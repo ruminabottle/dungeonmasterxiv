@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Everything in this plugin that does not need Dalamud. It exists so the test project can
+    reference this and nothing else, which makes a Dalamud-touching test a compile error instead
+    of a silent problem.
+
+    Why that matters: Dalamud.dll declares a dependency on Microsoft.WindowsDesktop.App, which has
+    no macOS build. If a Dalamud type reaches a test assembly's reference graph, xUnit skips the
+    ENTIRE assembly — every test in it, including ones with no Dalamud involvement — and
+    `dotnet test` still exits 0. A green run would then prove nothing. A comment cannot prevent
+    that; a missing reference can.
+
+    So: this project must never reference Dalamud, DalamudPackager, or the plugin project. Types
+    that need a Dalamud type belong in the plugin project instead.
+
+    Deliberately targets plain net10.0, not net10.0-windows: nothing here is platform-specific,
+    and the narrower TFM is one more thing stopping Dalamud from creeping in.
+  -->
+  <PropertyGroup>
+    <AssemblyName>DungeonMasterXIV.Core</AssemblyName>
+    <RootNamespace>DungeonMasterXIV</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

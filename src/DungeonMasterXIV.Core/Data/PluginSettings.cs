@@ -2,9 +2,10 @@ namespace DungeonMasterXIV.Data;
 
 /// <summary>
 /// The settings themselves, as a plain serializable type with no Dalamud dependency.
-/// <see cref="Configuration"/> is the thin adapter that hands this to Dalamud's config mechanism.
-/// The skeleton stores window state and nothing else — the session, campaign and character data
-/// described in the brief are not part of it.
+/// <c>Configuration</c>, over in the plugin project, is the thin adapter that hands this to
+/// Dalamud's config mechanism — it cannot be named in a cref from here, because this project
+/// deliberately cannot see it. The skeleton stores window state and nothing else; the session,
+/// campaign and character data described in the brief are not part of it.
 /// </summary>
 public sealed class PluginSettings
 {
