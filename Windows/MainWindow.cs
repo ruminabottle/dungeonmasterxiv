@@ -1,3 +1,4 @@
+using System;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using DungeonMasterXIV.Data;
@@ -11,6 +12,9 @@ namespace DungeonMasterXIV.Windows;
 public sealed class MainWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;
+
+    /// <summary>Opens the session window. Set during wiring.</summary>
+    public Action? OpenSession { get; set; }
 
     /// <param name="configurationStore">Used to remember whether this window was left open.</param>
     public MainWindow(ConfigurationStore configurationStore)
@@ -36,6 +40,10 @@ public sealed class MainWindow : Window
             "campaigns run in game.");
         ImGui.Separator();
         ImGui.TextUnformatted("No session is running.");
+        if (ImGui.Button("Open session window"))
+        {
+            OpenSession?.Invoke();
+        }
     }
 
     /// <inheritdoc />

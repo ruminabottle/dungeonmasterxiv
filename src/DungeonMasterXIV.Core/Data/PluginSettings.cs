@@ -38,6 +38,13 @@ public sealed class PluginSettings
     public static bool RequiresWriteOnLoad(int? versionOnDisk) => versionOnDisk is null;
 
     /// <summary>
+    /// The relay this client dials. R-1.8 requires this to be swappable and discoverable — the
+    /// default is a default, not a dependency. Validated by
+    /// <c>RelayEndpoint.TryParse</c> before use rather than trusted from disk.
+    /// </summary>
+    public string RelayAddress { get; set; } = Net.RelayEndpoint.Default;
+
+    /// <summary>
     /// Whether a window that was open on unload should be reopened on load.
     /// </summary>
     /// <param name="wasOpen">The remembered open state of that window.</param>
