@@ -1,0 +1,16 @@
+{
+  "Name": "DungeonMasterXIV",
+  "Author": "ruminabottle",
+  "Punchline": "Dice, initiative and HP for tabletop RP sessions, tracked in game.",
+  "Description": "A tracker for groups running tabletop-style RP campaigns inside FFXIV. Captures rolls so they stop scrolling away, keeps turn order on every participant's screen, and tracks combatant HP and status for the current encounter. A DM hosts the session and their client is the single source of truth; players join with a session code and are admitted individually. The plugin observes and displays only — it never sends anything into the game.",
+  "RepoUrl": "https://github.com/ruminabottle/dungeonmasterxiv",
+  "Tags": [
+    "roleplay",
+    "tabletop",
+    "dice",
+    "initiative",
+    "session"
+  ],
+  "ApplicableVersion": "any",
+  "AcceptsFeedback": false
+}

@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Where the Dalamud reference assemblies live. Shared by the plugin and its tests.
+       macOS is NOT 'Linux' to MSBuild: a block that conditions only on Windows and Linux
+       silently resolves to an empty path here and fails with a confusing missing reference. -->
+  <PropertyGroup>
+    <DalamudLibPath Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(AppData)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+    <DalamudLibPath Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(HOME)/.xlcore/dalamud/Hooks/dev/</DalamudLibPath>
+    <DalamudLibPath Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/.xlcore/dalamud/Hooks/dev/</DalamudLibPath>
+    <DalamudLibPath Condition="'$(DALAMUD_HOME)' != ''">$(DALAMUD_HOME)/</DalamudLibPath>
+  </PropertyGroup>
+
+</Project>
