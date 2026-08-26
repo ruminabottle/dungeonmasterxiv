@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using DungeonMasterXIV.Net;
 using Xunit;
@@ -78,6 +80,17 @@ public class SessionAudienceTests
 
         Assert.Empty(audience.Recipients);
         Assert.Equal(0, audience.Count);
+    }
+
+    // Fails if: Recipients hands back the backing list typed as an interface, which a caller can
+    // downcast and mutate — and which would change under C2's receive loop mid-enumeration.
+    [Fact]
+    public void RecipientsCannotBeMutatedByItsCaller()
+    {
+        var audience = new SessionAudience();
+        audience.Admit("PEER-1");
+
+        Assert.Throws<InvalidCastException>(() => (List<AdmittedPeer>)audience.Recipients);
     }
 
     // The structural claim, asserted rather than argued: every recipient came from Admit. There is

@@ -43,7 +43,8 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin(
         IDalamudPluginInterface pluginInterface,
         ICommandManager commandManager,
-        IPluginLog log)
+        IPluginLog log,
+        IFramework framework)
     {
         _log = log;
 
@@ -61,7 +62,7 @@ public sealed class Plugin : IDalamudPlugin
 
         try
         {
-            Register(pluginInterface, commandManager);
+            Register(pluginInterface, commandManager, framework);
         }
         catch
         {
@@ -79,7 +80,7 @@ public sealed class Plugin : IDalamudPlugin
         _log.Information("Dungeon Master XIV unloaded.");
     }
 
-    private void Register(IDalamudPluginInterface pluginInterface, ICommandManager commandManager)
+    private void Register(IDalamudPluginInterface pluginInterface, ICommandManager commandManager, IFramework framework)
     {
         _windowSystem.AddWindow(_mainWindow);
         _unwind.Push(() => _windowSystem.RemoveWindow(_mainWindow));
@@ -95,6 +96,7 @@ public sealed class Plugin : IDalamudPlugin
         _unwind.Push(() =>
         {
             _sessionCoordinator.StopHosting();
+            _sessionCoordinator.Detach();
             _relayTransport.Dispose();
         });
 
@@ -112,6 +114,10 @@ public sealed class Plugin : IDalamudPlugin
 
         pluginInterface.UiBuilder.OpenConfigUi += _configWindow.Toggle;
         _unwind.Push(() => pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle);
+
+        // The timeouts A-1.5b depends on are only reachable if something calls them every frame.
+        framework.Update += OnFrameworkUpdate;
+        _unwind.Push(() => framework.Update -= OnFrameworkUpdate);
     }
 
     private void Unwind()
@@ -123,4 +129,6 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void OnCommand(string command, string arguments) => _commandDispatcher.Execute(arguments);
+
+    private void OnFrameworkUpdate(IFramework framework) => _sessionCoordinator.Tick(framework.UpdateDelta);
 }

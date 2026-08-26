@@ -39,7 +39,12 @@ public sealed class SessionAudience
     /// Everyone session state may be addressed to. Contains only admitted participants, so building
     /// a payload for this audience cannot include a client at None.
     /// </summary>
-    public IReadOnlyList<AdmittedPeer> Recipients => _admitted;
+    /// <remarks>
+    /// A genuine read-only wrapper, not the backing list typed as an interface. Returning
+    /// <c>_admitted</c> directly would let a caller downcast to <see cref="List{T}"/> and mutate it,
+    /// and would hand C2's receive loop a collection that can change under enumeration.
+    /// </remarks>
+    public IReadOnlyList<AdmittedPeer> Recipients => _admitted.AsReadOnly();
 
     /// <summary>
     /// How many participants are admitted. For the host's own display (R-1.1) and for nobody else —

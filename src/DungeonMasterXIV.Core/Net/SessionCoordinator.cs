@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DungeonMasterXIV.Net;
 
@@ -20,7 +22,15 @@ public sealed class SessionCoordinator
     {
         _transport = transport;
         _relayAddress = relayAddress;
+        _transport.Failed += OnTransportFailed;
     }
+
+    private readonly List<string> _pendingRequests = new();
+    private readonly object _reportedFailureLock = new();
+    private SessionFailure _reportedFailure = SessionFailure.None;
+    private TimeSpan _timeInPhase;
+    private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
+    private JoinPhase _tickedJoinPhase = JoinPhase.Idle;
 
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();
@@ -32,10 +42,16 @@ public sealed class SessionCoordinator
     public SessionAudience Audience { get; } = new();
 
     /// <summary>
-    /// The session-scoped code of a participant awaiting a decision, or null. Never a character
-    /// name — R-1.3 requires the prompt to identify a requester by code.
+    /// Every participant awaiting a decision, by session-scoped code. Never a character name —
+    /// R-1.3 requires the prompt to identify a requester by code.
     /// </summary>
-    public string? PendingRequestCode { get; private set; }
+    /// <remarks>
+    /// A list rather than one slot because four players clicking join at the start of a session is
+    /// the ordinary case, not an edge. A single slot silently strands everyone but the last, and
+    /// each stranded player sits on "waiting for the DM to decide" forever — which looks to them
+    /// exactly like a DM who is ignoring them.
+    /// </remarks>
+    public IReadOnlyList<string> PendingRequests => _pendingRequests.AsReadOnly();
 
     /// <summary>Starts hosting under a freshly generated code (R-1.1, R-1.2a).</summary>
     public void StartHosting()
@@ -52,7 +68,7 @@ public sealed class SessionCoordinator
     {
         Host.Stop();
         Audience.Clear();
-        PendingRequestCode = null;
+        _pendingRequests.Clear();
         SynchroniseTransport();
     }
 
@@ -64,7 +80,13 @@ public sealed class SessionCoordinator
     }
 
     /// <summary>Records that a participant is asking to be let in.</summary>
-    public void ReceiveJoinRequest(string peerCode) => PendingRequestCode = peerCode;
+    public void ReceiveJoinRequest(string peerCode)
+    {
+        if (!_pendingRequests.Contains(peerCode))
+        {
+            _pendingRequests.Add(peerCode);
+        }
+    }
 
     /// <summary>
     /// Admits the pending participant. Only after this does anything become addressable to them —
@@ -72,7 +94,7 @@ public sealed class SessionCoordinator
     /// </summary>
     public AdmittedPeer Admit(string peerCode)
     {
-        PendingRequestCode = null;
+        _pendingRequests.Remove(peerCode);
         return Audience.Admit(peerCode);
     }
 
@@ -82,7 +104,7 @@ public sealed class SessionCoordinator
     /// </summary>
     public void Deny(string peerCode)
     {
-        PendingRequestCode = null;
+        _pendingRequests.Remove(peerCode);
         Audience.Remove(peerCode);
     }
 
@@ -131,6 +153,74 @@ public sealed class SessionCoordinator
         if (!wanted && _transport.IsConnected)
         {
             _transport.Disconnect();
+        }
+    }
+
+    /// <summary>
+    /// Advances anything that depends on the passage of time. Called once per frame from the
+    /// plugin, which is the only place that knows what a frame is.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the half that makes A-1.5b real rather than merely correct. The state machines have
+    /// always known how to time out; without something calling them every frame,
+    /// <see cref="HostingPhase.Registering"/> and <see cref="JoinPhase.Contacting"/> are terminal in
+    /// the running product and the user watches the open-ended spinner R-1.8 forbids.
+    /// </para>
+    /// <para>
+    /// Core stays clock-free: the caller supplies the delta, so nothing here reads a clock and every
+    /// timeout remains drivable from a test with an explicit <see cref="TimeSpan"/>.
+    /// </para>
+    /// </remarks>
+    /// <param name="sinceLastTick">Elapsed time since the previous call.</param>
+    public void Tick(TimeSpan sinceLastTick)
+    {
+        ApplyReportedFailure();
+
+        if (Host.Phase != _tickedHostPhase || Join.Phase != _tickedJoinPhase)
+        {
+            _tickedHostPhase = Host.Phase;
+            _tickedJoinPhase = Join.Phase;
+            _timeInPhase = TimeSpan.Zero;
+            return;
+        }
+
+        _timeInPhase += sinceLastTick;
+
+        var expired = Host.ExpireIfRegistrationTimedOut(_timeInPhase);
+        expired |= Join.ExpireIfContactTimedOut(_timeInPhase);
+
+        if (expired)
+        {
+            SynchroniseTransport();
+        }
+    }
+
+    /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
+    public void Detach() => _transport.Failed -= OnTransportFailed;
+
+    // Raised off the framework thread by the transport, so it is only recorded here and applied on
+    // the next tick. Mutating session state from a socket callback would race the draw.
+    private void OnTransportFailed(SessionFailure failure)
+    {
+        lock (_reportedFailureLock)
+        {
+            _reportedFailure = failure;
+        }
+    }
+
+    private void ApplyReportedFailure()
+    {
+        SessionFailure failure;
+        lock (_reportedFailureLock)
+        {
+            failure = _reportedFailure;
+            _reportedFailure = SessionFailure.None;
+        }
+
+        if (failure != SessionFailure.None)
+        {
+            Fail(failure);
         }
     }
 

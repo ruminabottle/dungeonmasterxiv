@@ -95,7 +95,7 @@ public class SessionCoordinatorTests
 
         coordinator.Deny("PEER-1");
 
-        Assert.Null(coordinator.PendingRequestCode);
+        Assert.Empty(coordinator.PendingRequests);
         Assert.False(coordinator.Audience.IsAdmitted("PEER-1"));
         Assert.Equal(0, coordinator.Audience.Count);
     }
@@ -111,7 +111,7 @@ public class SessionCoordinatorTests
 
         coordinator.Admit("PEER-1");
 
-        Assert.Null(coordinator.PendingRequestCode);
+        Assert.Empty(coordinator.PendingRequests);
         Assert.True(coordinator.Audience.IsAdmitted("PEER-1"));
     }
 
@@ -129,6 +129,103 @@ public class SessionCoordinatorTests
         Assert.Equal(0, coordinator.Audience.Count);
     }
 
+    // The regression test for "correct but unreached". Fails if: nothing drives the timeouts —
+    // which is exactly what shipped, because the state machines were right and no caller existed.
+    // Asserts through Tick rather than by calling ExpireIfRegistrationTimedOut directly, so a
+    // future refactor that removes the tick fails here instead of passing on the unit test.
+    [Fact]
+    public void TickingPastTheTimeoutEndsARegistrationTheRelayNeverAnswered()
+    {
+        var (coordinator, transport) = Build();
+        coordinator.StartHosting();
+
+        coordinator.Tick(TimeSpan.Zero);                              // settle into the phase
+        coordinator.Tick(HostSession.RegistrationTimeout);
+
+        Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
+        Assert.Equal(SessionFailure.RelayUnreachable, coordinator.Host.Failure);
+        Assert.False(transport.IsConnected);
+    }
+
+    // Fails if: elapsed time is not reset when a phase changes, which would carry a previous
+    // phase's clock forward and time out a brand-new attempt instantly.
+    [Fact]
+    public void TheClockRestartsWhenThePhaseChanges()
+    {
+        var (coordinator, _) = Build();
+        coordinator.StartHosting();
+        coordinator.Tick(TimeSpan.Zero);
+        coordinator.Tick(HostSession.RegistrationTimeout - TimeSpan.FromSeconds(1));
+
+        coordinator.Host.Registered();
+        coordinator.Tick(TimeSpan.Zero);
+        coordinator.Tick(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(HostingPhase.Hosting, coordinator.Host.Phase);
+    }
+
+    // Non-blocking 6, and the reason SessionFailure.ConnectionLost was unreachable in the product.
+    // Fails if: a transport failure never lands in the state machine — a relay that refuses would
+    // then leave the DM watching a spinner with the reason only in a log they will not read.
+    [Fact]
+    public void ATransportFailureReachesTheSessionStateOnTheNextTick()
+    {
+        var (coordinator, transport) = Build();
+        coordinator.StartHosting();
+
+        transport.RaiseFailure(SessionFailure.ConnectionLost);
+        coordinator.Tick(TimeSpan.Zero);
+
+        Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
+        Assert.Equal(SessionFailure.ConnectionLost, coordinator.Host.Failure);
+    }
+
+    // Blocking 2. Fails if: pending requests are one slot — four players clicking join at the start
+    // of a session is the ordinary case, and a single slot strands every one but the last on
+    // "waiting for the DM", which looks to them like a DM ignoring them.
+    [Fact]
+    public void EveryConcurrentJoinRequestIsHeldRatherThanTheNewestReplacingTheRest()
+    {
+        var (coordinator, _) = Build();
+        coordinator.StartHosting();
+
+        coordinator.ReceiveJoinRequest("PEER-1");
+        coordinator.ReceiveJoinRequest("PEER-2");
+        coordinator.ReceiveJoinRequest("PEER-3");
+
+        Assert.Equal(3, coordinator.PendingRequests.Count);
+    }
+
+    // Fails if: deciding one request clears the others, which is the same stranding by a different
+    // route — the DM admits the first and the rest vanish from the prompt.
+    [Fact]
+    public void DecidingOneRequestLeavesTheOthersPending()
+    {
+        var (coordinator, _) = Build();
+        coordinator.StartHosting();
+        coordinator.ReceiveJoinRequest("PEER-1");
+        coordinator.ReceiveJoinRequest("PEER-2");
+
+        coordinator.Admit("PEER-1");
+
+        Assert.Single(coordinator.PendingRequests);
+        Assert.Contains("PEER-2", coordinator.PendingRequests);
+        Assert.True(coordinator.Audience.IsAdmitted("PEER-1"));
+        Assert.False(coordinator.Audience.IsAdmitted("PEER-2"));
+    }
+
+    // Fails if: a duplicate request adds a second prompt for the same person, which the DM would
+    // have to dismiss twice.
+    [Fact]
+    public void ARepeatedRequestFromTheSamePeerDoesNotStack()
+    {
+        var (coordinator, _) = Build();
+        coordinator.ReceiveJoinRequest("PEER-1");
+        coordinator.ReceiveJoinRequest("PEER-1");
+
+        Assert.Single(coordinator.PendingRequests);
+    }
+
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Build()
     {
         var transport = new FakeTransport();
@@ -137,6 +234,10 @@ public class SessionCoordinatorTests
 
     private sealed class FakeTransport : ISessionTransport
     {
+        public event Action<SessionFailure>? Failed;
+
+        public void RaiseFailure(SessionFailure failure) => Failed?.Invoke(failure);
+
         public bool IsConnected { get; private set; }
 
         public int ConnectCount { get; private set; }

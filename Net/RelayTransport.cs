@@ -28,12 +28,24 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
     private readonly IPluginLog _log;
     private ClientWebSocket? _socket;
     private CancellationTokenSource? _lifetime;
+    private bool _connecting;
 
     /// <param name="log">Dalamud's log. Never receives a character name (D-8).</param>
     public RelayTransport(IPluginLog log) => _log = log;
 
     /// <inheritdoc />
-    public bool IsConnected => _socket?.State == WebSocketState.Open;
+    public event Action<SessionFailure>? Failed;
+
+    /// <summary>
+    /// Whether a connection exists or is being established.
+    /// </summary>
+    /// <remarks>
+    /// A connect in flight counts. Reporting false while <see cref="WebSocketState.Connecting"/>
+    /// would let <see cref="SessionCoordinator.SynchroniseTransport"/> start a second connect on top
+    /// of the first — reachable by clicking Start session and then Request to join before the first
+    /// one lands.
+    /// </remarks>
+    public bool IsConnected => _connecting || _socket?.State == WebSocketState.Open;
 
     /// <inheritdoc />
     public void Connect(Uri relay)
@@ -41,8 +53,11 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         ArgumentNullException.ThrowIfNull(relay);
         Disconnect();
 
-        _lifetime = new CancellationTokenSource();
-        _socket = new ClientWebSocket();
+        var lifetime = new CancellationTokenSource();
+        var socket = new ClientWebSocket();
+        _lifetime = lifetime;
+        _socket = socket;
+        _connecting = true;
 
         // Transport contract clause 2. WebSocket-level ping/pong, not an application heartbeat, so
         // no envelope and no C1 type is involved. The client initiates rather than relying on the
@@ -55,12 +70,16 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         // the one artifact most likely to be pasted into a bug report.
         _log.Information("Connecting to the configured session relay.");
 
-        _ = ConnectAsync(relay, _lifetime.Token);
+        // The socket and token are passed as locals, never re-read from the fields. A body that
+        // read _socket could observe a LATER connection's socket after a Disconnect/Connect pair and
+        // drive somebody else's object.
+        _ = ConnectAsync(socket, relay, lifetime.Token);
     }
 
     /// <inheritdoc />
     public void Disconnect()
     {
+        _connecting = false;
         if (_lifetime is not null)
         {
             _lifetime.Cancel();
@@ -93,22 +112,31 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
     /// <inheritdoc />
     public void Dispose() => Disconnect();
 
-    private async Task ConnectAsync(Uri relay, CancellationToken token)
+    private async Task ConnectAsync(ClientWebSocket socket, Uri relay, CancellationToken token)
     {
         try
         {
-            if (_socket is not null)
-            {
-                await _socket.ConnectAsync(relay, token).ConfigureAwait(false);
-            }
+            await socket.ConnectAsync(relay, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            // Disconnect() cancelled us. Expected, and not a failure worth logging.
+            // Disconnect() cancelled us. Expected, and not a failure worth reporting.
         }
-        catch (WebSocketException exception)
+        catch (Exception exception) when (exception is WebSocketException
+                                              or ObjectDisposedException
+                                              or InvalidOperationException)
         {
+            // Narrower catches let ObjectDisposedException and InvalidOperationException escape into
+            // an unobserved task, where the failure vanishes and the user waits on a spinner.
             _log.Warning(exception, "Could not reach the session relay.");
+            Failed?.Invoke(SessionFailure.RelayUnreachable);
+        }
+        finally
+        {
+            if (ReferenceEquals(socket, _socket))
+            {
+                _connecting = false;
+            }
         }
     }
 }

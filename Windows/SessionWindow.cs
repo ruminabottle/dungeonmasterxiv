@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using DungeonMasterXIV.Net;
@@ -93,19 +94,29 @@ public sealed class SessionWindow : Window
             ImGui.TextWrapped(SessionFailureMessage.For(join.Failure));
         }
 
-        if (_coordinator.PendingRequestCode is { } requester)
+        // Every pending request gets its own prompt. One slot would strand all but the newest, and
+        // the stranded players would see a DM who appears to be ignoring them.
+        var pending = _coordinator.PendingRequests;
+        if (pending.Count == 0)
         {
-            ImGui.Separator();
-            ImGui.TextUnformatted($"Join request from {requester}");
-            ImGui.TextWrapped(AdmissionDisclosure);
+            return;
+        }
 
-            if (ImGui.Button("Admit"))
+        ImGui.Separator();
+        ImGui.TextWrapped(AdmissionDisclosure);
+
+        // Copied because Admit and Deny mutate the pending list, and this is a draw callback.
+        foreach (var requester in pending.ToArray())
+        {
+            ImGui.TextUnformatted($"Join request from {requester}");
+
+            if (ImGui.Button($"Admit##{requester}"))
             {
                 _coordinator.Admit(requester);
             }
 
             ImGui.SameLine();
-            if (ImGui.Button("Deny"))
+            if (ImGui.Button($"Deny##{requester}"))
             {
                 _coordinator.Deny(requester);
             }
