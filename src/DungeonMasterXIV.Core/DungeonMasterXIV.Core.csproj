@@ -1,21 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Everything in this plugin that does not need Dalamud. It exists so the test project can
-    reference this and nothing else, which makes a Dalamud-touching test a compile error instead
-    of a silent problem.
+    Everything in this plugin that does not need Dalamud, so the test project can reference this
+    and nothing else. This project must never reference Dalamud, DalamudPackager, or the plugin
+    project; the ForbidDalamud target below makes that a build failure rather than a request.
+    Types that need a Dalamud type belong in the plugin project.
 
-    Why that matters: Dalamud.dll declares a dependency on Microsoft.WindowsDesktop.App, which has
-    no macOS build. If a Dalamud type reaches a test assembly's reference graph, xUnit skips the
-    ENTIRE assembly — every test in it, including ones with no Dalamud involvement — and
-    `dotnet test` still exits 0. A green run would then prove nothing. A comment cannot prevent
-    that; a missing reference can.
+    Why a separate project rather than a comment asking people not to: today Dalamud cannot reach
+    the test assembly, but only by accident. Raw <Reference> items do not flow transitively through
+    a ProjectReference — only ProjectReference and PackageReference do — and the plugin's Dalamud
+    references are additionally Private=false. Nobody designed that. Switching to a Dalamud
+    PackageReference (a Dalamud.NET.Sdk exists and is the obvious future migration) or flipping
+    Private would make Dalamud flow into the test assembly transitively. Referencing Core and
+    nothing else makes the guarantee deliberate instead of incidental.
 
-    So: this project must never reference Dalamud, DalamudPackager, or the plugin project. Types
-    that need a Dalamud type belong in the plugin project instead.
+    Observed 2026-08-26, and recorded because the stronger claim it replaces was not reproducible:
+    a Dalamud-touching test on main fails loudly at runtime with FileNotFoundException, contained
+    to that test. The whole-assembly silent skip described elsewhere did not occur on this
+    configuration; it becomes reachable if Dalamud ever flows here transitively.
 
-    Deliberately targets plain net10.0, not net10.0-windows: nothing here is platform-specific,
-    and the narrower TFM is one more thing stopping Dalamud from creeping in.
+    Targets plain net10.0, not net10.0-windows, because nothing here is platform-specific and it
+    keeps Core loadable by a plain-net10.0 test host. Note this is NOT a barrier against Dalamud:
+    a raw assembly <Reference> is not checked against the TFM at all, that check being a NuGet
+    mechanism. Verified by probe — Core with a Dalamud <Reference> and a type implementing
+    IPluginConfiguration builds 0 errors, 0 warnings. The target below is the actual barrier.
   -->
   <PropertyGroup>
     <AssemblyName>DungeonMasterXIV.Core</AssemblyName>
@@ -26,5 +34,23 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
+
+  <!--
+    The rule above, as a build failure rather than a request. Batches over each reference's
+    %(Identity) — item references are NOT expanded inside property-function arguments, so the
+    tempting $([System.String]::Copy('@(Reference)').Contains('Dalamud')) silently evaluates
+    False forever and is a check that cannot fail.
+  -->
+  <Target Name="ForbidDalamud" BeforeTargets="Build">
+    <Error Condition="$([System.String]::Copy('%(Reference.Identity)').Contains('Dalamud'))"
+           Text="DungeonMasterXIV.Core must never reference Dalamud (found reference '%(Reference.Identity)'). Types needing Dalamud belong in the plugin project." />
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').Contains('Dalamud'))"
+           Text="DungeonMasterXIV.Core must never reference Dalamud (found package '%(PackageReference.Identity)')." />
+    <!-- Backstop, not the primary catch: the plugin references Core, so a reference back is a
+         genuine cycle and NuGet restore fails first with MSB4006 before this target runs.
+         Verified 2026-08-26. Kept so the rule is stated where the other two are. -->
+    <Error Condition="'%(ProjectReference.Filename)' == 'DungeonMasterXIV'"
+           Text="DungeonMasterXIV.Core must never reference the plugin project." />
+  </Target>
 
 </Project>

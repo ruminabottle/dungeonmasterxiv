@@ -20,13 +20,19 @@
   <!--
     Core ONLY. This project must never reference DungeonMasterXIV.csproj.
 
-    That reference is what used to put Dalamud in this assembly's reference graph. Dalamud.dll
-    needs Microsoft.WindowsDesktop.App, which has no macOS build, so a single test touching a
-    Dalamud type made xUnit skip the WHOLE assembly while `dotnet test` still exited 0 — every
-    other test silently stopped running behind a green summary.
+    Dalamud must never reach this assembly's reference graph. Today it cannot, but only by
+    accident: raw <Reference> items do not flow transitively through a ProjectReference, and the
+    plugin's Dalamud references are Private=false. Switching to a Dalamud PackageReference, or
+    flipping Private, would make Dalamud flow here transitively. Referencing Core and nothing else
+    makes the guarantee deliberate instead of incidental.
 
-    With only Core referenced, writing such a test is a compile error instead. Anything that needs
-    a Dalamud type is not unit-testable on this machine and must be kept thin enough not to need it.
+    Observed 2026-08-26: a Dalamud-touching test on main fails loudly at runtime with
+    FileNotFoundException, contained to that test. The whole-assembly silent skip described
+    elsewhere was not reproducible on this configuration, though it would become reachable if
+    Dalamud ever flows here transitively.
+
+    Either way: anything needing a Dalamud type is not unit-testable on this machine and must be
+    kept thin enough not to need it.
   -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\DungeonMasterXIV.Core\DungeonMasterXIV.Core.csproj" />
