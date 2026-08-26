@@ -44,6 +44,13 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         _lifetime = new CancellationTokenSource();
         _socket = new ClientWebSocket();
 
+        // Transport contract clause 2. WebSocket-level ping/pong, not an application heartbeat, so
+        // no envelope and no C1 type is involved. The client initiates rather than relying on the
+        // relay to: a lull long enough for a NAT table to drop the connection is normal play, and
+        // the failure it prevents shows up mid-session rather than at connect time.
+        _socket.Options.KeepAliveInterval = TransportContract.KeepAliveInterval;
+        _socket.Options.KeepAliveTimeout = TransportContract.KeepAliveTimeout;
+
         // Logged without the address: a relay a user configured is their business, and the log is
         // the one artifact most likely to be pasted into a bug report.
         _log.Information("Connecting to the configured session relay.");
