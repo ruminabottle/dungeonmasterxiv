@@ -42,6 +42,7 @@ public static class SessionCipher
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(plaintext);
         ArgumentNullException.ThrowIfNull(associatedData);
+        RequireDocumentedKeySize(key);
 
         var nonce = RandomNumberGenerator.GetBytes(NonceSize);
         var ciphertext = new byte[plaintext.Length];
@@ -74,6 +75,7 @@ public static class SessionCipher
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentNullException.ThrowIfNull(associatedData);
+        RequireDocumentedKeySize(key);
 
         if (payload.Ciphertext.Length < TagSize)
         {
@@ -89,5 +91,19 @@ public static class SessionCipher
         aes.Decrypt(payload.Nonce, body, tag, plaintext, associatedData);
 
         return plaintext;
+    }
+
+    // AesGcm picks its algorithm from the length of the key it is handed: 16 bytes gives AES-128 and
+    // 24 gives AES-192, with no error and no warning, because both are valid AES keys. This type
+    // documents AES-256, so anything but KeySize is a caller's bug and must surface as one rather
+    // than as a quietly weaker cipher. Do not soften this into padding or truncation.
+    private static void RequireDocumentedKeySize(byte[] key)
+    {
+        if (key.Length != KeySize)
+        {
+            throw new ArgumentException(
+                $"Key must be {KeySize} bytes for AES-256; got {key.Length}.",
+                nameof(key));
+        }
     }
 }
