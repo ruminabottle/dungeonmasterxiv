@@ -14,15 +14,22 @@ public class SessionCipherTests
 {
     private static readonly byte[] Plaintext = Encoding.UTF8.GetBytes("initiative 17, Ysera acts first");
 
+    private static readonly byte[] Aad =
+        WireEnvelope.AssociatedDataFor(SessionCode.FromValid("BKD7RM"), WireMessageType.SessionPayload);
+
     private static byte[] Key() => RandomNumberGenerator.GetBytes(SessionCipher.KeySize);
 
-    // Fails if: the cipher is a pass-through. This is the null-cipher test.
+    // Fails if: the cipher is a pass-through, including one careful enough to keep the lengths
+    // right. The earlier version of this test asserted NotEqual(plaintext, ciphertext), which is a
+    // proxy rather than the property: Ciphertext is body plus a 16-byte tag, so the two always
+    // differ in length and the assertion held whatever the cipher did. The plaintext could sit in
+    // the clear at offset 0 and it still passed. Assert absence, not inequality.
     [Fact]
-    public void CiphertextIsNotThePlaintext()
+    public void ThePlaintextDoesNotAppearInTheCiphertext()
     {
-        var payload = SessionCipher.Seal(Key(), Plaintext);
+        var payload = SessionCipher.Seal(Key(), Plaintext, Aad);
 
-        Assert.NotEqual(Plaintext, payload.Ciphertext);
+        Assert.False(ByteSequence.Contains(payload.Ciphertext, Plaintext));
     }
 
     // Fails if: the nonce is fixed or derived from the message. Encrypting the same bytes twice
@@ -32,8 +39,8 @@ public class SessionCipherTests
     {
         var key = Key();
 
-        var first = SessionCipher.Seal(key, Plaintext);
-        var second = SessionCipher.Seal(key, Plaintext);
+        var first = SessionCipher.Seal(key, Plaintext, Aad);
+        var second = SessionCipher.Seal(key, Plaintext, Aad);
 
         Assert.NotEqual(first.Ciphertext, second.Ciphertext);
         Assert.NotEqual(first.Nonce, second.Nonce);
@@ -44,7 +51,7 @@ public class SessionCipherTests
     {
         var key = Key();
 
-        var recovered = SessionCipher.Open(key, SessionCipher.Seal(key, Plaintext));
+        var recovered = SessionCipher.Open(key, SessionCipher.Seal(key, Plaintext, Aad), Aad);
 
         Assert.Equal(Plaintext, recovered);
     }
@@ -54,9 +61,9 @@ public class SessionCipherTests
     [Fact]
     public void AnotherKeyCannotOpenIt()
     {
-        var payload = SessionCipher.Seal(Key(), Plaintext);
+        var payload = SessionCipher.Seal(Key(), Plaintext, Aad);
 
-        Assert.Throws<AuthenticationTagMismatchException>(() => SessionCipher.Open(Key(), payload));
+        Assert.Throws<AuthenticationTagMismatchException>(() => SessionCipher.Open(Key(), payload, Aad));
     }
 
     // Fails if: there is no authentication tag. This is what makes a relay unable to alter traffic
@@ -65,10 +72,10 @@ public class SessionCipherTests
     public void AlteringOneByteOfCiphertextIsDetected()
     {
         var key = Key();
-        var payload = SessionCipher.Seal(key, Plaintext);
+        var payload = SessionCipher.Seal(key, Plaintext, Aad);
         payload.Ciphertext[0] ^= 0xFF;
 
-        Assert.Throws<AuthenticationTagMismatchException>(() => SessionCipher.Open(key, payload));
+        Assert.Throws<AuthenticationTagMismatchException>(() => SessionCipher.Open(key, payload, Aad));
     }
 
     // Fails if: the nonce is not covered by the authentication.
@@ -76,10 +83,10 @@ public class SessionCipherTests
     public void AlteringOneByteOfTheNonceIsDetected()
     {
         var key = Key();
-        var payload = SessionCipher.Seal(key, Plaintext);
+        var payload = SessionCipher.Seal(key, Plaintext, Aad);
         payload.Nonce[0] ^= 0xFF;
 
-        Assert.Throws<AuthenticationTagMismatchException>(() => SessionCipher.Open(key, payload));
+        Assert.Throws<AuthenticationTagMismatchException>(() => SessionCipher.Open(key, payload, Aad));
     }
 
     // Fails if: the tag length check is dropped and a truncated payload is treated as valid.
@@ -87,6 +94,6 @@ public class SessionCipherTests
     public void APayloadTooShortToHoldATagIsRejected()
     {
         Assert.Throws<CryptographicException>(
-            () => SessionCipher.Open(Key(), SealedPayload.FromWire(new byte[SessionCipher.NonceSize], new byte[4])));
+            () => SessionCipher.Open(Key(), SealedPayload.FromWire(new byte[SessionCipher.NonceSize], new byte[4]), Aad));
     }
 }

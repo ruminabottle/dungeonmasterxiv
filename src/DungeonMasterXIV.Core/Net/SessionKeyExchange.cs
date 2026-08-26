@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace DungeonMasterXIV.Net;
 
@@ -41,11 +42,24 @@ public sealed class SessionKeyExchange : IDisposable
     public byte[] PublicKey => _keyPair.PublicKey.ExportSubjectPublicKeyInfo();
 
     /// <summary>
-    /// Agrees a shared key with the other side's public key.
+    /// Agrees a shared key with the other side's public key, bound to one session.
     /// </summary>
     /// <param name="otherPartyPublicKey">The SPKI bytes the other side sent.</param>
+    /// <param name="sessionCode">
+    /// The session this key is for, used as the HKDF salt so the same pair of parties cannot derive
+    /// the same key in two different sessions. Without it, whether two sessions share a key depends
+    /// on how long someone happens to hold this object — a lifetime decision made elsewhere — and a
+    /// past participant could read a later session's traffic.
+    /// </param>
     /// <returns>A <see cref="SessionCipher.KeySize"/>-byte key. Both sides derive the same one.</returns>
-    public byte[] DeriveSharedKey(byte[] otherPartyPublicKey)
+    /// <remarks>
+    /// The salt is not key material and does not need to be secret, which is why this is compatible
+    /// with D-11: the directive forbids deriving the key <i>from</i> the code, and every bit of
+    /// entropy here still comes from the ECDH agreement. Someone who knows the code and nothing else
+    /// is exactly as far from the key as before. The salt binds the key to a context; it does not
+    /// supply any of its strength.
+    /// </remarks>
+    public byte[] DeriveSharedKey(byte[] otherPartyPublicKey, SessionCode sessionCode)
     {
         ArgumentNullException.ThrowIfNull(otherPartyPublicKey);
 
@@ -55,7 +69,12 @@ public sealed class SessionKeyExchange : IDisposable
         var agreement = _keyPair.DeriveRawSecretAgreement(otherParty.PublicKey);
         try
         {
-            return HKDF.DeriveKey(HashAlgorithmName.SHA256, agreement, SessionCipher.KeySize, info: DerivationInfo);
+            return HKDF.DeriveKey(
+                HashAlgorithmName.SHA256,
+                agreement,
+                SessionCipher.KeySize,
+                salt: Encoding.UTF8.GetBytes(sessionCode.Value),
+                info: DerivationInfo);
         }
         finally
         {

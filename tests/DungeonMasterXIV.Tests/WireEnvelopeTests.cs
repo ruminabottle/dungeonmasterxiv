@@ -10,6 +10,9 @@ public class WireEnvelopeTests
 {
     private static readonly SessionCode Code = SessionCode.FromValid("BKD7RM");
 
+    private static readonly byte[] Aad =
+        WireEnvelope.AssociatedDataFor(Code, WireMessageType.SessionPayload);
+
     // A-1.5f, the format half. Fails if: the cipher is a pass-through, or the envelope carries a
     // payload in the clear.
     //
@@ -25,12 +28,12 @@ public class WireEnvelopeTests
         var key = RandomNumberGenerator.GetBytes(SessionCipher.KeySize);
 
         var wire = EnvelopeCodec.Encode(
-            WireEnvelope.ForSessionPayload(Code, SessionCipher.Seal(key, secret)));
+            WireEnvelope.ForSessionPayload(Code, SessionCipher.Seal(key, secret, Aad)));
 
         Assert.True(EnvelopeCodec.TryDecode(wire, out var decoded));
         Assert.NotNull(decoded!.Payload);
-        Assert.False(ContainsSequence(decoded.Payload!, secret), "Plaintext found in the payload field.");
-        Assert.False(ContainsSequence(wire, secret), "Plaintext found elsewhere in the encoded envelope.");
+        Assert.False(ByteSequence.Contains(decoded.Payload!, secret), "Plaintext found in the payload field.");
+        Assert.False(ByteSequence.Contains(wire, secret), "Plaintext found elsewhere in the encoded envelope.");
     }
 
     // Fails if: encoding or decoding drops a field. A payload that survives the relay but loses its
@@ -40,13 +43,13 @@ public class WireEnvelopeTests
     {
         var key = RandomNumberGenerator.GetBytes(SessionCipher.KeySize);
         var plaintext = Encoding.UTF8.GetBytes("turn order: 21, 17, 9");
-        var original = WireEnvelope.ForSessionPayload(Code, SessionCipher.Seal(key, plaintext));
+        var original = WireEnvelope.ForSessionPayload(Code, SessionCipher.Seal(key, plaintext, Aad));
 
         Assert.True(EnvelopeCodec.TryDecode(EnvelopeCodec.Encode(original), out var decoded));
         var recovered = decoded!.TryGetSealedPayload();
 
         Assert.NotNull(recovered);
-        Assert.Equal(plaintext, SessionCipher.Open(key, recovered!));
+        Assert.Equal(plaintext, SessionCipher.Open(key, recovered!, Aad));
     }
 
     // Fails if: the code-claim exchange R-1.2a describes cannot be expressed on the wire. Without
@@ -93,6 +96,42 @@ public class WireEnvelopeTests
         Assert.Equal(joiner.PublicKey, decoded!.PublicKey);
     }
 
+    // The test for finding 1. Fails if: the tag stops covering the envelope metadata — that is, if
+    // Seal/Open go back to the 4-argument AES-GCM overload with no associated data.
+    //
+    // A relay forwards ciphertext it cannot read, but it can still alter what sits beside it. Here
+    // it re-emits a payload sealed for one session stamped with another session code. Without the
+    // binding the tag still verifies, because it never covered the code; with it, the receiver
+    // recomputes a different AAD and the open fails.
+    [Fact]
+    public void APayloadRestampedWithAnotherSessionCodeWillNotOpen()
+    {
+        var key = RandomNumberGenerator.GetBytes(SessionCipher.KeySize);
+        var elsewhere = SessionCode.FromValid("CFGH23");
+        var payload = SessionCipher.Seal(key, Encoding.UTF8.GetBytes("the DM is at 3 hit points"), Aad);
+
+        var reframed = WireEnvelope.ForSessionPayload(elsewhere, payload);
+
+        Assert.Throws<AuthenticationTagMismatchException>(
+            () => SessionCipher.Open(key, reframed.TryGetSealedPayload()!, reframed.AssociatedData()));
+    }
+
+    // Also finding 1, the other half. Fails if: the message type stops being covered by the tag.
+    // Today TryGetSealedPayload happens to refuse a non-payload type, so this would fail closed by
+    // luck; the binding is what makes it fail closed by construction, and C2 adds a sender field
+    // that will need the same protection.
+    [Fact]
+    public void APayloadRelabelledAsAnotherMessageTypeWillNotOpen()
+    {
+        var key = RandomNumberGenerator.GetBytes(SessionCipher.KeySize);
+        var payload = SessionCipher.Seal(key, Encoding.UTF8.GetBytes("roll for initiative"), Aad);
+
+        var relabelled = WireEnvelope.AssociatedDataFor(Code, WireMessageType.JoinRequest);
+
+        Assert.Throws<AuthenticationTagMismatchException>(
+            () => SessionCipher.Open(key, payload, relabelled));
+    }
+
     // Fails if: TryGetSealedPayload starts inventing payloads for messages that have none.
     [Fact]
     public void AControlMessageYieldsNoSealedPayload()
@@ -111,8 +150,4 @@ public class WireEnvelopeTests
         Assert.False(EnvelopeCodec.TryDecode(Encoding.UTF8.GetBytes(garbage), out var decoded));
         Assert.Null(decoded);
     }
-
-    private static bool ContainsSequence(byte[] haystack, byte[] needle) =>
-        Enumerable.Range(0, haystack.Length - needle.Length + 1)
-            .Any(i => haystack.Skip(i).Take(needle.Length).SequenceEqual(needle));
 }

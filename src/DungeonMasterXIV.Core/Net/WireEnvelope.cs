@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace DungeonMasterXIV.Net;
 
@@ -42,6 +43,24 @@ public sealed record WireEnvelope
 
     /// <summary>SPKI public key; present on <see cref="WireMessageType.JoinRequest"/> only (D-11).</summary>
     public byte[]? PublicKey { get; private init; }
+
+    /// <summary>
+    /// The envelope metadata a payload is bound to: the session it belongs to and what kind of
+    /// message it is. Authenticated by <see cref="SessionCipher"/> but never transmitted — the
+    /// receiver rebuilds it from the envelope in front of it, so a re-framed payload fails its tag
+    /// check rather than decrypting under a type or session code it was never sealed for.
+    /// </summary>
+    /// <remarks>
+    /// The encoding is unambiguous because a session code is always exactly
+    /// <see cref="SessionCode.Length"/> characters drawn from an alphabet that contains no
+    /// separator, so no pair of inputs can produce the same bytes.
+    /// </remarks>
+    public static byte[] AssociatedDataFor(SessionCode code, WireMessageType type) =>
+        Encoding.UTF8.GetBytes($"{code.Value}:{(int)type}");
+
+    /// <summary>The binding for this envelope, for a receiver about to open its payload.</summary>
+    public byte[] AssociatedData() =>
+        Encoding.UTF8.GetBytes($"{SessionCode}:{(int)Type}");
 
     /// <summary>Host asks the relay to claim <paramref name="code"/>.</summary>
     public static WireEnvelope ForCodeRequest(SessionCode code) =>

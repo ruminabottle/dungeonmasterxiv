@@ -28,17 +28,27 @@ public static class SessionCipher
     /// Encrypts <paramref name="plaintext"/>, generating a fresh random nonce for every call so
     /// that encrypting the same bytes twice never produces the same ciphertext.
     /// </summary>
-    public static SealedPayload Seal(byte[] key, byte[] plaintext)
+    /// <param name="key">The shared key from <see cref="SessionKeyExchange.DeriveSharedKey"/>.</param>
+    /// <param name="plaintext">The bytes to encrypt.</param>
+    /// <param name="associatedData">
+    /// Envelope metadata to authenticate but not encrypt — see
+    /// <see cref="WireEnvelope.AssociatedDataFor"/>. It is covered by the tag and never transmitted;
+    /// the receiver recomputes it from the fields it already has. Without it the tag covers only the
+    /// payload, and a relay could re-stamp a valid payload with a different message type or session
+    /// code and have it still verify.
+    /// </param>
+    public static SealedPayload Seal(byte[] key, byte[] plaintext, byte[] associatedData)
     {
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(plaintext);
+        ArgumentNullException.ThrowIfNull(associatedData);
 
         var nonce = RandomNumberGenerator.GetBytes(NonceSize);
         var ciphertext = new byte[plaintext.Length];
         var tag = new byte[TagSize];
 
         using var aes = new AesGcm(key, TagSize);
-        aes.Encrypt(nonce, plaintext, ciphertext, tag);
+        aes.Encrypt(nonce, plaintext, ciphertext, tag, associatedData);
 
         var sealedBytes = new byte[ciphertext.Length + TagSize];
         ciphertext.CopyTo(sealedBytes, 0);
@@ -49,13 +59,21 @@ public static class SessionCipher
 
     /// <summary>
     /// Decrypts and authenticates a payload. Throws
-    /// <see cref="AuthenticationTagMismatchException"/> if the key is wrong or the ciphertext was
-    /// altered in transit — a relay that tampered would be caught here, not silently trusted.
+    /// <see cref="AuthenticationTagMismatchException"/> if the key is wrong, the ciphertext was
+    /// altered in transit, or the envelope it arrived in does not match the one it was sealed for.
     /// </summary>
-    public static byte[] Open(byte[] key, SealedPayload payload)
+    /// <param name="key">The shared key from <see cref="SessionKeyExchange.DeriveSharedKey"/>.</param>
+    /// <param name="payload">The sealed payload taken off the wire.</param>
+    /// <param name="associatedData">
+    /// Recomputed from the received envelope. If a relay re-framed the payload — changed its type or
+    /// re-emitted it under another session code — this will not match what was sealed and the tag
+    /// check fails.
+    /// </param>
+    public static byte[] Open(byte[] key, SealedPayload payload, byte[] associatedData)
     {
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(associatedData);
 
         if (payload.Ciphertext.Length < TagSize)
         {
@@ -68,7 +86,7 @@ public static class SessionCipher
         var plaintext = new byte[bodyLength];
 
         using var aes = new AesGcm(key, TagSize);
-        aes.Decrypt(payload.Nonce, body, tag, plaintext);
+        aes.Decrypt(payload.Nonce, body, tag, plaintext, associatedData);
 
         return plaintext;
     }
