@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The relay's own tests. Separate from DungeonMasterXIV.Tests because that project exists to be
+    unreachable from Dalamud and references Core alone; this one references the relay, which is a
+    Web SDK application. Keeping them apart means neither project's reference graph has to explain
+    the other's.
+
+    Package versions are pinned to the same ones DungeonMasterXIV.Tests already uses, so restore
+    resolves from the local cache rather than needing the network for a second set.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- The relay is an ASP.NET Core application, so its tests need the same shared framework to
+       name WebApplication and HttpContext. A ProjectReference does not bring a FrameworkReference
+       with it. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DungeonMasterXIV.Relay\DungeonMasterXIV.Relay.csproj" />
+  </ItemGroup>
+
+</Project>
