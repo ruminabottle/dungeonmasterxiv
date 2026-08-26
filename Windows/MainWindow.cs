@@ -32,7 +32,7 @@ public sealed class MainWindow : Window
     public override void Draw()
     {
         ImGui.TextWrapped(
-            "DungeonMasterXIV tracks dice rolls, initiative and combatant state for tabletop RP " +
+            "Dungeon Master XIV tracks dice rolls, initiative and combatant state for tabletop RP " +
             "campaigns run in game.");
         ImGui.Separator();
         ImGui.TextUnformatted("No session is running.");
