@@ -14,7 +14,7 @@ public sealed class MainWindow : Window
 
     /// <param name="configurationStore">Used to remember whether this window was left open.</param>
     public MainWindow(ConfigurationStore configurationStore)
-        : base("DungeonMasterXIV##dmx-main")
+        : base("Dungeon Master XIV##dmx-main")
     {
         _configurationStore = configurationStore;
 
@@ -32,7 +32,7 @@ public sealed class MainWindow : Window
     public override void Draw()
     {
         ImGui.TextWrapped(
-            "DungeonMasterXIV tracks dice rolls, initiative and combatant state for tabletop RP " +
+            "Dungeon Master XIV tracks dice rolls, initiative and combatant state for tabletop RP " +
             "campaigns run in game.");
         ImGui.Separator();
         ImGui.TextUnformatted("No session is running.");

@@ -28,6 +28,16 @@ public sealed class PluginSettings
     public bool RestoreWindowState { get; set; } = true;
 
     /// <summary>
+    /// Whether loading should write the settings straight back out. True only when nothing
+    /// readable came off disk, so a first run leaves a schema version behind without the user
+    /// having to open anything, and a config already at the current version is not rewritten
+    /// identically on every load. A version we do not recognise is left for a migration to deal
+    /// with rather than stamped down to this one.
+    /// </summary>
+    /// <param name="versionOnDisk">The schema version that was loaded, or <c>null</c> if none was.</param>
+    public static bool RequiresWriteOnLoad(int? versionOnDisk) => versionOnDisk is null;
+
+    /// <summary>
     /// Whether a window that was open on unload should be reopened on load.
     /// </summary>
     /// <param name="wasOpen">The remembered open state of that window.</param>
