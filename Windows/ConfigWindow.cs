@@ -59,7 +59,9 @@ public sealed class ConfigWindow : Window
 
     private void Remember(bool isOpen)
     {
-        _configurationStore.Configuration.Settings.SettingsWindowOpen = isOpen;
-        _configurationStore.Save();
+        if (_configurationStore.Configuration.Settings.RecordSettingsWindowOpen(isOpen))
+        {
+            _configurationStore.Save();
+        }
     }
 }

@@ -61,4 +61,53 @@ public class PluginSettingsTests
 
         Assert.Equal(expected, settings.ShouldOpenOnLoad(wasOpen));
     }
+
+    [Fact]
+    public void RecordingAChangedMainWindowStateReportsTheChangeAndStoresIt()
+    {
+        var settings = new PluginSettings { MainWindowOpen = false };
+
+        Assert.True(settings.RecordMainWindowOpen(true));
+        Assert.True(settings.MainWindowOpen);
+    }
+
+    [Fact]
+    public void RecordingTheMainWindowStateItAlreadyHasReportsNoChange()
+    {
+        // The caller saves only when this returns true. Returning true here would rewrite an
+        // identical config file every time the plugin loads with the window already open.
+        var settings = new PluginSettings { MainWindowOpen = true };
+
+        Assert.False(settings.RecordMainWindowOpen(true));
+        Assert.True(settings.MainWindowOpen);
+    }
+
+    [Fact]
+    public void RecordingAChangedSettingsWindowStateReportsTheChangeAndStoresIt()
+    {
+        var settings = new PluginSettings { SettingsWindowOpen = true };
+
+        Assert.True(settings.RecordSettingsWindowOpen(false));
+        Assert.False(settings.SettingsWindowOpen);
+    }
+
+    [Fact]
+    public void RecordingTheSettingsWindowStateItAlreadyHasReportsNoChange()
+    {
+        var settings = new PluginSettings { SettingsWindowOpen = false };
+
+        Assert.False(settings.RecordSettingsWindowOpen(false));
+        Assert.False(settings.SettingsWindowOpen);
+    }
+
+    [Fact]
+    public void EachWindowsRecordedStateIsIndependentOfTheOther()
+    {
+        var settings = new PluginSettings();
+
+        settings.RecordMainWindowOpen(true);
+
+        Assert.True(settings.MainWindowOpen);
+        Assert.False(settings.SettingsWindowOpen);
+    }
 }

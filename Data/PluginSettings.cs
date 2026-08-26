@@ -31,4 +31,35 @@ public sealed class PluginSettings
     /// </summary>
     /// <param name="wasOpen">The remembered open state of that window.</param>
     public bool ShouldOpenOnLoad(bool wasOpen) => RestoreWindowState && wasOpen;
+
+    /// <summary>
+    /// Records the main window's open state, reporting whether that changed anything. Callers
+    /// save only when it returns true, so reopening the plugin does not rewrite an identical file.
+    /// </summary>
+    /// <param name="isOpen">The window's new open state.</param>
+    public bool RecordMainWindowOpen(bool isOpen)
+    {
+        if (MainWindowOpen == isOpen)
+        {
+            return false;
+        }
+
+        MainWindowOpen = isOpen;
+        return true;
+    }
+
+    /// <summary>
+    /// Records the settings window's open state, reporting whether that changed anything.
+    /// </summary>
+    /// <param name="isOpen">The window's new open state.</param>
+    public bool RecordSettingsWindowOpen(bool isOpen)
+    {
+        if (SettingsWindowOpen == isOpen)
+        {
+            return false;
+        }
+
+        SettingsWindowOpen = isOpen;
+        return true;
+    }
 }

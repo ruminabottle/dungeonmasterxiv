@@ -46,7 +46,9 @@ public sealed class MainWindow : Window
 
     private void Remember(bool isOpen)
     {
-        _configurationStore.Configuration.Settings.MainWindowOpen = isOpen;
-        _configurationStore.Save();
+        if (_configurationStore.Configuration.Settings.RecordMainWindowOpen(isOpen))
+        {
+            _configurationStore.Save();
+        }
     }
 }

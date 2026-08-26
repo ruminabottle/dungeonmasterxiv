@@ -10,9 +10,10 @@ namespace DungeonMasterXIV.Data;
 public sealed class Configuration : IPluginConfiguration
 {
     /// <summary>
-    /// Schema version of the stored settings — the value that was read from disk, or
-    /// <see cref="PluginSettings.CurrentSchemaVersion"/> on a first run. Kept as written rather
-    /// than restamped on save, so a future migration can tell which shape it is dealing with.
+    /// Schema version of the settings in this object. <see cref="ConfigurationStore.Save"/> stamps
+    /// it with <see cref="PluginSettings.CurrentSchemaVersion"/> before every write, so it always
+    /// describes the shape that was actually written. The version that arrived from disk is a
+    /// different question and is answered by <see cref="ConfigurationStore.LoadedVersion"/>.
     /// </summary>
     public int Version { get; set; } = PluginSettings.CurrentSchemaVersion;
 
