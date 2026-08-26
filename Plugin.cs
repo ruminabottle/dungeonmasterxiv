@@ -4,6 +4,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 using DungeonMasterXIV.Services;
@@ -19,6 +20,7 @@ namespace DungeonMasterXIV;
 public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/dmx";
+    private const string CampaignsCommandName = "/dmxcampaigns";
 
     /// <summary>
     /// How to undo each registration that actually completed, newest first. Dalamud does not call
@@ -31,12 +33,14 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly IPluginLog _log;
     private readonly ConfigurationStore _configurationStore;
+    private readonly CampaignStore _campaignStore;
     private readonly WindowSystem _windowSystem;
     private readonly MainWindow _mainWindow;
     private readonly ConfigWindow _configWindow;
     private readonly SessionWindow _sessionWindow;
     private readonly RelayTransport _relayTransport;
     private readonly SessionCoordinator _sessionCoordinator;
+    private readonly CampaignListWindow _campaignListWindow;
     private readonly CommandDispatcher _commandDispatcher;
 
     /// <summary>Constructs the plugin from the Dalamud services injected by the host.</summary>
@@ -49,6 +53,9 @@ public sealed class Plugin : IDalamudPlugin
         _log = log;
 
         _configurationStore = new ConfigurationStore(pluginInterface, log);
+        _campaignStore = new CampaignStore(
+            new CampaignFileArchive(pluginInterface),
+            new CampaignStoreLog(log));
         _windowSystem = new WindowSystem("DungeonMasterXIV");
         _mainWindow = new MainWindow(_configurationStore);
         _configWindow = new ConfigWindow(_configurationStore);
@@ -58,6 +65,7 @@ public sealed class Plugin : IDalamudPlugin
             () => _configurationStore.Configuration.Settings.RelayAddress);
         _sessionWindow = new SessionWindow(_sessionCoordinator);
         _mainWindow.OpenSession = _sessionWindow.Open;
+        _campaignListWindow = new CampaignListWindow(_campaignStore);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
 
         try
@@ -100,11 +108,20 @@ public sealed class Plugin : IDalamudPlugin
             _relayTransport.Dispose();
         });
 
+        _windowSystem.AddWindow(_campaignListWindow);
+        _unwind.Push(() => _windowSystem.RemoveWindow(_campaignListWindow));
+
         commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
             HelpMessage = "Toggle the Dungeon Master XIV window. \"/dmx settings\" opens settings.",
         });
         _unwind.Push(() => commandManager.RemoveHandler(CommandName));
+
+        commandManager.AddHandler(CampaignsCommandName, new CommandInfo(OnCampaignsCommand)
+        {
+            HelpMessage = "List the campaigns stored on this machine.",
+        });
+        _unwind.Push(() => commandManager.RemoveHandler(CampaignsCommandName));
 
         pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
         _unwind.Push(() => pluginInterface.UiBuilder.Draw -= _windowSystem.Draw);
@@ -131,4 +148,6 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string command, string arguments) => _commandDispatcher.Execute(arguments);
 
     private void OnFrameworkUpdate(IFramework framework) => _sessionCoordinator.Tick(framework.UpdateDelta);
+
+    private void OnCampaignsCommand(string command, string arguments) => _campaignListWindow.Open();
 }
