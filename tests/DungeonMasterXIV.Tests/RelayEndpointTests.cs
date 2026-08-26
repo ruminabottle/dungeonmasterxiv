@@ -39,15 +39,47 @@ public class RelayEndpointTests
         Assert.Null(endpoint);
     }
 
-    // Fails if: ws:// and wss:// are reported as equally protected. R-1.9 forbids overstating the
-    // guarantee in either direction, and the UI needs to be able to say which one the user is on.
-    [Fact]
-    public void PlainWebSocketIsNotReportedAsEncryptedTransport()
+    // Fails if: ws:// is accepted to a host on an observable network path. D-11 keeps payloads
+    // encrypted either way, so this is not about content — anyone on the path still sees the session
+    // code, timing, sizes and cadence, which is the cross-session correlation D-8 forbids.
+    [Theory]
+    [InlineData("ws://relay.example.org/session")]
+    [InlineData("ws://192.168.1.10/session")]
+    [InlineData("ws://[2001:db8::1]/session")]
+    public void PlainWebSocketToARemoteHostIsRejected(string candidate)
     {
-        Assert.True(RelayEndpoint.TryParse("wss://relay.example.org", out var secure));
-        Assert.True(RelayEndpoint.TryParse("ws://relay.example.org", out var plain));
+        Assert.False(RelayEndpoint.TryParse(candidate, out _));
+    }
 
-        Assert.True(RelayEndpoint.IsEncryptedTransport(secure!));
-        Assert.False(RelayEndpoint.IsEncryptedTransport(plain!));
+    // The exception, and the reason it is principled rather than a compromise: there is no
+    // observable path, so none of the above applies. Fails if: loopback stops being reachable, which
+    // would make a local test relay impossible to point at.
+    [Theory]
+    [InlineData("ws://localhost:8080/session")]
+    [InlineData("ws://127.0.0.1:8080/session")]
+    [InlineData("ws://[::1]:8080/session")]
+    public void PlainWebSocketToLoopbackIsAllowed(string candidate)
+    {
+        Assert.True(RelayEndpoint.TryParse(candidate, out _));
+    }
+
+    // The trap in the obvious implementation. Every one of these is an ordinary remote host that a
+    // hostname string comparison would wave through. Fails if: the loopback check becomes a
+    // Contains or StartsWith on the host rather than Uri.IsLoopback.
+    [Theory]
+    [InlineData("ws://localhost.example.org/session")]
+    [InlineData("ws://127.0.0.1.example.org/session")]
+    [InlineData("ws://notlocalhost/session")]
+    [InlineData("ws://localhost@evil.example.org/session")]
+    public void AHostThatMerelyLooksLikeLoopbackIsRejected(string candidate)
+    {
+        Assert.False(RelayEndpoint.TryParse(candidate, out _));
+    }
+
+    // Fails if: TLS stops being accepted to ordinary hosts, which is the normal case.
+    [Fact]
+    public void EncryptedWebSocketToARemoteHostIsAllowed()
+    {
+        Assert.True(RelayEndpoint.TryParse("wss://relay.example.org/session", out _));
     }
 }

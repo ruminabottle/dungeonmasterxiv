@@ -31,12 +31,9 @@ public sealed class ConfigWindow : Window
         + "sessions, and nothing to delete anywhere but here.",
     };
 
-    private const string PlainTransportWarning =
-        "This relay address is not encrypted in transit. Your session payloads are still encrypted "
-        + "end to end, but who you connect to is visible to anyone on the network path.";
-
     private const string InvalidRelayWarning =
-        "This is not a usable relay address. It must start with wss:// or ws://.";
+        "This is not a usable relay address. It must start with wss:// - or ws:// for a relay "
+        + "running on this machine.";
 
     /// <param name="configurationStore">The settings this window reads and writes.</param>
     public ConfigWindow(ConfigurationStore configurationStore)
@@ -91,14 +88,7 @@ public sealed class ConfigWindow : Window
             _configurationStore.Save();
         }
 
-        if (RelayEndpoint.TryParse(settings.RelayAddress, out var endpoint))
-        {
-            if (!RelayEndpoint.IsEncryptedTransport(endpoint!))
-            {
-                ImGui.TextWrapped(PlainTransportWarning);
-            }
-        }
-        else
+        if (!RelayEndpoint.TryParse(settings.RelayAddress, out _))
         {
             ImGui.TextWrapped(InvalidRelayWarning);
         }

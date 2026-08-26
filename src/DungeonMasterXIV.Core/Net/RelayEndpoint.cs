@@ -7,10 +7,28 @@ namespace DungeonMasterXIV.Net;
 /// than trusted from settings.
 /// </summary>
 /// <remarks>
+/// <para>
 /// D-2 permits exactly two network destinations: a configured session relay and a session peer.
-/// Validation therefore rejects anything that is not an absolute wss:// or ws:// URL — not because
-/// other schemes would fail to connect, but because a setting that accepted <c>https://</c> or a
-/// bare hostname would be a route to a destination D-2 does not permit.
+/// Validation therefore rejects anything that is not an absolute WebSocket URL — not because other
+/// schemes would fail to connect, but because a setting that accepted <c>https://</c> or a bare
+/// hostname would be a route to a destination D-2 does not permit.
+/// </para>
+/// <para>
+/// <b>TLS is required, and D-11 is not the reason.</b> D-11 encrypts payloads, so content survives
+/// an unencrypted transport intact — but anyone on the path still sees the session code, the
+/// timing, the message sizes and the cadence, which is the cross-session correlation D-8 forbids.
+/// The same argument makes a TLS-terminating proxy in front of the relay approve-blocking, and
+/// allowing it here would have been the same exposure by a different route.
+/// </para>
+/// <para>
+/// A warning was the obvious alternative and is not one: the person who clicks through it is not
+/// the person who pays. The exposed metadata belongs to every other participant in the session, and
+/// none of them saw the dialog.
+/// </para>
+/// <para>
+/// Loopback is the one exception, and it is principled rather than a compromise — there is no
+/// observable network path, so none of the above applies.
+/// </para>
 /// </remarks>
 public static class RelayEndpoint
 {
@@ -29,7 +47,7 @@ public static class RelayEndpoint
             return false;
         }
 
-        if (parsed.Scheme != "wss" && parsed.Scheme != "ws")
+        if (!IsPermittedScheme(parsed))
         {
             return false;
         }
@@ -38,11 +56,9 @@ public static class RelayEndpoint
         return true;
     }
 
-    /// <summary>
-    /// Whether this address is encrypted in transit. <c>ws://</c> parses so that a self-hosted relay
-    /// on a trusted network is reachable, but the UI states which one the user is on — D-11's
-    /// payload encryption is unaffected either way, and claiming otherwise would be the kind of
-    /// overstatement R-1.9 forbids in both directions.
-    /// </summary>
-    public static bool IsEncryptedTransport(Uri endpoint) => endpoint.Scheme == "wss";
+    // wss:// anywhere; ws:// only where there is no network path to observe. Uri.IsLoopback is the
+    // BCL's own answer rather than a hostname comparison of ours — a string check would accept
+    // "localhost.example.org", which is a perfectly ordinary remote host.
+    private static bool IsPermittedScheme(Uri candidate) =>
+        candidate.Scheme == "wss" || (candidate.Scheme == "ws" && candidate.IsLoopback);
 }
