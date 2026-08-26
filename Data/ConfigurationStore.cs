@@ -14,7 +14,8 @@ public sealed class ConfigurationStore
     /// <summary>
     /// Loads the stored settings. A first run and a config that could not be read both end up on
     /// defaults, so they are logged differently — losing every setting should leave a signal for
-    /// whoever ends up supporting it.
+    /// whoever ends up supporting it. Either way defaults are written straight back out, so the
+    /// schema version reaches disk on load rather than waiting for the user to open a window.
     /// </summary>
     public ConfigurationStore(IDalamudPluginInterface pluginInterface, IPluginLog log)
     {
@@ -36,6 +37,11 @@ public sealed class ConfigurationStore
                 Configuration = new Configuration();
                 log.Warning("Stored settings could not be read and have been replaced with defaults. Previous settings are lost.");
                 break;
+        }
+
+        if (PluginSettings.RequiresWriteOnLoad(LoadedVersion))
+        {
+            Save();
         }
     }
 

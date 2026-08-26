@@ -17,7 +17,7 @@ public sealed class ConfigWindow : Window
 
     /// <param name="configurationStore">The settings this window reads and writes.</param>
     public ConfigWindow(ConfigurationStore configurationStore)
-        : base("DungeonMasterXIV settings##dmx-settings")
+        : base("Dungeon Master XIV settings##dmx-settings")
     {
         _configurationStore = configurationStore;
         _schemaVersionLabel = $"Settings schema version {configurationStore.Configuration.Version}";

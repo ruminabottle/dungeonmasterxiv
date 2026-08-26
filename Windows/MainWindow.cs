@@ -14,7 +14,7 @@ public sealed class MainWindow : Window
 
     /// <param name="configurationStore">Used to remember whether this window was left open.</param>
     public MainWindow(ConfigurationStore configurationStore)
-        : base("DungeonMasterXIV##dmx-main")
+        : base("Dungeon Master XIV##dmx-main")
     {
         _configurationStore = configurationStore;
 
