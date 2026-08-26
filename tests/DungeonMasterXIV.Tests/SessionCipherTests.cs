@@ -1,3 +1,4 @@
+using System;
 using System.Security.Cryptography;
 using System.Text;
 using DungeonMasterXIV.Net;
@@ -87,6 +88,43 @@ public class SessionCipherTests
         payload.Nonce[0] ^= 0xFF;
 
         Assert.Throws<AuthenticationTagMismatchException>(() => SessionCipher.Open(key, payload, Aad));
+    }
+
+    // Fails if: a key of the wrong length is accepted. AesGcm picks its algorithm from the length of
+    // the key it is handed -- 16 bytes gives AES-128 and 24 gives AES-192, with no error, no warning
+    // and no log line, while this type documents AES-256. Note what is NOT asserted here: that Seal
+    // produced output, or that the output looks encrypted. Both hold under AES-128, which is exactly
+    // why this bug survived review. The rejection is the property.
+    [Theory]
+    [InlineData(16)]
+    [InlineData(24)]
+    [InlineData(0)]
+    [InlineData(31)]
+    [InlineData(33)]
+    public void SealRejectsAKeyThatIsNotTheDocumentedLength(int keyLength)
+    {
+        var thrown = Assert.Throws<ArgumentException>(
+            () => SessionCipher.Seal(new byte[keyLength], Plaintext, Aad));
+
+        Assert.Equal("key", thrown.ParamName);
+    }
+
+    // Fails if: Open accepts a wrong-length key. Guarding only Seal would leave a receiver opening
+    // traffic under AES-128 while the sender used AES-256.
+    [Theory]
+    [InlineData(16)]
+    [InlineData(24)]
+    [InlineData(0)]
+    [InlineData(31)]
+    [InlineData(33)]
+    public void OpenRejectsAKeyThatIsNotTheDocumentedLength(int keyLength)
+    {
+        var payload = SessionCipher.Seal(Key(), Plaintext, Aad);
+
+        var thrown = Assert.Throws<ArgumentException>(
+            () => SessionCipher.Open(new byte[keyLength], payload, Aad));
+
+        Assert.Equal("key", thrown.ParamName);
     }
 
     // Fails if: the tag length check is dropped and a truncated payload is treated as valid.
