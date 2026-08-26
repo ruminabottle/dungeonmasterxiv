@@ -101,6 +101,34 @@ public class PluginSettingsTests
     }
 
     [Fact]
+    public void AFirstRunWithNothingOnDiskRequiresAWriteOnLoad()
+    {
+        // BUG-1. The load path never wrote, so a user who loaded the plugin and opened no window
+        // had no config file at all, and therefore no schema version on disk. R-0.5 wants the
+        // version there from the first load rather than from the first click.
+        Assert.True(PluginSettings.RequiresWriteOnLoad(null));
+    }
+
+    [Fact]
+    public void ConfigAlreadyAtTheCurrentSchemaVersionRequiresNoWriteOnLoad()
+    {
+        // This is the case that separates the fix from the careless version of it. Calling Save()
+        // unconditionally on load also satisfies A-0.5, and rewrites an identical file every time
+        // the plugin loads -- which is the exact cost RecordMainWindowOpen exists to avoid.
+        Assert.False(PluginSettings.RequiresWriteOnLoad(PluginSettings.CurrentSchemaVersion));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ConfigAtSomeOtherSchemaVersionIsLeftAloneOnLoad(int versionOnDisk)
+    {
+        // A version we do not recognise is a migration's problem, and there is no migration yet.
+        // Stamping it down to the current version would overwrite a config a newer build wrote.
+        Assert.False(PluginSettings.RequiresWriteOnLoad(versionOnDisk));
+    }
+
+    [Fact]
     public void EachWindowsRecordedStateIsIndependentOfTheOther()
     {
         var settings = new PluginSettings();
