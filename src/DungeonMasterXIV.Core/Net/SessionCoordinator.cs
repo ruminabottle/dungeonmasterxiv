@@ -34,6 +34,7 @@ public sealed class SessionCoordinator
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
     private JoinPhase _tickedJoinPhase = JoinPhase.Idle;
+    private string? _requestedCode;
 
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();
@@ -81,6 +82,7 @@ public sealed class SessionCoordinator
         HostKeys?.Dispose();
         HostKeys = new SessionKeyExchange();
         Host.Start(SessionCodeGenerator.Next());
+        _requestedCode = null;
         SynchroniseTransport();
     }
 
@@ -98,6 +100,7 @@ public sealed class SessionCoordinator
         _inbox.Clear();
         Grace.Reset();
         JustLapsed = Array.Empty<PendingAdmission>();
+        _requestedCode = null;
         SynchroniseTransport();
     }
 
@@ -302,7 +305,8 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
-        SessionKey = _inbox.Drain(Join, JoinerKeys) ?? SessionKey;
+        SessionKey = _inbox.Drain(Join, JoinerKeys, Host) ?? SessionKey;
+        RegisterWithRelayWhenReady();
         JustLapsed = Admissions.ExpireLapsed(now);
         AnnounceLapsed();
 
@@ -330,6 +334,47 @@ public sealed class SessionCoordinator
         {
             SynchroniseTransport();
         }
+    }
+
+    /// <summary>
+    /// Claims the session's code with the relay, once the socket can actually carry the request
+    /// (R-1.2a).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This is the step BUG-36 was missing entirely.</b> <c>WireEnvelope.ForCodeRequest</c> had no
+    /// production call site at all: the host connected, sent nothing, and sat in
+    /// <see cref="HostingPhase.Registering"/> until it timed out and told the DM the relay was
+    /// unreachable — while the relay held the connection open waiting for the client to speak first.
+    /// </para>
+    /// <para>
+    /// <b>On readiness, not on connection, and the difference is the whole reason this is here
+    /// rather than in <see cref="SynchroniseTransport"/>.</b>
+    /// <see cref="ISessionTransport.Send"/> discards a frame that arrives before the socket opens,
+    /// and <see cref="ISessionTransport.IsConnected"/> is already true while a connect is in flight.
+    /// Sending on the return from <c>Connect</c> would therefore have produced the same silence
+    /// through a different door — and left a fix that looked right in review and failed in the
+    /// product.
+    /// </para>
+    /// <para>
+    /// Guarded by <b>which code was requested</b> rather than by a "have we sent one" flag. R-1.2a
+    /// answers a refusal by regenerating and asking again, so the interesting question is whether
+    /// the code currently held has been claimed — a boolean would be true after the refused attempt
+    /// and the replacement code would never be requested.
+    /// </para>
+    /// </remarks>
+    private void RegisterWithRelayWhenReady()
+    {
+        if (Host.Phase != HostingPhase.Registering
+            || Host.Code is not { } code
+            || string.Equals(_requestedCode, code.Value, StringComparison.Ordinal)
+            || !_transport.IsReadyToSend)
+        {
+            return;
+        }
+
+        _requestedCode = code.Value;
+        _transport.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(code)));
     }
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>

@@ -60,6 +60,11 @@ public class SessionCoordinatorTests
         coordinator.StartHosting();
 
         Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
+
+        // STILL RelayUnreachable, and the contrast with the registration timeout is the point: an
+        // address that does not parse means no connection was ever attempted, so the relay really
+        // was not reached. RegistrationNotAnswered is for the opposite case — a relay that answered
+        // and then heard nothing from us (BUG-36).
         Assert.Equal(SessionFailure.RelayUnreachable, coordinator.Host.Failure);
         Assert.False(transport.IsConnected);
         Assert.NotEmpty(SessionFailureMessage.For(coordinator.Host.Failure));
@@ -143,7 +148,10 @@ public class SessionCoordinatorTests
         coordinator.Tick(HostSession.RegistrationTimeout, Now);
 
         Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
-        Assert.Equal(SessionFailure.RelayUnreachable, coordinator.Host.Failure);
+
+        // The test's own name already said "the relay never answered". The enum said "unreachable",
+        // which is a different claim and was the false one (BUG-36).
+        Assert.Equal(SessionFailure.RegistrationNotAnswered, coordinator.Host.Failure);
         Assert.False(transport.IsConnected);
     }
 
@@ -250,6 +258,11 @@ public class SessionCoordinatorTests
         public void RaiseFailure(SessionFailure failure) => Failed?.Invoke(failure);
 
         public bool IsConnected { get; private set; }
+
+        // A fake socket is open the instant it connects, so readiness follows connection here.
+        // The real WebSocket does not (BUG-36), which is why the coordinator asks this and not
+        // IsConnected -- and why TheHostRegistersItsCodeTests drives the two apart deliberately.
+        public bool IsReadyToSend => IsConnected;
 
         public int ConnectCount { get; private set; }
 
