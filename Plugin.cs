@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -25,11 +23,12 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>
     /// How to undo each registration that actually completed, newest first. Dalamud does not call
     /// <see cref="Dispose"/> on a plugin whose constructor threw, so registration records its own
-    /// undo as it goes and the constructor unwinds this itself on the way out. Popping in LIFO
+    /// undo as it goes and the constructor unwinds this itself on the way out. Unwinding in LIFO
     /// order is what guarantees the reverse of construction — including unsubscribing Draw before
-    /// any window leaves the window system, so no frame can land on a half-emptied one.
+    /// any window leaves the window system, so no frame can land on a half-emptied one. Each step is
+    /// isolated from the others, so one that throws cannot abandon the ones still queued behind it.
     /// </summary>
-    private readonly Stack<Action> _unwind = new();
+    private readonly TeardownSequence _unwind = new();
 
     private readonly IPluginLog _log;
     private readonly ConfigurationStore _configurationStore;
@@ -91,17 +90,17 @@ public sealed class Plugin : IDalamudPlugin
     private void Register(IDalamudPluginInterface pluginInterface, ICommandManager commandManager, IFramework framework)
     {
         _windowSystem.AddWindow(_mainWindow);
-        _unwind.Push(() => _windowSystem.RemoveWindow(_mainWindow));
+        _unwind.Push("main window", () => _windowSystem.RemoveWindow(_mainWindow));
 
         _windowSystem.AddWindow(_configWindow);
-        _unwind.Push(() => _windowSystem.RemoveWindow(_configWindow));
+        _unwind.Push("settings window", () => _windowSystem.RemoveWindow(_configWindow));
 
         _windowSystem.AddWindow(_sessionWindow);
-        _unwind.Push(() => _windowSystem.RemoveWindow(_sessionWindow));
+        _unwind.Push("session window", () => _windowSystem.RemoveWindow(_sessionWindow));
 
         // R-1.1: unloading the plugin ends the session, and ending it drops the relay connection.
         // Registered as an unwind step so it runs on a constructor throw as well as on Dispose.
-        _unwind.Push(() =>
+        _unwind.Push("session and relay connection", () =>
         {
             _sessionCoordinator.StopHosting();
             _sessionCoordinator.Detach();
@@ -109,41 +108,43 @@ public sealed class Plugin : IDalamudPlugin
         });
 
         _windowSystem.AddWindow(_campaignListWindow);
-        _unwind.Push(() => _windowSystem.RemoveWindow(_campaignListWindow));
+        _unwind.Push("campaign list window", () => _windowSystem.RemoveWindow(_campaignListWindow));
 
         commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
             HelpMessage = "Toggle the Dungeon Master XIV window. \"/dmx settings\" opens settings.",
         });
-        _unwind.Push(() => commandManager.RemoveHandler(CommandName));
+        _unwind.Push("/dmx command", () => commandManager.RemoveHandler(CommandName));
 
         commandManager.AddHandler(CampaignsCommandName, new CommandInfo(OnCampaignsCommand)
         {
             HelpMessage = "List the campaigns stored on this machine.",
         });
-        _unwind.Push(() => commandManager.RemoveHandler(CampaignsCommandName));
+        _unwind.Push("/dmxcampaigns command", () => commandManager.RemoveHandler(CampaignsCommandName));
 
         pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
-        _unwind.Push(() => pluginInterface.UiBuilder.Draw -= _windowSystem.Draw);
+        _unwind.Push("draw handler", () => pluginInterface.UiBuilder.Draw -= _windowSystem.Draw);
 
         pluginInterface.UiBuilder.OpenMainUi += _mainWindow.Toggle;
-        _unwind.Push(() => pluginInterface.UiBuilder.OpenMainUi -= _mainWindow.Toggle);
+        _unwind.Push("main UI handler", () => pluginInterface.UiBuilder.OpenMainUi -= _mainWindow.Toggle);
 
         pluginInterface.UiBuilder.OpenConfigUi += _configWindow.Toggle;
-        _unwind.Push(() => pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle);
+        _unwind.Push("config UI handler", () => pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle);
 
         // The timeouts A-1.5b depends on are only reachable if something calls them every frame.
         framework.Update += OnFrameworkUpdate;
-        _unwind.Push(() => framework.Update -= OnFrameworkUpdate);
+        _unwind.Push("framework update handler", () => framework.Update -= OnFrameworkUpdate);
     }
 
-    private void Unwind()
-    {
-        while (_unwind.Count > 0)
-        {
-            _unwind.Pop()();
-        }
-    }
+    // A step that throws must not abandon the steps still queued behind it: the transport teardown
+    // sits above three RemoveWindow calls, and skipping those leaves windows registered against a
+    // disposed plugin. That surfaces on the NEXT enable as a duplicate window rather than here, so
+    // the failure and the symptom are separated by a user action (A-0.6, BUG-8).
+    private void Unwind() => _unwind.UnwindAll(
+        (step, exception) => _log.Error(
+            exception,
+            "Teardown step '{Step}' failed. The remaining steps still ran; the plugin is fully unwound.",
+            step));
 
     private void OnCommand(string command, string arguments) => _commandDispatcher.Execute(arguments);
 
