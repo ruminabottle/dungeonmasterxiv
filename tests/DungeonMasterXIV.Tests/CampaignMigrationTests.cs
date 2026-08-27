@@ -134,14 +134,21 @@ public class CampaignMigrationTests
     // The old file is deleted only after every campaign has been written, so an interrupted
     // migration leaves it intact and is retried rather than losing the campaigns that had not been
     // written yet. Fails if the delete is moved before or into the write loop.
+    //
+    // This asserted Assert.Throws<IOException> until PR #17's second finding: that exception
+    // escaped the CampaignStore constructor, and this path runs once for every existing user on
+    // upgrade, so a transient write failure stopped the plugin loading at all. The write failure is
+    // now reported and the load continues. The assertion changed because the required behaviour
+    // changed, not because the test was made to pass.
     [Fact]
     public void AnInterruptedMigrationLeavesTheOldFileIntactToBeRetried()
     {
         var v1 = AV1StoreFromThePreviousBuild(out _, out var second);
         var archive = new FakeCampaignArchive(v1) { FailWriteForName = CampaignFileName.NameFor(second) };
 
-        Assert.Throws<IOException>(() => new CampaignStore(archive, new RecordingCampaignLog()));
+        var interrupted = new CampaignStore(archive, new RecordingCampaignLog());
 
+        Assert.True(interrupted.Migrated < 2);
         Assert.Equal(v1, archive.ReadLegacy());
 
         // And the retry succeeds once the failure clears, with nothing lost.
@@ -149,6 +156,7 @@ public class CampaignMigrationTests
         var store = new CampaignStore(archive, new RecordingCampaignLog());
         Assert.Equal(2, store.Migrated);
         Assert.Equal(2, store.Campaigns.Count);
+        Assert.Null(archive.ReadLegacy());
     }
 
     // A v1 store that will not parse cannot be migrated, and must not be discarded either: the

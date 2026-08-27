@@ -14,4 +14,10 @@ public enum CampaignFileProblem
     /// migrated, or a document a previous version preserved. It may hold participant labels.
     /// </summary>
     LeftByAnEarlierBuild,
+
+    /// <summary>
+    /// The previous store, kept because campaigns in it could not be moved to files of their own.
+    /// <b>It is the only copy of those campaigns</b>, so its copy must not say it is unused.
+    /// </summary>
+    StillHoldsCampaigns,
 }

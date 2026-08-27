@@ -62,9 +62,16 @@ public static class CampaignListView
         return rows;
     }
 
+    /// <summary>Copy for the previous store when it is still the only copy of some campaigns.</summary>
+    public const string StillHoldsCampaignsDetail =
+        "This is the previous store, and it has been KEPT ON PURPOSE: one or more campaigns in it " +
+        "could not be moved into files of their own, so this is the only copy of them. Deleting it " +
+        "will lose those campaigns. The plugin will try again next time it loads.";
+
     private static string DetailFor(CampaignFileProblem problem) => problem switch
     {
         CampaignFileProblem.WillNotParse => WillNotParseDetail,
+        CampaignFileProblem.StillHoldsCampaigns => StillHoldsCampaignsDetail,
         _ => LeftBehindDetail,
     };
 
