@@ -96,20 +96,89 @@ public sealed class TlsBypassFenceTests
     }
 
     /// <summary>
-    /// A comment may name a bypass, so that the rule can be documented where it matters.
+    /// A comment may name a bypass, so that the rule can be documented where it matters — in any of
+    /// the forms C# actually offers for writing one.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// A rule that forbids explaining itself gets explained wrongly or not at all, and the natural
     /// place to warn the next person is an XML doc on the transport type in Core — a project the
     /// guard scans.
+    /// </para>
+    /// <para>
+    /// <b>BUG-18: this was a Fact covering <c>//</c> alone, and the guard permitted only that.</b>
+    /// A <c>/* */</c> block comment naming a token failed the build, so the fence permitted one of
+    /// the two standard ways of explaining itself and forbade the other. The row list is the fix's
+    /// shape: each form a reader might reasonably reach for is now its own case.
+    /// </para>
     /// </remarks>
-    [Fact]
-    public void TheGuardIsSilentOnACommentSoTheRuleCanBeDocumented()
+    [Theory]
+    [InlineData("// never assign {0} in a shipped project")]
+    [InlineData("/// <summary>Never assign {0} here.</summary>")]
+    [InlineData("/* Never assign {0} in a shipped project. */")]
+    [InlineData("/*\n * Never assign {0} in a shipped project.\n */")]
+    public void TheGuardIsSilentOnACommentSoTheRuleCanBeDocumented(string commentFormat)
     {
         var token = TokensDeclaredByTheGuard()[0];
-        var output = ScanProbe("Probe", $"// never assign {token} in a shipped project\nclass Probe {{ }}");
+        var comment = string.Format(commentFormat, token);
+        var output = ScanProbe("Probe", $"{comment}\nclass Probe {{ }}");
 
         Assert.DoesNotContain("disables TLS certificate validation", output, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A comment containing a semicolon is still a comment.
+    /// </summary>
+    /// <remarks>
+    /// BUG-19. The guard recorded, as one of its known limitations, that MSBuild splits items on
+    /// <c>;</c> so a semicolon-bearing comment is scanned as two fragments and the tail can still
+    /// fire. It cannot: <c>ReadLinesFromFile</c> escapes the semicolons in what it emits, so the
+    /// line arrives as one item. The general MSBuild fact is real for <c>Include</c> attributes and
+    /// does not reach this. The note is deleted; this is what keeps the behaviour it described true.
+    /// </remarks>
+    [Fact]
+    public void TheGuardIsSilentOnACommentContainingASemicolon()
+    {
+        var token = TokensDeclaredByTheGuard()[0];
+        var output = ScanProbe("Probe", $"// never do this; {token} = x\nclass Probe {{ }}");
+
+        Assert.DoesNotContain("disables TLS certificate validation", output, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <b>The control for the block-comment skip.</b> A line that begins with an asterisk because it
+    /// is real code, not because it continues a comment, must still fire.
+    /// </summary>
+    /// <remarks>
+    /// qa-2's caution on BUG-18, and it is the reason the skip matches <c>"* "</c> rather than
+    /// <c>"*"</c>: an asterisk is both how a continued block-comment line looks and how a pointer
+    /// dereference starts. Skipping every line that opens with one would be easy to get subtly wrong
+    /// and impossible to notice, because the hole it opens is silence — which is what a clean
+    /// repository looks like too.
+    /// </remarks>
+    [Fact]
+    public void TheGuardStillFiresOnARealAssignmentBeginningWithAnAsterisk()
+    {
+        var token = TokensDeclaredByTheGuard()[0];
+        var output = ScanProbe(
+            "Probe",
+            $"unsafe class Probe {{ void M(object** p) {{\n        *p = {token};\n    }} }}");
+
+        Assert.Contains("disables TLS certificate validation", output, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The skip ends where the comment ends: a real assignment after <c>*/</c> still fires.
+    /// </summary>
+    [Fact]
+    public void TheGuardStillFiresAfterABlockCommentCloses()
+    {
+        var token = TokensDeclaredByTheGuard()[0];
+        var output = ScanProbe(
+            "Probe",
+            $"class Probe {{ void M(object h) {{\n        /*\n         * documented\n         */\n        h.{token} = null;\n    }} }}");
+
+        Assert.Contains("disables TLS certificate validation", output, StringComparison.Ordinal);
     }
 
     /// <summary>

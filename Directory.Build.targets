@@ -26,17 +26,33 @@
     than the gap itself. What this buys is the copy-paste route, which is the one that actually
     happens.
 
-    Two more edges, recorded rather than fixed:
+    More edges, recorded rather than fixed:
 
       - The allowlist's granularity is the PROJECT. All of DungeonMasterXIV.Relay.Tests is unfenced,
         not just the one method that needs it, so a second test there could reach for the same line —
         including the process-global ServicePointManager form, which would affect every test in the
         run. A file-level allowlist would match the actual intent.
 
-      - MSBuild items split on ';', so a COMMENT containing a semicolon is scanned as two fragments
-        and its tail no longer looks like a comment. That fragment can still fire. The skip below
-        removes the ordinary case, not that one — same root cause as the positional callback, and
-        the same fix.
+      - THE BLOCK-COMMENT SKIP IS BY LINE SHAPE, SO IT COVERS ONLY THE BLOCK COMMENTS WHOSE LINES
+        LOOK LIKE COMMENTS. '/*' opening a block and '* ' continuing one are recognised. An INTERIOR
+        line that is plain indented prose is not, and is scanned as though it were code:
+
+            /*
+                Do not assign RemoteCertificateValidationCallback here.   (this line still fires)
+            */
+
+        This is BUG-18's own reproduction and it is NOT fixed. The scan is one item-batched
+        condition per line, and ReadLinesFromFile's output carries no metadata naming the file the
+        line came from, so a line cannot ask whether it sits inside a comment. Closing it means
+        scanning per FILE — strip '/\*[\s\S]*?\*/' from the text and match on what is left, which
+        is measured to work — and that changes how the target batches, not what this condition says.
+        Recorded rather than attempted, because it is a different shape of change from the one
+        BUG-18 was dispatched as.
+
+      - The continued-line skip is '* ' — asterisk then space — and not '*', because an asterisk
+        also begins a pointer dereference. So a token named on a line opening with asterisk-space is
+        not scanned, whatever that line turns out to be. No assignment has that shape, but it is a
+        hole rather than a judgement call, so it is written down.
 
       - %(Compile) is silent on anything that is not compiled C# from disk, notably source-generated
         files. There are no generators in this solution today.
@@ -77,8 +93,21 @@
       Comments are skipped so that other projects may DOCUMENT this rule — an XML doc on the
       transport type in Core is the natural place to warn the next person, and a rule that forbids
       explaining itself gets explained wrongly or not at all.
+
+      THREE PREFIXES, because C# has more than one way to write a comment and BUG-18 was the guard
+      permitting only the first: '//' (which covers '///' for free), '/*' opening a block, and '* '
+      continuing one. A closing '*/' needs no case of its own — a line carrying only '*/' holds no
+      token and cannot fire, and one carrying comment TEXT before it opens with '* ' already.
+
+      The skip is '* ' and not '*' deliberately. An asterisk begins a continued comment line and
+      also begins a pointer dereference, so skipping every line that opens with one would silently
+      unfence '*p = handler;'. The space is what separates the two, and the control for it is
+      TlsBypassFenceTests.TheGuardStillFiresOnARealAssignmentBeginningWithAnAsterisk — a skip that
+      widened would go quiet, and silence is also what a clean repository looks like.
     -->
     <Error Condition="!$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('//'))
+                  And !$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('/*'))
+                  And !$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('* '))
                   And ($([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('RemoteCertificateValidationCallback'))
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateCustomValidationCallback'))
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateValidationCallback'))
