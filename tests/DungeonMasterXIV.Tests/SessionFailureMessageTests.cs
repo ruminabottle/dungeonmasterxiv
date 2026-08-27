@@ -56,6 +56,39 @@ public class SessionFailureMessageTests
             Assert.DoesNotContain(forbidden, SessionFailureMessage.For(failure), StringComparison.OrdinalIgnoreCase));
     }
 
+    // BUG-37. Fails if: the sentence for a malformed address asserts something the failure never
+    // established. Nothing was contacted, so any claim about the relay's health — in either
+    // direction — is invented. Paired against RelayUnreachable's sentence because the defect was
+    // that they were the SAME sentence.
+    [Fact]
+    public void TheUnreadableAddressSentenceClaimsNothingAboutTheRelay()
+    {
+        var message = SessionFailureMessage.For(SessionFailure.RelayAddressUnreadable);
+
+        Assert.NotEqual(SessionFailureMessage.For(SessionFailure.RelayUnreachable), message);
+        Assert.DoesNotContain("unreachable", message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("not responding", message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nothing was contacted", message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // The same guards the three R-1.8 failures get, applied to the value this bug added. NOTE: the
+    // arrays above still name three of the enum's seven values, so PluginBehindRelay,
+    // RelayBehindPlugin and RegistrationNotAnswered remain unguarded by them. That gap predates
+    // BUG-37 and is reported rather than widened here.
+    [Theory]
+    [InlineData("connection failed")]
+    [InlineData("something went wrong")]
+    [InlineData("please wait")]
+    [InlineData("anonymous")]
+    [InlineData("private")]
+    public void TheUnreadableAddressSentenceAvoidsTheForbiddenPhrasings(string forbidden)
+    {
+        Assert.DoesNotContain(
+            forbidden,
+            SessionFailureMessage.For(SessionFailure.RelayAddressUnreadable),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     // Fails if: the no-failure case starts producing text, which would put an error in front of a
     // user whose session is working.
     [Fact]

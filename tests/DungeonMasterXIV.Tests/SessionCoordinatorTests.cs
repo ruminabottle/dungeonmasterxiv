@@ -61,13 +61,32 @@ public class SessionCoordinatorTests
 
         Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
 
-        // STILL RelayUnreachable, and the contrast with the registration timeout is the point: an
-        // address that does not parse means no connection was ever attempted, so the relay really
-        // was not reached. RegistrationNotAnswered is for the opposite case — a relay that answered
-        // and then heard nothing from us (BUG-36).
-        Assert.Equal(SessionFailure.RelayUnreachable, coordinator.Host.Failure);
+        // RelayAddressUnreadable, not RelayUnreachable (BUG-37). This comment used to defend the
+        // latter on the grounds that "no connection was ever attempted, so the relay really was not
+        // reached" — true of the code and false of the sentence the user sees, which asserts the
+        // relay is at fault. Nothing was contacted, so nothing is known about the relay.
+        Assert.Equal(SessionFailure.RelayAddressUnreadable, coordinator.Host.Failure);
         Assert.False(transport.IsConnected);
         Assert.NotEmpty(SessionFailureMessage.For(coordinator.Host.Failure));
+    }
+
+    // BUG-37. Fails if: a typo in the relay address is reported as the relay being at fault. The
+    // address never parsed, so no socket was opened and nothing was contacted — the plugin cannot
+    // know whether the relay is up, and saying it is unreachable blames a third party for the user's
+    // typo. Asserted on the SENTENCE rather than only the enum, because the sentence is what makes
+    // the claim.
+    [Fact]
+    public void AMalformedAddressDoesNotBlameTheRelay()
+    {
+        var transport = new FakeTransport();
+        var coordinator = new SessionCoordinator(transport, () => "not-a-relay");
+
+        coordinator.StartHosting();
+
+        var message = SessionFailureMessage.For(coordinator.Host.Failure);
+        Assert.DoesNotContain("the relay itself is unreachable", message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("not responding", message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, transport.ConnectCount);
     }
 
     // Fails if: Fail and SynchroniseTransport call each other without terminating. They are mutually
