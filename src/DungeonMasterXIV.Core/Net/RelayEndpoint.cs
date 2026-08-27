@@ -33,7 +33,19 @@ namespace DungeonMasterXIV.Net;
 public static class RelayEndpoint
 {
     /// <summary>The relay used when the user has not chosen one. A default, not a dependency.</summary>
-    public const string Default = "wss://relay.dungeonmasterxiv.invalid" + SessionPath;
+    /// <remarks>
+    /// <b>This must be a hostname that actually resolves, and for one release it was not.</b> It
+    /// shipped as <c>relay.dungeonmasterxiv.invalid</c> — <c>.invalid</c> is reserved by RFC 2606
+    /// and can never resolve, by design — so every install dialled an address that cannot exist
+    /// while the deployed relay was running and correct (BUG-35). Nothing said it was a placeholder:
+    /// the summary above describes the <i>role</i> and gives a reader no reason to check the
+    /// <i>value</i>, which is why it survived a release.
+    /// <see cref="TheShippedDefaultRelayCanResolveTests"/> now fails the build on any reserved TLD,
+    /// because a placeholder here is not visible in review and is invisible in a green suite:
+    /// every test that exercises the relay supplies its own endpoint, so none of them ever dialled
+    /// this value.
+    /// </remarks>
+    public const string Default = "wss://relay.ruminabottle.com" + SessionPath;
 
     /// <summary>
     /// The path a session connection is made on. <b>The one place this value exists.</b>
