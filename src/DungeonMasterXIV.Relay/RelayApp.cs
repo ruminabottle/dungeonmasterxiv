@@ -49,7 +49,23 @@ public static class RelayApp
                         + "terminates TLS itself; a proxy in front of it is a destination D-2 forbids.");
                 }
 
-                listen.UseHttps(options.CertificatePath, options.CertificatePassword);
+                try
+                {
+                    listen.UseHttps(options.CertificatePath, options.CertificatePassword);
+                }
+                catch (Exception failure)
+                {
+                    // Every exception type, deliberately: the load failure surfaces as a different
+                    // platform-specific crypto exception on each host, and the one that matters here
+                    // is the one nobody would think to name. Nothing is swallowed — the original is
+                    // the inner exception, and its text is quoted in the message. See BUG-15.
+                    throw new InvalidOperationException(
+                        CertificateLoadFailure.Describe(
+                            options.CertificatePath,
+                            CertificateLoadFailure.CurrentIdentity(),
+                            failure.Message),
+                        failure);
+                }
             }));
 
         builder.Services.AddSingleton(options);
