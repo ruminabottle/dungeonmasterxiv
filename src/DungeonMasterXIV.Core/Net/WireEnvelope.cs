@@ -226,6 +226,56 @@ public sealed record WireEnvelope
     }
 
     /// <summary>
+    /// Host to joiner, before the DM has decided: the host's public key and when the window closes
+    /// (R-1.3a-i, D-11 as amended 2026-08-27).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The point of this message is that it is sent early.</b>
+    /// <see cref="ForJoinAccepted"/> carries the same host key, and carrying it only there is the
+    /// defect: the joiner cannot compute the fingerprint until the decision it exists to inform has
+    /// already been made. A-1.3f-1 fails on any build where the host key reaches the joiner no
+    /// earlier than acceptance.
+    /// </para>
+    /// <para>
+    /// The joiner's key is echoed for the same reason <see cref="ForJoinAccepted"/> echoes it: a
+    /// client may have more than one attempt outstanding and has to know which one this answers.
+    /// </para>
+    /// </remarks>
+    /// <param name="code">The session being joined.</param>
+    /// <param name="joinerPublicKey">The requester's key, echoed so they can match it to their attempt.</param>
+    /// <param name="hostPublicKey">The host's key — the half the joiner cannot obtain any other way.</param>
+    /// <param name="deadline">When the DM's window closes (R-1.3c).</param>
+    public static WireEnvelope ForJoinPending(
+        SessionCode code,
+        byte[] joinerPublicKey,
+        byte[] hostPublicKey,
+        AdmissionDeadline deadline)
+    {
+        ArgumentNullException.ThrowIfNull(joinerPublicKey);
+        ArgumentNullException.ThrowIfNull(hostPublicKey);
+        return new WireEnvelope(WireMessageType.JoinPending, code.Value)
+        {
+            PublicKey = joinerPublicKey,
+            HostPublicKey = hostPublicKey,
+            DeadlineUtcTicks = deadline.UtcTicks,
+        };
+    }
+
+    /// <summary>
+    /// The host's public key offered <b>before</b> a decision, or null if this envelope is not a
+    /// pending notice.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately separate from <see cref="TryGetAdmissionOutcome"/> and deliberately not an
+    /// <see cref="AdmissionOutcome"/>: this message carries no decision, and folding it into the
+    /// outcome vocabulary would let a consumer treat "the DM is looking at your request" as an
+    /// answer. The distinction is the whole requirement.
+    /// </remarks>
+    public byte[]? TryGetPendingHostKey() =>
+        Type == WireMessageType.JoinPending ? HostPublicKey : null;
+
+    /// <summary>
     /// The admission outcome this envelope expresses, or null if it is not an admission answer.
     /// Consumers go through <see cref="AdmissionOutcome.Match{T}"/>, so none can drop a case.
     /// </summary>

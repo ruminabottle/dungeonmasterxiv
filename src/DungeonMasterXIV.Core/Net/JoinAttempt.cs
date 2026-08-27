@@ -45,6 +45,37 @@ public sealed class JoinAttempt
     /// </remarks>
     public bool MayReceiveSessionState => Phase == JoinPhase.Admitted;
 
+    /// <summary>
+    /// The combined fingerprint to read aloud, or null while this client has nothing to compare.
+    /// </summary>
+    /// <remarks>
+    /// Null is the honest answer and the UI must render it as one. A joiner shown a fingerprint they
+    /// could not actually have compared is the failure BUG-31 was filed for, one screen over.
+    /// </remarks>
+    public string? Fingerprint { get; private set; }
+
+    /// <summary>
+    /// Whether a fingerprint was available <b>at the moment the DM admitted this client</b>
+    /// (A-1.3f-1, R-1.3a-i).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Snapshotted in <see cref="Admitted"/>, never derived from <see cref="Fingerprint"/>.</b>
+    /// That is the whole ordering guarantee, and the reason it is a stored bool rather than
+    /// <c>Fingerprint is not null</c>: the host's key also arrives in the acceptance envelope, so a
+    /// derived property would flip to true a moment after admission and report that a comparison was
+    /// possible when it was not. A-1.3f-1 asks whether the key was available <i>beforehand</i>, and
+    /// only a value captured before the transition can answer that.
+    /// </para>
+    /// <para>
+    /// False after an admission by a host too old to send
+    /// <see cref="WireMessageType.JoinPending"/>. That client is still admitted — D-14 requires an
+    /// old host and a new joiner to interoperate — but the UI says the check could not be made
+    /// rather than implying it was.
+    /// </para>
+    /// </remarks>
+    public bool FingerprintWasComparableAtDecision { get; private set; }
+
     /// <summary>The player asked to join. A human action, never automatic (R-1.3).</summary>
     public void Request(SessionCode code)
     {
@@ -52,6 +83,31 @@ public sealed class JoinAttempt
         Code = code;
         Failure = SessionFailure.None;
         Deadline = null;
+        Fingerprint = null;
+        FingerprintWasComparableAtDecision = false;
+    }
+
+    /// <summary>
+    /// The host offered its public key, so this client can compute the fingerprint (R-1.3a-i).
+    /// </summary>
+    /// <remarks>
+    /// Ignored once a decision has been made. Accepting it later would overwrite null with a
+    /// plausible-looking string and put a fingerprint on screen that nobody could have read aloud in
+    /// time — the exact shape of a control that records a check which did not happen (D-11).
+    /// </remarks>
+    /// <param name="hostPublicKey">The host's SPKI public key, from a pending notice.</param>
+    /// <param name="ownPublicKey">This client's own public key.</param>
+    public void HostKeyOffered(byte[] hostPublicKey, byte[] ownPublicKey)
+    {
+        ArgumentNullException.ThrowIfNull(hostPublicKey);
+        ArgumentNullException.ThrowIfNull(ownPublicKey);
+
+        if (Phase is not (JoinPhase.Contacting or JoinPhase.AwaitingDecision))
+        {
+            return;
+        }
+
+        Fingerprint = KeyFingerprint.Of(hostPublicKey, ownPublicKey);
     }
 
     /// <summary>
@@ -99,6 +155,11 @@ public sealed class JoinAttempt
         Deadline?.RemainingAt(now) ?? TimeSpan.Zero;
 
     /// <summary>The DM accepted.</summary>
+    /// <remarks>
+    /// Captures whether a fingerprint existed <b>before</b> this transition (A-1.3f-1). Read the
+    /// remarks on <see cref="FingerprintWasComparableAtDecision"/> for why the capture has to happen
+    /// here rather than being computed on demand afterwards.
+    /// </remarks>
     public void Admitted()
     {
         if (Phase != JoinPhase.AwaitingDecision)
@@ -106,6 +167,7 @@ public sealed class JoinAttempt
             return;
         }
 
+        FingerprintWasComparableAtDecision = Fingerprint is not null;
         Phase = JoinPhase.Admitted;
     }
 

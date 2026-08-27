@@ -134,14 +134,25 @@ public sealed class SessionCoordinator
             return null;
         }
 
+        var deadline = AdmissionDeadline.DecidedByHost(now);
         var request = new PendingAdmission(
             peerCode,
             KeyFingerprint.Of(joinerPublicKey, HostKeys.PublicKey),
-            AdmissionDeadline.DecidedByHost(now),
+            deadline,
             relink,
             joinerPublicKey);
 
         Admissions.Receive(request);
+
+        // The host's key goes back NOW, not on acceptance (R-1.3a-i, A-1.3f-1). Sending it here is
+        // the entire fix: the joiner needs it while the DM is still deciding, because a fingerprint
+        // that arrives with the answer cannot inform the answer. The same key travels again in
+        // Admit's acceptance envelope, which is where it used to travel for the first time.
+        if (Host.Code is { } hostedCode)
+        {
+            _announcer.Pending(hostedCode, joinerPublicKey, HostKeys.PublicKey, deadline);
+        }
+
         return request;
     }
 

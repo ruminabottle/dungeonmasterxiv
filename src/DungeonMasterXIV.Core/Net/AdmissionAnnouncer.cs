@@ -27,6 +27,22 @@ public sealed class AdmissionAnnouncer
     public AdmissionAnnouncer(ISessionTransport transport) => _transport = transport;
 
     /// <summary>
+    /// Tells a joiner the DM is looking at their request, carrying the host's key so they can
+    /// compare the fingerprint <b>while the decision is still open</b> (R-1.3a-i, A-1.3f-1).
+    /// </summary>
+    /// <remarks>
+    /// Sent when the request is recorded, not when it is answered. That timing is the requirement:
+    /// the same key travels again in <see cref="Accepted"/>, and a build that sends it only there
+    /// gives the joiner nothing to compare until the comparison is moot.
+    /// </remarks>
+    public void Pending(
+        SessionCode code,
+        byte[] joinerPublicKey,
+        byte[] hostPublicKey,
+        AdmissionDeadline deadline) =>
+        Send(WireEnvelope.ForJoinPending(code, joinerPublicKey, hostPublicKey, deadline));
+
+    /// <summary>
     /// Tells a joiner they are in, carrying <b>both</b> keys.
     /// </summary>
     /// <remarks>
