@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    The relay (PRD-1 R-1.8, R-1.9, R-1.2a; directives D-2, D-3, D-8, D-11).
+
+    A dumb pipe. It arbitrates the session-code namespace, forwards envelopes between the
+    connections attached to a code, and forgets. It is never authoritative (D-3) and it stores
+    nothing durable (D-2) — see NoDurableStorage below, which makes that a build failure rather
+    than a promise.
+
+    Plain net10.0, not net10.0-windows: this runs in a Linux container on a VM, and nothing here
+    is platform-specific. It references Core for the wire format and nothing else — no Dalamud,
+    no ImGui, no plugin project. The relay parses envelopes; it never renders anything.
+  -->
+  <PropertyGroup>
+    <AssemblyName>DungeonMasterXIV.Relay</AssemblyName>
+    <RootNamespace>DungeonMasterXIV.Relay</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DungeonMasterXIV.Core\DungeonMasterXIV.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    Same shape as Core's ForbidDalamud, and batched over %(Identity) for the same reason: an item
+    reference is not expanded inside a property-function argument, so the tempting
+    $([System.String]::Copy('@(Reference)').Contains(...)) evaluates False forever and is a check
+    that cannot fail. Core's comment records that; repeating the mistake here would be free.
+  -->
+  <Target Name="ForbidDalamud" BeforeTargets="Build">
+    <Error Condition="$([System.String]::Copy('%(Reference.Identity)').Contains('Dalamud'))"
+           Text="DungeonMasterXIV.Relay must never reference Dalamud (found reference '%(Reference.Identity)'). The relay does not run in a game client." />
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').Contains('Dalamud'))"
+           Text="DungeonMasterXIV.Relay must never reference Dalamud (found package '%(PackageReference.Identity)')." />
+    <Error Condition="'%(ProjectReference.Filename)' == 'DungeonMasterXIV'"
+           Text="DungeonMasterXIV.Relay must never reference the plugin project." />
+  </Target>
+
+  <!--
+    D-2: the relay stores nothing. A storage or caching client arriving as a dependency is the
+    realistic way that gets breached — nobody writes File.WriteAllText on purpose, they add a
+    package that persists as a side effect. R-1.7a ships user-facing copy saying "no server
+    storing your sessions", so this is a false-copy risk under D-8, not a tidiness rule.
+
+    This catches the dependency route. The A-1.5e test catches the behaviour, including plain
+    File.WriteAllText, which no reference check can see. Neither substitutes for the other.
+  -->
+  <Target Name="NoDurableStorage" BeforeTargets="Build">
+    <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').Contains('EntityFramework'))
+                   Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('Sqlite'))
+                   Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('SqlClient'))
+                   Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('Npgsql'))
+                   Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('StackExchange.Redis'))
+                   Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('MongoDB'))
+                   Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('Serilog.Sinks.File'))"
+           Text="The relay stores nothing (D-2, A-1.5e). '%(PackageReference.Identity)' is a persistence dependency. R-1.7a tells users there is no server storing their sessions; adding this would make shipped copy false." />
+  </Target>
+
+</Project>
