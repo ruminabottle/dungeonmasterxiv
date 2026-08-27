@@ -54,4 +54,12 @@ public sealed class Campaign
     /// </remarks>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? UnknownProperties { get; set; }
+
+    /// <summary>
+    /// Unknown properties from the enclosing campaign FILE, carried so a load-and-save cycle does
+    /// not delete them either. Not serialized as part of the campaign — the file codec lifts it
+    /// back onto the file root on write.
+    /// </summary>
+    [JsonIgnore]
+    public Dictionary<string, JsonElement>? FileUnknownProperties { get; set; }
 }

@@ -1,47 +1,74 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using DungeonMasterXIV.Campaigns;
 
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
 /// An in-memory <see cref="ICampaignArchive"/> that records what happened to it, so a test can
-/// assert that an unreadable document was kept rather than written over.
+/// assert what reached disk and what was left untouched.
 /// </summary>
 internal sealed class FakeCampaignArchive : ICampaignArchive
 {
-    public FakeCampaignArchive(string? initialContent = null) => Content = initialContent;
+    private readonly Dictionary<string, string> _files = new(StringComparer.Ordinal);
 
-    /// <summary>What is currently stored, as the store would find it on a later load.</summary>
-    public string? Content { get; private set; }
+    /// <param name="legacy">Contents of an old single-file store, if this machine has one.</param>
+    public FakeCampaignArchive(string? legacy = null)
+    {
+        if (legacy is not null)
+        {
+            _files[CampaignFileName.LegacyFileName] = legacy;
+        }
+    }
 
-    /// <summary>Every write, in order. Empty means nothing was written at all.</summary>
+    /// <summary>Every file currently present, by name.</summary>
+    public IReadOnlyDictionary<string, string> Files => _files;
+
+    /// <summary>Names written, in order, including repeats. Empty means nothing was written.</summary>
     public List<string> Writes { get; } = new();
 
-    /// <summary>What was moved aside, or null if nothing ever was.</summary>
-    public string? Preserved { get; private set; }
+    /// <summary>Names deleted, in order.</summary>
+    public List<string> Deletes { get; } = new();
 
-    public string? Read() => Content;
+    /// <summary>
+    /// When set, writing this name throws — used to interrupt a migration part-way and check the
+    /// old file survives to be retried.
+    /// </summary>
+    public string? FailWriteForName { get; set; }
 
-    public void Write(string contents)
+    /// <summary>Puts a file in the folder without going through the write path.</summary>
+    public void Place(string name, string contents) => _files[name] = contents;
+
+    public IReadOnlyList<string> CampaignFiles() =>
+        _files.Keys.Where(CampaignFileName.IsCampaignFileName).OrderBy(n => n, StringComparer.Ordinal).ToArray();
+
+    public string? ReadCampaign(string name) => _files.GetValueOrDefault(name);
+
+    public void WriteCampaign(string name, string contents)
     {
-        Content = contents;
-        Writes.Add(contents);
+        if (string.Equals(name, FailWriteForName, StringComparison.Ordinal))
+        {
+            throw new IOException($"Simulated failure writing '{name}'.");
+        }
+
+        _files[name] = contents;
+        Writes.Add(name);
     }
 
-    public string PreserveUnreadable()
+    public string? ReadLegacy() => _files.GetValueOrDefault(CampaignFileName.LegacyFileName);
+
+    public IReadOnlyList<string> OtherOwnedFiles() =>
+        _files.Keys
+            .Where(name => PreservedCampaignFile.IsPreservedName(name)
+                || string.Equals(name, CampaignFileName.LegacyFileName, StringComparison.Ordinal))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+    public bool Delete(string name)
     {
-        var name = PreservedCampaignFile.NameFor(DateTimeOffset.UtcNow);
-        Preserved = Content;
-        Content = null;
-        PreservedNames.Add(name);
-        return name;
+        Deletes.Add(name);
+        return _files.Remove(name);
     }
-
-    /// <summary>Preserved files still present, as the DM would see them listed.</summary>
-    public List<string> PreservedNames { get; } = new();
-
-    public IReadOnlyList<string> PreservedFiles() => PreservedNames;
-
-    public bool DeletePreserved(string name) => PreservedNames.Remove(name);
 }

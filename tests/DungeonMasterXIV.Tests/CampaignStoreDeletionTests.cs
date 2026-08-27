@@ -29,12 +29,20 @@ public class CampaignStoreDeletionTests
 
         Assert.True(store.Delete(doomed.CampaignId));
 
-        var written = archive.Content;
-        Assert.NotNull(written);
-        Assert.DoesNotContain(doomed.CampaignId.ToString(), written!);
-        Assert.DoesNotContain(doomedParticipant.ToString(), written!);
-        Assert.Contains(survivor.CampaignId.ToString(), written!);
-        Assert.Contains(survivingParticipant.ToString(), written!);
+        // Asserted both ways round on purpose. "The deleted campaign's file is gone" is satisfied
+        // by a delete that removed every file, so the survivor must be positively present in the
+        // same assertion -- otherwise the check cannot fail in the way that matters.
+        Assert.DoesNotContain(CampaignFileName.NameFor(doomed.CampaignId), archive.Files.Keys);
+        var survivorFile = archive.Files[CampaignFileName.NameFor(survivor.CampaignId)];
+        Assert.Contains(survivor.CampaignId.ToString(), survivorFile);
+        Assert.Contains(survivingParticipant.ToString(), survivorFile);
+
+        // And nothing anywhere on disk still holds the deleted campaign or its participant.
+        Assert.All(archive.Files.Values, contents =>
+        {
+            Assert.DoesNotContain(doomed.CampaignId.ToString(), contents);
+            Assert.DoesNotContain(doomedParticipant.ToString(), contents);
+        });
     }
 
     [Fact]
@@ -93,8 +101,10 @@ public class CampaignStoreDeletionTests
 
         store.Create(SessionCode.FromValid("BKD7RM"));
 
-        Assert.True(CampaignDocumentCodec.TryDeserialize(archive.Content!, out var written));
-        Assert.Equal(CampaignDocument.CurrentSchemaVersion, written!.Version);
+        var file = archive.Files[CampaignFileName.NameFor(store.Campaigns[0].CampaignId)];
+        Assert.Contains($"\"Version\": {CampaignFileDocument.CurrentSchemaVersion}", file);
+        Assert.True(CampaignFileCodec.TryDeserialize(file, out var written));
+        Assert.NotNull(written);
     }
 
     [Fact]

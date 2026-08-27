@@ -21,7 +21,7 @@ public sealed class CampaignListWindow : Window
     private readonly CampaignStore _store;
 
     private IReadOnlyList<CampaignRow> _rows = Array.Empty<CampaignRow>();
-    private IReadOnlyList<string> _preserved = Array.Empty<string>();
+    private IReadOnlyList<UnreadableRow> _unreadable = Array.Empty<UnreadableRow>();
     private int _rowsBuiltAtRevision = -1;
     private Guid? _awaitingConfirmation;
 
@@ -66,40 +66,7 @@ public sealed class CampaignListWindow : Window
             DrawRow(row);
         }
 
-        DrawPreserved();
-    }
-
-    // A-1.10 says no trace of a deleted campaign remains on disk. A campaign whose data sits in a
-    // preserved unreadable file is a trace, and those files hold participant labels — so they are
-    // listed and removable here rather than accumulating unseen in a folder people zip into bug
-    // reports.
-    private void DrawPreserved()
-    {
-        if (_preserved.Count == 0)
-        {
-            return;
-        }
-
-        ImGui.Spacing();
-        ImGui.TextUnformatted("Unreadable files kept aside");
-        ImGui.TextWrapped(
-            "These were kept instead of being overwritten, so nothing was lost. They still contain " +
-            "whatever the unreadable file held, including participant names. Delete one once you no " +
-            "longer need it.");
-
-        foreach (var name in _preserved)
-        {
-            ImGui.PushID(name);
-            ImGui.TextUnformatted(name);
-            ImGui.SameLine();
-
-            if (ImGui.Button("Delete file"))
-            {
-                _store.DeletePreserved(name);
-            }
-
-            ImGui.PopID();
-        }
+        DrawUnreadable();
     }
 
     private void RefreshRowsIfStale()
@@ -110,8 +77,38 @@ public sealed class CampaignListWindow : Window
         }
 
         _rows = CampaignListView.Build(_store.Campaigns);
-        _preserved = _store.PreservedFiles();
+        _unreadable = CampaignListView.BuildUnreadable(_store.Unreadable);
         _rowsBuiltAtRevision = _store.Revision;
+    }
+
+    // A-1.10, as extended on 2026-08-27: the DM must be able to list and delete EVERY campaign the
+    // machine holds, including files the plugin cannot read or parse. An unreadable file is exactly
+    // the one a user cannot reason about, so it is the one that most needs to be visible — and it
+    // sits in the folder people zip into a bug report.
+    private void DrawUnreadable()
+    {
+        if (_unreadable.Count == 0)
+        {
+            return;
+        }
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Files that cannot be read");
+
+        foreach (var row in _unreadable)
+        {
+            ImGui.PushID(row.FileName);
+            ImGui.TextUnformatted(row.FileName);
+            ImGui.TextWrapped(row.Detail);
+
+            if (ImGui.Button("Delete file"))
+            {
+                _store.DeleteUnreadable(row.FileName);
+            }
+
+            ImGui.Separator();
+            ImGui.PopID();
+        }
     }
 
     private void DrawRow(CampaignRow row)
