@@ -33,7 +33,26 @@ namespace DungeonMasterXIV.Net;
 public static class RelayEndpoint
 {
     /// <summary>The relay used when the user has not chosen one. A default, not a dependency.</summary>
-    public const string Default = "wss://relay.dungeonmasterxiv.invalid/session";
+    public const string Default = "wss://relay.dungeonmasterxiv.invalid" + SessionPath;
+
+    /// <summary>
+    /// The path a session connection is made on. <b>The one place this value exists.</b>
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The relay serves this and the client dials it, so they must agree — and they did not, twice.
+    /// A relay on a different path answers the upgrade with a 400 and the plugin reports it
+    /// unreachable, which is a correctly deployed relay and a correctly configured client both
+    /// looking broken, with the two-machine A-1.5a chain spent chasing NAT before anyone reads a
+    /// path string.
+    /// </para>
+    /// <para>
+    /// It is a shared constant rather than two values an assertion compares because the assertion
+    /// only ever caught the case somebody had already thought to write down. One value cannot
+    /// disagree with itself.
+    /// </para>
+    /// </remarks>
+    public const string SessionPath = "/session";
 
     /// <summary>
     /// Whether <paramref name="candidate"/> is a usable relay address.

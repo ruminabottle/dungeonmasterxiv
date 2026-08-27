@@ -57,23 +57,14 @@ public sealed class RelayOptions
     /// The request path the WebSocket upgrade is accepted on.
     /// </summary>
     /// <remarks>
-    /// <b>Must match the path in <see cref="RelayEndpoint.Default"/>.</b> The client dials that
-    /// address; a relay serving a different path answers the upgrade with a 400, and the plugin
-    /// reports the relay as unreachable — a correctly deployed relay and a correctly configured
-    /// client showing "not responding", with the whole two-machine A-1.5a chain spent chasing NAT
-    /// before anyone reads a path string.
+    /// Taken from <see cref="RelayEndpoint.SessionPath"/> rather than restated, because a shared
+    /// type is what makes two halves agree and two matching literals is what makes them drift.
     /// <para>
-    /// Ruled 2026-08-27: the relay moved rather than the client. The client's default is
-    /// user-visible under R-1.8, so anyone who has written the address down already has this one,
-    /// while the relay's path had no deployed dependency at all — <c>deploy/compose.yaml</c> does
-    /// not set <c>PATH_PREFIX</c>, so nothing anywhere pinned it.
-    /// </para>
-    /// <para>
-    /// It stays configurable, so the value fixes today and
-    /// <c>RelayPathMatchesTheClientDefaultTests</c> fixes the class.
+    /// It stays configurable via <c>DMX_RELAY_PATH_PREFIX</c> — an operator behind a reverse proxy
+    /// may need a different prefix. What is no longer possible is the two <i>defaults</i> differing.
     /// </para>
     /// </remarks>
-    public string Path { get; init; } = "/session";
+    public string Path { get; init; } = RelayEndpoint.SessionPath;
 
     /// <summary>
     /// Largest single envelope accepted. A client that could send an unbounded message could make
@@ -157,7 +148,7 @@ public sealed class RelayOptions
         UseTls = ReadBool("USE_TLS") ?? true,
         CertificatePath = Read("CERT_PATH"),
         CertificatePassword = Read("CERT_PASSWORD"),
-        Path = Read("PATH_PREFIX") ?? "/relay",
+        Path = Read("PATH_PREFIX") ?? RelayEndpoint.SessionPath,
         ContentRoot = Read("CONTENT_ROOT"),
         KeepAliveInterval = ReadSeconds("KEEPALIVE_INTERVAL_SECONDS") ?? TransportContract.KeepAliveInterval,
         MaxMessageBytes = ReadInt("MAX_MESSAGE_BYTES") ?? 64 * 1024,
