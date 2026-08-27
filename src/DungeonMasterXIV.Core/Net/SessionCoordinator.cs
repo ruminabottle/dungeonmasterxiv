@@ -10,8 +10,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 public sealed class SessionCoordinator
 {
-    private readonly ISessionTransport _transport;
-    private readonly Func<string> _relayAddress;
+    private readonly RelayLink _link;
 
     /// <param name="transport">The socket adapter.</param>
     /// <param name="relayAddress">
@@ -20,17 +19,12 @@ public sealed class SessionCoordinator
     /// </param>
     public SessionCoordinator(ISessionTransport transport, Func<string> relayAddress)
     {
-        _transport = transport;
-        _relayAddress = relayAddress;
-        _transport.Failed += OnTransportFailed;
-        _transport.Received += _inbox.Receive;
+        _link = new RelayLink(transport, relayAddress, _inbox.Receive);
         _announcer = new AdmissionAnnouncer(transport);
     }
 
     private readonly AdmissionAnnouncer _announcer;
-    private readonly object _reportedFailureLock = new();
     private readonly AdmissionInbox _inbox = new();
-    private SessionFailure _reportedFailure = SessionFailure.None;
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
     private JoinPhase _tickedJoinPhase = JoinPhase.Idle;
@@ -258,25 +252,14 @@ public sealed class SessionCoordinator
     /// </remarks>
     public void SynchroniseTransport()
     {
-        var wanted = Host.RequiresRelayConnection || JoinNeedsConnection();
+        // The link reports rather than applies, so the mutual recursion between this and Fail still
+        // terminates the way it always has: Fail leaves nothing wanting a connection, so the next
+        // call through here disconnects and returns None.
+        var failure = _link.Synchronise(Host.RequiresRelayConnection || JoinNeedsConnection());
 
-        if (wanted && !_transport.IsConnected)
+        if (failure != SessionFailure.None)
         {
-            if (RelayEndpoint.TryParse(_relayAddress(), out var relay))
-            {
-                _transport.Connect(relay!);
-            }
-            else
-            {
-                Fail(SessionFailure.RelayUnreachable);
-            }
-
-            return;
-        }
-
-        if (!wanted && _transport.IsConnected)
-        {
-            _transport.Disconnect();
+            Fail(failure);
         }
     }
 
@@ -368,42 +351,21 @@ public sealed class SessionCoordinator
         if (Host.Phase != HostingPhase.Registering
             || Host.Code is not { } code
             || string.Equals(_requestedCode, code.Value, StringComparison.Ordinal)
-            || !_transport.IsReadyToSend)
+            || !_link.IsReadyToSend)
         {
             return;
         }
 
         _requestedCode = code.Value;
-        _transport.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(code)));
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(code)));
     }
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
-    public void Detach()
-    {
-        _transport.Failed -= OnTransportFailed;
-        _transport.Received -= _inbox.Receive;
-    }
-
-    // Raised off the framework thread by the transport, so it is only recorded here and applied on
-    // the next tick. Mutating session state from a socket callback would race the draw.
-    private void OnTransportFailed(SessionFailure failure)
-    {
-        lock (_reportedFailureLock)
-        {
-            _reportedFailure = failure;
-        }
-    }
+    public void Detach() => _link.Detach();
 
     private void ApplyReportedFailure()
     {
-        SessionFailure failure;
-        lock (_reportedFailureLock)
-        {
-            failure = _reportedFailure;
-            _reportedFailure = SessionFailure.None;
-        }
-
-        if (failure != SessionFailure.None)
+        if (_link.TryTakeReportedFailure(out var failure))
         {
             Fail(failure);
         }
