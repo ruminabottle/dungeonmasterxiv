@@ -59,6 +59,7 @@ public static class RelayApp
         builder.Services.AddSingleton<RelayLog>();
         builder.Services.AddSingleton<RelayHub>();
         builder.Services.AddSingleton<WebSocketRelayEndpoint>();
+        builder.Services.AddSingleton<ProtocolVersionGate>();
 
         var app = builder.Build();
 
@@ -98,8 +99,18 @@ public static class RelayApp
         return new Uri(address).Port;
     }
 
-    private static async Task UpgradeAsync(HttpContext context, WebSocketRelayEndpoint endpoint, RelayLog log)
+    private static async Task UpgradeAsync(
+        HttpContext context,
+        WebSocketRelayEndpoint endpoint,
+        ProtocolVersionGate versions)
     {
+        // Before the upgrade, deliberately: R-1.7b refuses a mismatched client rather than
+        // connecting it and then explaining. The gate writes its own refusal.
+        if (!versions.Admits(context))
+        {
+            return;
+        }
+
         if (!context.WebSockets.IsWebSocketRequest)
         {
             // Nothing else is served here. The relay has no health page, no status page and no

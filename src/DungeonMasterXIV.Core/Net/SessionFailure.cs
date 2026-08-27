@@ -1,9 +1,11 @@
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// Why a session connection is not working. R-1.8 requires these three to be distinguishable to the
-/// user, because the action each one calls for is different: wait, check your own network, or check
-/// the code you were given.
+/// Why a session connection is not working. R-1.8 requires the first three to be distinguishable to
+/// the user, because the action each one calls for is different: wait, check your own network, or
+/// check the code you were given. R-1.7b adds two more for the same reason — a version mismatch
+/// calls for updating one side or the other, and "connection failed" would send the user looking at
+/// their router.
 /// </summary>
 public enum SessionFailure
 {
@@ -18,6 +20,18 @@ public enum SessionFailure
 
     /// <summary>The relay answered and reported no live session under that code.</summary>
     SessionCodeNotActive = 3,
+
+    /// <summary>
+    /// The relay speaks a newer protocol than this plugin. The user has to update the plugin
+    /// (R-1.7b).
+    /// </summary>
+    PluginBehindRelay = 4,
+
+    /// <summary>
+    /// This plugin speaks a newer protocol than the relay. Nothing the user can fix on their side —
+    /// the relay operator has to update, or they can point at a different relay (R-1.7b, R-1.8).
+    /// </summary>
+    RelayBehindPlugin = 5,
 }
 
 /// <summary>
@@ -48,6 +62,13 @@ public static class SessionFailureMessage
         SessionFailure.SessionCodeNotActive =>
             "No session is running under that code. Check the code with your DM — codes belong to a "
             + "session that is live now, so one from last week will not work until they start again.",
+        SessionFailure.PluginBehindRelay =>
+            "This plugin is too old for that relay. Update the plugin and try again — the relay "
+            + "speaks a newer version of the session protocol than this build does.",
+        SessionFailure.RelayBehindPlugin =>
+            "That relay is older than this plugin and cannot speak to it. Nothing on your side is "
+            + "wrong: the relay has to be updated, or you can point the plugin at a different one in "
+            + "settings.",
         _ => string.Empty,
     };
 }
