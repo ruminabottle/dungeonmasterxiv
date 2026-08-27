@@ -60,7 +60,7 @@ public class ReleaseInputsTests
     {
         // The tag and the version agree, so this reaches the URL check. Paired with a version the
         // tag does not name, it would still throw and still pass -- for the wrong reason.
-        var inputs = new ReleaseInputs("v1.0", TaggedVersion.Of("v1.0"), 13, repoUrl, Assets.Any());
+        var inputs = new ReleaseInputs("v1.0.0", TaggedVersion.Of("v1.0.0"), 13, repoUrl, Assets.Any());
 
         Assert.Throws<ArgumentException>(inputs.Validate);
     }
