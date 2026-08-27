@@ -41,11 +41,18 @@ Session traffic is **end-to-end encrypted between the people in the session**. T
 sealed messages and holds no key. It forwards your DM's bytes onward unchanged and cannot open them.
 
 **One honest limit, which matters.** Encryption protects you from someone substituting a key only if
-the humans involved actually check the fingerprint. When you join a session, you and the DM are each
-shown the same short code and asked to read it aloud to each other. **If nobody reads it, that check
-did not happen** — and the phrase "end-to-end encrypted" cannot do that work on its own. It takes
-ten seconds and it is the only thing standing between a substituted key and someone reading your
-session.
+the humans involved can check the keys. Today that check is **one-directional, and you should know
+which direction.**
+
+**The DM is shown a short code** when someone asks to join, and can confirm it against what that
+person reads out. That protects the DM against a substituted joiner.
+
+**If you are joining, you are shown nothing to compare.** Your client does not receive the DM's key
+until the moment you are admitted, so there is currently no step at which you could verify you are
+talking to the DM you think you are. **A substituted host key is not something you can presently
+detect**, and no amount of "end-to-end encrypted" changes that. We consider this a defect in the
+product rather than an acceptable design, and it is recorded as one; this page will say so until it
+is fixed rather than describing a check that does not exist.
 
 ## What it can see
 

@@ -89,6 +89,12 @@ public enum RelayOutcome
 
     /// <summary>An admission decision named a joiner that is not waiting on one.</summary>
     UnknownJoiner = 14,
+
+    /// <summary>
+    /// The host's public key was carried to a joiner still waiting on a decision (R-1.3a-i), and
+    /// the gate was left exactly as it was.
+    /// </summary>
+    PendingNoticeForwarded = 15,
 }
 
 /// <summary>

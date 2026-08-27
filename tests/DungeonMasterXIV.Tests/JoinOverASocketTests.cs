@@ -109,14 +109,28 @@ public class JoinOverASocketTests
         coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
         coordinator.Admit("PEER-1");
 
+        // The acceptance is no longer the FIRST thing the host sends: R-1.3a-i puts a JoinPending
+        // carrying the host's key on the wire when the request is recorded, before the DM decides.
+        // So this looks for the acceptance among what arrived rather than assuming it leads. The
+        // subject of this test is the send path, not the order — the ordering is asserted in
+        // TheJoinerCanCompareBeforeAdmissionTests, where it is the point rather than a side effect.
+        //
         // TryTake with a bound rather than Take: a frame that never arrives should fail this test,
         // not hang the suite. An unbounded wait turns a broken send path into a stuck CI run, which
         // is a worse signal than a red one.
-        Assert.True(server.Received.TryTake(out var frame, (int)Patience.TotalMilliseconds),
-            "No frame reached the socket within the timeout.");
-        Assert.True(EnvelopeCodec.TryDecode(frame, out var envelope));
-        Assert.Equal(WireMessageType.JoinAccepted, envelope!.Type);
-        Assert.Equal(coordinator.HostKeys!.PublicKey, envelope.HostPublicKey);
+        WireEnvelope? acceptance = null;
+        while (acceptance is null
+               && server.Received.TryTake(out var frame, (int)Patience.TotalMilliseconds))
+        {
+            if (EnvelopeCodec.TryDecode(frame, out var envelope)
+                && envelope!.Type == WireMessageType.JoinAccepted)
+            {
+                acceptance = envelope;
+            }
+        }
+
+        Assert.True(acceptance is not null, "No acceptance reached the socket within the timeout.");
+        Assert.Equal(coordinator.HostKeys!.PublicKey, acceptance!.HostPublicKey);
     }
 
     // The probe found this gap rather than the plan: truncating a frame by one byte failed both

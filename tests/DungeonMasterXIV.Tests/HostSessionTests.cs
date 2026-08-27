@@ -71,7 +71,11 @@ public class HostSessionTests
         Assert.True(session.ExpireIfRegistrationTimedOut(HostSession.RegistrationTimeout));
 
         Assert.Equal(HostingPhase.Failed, session.Phase);
-        Assert.Equal(SessionFailure.RelayUnreachable, session.Failure);
+
+        // NOT RelayUnreachable, and the change is the point rather than a detail (BUG-36). Reaching
+        // a registration timeout means the connection succeeded and the relay never confirmed the
+        // code; saying "unreachable" sent an evening into DNS and TLS on a healthy relay.
+        Assert.Equal(SessionFailure.RegistrationNotAnswered, session.Failure);
         Assert.False(session.RequiresRelayConnection);
     }
 

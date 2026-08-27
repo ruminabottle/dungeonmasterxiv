@@ -38,6 +38,11 @@ public sealed class AdmissionInbox
     /// </summary>
     /// <param name="attempt">This client's join attempt.</param>
     /// <param name="keys">This client's key pair, for deriving a session key on acceptance.</param>
+    /// <param name="host">
+    /// This client's hosting lifecycle, when it is a host. One socket carries both roles' traffic
+    /// into one queue, so the relay's answer to a code request is drained here too rather than by a
+    /// second consumer that would race this one for the same frames (BUG-36).
+    /// </param>
     /// <returns>The derived session key if this drain admitted us, otherwise null.</returns>
     /// <remarks>
     /// A frame that does not parse is dropped rather than raised — anything can arrive from a relay
@@ -45,7 +50,7 @@ public sealed class AdmissionInbox
     /// arrives as <see cref="WireMessageType.Unknown"/> from the deserializer and falls through
     /// without a handler needing to remember to ignore it (D-14).
     /// </remarks>
-    public byte[]? Drain(JoinAttempt attempt, SessionKeyExchange? keys)
+    public byte[]? Drain(JoinAttempt attempt, SessionKeyExchange? keys, HostSession? host = null)
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
@@ -60,8 +65,35 @@ public sealed class AdmissionInbox
 
         foreach (var frame in frames)
         {
-            if (EnvelopeCodec.TryDecode(frame, out var envelope)
-                && envelope?.TryGetAdmissionOutcome() is { } outcome)
+            if (!EnvelopeCodec.TryDecode(frame, out var envelope) || envelope is null)
+            {
+                continue;
+            }
+
+            // The relay's answer to this host's code request (R-1.2a). Registering is the one thing
+            // a host waits on, and before BUG-36 nothing consumed these at all — the request was
+            // never sent, so the answer never came and no handler was missed.
+            if (host is not null && ApplyRegistration(envelope, host))
+            {
+                continue;
+            }
+
+            // Pending notices first, and they are not outcomes. A pending notice says the DM is
+            // looking; applying it is what gives this client something to compare while the
+            // decision is still open (R-1.3a-i, A-1.3f-1).
+            if (envelope.TryGetPendingHostKey() is { } hostPublicKey)
+            {
+                attempt.AwaitDecision(envelope.TryGetDeadline());
+
+                if (keys is not null)
+                {
+                    attempt.HostKeyOffered(hostPublicKey, keys.PublicKey);
+                }
+
+                continue;
+            }
+
+            if (envelope.TryGetAdmissionOutcome() is { } outcome)
             {
                 sessionKey = Apply(outcome, attempt, keys) ?? sessionKey;
             }
@@ -76,6 +108,31 @@ public sealed class AdmissionInbox
         lock (_gate)
         {
             _frames.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Applies the relay's arbitration of a code request, or reports that this frame was not one.
+    /// </summary>
+    /// <remarks>
+    /// R-1.2a: the host proposes and the relay arbitrates. A refusal means the code is already live,
+    /// and the answer is to regenerate and ask again — never to surface it to the DM, who did not
+    /// choose the code and can do nothing about the collision.
+    /// </remarks>
+    private static bool ApplyRegistration(WireEnvelope envelope, HostSession host)
+    {
+        switch (envelope.Type)
+        {
+            case WireMessageType.CodeAccepted:
+                host.Registered();
+                return true;
+
+            case WireMessageType.CodeRefused:
+                host.CodeAlreadyLive(SessionCodeGenerator.Next());
+                return true;
+
+            default:
+                return false;
         }
     }
 
