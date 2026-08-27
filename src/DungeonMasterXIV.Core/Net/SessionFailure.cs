@@ -32,6 +32,19 @@ public enum SessionFailure
     /// the relay operator has to update, or they can point at a different relay (R-1.7b, R-1.8).
     /// </summary>
     RelayBehindPlugin = 5,
+
+    /// <summary>
+    /// The relay accepted the connection but never confirmed the session code (BUG-36).
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="RelayUnreachable"/> because the relay <b>was</b> reached: it
+    /// answered, upgraded the connection and held it open. Reporting this as "unreachable" sent an
+    /// evening into DNS, TLS and certificate checks on a relay that was healthy the whole time,
+    /// while the actual fault was that this client never spoke. A failure message that names the
+    /// wrong half of a system is worse than a vague one, because it is actionable and the action is
+    /// wasted.
+    /// </remarks>
+    RegistrationNotAnswered = 6,
 }
 
 /// <summary>
@@ -69,6 +82,10 @@ public static class SessionFailureMessage
             "That relay is older than this plugin and cannot speak to it. Nothing on your side is "
             + "wrong: the relay has to be updated, or you can point the plugin at a different one in "
             + "settings.",
+        SessionFailure.RegistrationNotAnswered =>
+            "The relay accepted the connection but never confirmed the session code. The relay is "
+            + "reachable, so this is not your network — try starting the session again, and if it "
+            + "keeps happening the relay is not answering registrations.",
         _ => string.Empty,
     };
 }

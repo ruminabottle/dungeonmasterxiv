@@ -210,6 +210,11 @@ public class TheJoinerCanCompareBeforeAdmissionTests
 
         public bool IsConnected { get; private set; }
 
+        // A fake socket is open the instant it connects, so readiness follows connection here.
+        // The real WebSocket does not (BUG-36), which is why the coordinator asks this and not
+        // IsConnected -- and why TheHostRegistersItsCodeTests drives the two apart deliberately.
+        public bool IsReadyToSend => IsConnected;
+
         public void Deliver(WireEnvelope envelope) => Received?.Invoke(EnvelopeCodec.Encode(envelope));
 
         public void DeliverRaw(byte[] frame) => Received?.Invoke(frame);

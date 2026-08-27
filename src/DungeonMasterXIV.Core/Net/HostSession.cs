@@ -100,6 +100,27 @@ public sealed class HostSession
         SupersededCode = null;
     }
 
+    /// <summary>
+    /// The relay refused the proposed code because it is already live, so this host takes another
+    /// and stays in registration (R-1.2a).
+    /// </summary>
+    /// <remarks>
+    /// <b>Not a failure, and deliberately not shown to anyone.</b> The DM did not choose the code and
+    /// can do nothing about a collision; surfacing it would be an error message about an event the
+    /// protocol handles by itself. The replacement is passed in rather than generated here, for the
+    /// same reason <see cref="Start"/> takes one — this type stays free of the generator.
+    /// </remarks>
+    /// <param name="replacement">A freshly generated code to propose instead.</param>
+    public void CodeAlreadyLive(SessionCode replacement)
+    {
+        if (Phase != HostingPhase.Registering)
+        {
+            return;
+        }
+
+        Code = replacement;
+    }
+
     /// <summary>Records a transport failure and leaves hosting.</summary>
     public void Fail(SessionFailure failure)
     {
@@ -121,7 +142,10 @@ public sealed class HostSession
             return false;
         }
 
-        Fail(SessionFailure.RelayUnreachable);
+        // NOT RelayUnreachable. Reaching this line means the connection was made and the relay never
+        // confirmed the code — a relay that could not be reached fails earlier and elsewhere
+        // (BUG-36).
+        Fail(SessionFailure.RegistrationNotAnswered);
         return true;
     }
 }

@@ -10,7 +10,30 @@ namespace DungeonMasterXIV.Net;
 public interface ISessionTransport
 {
     /// <summary>Whether a relay connection is currently held.</summary>
+    /// <remarks>
+    /// True while a connect is still in flight, deliberately, so
+    /// <see cref="SessionCoordinator.SynchroniseTransport"/> does not stack a second one. It is
+    /// therefore <b>not</b> the right question to ask before sending — see
+    /// <see cref="IsReadyToSend"/>.
+    /// </remarks>
     bool IsConnected { get; }
+
+    /// <summary>Whether a frame sent right now would actually go out.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>On the interface because BUG-36 made it load-bearing.</b> It existed on the WebSocket
+    /// implementation, named as a hazard that was "not reachable in the product today". Registering
+    /// a session made it reachable: the host must send its <c>CodeRequest</c> once connected, and
+    /// <see cref="Send"/> silently discards a frame that arrives before the socket opens. Sending on
+    /// the return from <see cref="Connect"/> would have reproduced BUG-36 exactly — a host that
+    /// believes it registered, a relay that was never told, and no error anywhere.
+    /// </para>
+    /// <para>
+    /// So the coordinator sends on readiness rather than on connection, which it cannot do unless it
+    /// can ask.
+    /// </para>
+    /// </remarks>
+    bool IsReadyToSend { get; }
 
     /// <summary>Opens a connection to <paramref name="relay"/>.</summary>
     void Connect(Uri relay);
