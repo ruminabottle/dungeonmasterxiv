@@ -31,6 +31,8 @@ public class ABuildRefusalNamesTheTagTests
     [InlineData("v65535.0.0")]
     [InlineData("v1.2.3.4.5")]
     [InlineData("v99999999999999999999.0.0")]
+    [InlineData("v")]
+    [InlineData("vv")]
     public void ARefusedTagIsNamedInTheRefusal(string tag)
     {
         var refusal = TheBuild.RefusalFromARealBuild(tag);

@@ -73,7 +73,7 @@ internal static class TheBuild
     /// every case in a theory.
     /// </para>
     /// </remarks>
-    public static bool FailsToBuild(string releaseTag) => RealBuild(releaseTag).ExitCode != 0;
+    public static bool FailsToBuild(string? releaseTag) => RealBuild(releaseTag).ExitCode != 0;
 
     /// <summary>What a real build says when it refuses this tag.</summary>
     /// <remarks>
@@ -82,7 +82,7 @@ internal static class TheBuild
     /// to come from there. Two shapes reached past the guards and failed inside MSBuild itself,
     /// which a single-target invocation would never have shown.
     /// </remarks>
-    public static string RefusalFromARealBuild(string releaseTag)
+    public static string RefusalFromARealBuild(string? releaseTag)
     {
         var (exitCode, output, errors) = RealBuild(releaseTag);
 
@@ -91,10 +91,31 @@ internal static class TheBuild
         return output + errors;
     }
 
-    private static (int ExitCode, string Output, string Errors) RealBuild(string releaseTag) =>
-        Run(
-            $"build \"{PluginProject()}\" -c Release -p:BaseOutputPath=\"{IsolatedOutput.FullName}/\"",
-            releaseTag);
+    /// <remarks>
+    /// <b>Serialised, because these builds share the repository's <c>obj/</c>.</b> Only
+    /// <c>BaseOutputPath</c> is redirected — redirecting the intermediate directory too breaks the
+    /// project reference with <c>NETSDK1005</c> (see above), so every real build regenerates the same
+    /// <c>obj/x64/Release/DungeonMasterXIV.AssemblyInfo.cs</c>. xunit runs test CLASSES in parallel,
+    /// so once a third class started issuing real builds the suite began failing 4 runs in 5, with a
+    /// different count each time and each failure passing in isolation.
+    /// <para>
+    /// A lock here rather than an xunit collection on the calling classes: a collection attribute is
+    /// a rule the next test class has to remember, and this is a property of the helper. The cost is
+    /// that real builds do not overlap, which they never usefully did — they contend for one
+    /// directory.
+    /// </para>
+    /// </remarks>
+    private static readonly object OneBuildAtATime = new();
+
+    private static (int ExitCode, string Output, string Errors) RealBuild(string? releaseTag)
+    {
+        lock (OneBuildAtATime)
+        {
+            return Run(
+                $"build \"{PluginProject()}\" -c Release -p:BaseOutputPath=\"{IsolatedOutput.FullName}/\"",
+                releaseTag);
+        }
+    }
 
     private static readonly DirectoryInfo IsolatedOutput =
         Directory.CreateTempSubdirectory("dmxiv-tag-builds");
