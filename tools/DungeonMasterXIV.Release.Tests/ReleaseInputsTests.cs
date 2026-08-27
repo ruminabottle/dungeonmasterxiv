@@ -8,8 +8,11 @@ public class ReleaseInputsTests
 {
     private const string Repo = "https://github.com/ruminabottle/dungeonmasterxiv";
 
+    // The version is DERIVED from the tag rather than written beside it. Both fixtures here used to
+    // pair "v0.1.0" with 0.0.0.1 -- a disagreeing pair, and BUG-14 is exactly that pair being
+    // accepted, so no test in this file could construct the defect it needed to see.
     private static ReleaseInputs Valid(string tag = "v0.1.0", int apiLevel = 13, string? assetName = null) =>
-        new(tag, new Version(0, 0, 0, 1), apiLevel, Repo, Assets.Any(assetName ?? Assets.PackagerName));
+        new(tag, TaggedVersion.Of(tag), apiLevel, Repo, Assets.Any(assetName ?? Assets.PackagerName));
 
     [Fact]
     public void CompleteInputsValidate()
@@ -24,7 +27,12 @@ public class ReleaseInputsTests
     [InlineData("   ")]
     public void AMissingTagIsRefused(string tag)
     {
-        Assert.Throws<ArgumentException>(() => Valid(tag: tag).Validate());
+        // Built explicitly rather than through Valid(), which derives its version FROM the tag and
+        // would throw while constructing the fixture -- the assertion would then pass without
+        // Validate() ever running.
+        var inputs = new ReleaseInputs(tag, new Version(0, 1, 0, 0), 13, Repo, Assets.Any());
+
+        Assert.Throws<ArgumentException>(inputs.Validate);
     }
 
     // A wrong API level makes Dalamud never offer the plugin, with nothing written anywhere we would
@@ -50,7 +58,9 @@ public class ReleaseInputsTests
     [InlineData("not a url")]
     public void ARepositoryUrlThatIsNotAbsoluteHttpsIsRefused(string repoUrl)
     {
-        var inputs = new ReleaseInputs("v0.1.0", new Version(1, 0), 13, repoUrl, Assets.Any());
+        // The tag and the version agree, so this reaches the URL check. Paired with a version the
+        // tag does not name, it would still throw and still pass -- for the wrong reason.
+        var inputs = new ReleaseInputs("v1.0", TaggedVersion.Of("v1.0"), 13, repoUrl, Assets.Any());
 
         Assert.Throws<ArgumentException>(inputs.Validate);
     }

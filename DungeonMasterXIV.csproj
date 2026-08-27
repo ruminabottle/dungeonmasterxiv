@@ -3,7 +3,21 @@
   <PropertyGroup>
     <AssemblyName>DungeonMasterXIV</AssemblyName>
     <RootNamespace>DungeonMasterXIV</RootNamespace>
-    <Version>0.0.0.1</Version>
+    <!-- NOT hand-maintained, and the hand-maintained 0.0.0.1 that used to sit here is BUG-14.
+         D-16/R-7.4a: the advertised version has exactly one author and it is the GIT TAG. A release
+         build is told the tag and computes the version from it; every other appearance (the
+         assembly, the repository manifest's TestingAssemblyVersion, the download link's path) is
+         computed from that same tag and checked against the artefact by the release tool.
+
+             dotnet build -c Release -p:ReleaseTag=v0.1.0
+
+         An ordinary `dotnet build` supplies no tag and gets 0.0.0.0 (TaggedVersion.UntaggedBuild),
+         so ordinary builds keep working and carry no release version. Any tag anybody would
+         actually cut disagrees with 0.0.0.0, so the release tool stops and names the rebuild. The
+         old literal was the opposite: releasable under any tag, and therefore invisible, because a
+         second release repeating a version is not rejected by Dalamud, merely never offered. -->
+    <Version Condition="'$(ReleaseTag)' != ''">$(ReleaseTag.TrimStart('v'))</Version>
+    <Version Condition="'$(Version)' == ''">0.0.0.0</Version>
     <Description>Tracks dice rolls, initiative, HP and session state for tabletop RP campaigns run in FFXIV.</Description>
     <PackageProjectUrl>https://github.com/ruminabottle/dungeonmasterxiv</PackageProjectUrl>
   </PropertyGroup>

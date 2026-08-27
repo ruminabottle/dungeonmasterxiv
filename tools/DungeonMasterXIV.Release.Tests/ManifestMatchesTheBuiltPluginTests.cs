@@ -9,14 +9,21 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// A-7.2: the manifest's version matches the version in the built assembly it links to.
+/// The manifest's version is the version of the built assembly it links to.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Three sources, deliberately.</b> The manifest is generated from the built DLL; this reads the
-/// DLL again independently; and a second test reads the project file. A check that consulted the
-/// csproj on both sides would be comparing a source of truth with itself and could not fail, while
-/// the defect it exists to catch is a manifest describing a build nobody produced.
+/// <b>Two sources, deliberately.</b> The manifest is generated from the built DLL, and this reads
+/// the DLL again independently. It used to be three: a second test read <c>&lt;Version&gt;</c> out of
+/// the csproj. That property is gone (BUG-14, D-16) — the version is now derived from the git tag,
+/// so there is no declared value left to compare a build against, and the guarantee that the
+/// advertised version tracks the tag moved to <see cref="VersionHasOneAuthorTests"/>.
+/// </para>
+/// <para>
+/// <b>A-7.2 no longer names this.</b> A-7.2 asked for a match and was replaced by A-7.2a/A-7.2b,
+/// because in BUG-14's reproduction the two sides matched, the criterion passed, and the release was
+/// broken. What is checked here is still worth checking; it is simply not sufficient, and this file
+/// no longer claims it is.
 /// </para>
 /// <para>
 /// <b>These fail rather than skip when the plugin has not been built.</b> A skipped version check
@@ -57,9 +64,9 @@ public class ManifestMatchesTheBuiltPluginTests
         return candidates.OrderByDescending(file => file.LastWriteTimeUtc).First().FullName;
     }
 
-    // A-7.2. One side is read out of the built assembly, the other out of the generated manifest.
-    // Fails if the generator hardcodes a version, reads the project file instead of the artefact,
-    // writes it into the wrong field, or renders it in a form Dalamud would not match.
+    // One side is read out of the built assembly, the other out of the generated manifest. Fails if
+    // the generator hardcodes a version, reads the project file instead of the artefact, writes it
+    // into the wrong field, or renders it in a form Dalamud would not match.
     [Fact]
     public void TheManifestVersionIsTheVersionOfTheAssemblyItLinksTo()
     {
@@ -68,8 +75,12 @@ public class ManifestMatchesTheBuiltPluginTests
 
         var plugin = JsonSerializer.Deserialize<PluginManifest>(
             File.ReadAllText(Path.Combine(RepositoryRoot().FullName, "DungeonMasterXIV.json")))!;
+        // The tag names whatever this tree was actually built as. A literal "v0.1.0" here would now
+        // be refused against any other build -- correctly, and it would make this test about the
+        // tag check rather than about the manifest.
         var manifest = RepositoryManifest.Build(
-            new ReleaseInputs("v0.1.0", fromTheArtefact, 13, plugin.RepoUrl, Assets.Any()), plugin);
+            new ReleaseInputs($"v{fromTheArtefact}", fromTheArtefact, 13, plugin.RepoUrl, Assets.Any()),
+            plugin);
 
         using var document = JsonDocument.Parse(manifest);
         var fromTheManifest = document.RootElement.EnumerateArray().Single()
@@ -77,23 +88,45 @@ public class ManifestMatchesTheBuiltPluginTests
 
         Assert.Equal(fromTheArtefact.ToString(), fromTheManifest);
 
-        // And it is a real version rather than the zero both sides would show if reading the
-        // assembly had quietly failed -- otherwise the equality above holds for the wrong reason.
-        Assert.NotEqual(new Version(0, 0, 0, 0), fromTheArtefact);
+        // And the equality is not vacuous: the field carries a parseable version rather than the
+        // empty string both sides would render alike. This deliberately does NOT require a release
+        // version -- since BUG-14 an ordinary `dotnet build` carries TaggedVersion.UntaggedBuild,
+        // and asserting otherwise would fail this suite on every tree nobody handed a tag.
+        Assert.False(string.IsNullOrWhiteSpace(fromTheManifest));
+        Assert.Equal(fromTheArtefact, Version.Parse(fromTheManifest!));
     }
 
-    // The third source. Catches a manifest generated from a STALE build: the DLL on disk is older
-    // than the version the project now declares, so the manifest would advertise a version nobody
-    // can install. Fails whenever bin/ is behind the csproj.
+    // The csproj must not go back to declaring a release version. That literal was BUG-14: it made
+    // every build releasable under any tag, and a second release repeating it is not rejected by
+    // Dalamud, merely never offered. The version it may still carry is the untagged fallback, which
+    // is unreleasable by construction -- so this asserts the shape, and VersionHasOneAuthorTests
+    // asserts the behaviour it produces.
     [Fact]
-    public void TheBuiltAssemblyIsTheVersionTheProjectDeclares()
+    public void TheProjectDeclaresNoHandAuthoredReleaseVersion()
     {
-        var declared = Regex.Match(
+        var declared = Regex.Matches(
             File.ReadAllText(Path.Combine(RepositoryRoot().FullName, "DungeonMasterXIV.csproj")),
-            @"<Version>([^<]+)</Version>");
+            @"<Version[^>]*>([^<]+)</Version>");
 
-        Assert.True(declared.Success, "DungeonMasterXIV.csproj declares no <Version>.");
-        Assert.Equal(Version.Parse(declared.Groups[1].Value), PluginAssemblyVersion.Of(BuiltPluginPath()));
+        // Without these two the loop below passes over an empty match set -- a check that cannot
+        // fail, wearing the costume of one that can. The derivation must be PRESENT, not merely
+        // un-contradicted.
+        Assert.NotEmpty(declared);
+        Assert.Contains(
+            declared.Cast<Match>(),
+            match => match.Groups[1].Value.Contains("$(ReleaseTag", StringComparison.Ordinal));
+
+        foreach (Match version in declared)
+        {
+            var value = version.Groups[1].Value;
+
+            Assert.True(
+                value.Contains("$(ReleaseTag", StringComparison.Ordinal) ||
+                Version.Parse(value) == TaggedVersion.UntaggedBuild,
+                $"DungeonMasterXIV.csproj declares <Version>{value}</Version>. The advertised version " +
+                "has one author and it is the git tag (D-16, R-7.4a); a literal here is a second one, " +
+                "which is BUG-14.");
+        }
     }
 
     // Reading a file that is not an assembly must fail loudly, not return a default that would make

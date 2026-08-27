@@ -26,7 +26,7 @@ public class RepositoryManifestTests
 
     private static JsonElement Entry(Version? version = null, string tag = "v0.1.0", int apiLevel = 13)
     {
-        var inputs = new ReleaseInputs(tag, version ?? new Version(0, 0, 0, 1), apiLevel, Repo, Assets.Any());
+        var inputs = new ReleaseInputs(tag, version ?? TaggedVersion.Of(tag), apiLevel, Repo, Assets.Any());
         var document = JsonDocument.Parse(RepositoryManifest.Build(inputs, APlugin()));
 
         Assert.Equal(JsonValueKind.Array, document.RootElement.ValueKind);
@@ -39,7 +39,7 @@ public class RepositoryManifestTests
     public void TheManifestIsAJsonArrayOfPluginEntries()
     {
         var manifest = RepositoryManifest.Build(
-            new ReleaseInputs("v0.1.0", new Version(0, 0, 0, 1), 13, Repo, Assets.Any()), APlugin());
+            new ReleaseInputs("v0.1.0", TaggedVersion.Of("v0.1.0"), 13, Repo, Assets.Any()), APlugin());
 
         using var document = JsonDocument.Parse(manifest);
 
@@ -108,7 +108,10 @@ public class RepositoryManifestTests
     [Fact]
     public void TheTestingVersionIsTheOneItWasGiven()
     {
-        Assert.Equal("2.3.4.5", Entry(version: new Version(2, 3, 4, 5)).GetProperty("TestingAssemblyVersion").GetString());
+        Assert.Equal(
+            "2.3.4.5",
+            Entry(version: new Version(2, 3, 4, 5), tag: "v2.3.4.5")
+                .GetProperty("TestingAssemblyVersion").GetString());
     }
 
     // R-7.3's two PROHIBITIONS. Pinned before the required sentence existed, deliberately: someone

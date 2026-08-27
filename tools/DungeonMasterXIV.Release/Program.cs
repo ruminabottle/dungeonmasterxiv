@@ -6,11 +6,22 @@ using DungeonMasterXIV.Release;
 
 // The named mechanism R-7.2 asks for: the repository manifest is generated, never hand-edited.
 //
+//   dotnet build -c Release -p:ReleaseTag=v0.1.0
 //   dotnet run --project tools/DungeonMasterXIV.Release --                          \
 //       --assembly bin/x64/Release/DungeonMasterXIV.dll                             \
 //       --plugin-manifest bin/x64/Release/DungeonMasterXIV.json                     \
 //       --asset bin/x64/Release/DungeonMasterXIV/latest.zip                         \
 //       --tag v0.1.0 --out repo.json [--dry-run]
+//
+// BOTH commands, and the SAME tag in each. -p:ReleaseTag is what gives the artefact its version
+// (D-16/R-7.4a: the tag is the one place that version is authored), and --tag is checked against
+// the artefact, so a build that was not told the tag is refused rather than published under it.
+// Omitting the build step is the mistake this refuses by name; see ReleaseInputs.Validate.
+//
+// This used to be one command, and the version came from a hand-maintained <Version> in the csproj.
+// Four different tags against one unchanged build all exited 0 and all advertised 0.0.0.1 -- BUG-14.
+// Dalamud does not reject a repeated version, it never offers the build, so the second release to a
+// tester was silently never delivered and the symptom was a tester who went quiet.
 //
 // --plugin-manifest is the BUILT manifest beside the assembly, not the source one at the repository
 // root. The build stamps DalamudApiLevel and AssemblyVersion onto it; the source has neither. There

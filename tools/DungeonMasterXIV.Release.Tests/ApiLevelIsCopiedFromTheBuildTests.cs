@@ -83,7 +83,7 @@ public class ApiLevelIsCopiedFromTheBuildTests
     {
         var built = Read(BuiltManifestFile().FullName);
         var inputs = new ReleaseInputs(
-            "v0.1.0", new Version(0, 0, 0, 1), built.DalamudApiLevel!.Value, built.RepoUrl, Assets.Any());
+            "v0.1.0", TaggedVersion.Of("v0.1.0"), built.DalamudApiLevel!.Value, built.RepoUrl, Assets.Any());
 
         using var document = JsonDocument.Parse(RepositoryManifest.Build(inputs, built));
         var entry = document.RootElement.EnumerateArray().Single();
