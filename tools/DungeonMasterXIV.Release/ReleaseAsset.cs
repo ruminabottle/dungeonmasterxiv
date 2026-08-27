@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace DungeonMasterXIV.Release;
 
@@ -31,6 +34,8 @@ namespace DungeonMasterXIV.Release;
 public sealed class ReleaseAsset
 {
     private const string PluginAssemblyName = "DungeonMasterXIV.dll";
+
+    private const string PluginManifestName = "DungeonMasterXIV.json";
 
     private ReleaseAsset(FileInfo file) => File = file;
 
@@ -110,6 +115,109 @@ public sealed class ReleaseAsset
                 "describes. Every build writes the same file name, so this is the only thing that " +
                 "tells them apart — attaching the wrong one ships a plugin that installs and then " +
                 "misbehaves.");
+        }
+    }
+
+    /// <summary>
+    /// Confirms the manifest inside this zip says the same things as the built manifest the
+    /// repository entry is generated from.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The DLL check cannot see this (BUG-16).</b> A metadata-only edit leaves the assembly
+    /// byte-identical — measured, twice, by two people — so a previous build's zip satisfies
+    /// <see cref="MustMatchTheAssembly"/> while carrying the previous build's metadata. The
+    /// repository entry then advertises one <c>DalamudApiLevel</c> and links an archive declaring
+    /// another, which is the failure mode <see cref="ReleaseInputs"/> singles out as the worst kind:
+    /// Dalamud does not reject it, it simply never offers the plugin.
+    /// </para>
+    /// <para>
+    /// <b>Values, never bytes.</b> Both files are JSON produced by different steps, and key order,
+    /// indentation and escaping may legitimately differ between them; today they happen to be
+    /// byte-identical, so a byte comparison would pass now and start failing the first time any of
+    /// that moved. A guard that produces false FAILs is worse than one that cannot fail, because a
+    /// noisy guard gets relaxed rather than fixed.
+    /// </para>
+    /// <para>
+    /// <b>The fields compared are exactly the ones the repository entry republishes</b>, plus
+    /// <c>AssemblyVersion</c>. That boundary is the check's own question — <i>does the entry
+    /// describe the artefact it links to?</i> — rather than a list someone has to keep in step: a
+    /// field nobody advertises cannot make the entry a false description, and every field that is
+    /// advertised can. <c>InternalName</c> is deliberately absent: it is derived from the project
+    /// name, so two builds cannot disagree on it without also disagreeing on the assembly's file
+    /// name, which <see cref="MustMatchTheAssembly"/> already refuses.
+    /// </para>
+    /// </remarks>
+    /// <param name="built">The built manifest the repository entry is generated from.</param>
+    /// <param name="builtPath">Where that manifest was read from, for the message.</param>
+    public void MustCarryTheSameMetadataAs(PluginManifest built, string builtPath)
+    {
+        var packaged = PackagedManifest();
+
+        var differences = Differences(built, packaged).ToList();
+
+        if (differences.Count == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"The {PluginManifestName} inside '{File.FullName}' does not say what '{builtPath}' says, " +
+            $"so the repository entry would describe something other than what a user installs:{Environment.NewLine}" +
+            string.Join(Environment.NewLine, differences) + Environment.NewLine +
+            "The zip is from a different build than the manifest this entry is generated from. A " +
+            "metadata-only change leaves the assembly byte-identical, so the assembly comparison " +
+            "cannot see this. Package the build you are releasing rather than attaching a zip from " +
+            "an earlier one.");
+    }
+
+    // Named field by field so the message says WHICH value disagrees. "The manifests differ" sends
+    // somebody diffing two files by hand; naming DalamudApiLevel ends the investigation.
+    private static IEnumerable<string> Differences(PluginManifest built, PluginManifest packaged)
+    {
+        foreach (var (field, fromBuilt, fromPackaged) in new[]
+        {
+            ("Name", built.Name, packaged.Name),
+            ("Author", built.Author, packaged.Author),
+            ("Punchline", built.Punchline, packaged.Punchline),
+            ("Description", built.Description, packaged.Description),
+            ("RepoUrl", built.RepoUrl, packaged.RepoUrl),
+            ("Tags", string.Join(", ", built.Tags), string.Join(", ", packaged.Tags)),
+            ("DalamudApiLevel", $"{built.DalamudApiLevel}", $"{packaged.DalamudApiLevel}"),
+            ("AssemblyVersion", built.AssemblyVersion, packaged.AssemblyVersion),
+        })
+        {
+            if (!string.Equals(fromBuilt, fromPackaged, StringComparison.Ordinal))
+            {
+                yield return $"  {field}: the build says '{fromBuilt}', the zip says '{fromPackaged}'";
+            }
+        }
+    }
+
+    private PluginManifest PackagedManifest()
+    {
+        using var archive = OpenZip();
+
+        var entry = archive.GetEntry(PluginManifestName)
+            ?? throw new InvalidOperationException(
+                $"'{File.FullName}' contains no {PluginManifestName}, so it is not a plugin release " +
+                "zip. That file is what Dalamud reads when it installs, and without it there is " +
+                "nothing to check the repository entry against.");
+
+        using var stream = entry.Open();
+
+        try
+        {
+            return JsonSerializer.Deserialize<PluginManifest>(stream)
+                ?? throw new InvalidOperationException(
+                    $"The {PluginManifestName} inside '{File.FullName}' is empty.");
+        }
+        catch (JsonException malformed)
+        {
+            throw new InvalidOperationException(
+                $"The {PluginManifestName} inside '{File.FullName}' is not readable as a plugin " +
+                "manifest, so the repository entry cannot be checked against the archive it links to.",
+                malformed);
         }
     }
 

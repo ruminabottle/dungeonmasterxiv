@@ -40,6 +40,11 @@ using DungeonMasterXIV.Release;
 // that installs and then misbehaves, which is worse than a dead link because it looks like it
 // worked.
 //
+// AND against --plugin-manifest, which is a second question, not the same one twice. A metadata-only
+// edit leaves the assembly byte-identical, so the SHA check passes on a zip a build behind and the
+// entry advertises metadata the archive contradicts -- including DalamudApiLevel, whose failure mode
+// is silence (BUG-16).
+//
 // --dry-run prints the manifest and writes nothing. It is how this is verified without cutting a
 // release, which is the whole point of the current gate: a manifest today would deliver a plugin
 // that installs cleanly and does nothing, because no relay is running.
@@ -83,6 +88,11 @@ try
     plugin = (JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(pluginManifestPath))
         ?? throw new InvalidOperationException($"'{pluginManifestPath}' is not a plugin manifest."))
         .RequireBuilt(pluginManifestPath);
+
+    // BUG-16. The line above checks the zip carries the same ASSEMBLY; this checks it carries the
+    // same METADATA. They are separate questions because a metadata-only edit leaves the assembly
+    // byte-identical, so the SHA comparison passes over a zip whose manifest is a build behind.
+    asset.MustCarryTheSameMetadataAs(plugin, pluginManifestPath);
 
     inputs = new ReleaseInputs(
         tag, PluginAssemblyVersion.Of(assemblyPath), plugin.DalamudApiLevel!.Value, plugin.RepoUrl, asset);
