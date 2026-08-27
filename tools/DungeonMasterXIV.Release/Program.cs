@@ -6,9 +6,10 @@ using DungeonMasterXIV.Release;
 
 // The named mechanism R-7.2 asks for: the repository manifest is generated, never hand-edited.
 //
-//   dotnet run --project tools/DungeonMasterXIV.Release --                 \
-//       --assembly bin/x64/Release/DungeonMasterXIV.dll                    \
-//       --plugin-manifest bin/x64/Release/DungeonMasterXIV.json            \
+//   dotnet run --project tools/DungeonMasterXIV.Release --                          \
+//       --assembly bin/x64/Release/DungeonMasterXIV.dll                             \
+//       --plugin-manifest bin/x64/Release/DungeonMasterXIV.json                     \
+//       --asset bin/x64/Release/DungeonMasterXIV/latest.zip                         \
 //       --tag v0.1.0 --out repo.json [--dry-run]
 //
 // --plugin-manifest is the BUILT manifest beside the assembly, not the source one at the repository
@@ -16,6 +17,17 @@ using DungeonMasterXIV.Release;
 // is deliberately no --api-level: R-7.3a requires it copied from the artefact, and an override would
 // reintroduce the typed value the requirement removes -- and would be used the first time somebody
 // was in a hurry.
+//
+// --asset is the built zip, and the download link's file name is read off it. There is no default
+// for the same reason: the previous constant said DungeonMasterXIV.zip, which DalamudPackager has
+// never written -- it writes latest.zip -- so the manifest was well-formed, the release real, the
+// plugin working and the link dead. A default would be that constant with a longer fuse.
+//
+// The zip is also checked against --assembly, because every build writes the same file name and the
+// version is not bumped between builds, so neither tells one build's zip from another's. Five were
+// on one machine at once, 61KB to 119KB, spanning two days. Attaching a stale one ships a plugin
+// that installs and then misbehaves, which is worse than a dead link because it looks like it
+// worked.
 //
 // --dry-run prints the manifest and writes nothing. It is how this is verified without cutting a
 // release, which is the whole point of the current gate: a manifest today would deliver a plugin
@@ -35,11 +47,13 @@ if (options.ContainsKey("api-level"))
 
 if (!options.TryGetValue("assembly", out var assemblyPath) ||
     !options.TryGetValue("plugin-manifest", out var pluginManifestPath) ||
-    !options.TryGetValue("tag", out var tag))
+    !options.TryGetValue("tag", out var tag) ||
+    !options.TryGetValue("asset", out var assetPath))
 {
     Console.Error.WriteLine(
-        "Required: --assembly <path> --plugin-manifest <BUILT manifest> --tag <git tag>. " +
-        "Optional: --out <path>, --dry-run. Nothing is defaulted or typed; see ReleaseInputs.");
+        "Required: --assembly <path> --plugin-manifest <BUILT manifest> --asset <built zip> " +
+        "--tag <git tag>. Optional: --out <path>, --dry-run. " +
+        "Nothing is defaulted or typed; see ReleaseInputs.");
     return 2;
 }
 
@@ -52,16 +66,20 @@ string manifest;
 // says what to do about it. Caught narrowly: anything else still crashes loudly.
 try
 {
+    var asset = ReleaseAsset.At(assetPath);
+    asset.MustMatchTheAssembly(assemblyPath);
+
     plugin = (JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(pluginManifestPath))
         ?? throw new InvalidOperationException($"'{pluginManifestPath}' is not a plugin manifest."))
         .RequireBuilt(pluginManifestPath);
 
     inputs = new ReleaseInputs(
-        tag, PluginAssemblyVersion.Of(assemblyPath), plugin.DalamudApiLevel!.Value, plugin.RepoUrl);
+        tag, PluginAssemblyVersion.Of(assemblyPath), plugin.DalamudApiLevel!.Value, plugin.RepoUrl, asset);
     manifest = RepositoryManifest.Build(inputs, plugin);
 }
 catch (Exception failure) when (
-    failure is InvalidOperationException or ArgumentException or FileNotFoundException or JsonException)
+    failure is InvalidOperationException or ArgumentException or FileNotFoundException
+        or InvalidDataException or JsonException)
 {
     Console.Error.WriteLine(failure.Message);
     Console.Error.WriteLine("No manifest generated. No tag created, no artefact published.");
