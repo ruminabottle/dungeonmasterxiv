@@ -200,6 +200,12 @@ public class AdmissionOnTheWireTests
     {
         public event Action<SessionFailure>? Failed;
 
+        public event Action<byte[]>? Received;
+
+        public void Deliver(WireEnvelope envelope) => Received?.Invoke(EnvelopeCodec.Encode(envelope));
+
+        public void DeliverRaw(byte[] frame) => Received?.Invoke(frame);
+
         public bool IsConnected { get; private set; }
 
         public List<byte[]> Sent { get; } = new();
@@ -209,6 +215,147 @@ public class AdmissionOnTheWireTests
         public void Disconnect() => IsConnected = false;
 
         public void Send(byte[] envelope) => Sent.Add(envelope);
+
+        public void RaiseFailure(SessionFailure failure) => Failed?.Invoke(failure);
+    }
+}
+
+/// <summary>
+/// The joiner's half of R-1.3b and R-1.3c: what happens when an answer actually arrives.
+/// </summary>
+public class AdmissionReceivedTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
+    private static readonly SessionCode Code = SessionCode.FromValid("BKD7RM");
+
+    // A-1.3. Fails if: an acceptance never reaches the joiner's state — which is where this stood
+    // before the receive path existed, with the host sending and nobody listening.
+    [Fact]
+    public void AnArrivingAcceptancePutsTheJoinerInTheSession()
+    {
+        var (coordinator, transport) = Joining();
+        using var host = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal(JoinPhase.Admitted, coordinator.Join.Phase);
+        Assert.True(coordinator.Join.MayReceiveSessionState);
+    }
+
+    // The acceptance is only useful if the key it carries is. Fails if: the host key is ignored,
+    // leaving an admitted joiner routed and unable to decrypt anything.
+    [Fact]
+    public void AnAdmittedJoinerDerivesTheSameKeyTheHostWillSealWith()
+    {
+        var (coordinator, transport) = Joining();
+        using var host = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal(
+            host.DeriveSharedKey(coordinator.JoinerKeys!.PublicKey, Code),
+            coordinator.SessionKey);
+    }
+
+    // A-1.4. Fails if: a denial is dropped, leaving the player on an indefinite spinner — R-1.8's
+    // ambiguity arriving through R-1.3b's door.
+    [Fact]
+    public void AnArrivingDenialIsShownAsRefusalAndNoStateFlows()
+    {
+        var (coordinator, transport) = Joining();
+        using var host = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinDenied(Code, coordinator.JoinerKeys!.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal(JoinPhase.Denied, coordinator.Join.Phase);
+        Assert.False(coordinator.Join.MayReceiveSessionState);
+        Assert.Null(coordinator.SessionKey);
+    }
+
+    // A-1.5h across the wire. Fails if: a lapse arrives as a denial, which tells someone they were
+    // turned away when nobody looked — and stops them re-requesting, which they are entitled to do.
+    [Fact]
+    public void AnArrivingLapseIsShownAsLapsedAndStaysReRequestable()
+    {
+        var (coordinator, transport) = Joining();
+
+        transport.Deliver(WireEnvelope.ForJoinLapsed(Code, coordinator.JoinerKeys!.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal(JoinPhase.Lapsed, coordinator.Join.Phase);
+        Assert.NotEqual(JoinPhase.Denied, coordinator.Join.Phase);
+        Assert.True(coordinator.Join.MayRequestAgain);
+    }
+
+    // D-14 at the consumer. Fails if: an unrecognised type reaches a handler, or takes the client
+    // down. A newer relay adding a message must not break an installed plugin.
+    [Fact]
+    public void AFrameFromANewerRelayIsIgnoredRatherThanCrashing()
+    {
+        var (coordinator, transport) = Joining();
+
+        transport.DeliverRaw(System.Text.Encoding.UTF8.GetBytes("{\"Type\":9999,\"SessionCode\":\"BKD7RM\"}"));
+
+        Assert.Null(Record.Exception(() => coordinator.Tick(TimeSpan.Zero, Now)));
+        Assert.Equal(JoinPhase.AwaitingDecision, coordinator.Join.Phase);
+    }
+
+    // Fails if: a malformed frame throws on the receive path. Anything can arrive from a relay, and
+    // a frame that does not parse must not take the game client down.
+    [Fact]
+    public void AMalformedFrameIsDroppedWithoutThrowing()
+    {
+        var (coordinator, transport) = Joining();
+
+        transport.DeliverRaw(System.Text.Encoding.UTF8.GetBytes("not json at all"));
+
+        Assert.Null(Record.Exception(() => coordinator.Tick(TimeSpan.Zero, Now)));
+    }
+
+    // Fails if: frames are applied on the socket thread. Mutating session state from a receive
+    // callback races the draw, which is why arrival and application are separated by the tick.
+    [Fact]
+    public void AnArrivingFrameChangesNothingUntilTheNextTick()
+    {
+        var (coordinator, transport) = Joining();
+        using var host = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+
+        Assert.Equal(JoinPhase.AwaitingDecision, coordinator.Join.Phase);
+    }
+
+    private static (SessionCoordinator Coordinator, FakeTransport Transport) Joining()
+    {
+        var transport = new FakeTransport();
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default);
+        coordinator.RequestJoin(Code);
+        coordinator.Join.AwaitDecision(AdmissionDeadline.DecidedByHost(Now));
+        return (coordinator, transport);
+    }
+
+    private sealed class FakeTransport : ISessionTransport
+    {
+        public event Action<SessionFailure>? Failed;
+
+        public event Action<byte[]>? Received;
+
+        public bool IsConnected { get; private set; }
+
+        public void Connect(Uri relay) => IsConnected = true;
+
+        public void Disconnect() => IsConnected = false;
+
+        public void Send(byte[] envelope)
+        {
+        }
+
+        public void Deliver(WireEnvelope envelope) => Received?.Invoke(EnvelopeCodec.Encode(envelope));
+
+        public void DeliverRaw(byte[] frame) => Received?.Invoke(frame);
 
         public void RaiseFailure(SessionFailure failure) => Failed?.Invoke(failure);
     }

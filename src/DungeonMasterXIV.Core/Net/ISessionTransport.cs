@@ -32,4 +32,16 @@ public interface ISessionTransport
     /// <see cref="SessionCoordinator"/> queues it and applies it on the next tick.
     /// </remarks>
     event Action<SessionFailure>? Failed;
+
+    /// <summary>
+    /// Raised with each frame that arrives. One encoded <see cref="WireEnvelope"/> per frame, per
+    /// the transport contract.
+    /// </summary>
+    /// <remarks>
+    /// Bytes rather than a decoded envelope on purpose: anything can arrive from a relay, so
+    /// deciding whether it parsed belongs to the layer that also decides whether to trust it. May be
+    /// raised off the framework thread — <see cref="SessionCoordinator"/> queues and applies on the
+    /// next tick rather than mutating session state from a socket callback.
+    /// </remarks>
+    event Action<byte[]>? Received;
 }

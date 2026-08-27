@@ -241,6 +241,12 @@ public class SessionCoordinatorTests
     {
         public event Action<SessionFailure>? Failed;
 
+        public event Action<byte[]>? Received;
+
+        public void Deliver(WireEnvelope envelope) => Received?.Invoke(EnvelopeCodec.Encode(envelope));
+
+        public void DeliverRaw(byte[] frame) => Received?.Invoke(frame);
+
         public void RaiseFailure(SessionFailure failure) => Failed?.Invoke(failure);
 
         public bool IsConnected { get; private set; }

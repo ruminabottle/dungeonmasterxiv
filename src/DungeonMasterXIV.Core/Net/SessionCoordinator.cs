@@ -23,11 +23,13 @@ public sealed class SessionCoordinator
         _transport = transport;
         _relayAddress = relayAddress;
         _transport.Failed += OnTransportFailed;
+        _transport.Received += OnFrameReceived;
         _announcer = new AdmissionAnnouncer(transport);
     }
 
     private readonly AdmissionAnnouncer _announcer;
     private readonly object _reportedFailureLock = new();
+    private readonly Queue<byte[]> _inbound = new();
     private SessionFailure _reportedFailure = SessionFailure.None;
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
@@ -54,6 +56,15 @@ public sealed class SessionCoordinator
     /// survived would be one.
     /// </remarks>
     public SessionKeyExchange? HostKeys { get; private set; }
+
+    /// <summary>This client's key pair when joining somebody else's session, or null.</summary>
+    public SessionKeyExchange? JoinerKeys { get; private set; }
+
+    /// <summary>
+    /// The key this client derived on being admitted, or null. Present only once the host's key has
+    /// arrived — which is why the acceptance has to carry it.
+    /// </summary>
+    public byte[]? SessionKey { get; private set; }
 
     /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
     public GraceWindow Grace { get; } = new();
@@ -92,6 +103,9 @@ public sealed class SessionCoordinator
     /// <summary>Requests to join <paramref name="code"/>. A human action (R-1.3).</summary>
     public void RequestJoin(SessionCode code)
     {
+        JoinerKeys?.Dispose();
+        JoinerKeys = new SessionKeyExchange();
+        SessionKey = null;
         Join.Request(code);
         SynchroniseTransport();
     }
@@ -276,6 +290,7 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
+        DrainInbound();
         JustLapsed = Admissions.ExpireLapsed(now);
         AnnounceLapsed();
 
@@ -306,10 +321,85 @@ public sealed class SessionCoordinator
     }
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
-    public void Detach() => _transport.Failed -= OnTransportFailed;
+    public void Detach()
+    {
+        _transport.Failed -= OnTransportFailed;
+        _transport.Received -= OnFrameReceived;
+    }
 
     // Raised off the framework thread by the transport, so it is only recorded here and applied on
     // the next tick. Mutating session state from a socket callback would race the draw.
+    // Arrives off the framework thread. Queued rather than applied, for the same reason a transport
+    // failure is: mutating session state from a socket callback races the draw.
+    private void OnFrameReceived(byte[] frame)
+    {
+        lock (_reportedFailureLock)
+        {
+            _inbound.Enqueue(frame);
+        }
+    }
+
+    /// <summary>
+    /// Applies whatever arrived since the last tick.
+    /// </summary>
+    /// <remarks>
+    /// An envelope that does not parse is dropped rather than raised: a relay can send anything, and
+    /// a malformed frame must not take the client down. D-14's tolerance is handled inside
+    /// <see cref="EnvelopeCodec.TryDecode"/>, so an unrecognised type arrives as
+    /// <see cref="WireMessageType.Unknown"/> and falls through here without a handler having to
+    /// remember to ignore it.
+    /// </remarks>
+    private void DrainInbound()
+    {
+        List<byte[]> frames;
+        lock (_reportedFailureLock)
+        {
+            frames = _inbound.ToList();
+            _inbound.Clear();
+        }
+
+        foreach (var frame in frames)
+        {
+            if (EnvelopeCodec.TryDecode(frame, out var envelope) && envelope is not null)
+            {
+                Apply(envelope);
+            }
+        }
+    }
+
+    // The joiner's half of R-1.3b and R-1.3c. Every outcome C6 defines is handled, and Match makes
+    // omitting one a compile error rather than a branch that silently does nothing.
+    private void Apply(WireEnvelope envelope)
+    {
+        if (envelope.TryGetAdmissionOutcome() is not { } outcome)
+        {
+            return;
+        }
+
+        outcome.Match<bool>(
+            onAccepted: hostPublicKey =>
+            {
+                Join.Admitted();
+                JoinerKeys ??= new SessionKeyExchange();
+                if (Join.Code is { } code)
+                {
+                    SessionKey = JoinerKeys.DeriveSharedKey(hostPublicKey, code);
+                }
+
+                return true;
+            },
+            onDenied: () =>
+            {
+                Join.Denied();
+                return true;
+            },
+            onLapsed: () =>
+            {
+                Join.Lapsed();
+                return true;
+            });
+    }
+
     private void OnTransportFailed(SessionFailure failure)
     {
         lock (_reportedFailureLock)
