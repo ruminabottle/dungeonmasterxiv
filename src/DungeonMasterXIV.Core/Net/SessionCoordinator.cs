@@ -23,8 +23,10 @@ public sealed class SessionCoordinator
         _transport = transport;
         _relayAddress = relayAddress;
         _transport.Failed += OnTransportFailed;
+        _announcer = new AdmissionAnnouncer(transport);
     }
 
+    private readonly AdmissionAnnouncer _announcer;
     private readonly object _reportedFailureLock = new();
     private SessionFailure _reportedFailure = SessionFailure.None;
     private TimeSpan _timeInPhase;
@@ -143,12 +145,9 @@ public sealed class SessionCoordinator
         var request = Admissions.Decide(peerCode);
         var peer = Audience.Admit(peerCode, role, request?.Verification ?? AdmissionVerification.NotCompared);
 
-        // The acceptance carries the HOST's key as well as echoing the joiner's. Without it the
-        // joiner is admitted, routed, and permanently unable to derive a session key — which
-        // presents as an encryption fault rather than a missing field.
         if (Host.Code is { } code && HostKeys is not null && request?.JoinerPublicKey is { } joinerKey)
         {
-            Send(WireEnvelope.ForJoinAccepted(code, joinerKey, HostKeys.PublicKey));
+            _announcer.Accepted(code, joinerKey, HostKeys.PublicKey);
         }
 
         return peer;
@@ -163,17 +162,11 @@ public sealed class SessionCoordinator
         var request = Admissions.Decide(peerCode);
         Audience.Remove(peerCode);
 
-        // R-1.3b: denial is an explicit message the denied client receives — not a timeout, not
-        // silence, not an absence of acceptance. Silence is indistinguishable from a broken relay,
-        // a wrong code, or a DM who has not looked yet, which is R-1.8's ambiguity arriving through
-        // a different door.
         if (Host.Code is { } code && request?.JoinerPublicKey is { } joinerKey)
         {
-            Send(WireEnvelope.ForJoinDenied(code, joinerKey));
+            _announcer.Denied(code, joinerKey);
         }
     }
-
-    private void Send(WireEnvelope envelope) => _transport.Send(EnvelopeCodec.Encode(envelope));
 
     /// <summary>
     /// The relay answered again after a drop and confirmed we still hold our code.
@@ -340,22 +333,11 @@ public sealed class SessionCoordinator
         }
     }
 
-    // R-1.3c: a lapsed requester is told it lapsed, never that they were denied. Nobody refused
-    // them, so asking again is reasonable — and being told after fifteen silent minutes is better
-    // than silence and worse than knowing.
     private void AnnounceLapsed()
     {
-        if (Host.Code is not { } code)
+        if (Host.Code is { } code)
         {
-            return;
-        }
-
-        foreach (var request in JustLapsed)
-        {
-            if (request.JoinerPublicKey is { } joinerKey)
-            {
-                Send(WireEnvelope.ForJoinLapsed(code, joinerKey));
-            }
+            _announcer.Lapsed(code, JustLapsed);
         }
     }
 
