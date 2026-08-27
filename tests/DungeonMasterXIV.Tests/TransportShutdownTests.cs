@@ -82,17 +82,33 @@ public class TransportShutdownTests
 
     // Fails if: the close is handed a token that never cancels. Without this the bound stops the
     // caller waiting but leaves the close itself running on with nobody listening.
+    // BUG-7. The bound is supplied rather than waited for, and the token is read inside the close
+    // rather than after it. Reading it afterwards raced two independent timers of the same length —
+    // the source's and the caller's wait — and asserted on which one happened to win; when the wait
+    // won, the source was disposed unfired and the token could never cancel. A zero bound is already
+    // cancelled when the source is constructed, so the close is invoked with a cancelled token by
+    // straight-line code, with no timer between the two.
     [Fact]
     public void TheCloseIsGivenATokenThatCancelsAtTheBound()
     {
-        CancellationToken observed = default;
+        var cancelledAtALapsedBound = false;
+        var cancelledAtABoundStillRunning = false;
 
         TransportShutdown.CloseThenDispose(
-            token => { observed = token; return new TaskCompletionSource().Task; },
+            token => { cancelledAtALapsedBound = token.IsCancellationRequested; return new TaskCompletionSource().Task; },
             () => { },
-            ShortBound);
+            TimeSpan.Zero);
 
-        Assert.True(observed.IsCancellationRequested);
+        // The other half of the bracket, and it is not redundant: without it the assertion above is
+        // equally satisfied by a close handed a token that is always dead, which would cancel real
+        // closes the instant they start. The close completes here, so nothing waits for the minute.
+        TransportShutdown.CloseThenDispose(
+            token => { cancelledAtABoundStillRunning = token.IsCancellationRequested; return Task.CompletedTask; },
+            () => { },
+            TimeSpan.FromMinutes(1));
+
+        Assert.True(cancelledAtALapsedBound);
+        Assert.False(cancelledAtABoundStillRunning);
     }
 
     // Fails if: the failure of a clean close is reported as an error, which would make the warning
