@@ -1,0 +1,25 @@
+[
+  {
+    "Author": "ruminabottle",
+    "Name": "Dungeon Master XIV",
+    "InternalName": "DungeonMasterXIV",
+    "Punchline": "Dice, initiative and encounter tracking for in-game tabletop sessions.",
+    "Description": "Dice, initiative and encounter tracking for tabletop roleplay sessions run inside FFXIV.\n\nThis does nothing on its own. Everyone playing needs this plugin installed, and it needs a connection to a relay — one person hosts a session and admits the others individually with a code. There is nothing to try alone, and anyone without the plugin cannot take part.\n\nRolls are made in the plugin rather than by the game, so 4d6+2 works where /dice cannot. Campaign history is stored on the host's machine.",
+    "RepoUrl": "https://github.com/ruminabottle/dungeonmasterxiv",
+    "Tags": [
+      "roleplay",
+      "tabletop",
+      "dice",
+      "initiative",
+      "session"
+    ],
+    "ApplicableVersion": "any",
+    "IsTestingExclusive": true,
+    "TestingAssemblyVersion": "0.1.0.0",
+    "TestingDalamudApiLevel": 15,
+    "DownloadLinkTesting": "https://github.com/ruminabottle/dungeonmasterxiv/releases/download/v0.1.0/latest.zip",
+    "DownloadLinkInstall": "https://github.com/ruminabottle/dungeonmasterxiv/releases/download/v0.1.0/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/ruminabottle/dungeonmasterxiv/releases/download/v0.1.0/latest.zip",
+    "DalamudApiLevel": 15
+  }
+]
