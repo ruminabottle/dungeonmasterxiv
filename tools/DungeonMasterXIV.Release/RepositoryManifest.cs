@@ -59,8 +59,11 @@ public static class RepositoryManifest
             ["Tags"] = new JsonArray(plugin.Tags.ConvertAll(tag => (JsonNode)JsonValue.Create(tag)!).ToArray()),
             ["ApplicableVersion"] = "any",
 
-            // Testing channel only. The stable fields are deliberately absent rather than blank:
-            // a populated stable field is what would make this visible to everyone (R-7.1, D-12).
+            // R-7.1 and D-12's second gate. THIS FLAG is what keeps the plugin off the stable
+            // channel -- not the absence of stable fields. The comment here used to claim the
+            // opposite, and omitting AssemblyVersion on the strength of it is BUG-34: a real tester
+            // was blocked by a manifest Dalamud cannot use. The correct argument was already
+            // written six lines below, about the download links, and simply not carried across.
             ["IsTestingExclusive"] = true,
             ["TestingAssemblyVersion"] = inputs.AssemblyVersion.ToString(),
             ["TestingDalamudApiLevel"] = inputs.DalamudApiLevel,
@@ -72,6 +75,17 @@ public static class RepositoryManifest
             ["DownloadLinkInstall"] = inputs.DownloadLink,
             ["DownloadLinkUpdate"] = inputs.DownloadLink,
             ["DalamudApiLevel"] = inputs.DalamudApiLevel,
+
+            // BUG-34, and it is required rather than a courtesy. Dalamud 15 declares
+            // AssemblyVersion NON-NULLABLE on PluginManifest, while TestingAssemblyVersion carries
+            // no such annotation and is optional -- established by reflecting on the shipped
+            // Dalamud.dll, whose type-level default is NullableContext(2), so the properties
+            // explicitly marked non-nullable are exactly the required ones. This manifest had the
+            // two the wrong way round: the optional field populated, the required one absent.
+            //
+            // No comparison against regenerated output could ever have caught it, because the
+            // generator was the thing that was wrong and its output agreed with itself.
+            ["AssemblyVersion"] = inputs.AssemblyVersion.ToString(),
         };
 
         return new JsonArray(entry).ToJsonString(Options);
