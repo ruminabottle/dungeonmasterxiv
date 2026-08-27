@@ -60,8 +60,27 @@ public sealed class AdmissionInbox
 
         foreach (var frame in frames)
         {
-            if (EnvelopeCodec.TryDecode(frame, out var envelope)
-                && envelope?.TryGetAdmissionOutcome() is { } outcome)
+            if (!EnvelopeCodec.TryDecode(frame, out var envelope) || envelope is null)
+            {
+                continue;
+            }
+
+            // Pending notices first, and they are not outcomes. A pending notice says the DM is
+            // looking; applying it is what gives this client something to compare while the
+            // decision is still open (R-1.3a-i, A-1.3f-1).
+            if (envelope.TryGetPendingHostKey() is { } hostPublicKey)
+            {
+                attempt.AwaitDecision(envelope.TryGetDeadline());
+
+                if (keys is not null)
+                {
+                    attempt.HostKeyOffered(hostPublicKey, keys.PublicKey);
+                }
+
+                continue;
+            }
+
+            if (envelope.TryGetAdmissionOutcome() is { } outcome)
             {
                 sessionKey = Apply(outcome, attempt, keys) ?? sessionKey;
             }

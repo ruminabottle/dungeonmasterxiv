@@ -31,6 +31,23 @@ public sealed class SessionWindow : Window
         "Admitted without the code being compared. This session is not protected against someone "
         + "sitting in the middle of it.";
 
+    // The joiner's side of CompareOutOfBand. Same instruction, same constraint, addressed to the
+    // person who until now was told to read out a code their client never showed them (BUG-31).
+    private const string ReadYourCodeAloud =
+        "Read this code to your DM over voice or chat while they decide, and check it matches what "
+        + "they see. Do not send it through the plugin - a channel someone has tampered with cannot "
+        + "prove it has not been tampered with.";
+
+    // R-1.3a-i: the honest rendering when there is nothing to compare. Never a blank space where a
+    // code would go, and never a placeholder that could be mistaken for one.
+    private const string NoCodeToCompare =
+        "Your DM's client has not sent a code to compare. You cannot check who you are talking to, "
+        + "and being admitted will not tell you.";
+
+    private const string AdmittedUncompared =
+        "You were admitted without ever having a code to compare. Nothing here proves the DM is who "
+        + "you think - it only proves someone admitted you.";
+
     private const string CodeChangedWarning =
         "Your session code changed while you were disconnected, because it was taken by another "
         + "session. Your players are still holding the old one - read them the new code below.";
@@ -124,6 +141,28 @@ public sealed class SessionWindow : Window
         {
             // R-1.3c's harder half: the bound is visible while the wait runs, not only at the end.
             ImGui.TextUnformatted($"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");
+
+            // R-1.3a-i: the joiner's half of the comparison, and it must be here rather than after
+            // admission. The DM is shown the same value in their prompt; whichever side reads it
+            // out, the other confirms.
+            if (join.Fingerprint is { } fingerprint)
+            {
+                ImGui.TextUnformatted($"Code to compare: {fingerprint}");
+                ImGui.TextWrapped(ReadYourCodeAloud);
+            }
+            else
+            {
+                ImGui.TextWrapped(NoCodeToCompare);
+            }
+        }
+
+        // Said once the decision is made, because by then the code on screen is no longer something
+        // that could have informed it. Reads from the snapshot taken at admission, not from whether
+        // a fingerprint exists now - the host's key arrives again in the acceptance envelope, so
+        // "do we have one?" is true a moment later and answers the wrong question (A-1.3f-1).
+        if (join.Phase == JoinPhase.Admitted && !join.FingerprintWasComparableAtDecision)
+        {
+            ImGui.TextWrapped(AdmittedUncompared);
         }
 
         if (join.MayRequestAgain || join.Phase == JoinPhase.Denied)

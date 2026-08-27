@@ -30,8 +30,17 @@ namespace DungeonMasterXIV.Net;
 /// second check to skip.
 /// </para>
 /// <para>
-/// This is a <b>rendering</b> decision and deliberately not a protocol one. No wire field carries
-/// it: after the exchange both sides already hold both keys, so both can compute it.
+/// <b>Computing one value from both keys is a rendering decision. Getting both keys to both sides
+/// in time is not, and this comment used to say otherwise.</b> It read: "No wire field carries it:
+/// after the exchange both sides already hold both keys, so both can compute it." That is true and
+/// useless — the exchange completes at <i>acceptance</i>, so the joiner held both keys only after
+/// the decision the comparison exists to inform, and could not compare anything. It shipped as
+/// BUG-31, and PRD-1 R-1.3a's matching bullet is struck for the same reason.
+/// </para>
+/// <para>
+/// The host's key now reaches the joiner before admission, in
+/// <see cref="WireMessageType.JoinPending"/> (R-1.3a-i, D-11 as amended 2026-08-27). This function
+/// is unchanged and was never at fault: it is correct, and it was unreachable on one side.
 /// </para>
 /// </remarks>
 public static class KeyFingerprint

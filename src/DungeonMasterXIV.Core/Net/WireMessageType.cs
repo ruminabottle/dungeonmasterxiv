@@ -46,4 +46,26 @@ public enum WireMessageType
     /// <see cref="JoinDenied"/> on purpose — nobody looked, so asking again is reasonable (R-1.3c).
     /// </summary>
     JoinLapsed = 8,
+
+    /// <summary>
+    /// Host to joiner: your request is in front of the DM, here is the host's public key, and here
+    /// is when the window closes. Carries no decision — the DM has not made one yet.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This message exists because of when it is sent, not what it contains (D-11 amended).</b>
+    /// <see cref="JoinAccepted"/> already carries the host's key, and carrying it there is too late:
+    /// the joiner cannot compute the fingerprint until the DM has already decided, so the check
+    /// meant to inform the decision arrives after it. A joiner who is only ever sent
+    /// <see cref="JoinAccepted"/> has nothing to compare and cannot detect a substituted host key.
+    /// </para>
+    /// <para>
+    /// <b>A new type rather than a field on <see cref="JoinRequest"/>.</b> D-14 permits either, but
+    /// <see cref="JoinRequest"/> means "joiner to host, asking to be admitted"; putting the host's
+    /// key on it would make one type mean two opposite things depending on direction, and D-14 says
+    /// no message type ever changes meaning. An old client decodes this as
+    /// <see cref="Unknown"/> and ignores it, which is the interoperability D-14 is for.
+    /// </para>
+    /// </remarks>
+    JoinPending = 9,
 }
