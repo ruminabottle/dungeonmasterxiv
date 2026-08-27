@@ -3,42 +3,43 @@ using System.Collections.Generic;
 namespace DungeonMasterXIV.Campaigns;
 
 /// <summary>
-/// Where the campaign document is kept. Implemented outside this project by a file adapter that
-/// knows the plugin's config directory; implemented in tests by an in-memory fake.
+/// Where campaign files are kept: one file per campaign (A-1.11b), plus whatever older files are
+/// still lying in the same folder.
 /// </summary>
 /// <remarks>
-/// This port carries no policy. <i>Whether</i> an unreadable document should be preserved is a
-/// decision and lives in <see cref="CampaignStore"/>; <see cref="PreserveUnreadable"/> only
-/// performs it.
+/// This port carries no policy. It does not know what a campaign is, what makes a file unreadable,
+/// or when to migrate — those decisions live in <see cref="CampaignStoreLoader"/> and
+/// <see cref="CampaignStore"/>. It knows names and bytes.
 /// </remarks>
 public interface ICampaignArchive
 {
-    /// <summary>
-    /// The stored document as text, or <c>null</c> when nothing has ever been written. Null means
-    /// first run and must not be conflated with a document that exists and will not parse.
-    /// </summary>
-    string? Read();
+    /// <summary>Every campaign file present, by name, in a stable order.</summary>
+    IReadOnlyList<string> CampaignFiles();
 
-    /// <summary>Overwrites the stored document with <paramref name="contents"/>.</summary>
-    /// <param name="contents">The serialized document.</param>
-    void Write(string contents);
+    /// <summary>The contents of one campaign file, or <c>null</c> if it is not there.</summary>
+    /// <param name="name">A campaign file name.</param>
+    string? ReadCampaign(string name);
 
-    /// <summary>
-    /// Moves the current stored document aside, keeping it, so the next <see cref="Write"/> starts
-    /// a fresh one without destroying what could not be read.
-    /// </summary>
-    /// <returns>A description of where it was kept, for the log. Never contains a participant label.</returns>
-    string PreserveUnreadable();
+    /// <summary>Writes one campaign file, replacing it if it exists.</summary>
+    /// <param name="name">A campaign file name.</param>
+    /// <param name="contents">The serialized campaign file.</param>
+    void WriteCampaign(string name, string contents);
 
-    /// <summary>
-    /// The names of every unreadable document kept aside and not yet removed. These still contain
-    /// whatever the unreadable file contained, participant labels included, which is why the DM
-    /// needs to be able to see and delete them (A-1.10).
-    /// </summary>
-    IReadOnlyList<string> PreservedFiles();
-
-    /// <summary>Removes one preserved file.</summary>
-    /// <param name="name">A name from <see cref="PreservedFiles"/>.</param>
+    /// <summary>Removes one file this plugin owns — a campaign file, a legacy file, or a preserved one.</summary>
+    /// <param name="name">The file's name.</param>
     /// <returns>Whether a file was removed.</returns>
-    bool DeletePreserved(string name);
+    bool Delete(string name);
+
+    /// <summary>
+    /// The old single-file store's contents, or <c>null</c> if it is not there. Read once so it can
+    /// be migrated onto the per-campaign layout, then deleted. Never written.
+    /// </summary>
+    string? ReadLegacy();
+
+    /// <summary>
+    /// Files this plugin left behind that are not campaign files — the legacy store when it is
+    /// still present, and anything preserved by an older build. They may hold participant labels,
+    /// which is why A-1.10 requires the DM be able to see and delete them.
+    /// </summary>
+    IReadOnlyList<string> OtherOwnedFiles();
 }

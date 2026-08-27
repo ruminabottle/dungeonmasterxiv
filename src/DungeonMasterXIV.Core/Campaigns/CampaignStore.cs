@@ -11,51 +11,61 @@ namespace DungeonMasterXIV.Campaigns;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Every lookup here takes a <see cref="Guid"/>.</b> No method finds a campaign by its session
-/// code, because R-1.2a makes a code the label of a live session rather than the name of a
-/// campaign — a DM whose usual code is taken at resume must get a new code and the same campaign.
-/// A by-code lookup is how that guarantee would be lost, so the shape of this type refuses it.
+/// <b>Every lookup here takes a <see cref="Guid"/>.</b> R-1.2a makes a session code the label of a
+/// live session rather than the name of a campaign — a DM whose usual code is taken at resume must
+/// get a new code and the same campaign. A by-code lookup is how that guarantee would be lost, so
+/// the shape of this type refuses it.
 /// </para>
 /// <para>
-/// Nothing here leaves the machine. This store is not the relay and does not soften D-2 (E-9).
+/// <b>One file per campaign</b> (A-1.11b). That bounds what a single file discloses when someone
+/// attaches one to a bug report; it is <i>not</i> a claim to satisfy A-1.11, which since
+/// 2026-08-27 is about what leaves the machine. Two files in one folder link a person exactly as
+/// well as one did.
 /// </para>
+/// <para>Nothing here leaves the machine. This store is not the relay and does not soften D-2.</para>
 /// </remarks>
 public sealed class CampaignStore
 {
     private readonly ICampaignArchive _archive;
     private readonly ICampaignStoreLog _log;
-    private readonly CampaignDocument _document;
+    private readonly List<Campaign> _campaigns;
+    private readonly List<UnreadableCampaignFile> _unreadable;
 
-    /// <param name="archive">Where the document is kept.</param>
+    /// <param name="archive">Where campaign files are kept.</param>
     /// <param name="log">Where load outcomes are reported.</param>
     public CampaignStore(ICampaignArchive archive, ICampaignStoreLog log)
     {
         _archive = archive;
         _log = log;
-        _document = Load(out var outcome, out var loadedVersion);
-        LoadOutcome = outcome;
-        LoadedVersion = loadedVersion;
+
+        var loaded = CampaignStoreLoader.Load(archive, log);
+        _campaigns = loaded.Campaigns;
+        _unreadable = loaded.Unreadable;
+        LoadOutcome = loaded.Outcome;
+        Migrated = loaded.Migrated;
     }
 
-    /// <summary>Every campaign this machine holds, oldest first.</summary>
-    public IReadOnlyList<Campaign> Campaigns => _document.Campaigns;
+    /// <summary>Every campaign this machine holds and can read.</summary>
+    public IReadOnlyList<Campaign> Campaigns => _campaigns;
 
-    /// <summary>How the document arrived: never stored, read, or preserved because it would not read.</summary>
+    /// <summary>
+    /// Files that are on disk and are not readable campaigns. A-1.10 requires the DM can list and
+    /// delete these too: an unreadable file is the one a user cannot reason about, and it may hold
+    /// participant labels.
+    /// </summary>
+    public IReadOnlyList<UnreadableCampaignFile> Unreadable => _unreadable;
+
+    /// <summary>Whether anything was stored at all, and whether any of it read.</summary>
     public CampaignLoadOutcome LoadOutcome { get; }
 
-    /// <summary>
-    /// Increments on every write. A draw callback may not rebuild its display rows each frame, so
-    /// the campaign list caches them and rebuilds only when this changes. Conservative by design:
-    /// a save that altered nothing still bumps it, which costs one rebuild and can never go stale.
-    /// </summary>
-    public int Revision { get; private set; }
+    /// <summary>How many campaigns were moved off the old single-file store on this load.</summary>
+    public int Migrated { get; }
 
     /// <summary>
-    /// The schema version that came off disk, or <c>null</c> when nothing readable was loaded.
-    /// A migration belongs here: this is the only point that knows which shape arrived, and the
-    /// document's own version is restamped by the next save.
+    /// Increments on every change. A draw callback may not rebuild its display rows each frame, so
+    /// the campaign list caches them and rebuilds only when this changes.
     /// </summary>
-    public int? LoadedVersion { get; }
+    public int Revision { get; private set; }
 
     /// <summary>
     /// Starts a campaign and returns it. Its identity is generated here and never derived from
@@ -71,23 +81,22 @@ public sealed class CampaignStore
             CreatedUtc = DateTimeOffset.UtcNow,
         };
 
-        _document.Campaigns.Add(campaign);
-        Save();
+        _campaigns.Add(campaign);
+        Save(campaign);
         return campaign;
     }
 
     /// <summary>The campaign with this identity, or <c>null</c>.</summary>
     /// <param name="campaignId">The campaign's local UUID.</param>
     public Campaign? Find(Guid campaignId) =>
-        _document.Campaigns.FirstOrDefault(campaign => campaign.CampaignId == campaignId);
+        _campaigns.FirstOrDefault(campaign => campaign.CampaignId == campaignId);
 
     /// <summary>
     /// Records a participant in a campaign and returns them, with a UUID generated fresh for this
     /// campaign, so the same person in another campaign gets an unrelated identifier.
     /// <para>
     /// <b>That rotation is necessary for A-1.11 and not sufficient for it.</b> The label is not
-    /// rotated, and it is the field most likely to match across campaigns; see
-    /// <see cref="CampaignParticipant"/> for what is and is not guaranteed.
+    /// rotated; see <see cref="CampaignParticipant"/> for what is and is not guaranteed.
     /// </para>
     /// </summary>
     /// <param name="campaignId">The campaign they played in.</param>
@@ -102,13 +111,13 @@ public sealed class CampaignStore
 
         var participant = new CampaignParticipant { ParticipantId = Guid.NewGuid(), Label = label };
         campaign.Participants.Add(participant);
-        Save();
+        Save(campaign);
         return participant;
     }
 
     /// <summary>
-    /// Changes which code a campaign prefers. The campaign's identity is untouched, which is the
-    /// whole point: a code taken at resume costs a new code, not the campaign (R-1.2a).
+    /// Changes which code a campaign prefers. Its identity is untouched: a code taken at resume
+    /// costs a new code, not the campaign (R-1.2a).
     /// </summary>
     /// <param name="campaignId">The campaign to relabel.</param>
     /// <param name="preferredCode">The code it should now ask the relay for.</param>
@@ -121,13 +130,13 @@ public sealed class CampaignStore
         }
 
         campaign.PreferredCode = preferredCode.Value;
-        Save();
+        Save(campaign);
         return true;
     }
 
     /// <summary>
-    /// Deletes a campaign outright and rewrites the document without it, so no participant, UUID
-    /// or state of that campaign survives the write (A-1.10).
+    /// Deletes a campaign outright, removing its file, so no participant, UUID or state of that
+    /// campaign survives on disk (A-1.10).
     /// </summary>
     /// <param name="campaignId">The campaign to delete.</param>
     public bool Delete(Guid campaignId)
@@ -139,75 +148,44 @@ public sealed class CampaignStore
         }
 
         var participantCount = campaign.Participants.Count;
-        _document.Campaigns.Remove(campaign);
-        Save();
-        _log.Information(
-            $"Deleted campaign {campaignId} and its {participantCount} participant record(s).");
+        _campaigns.Remove(campaign);
+        _archive.Delete(CampaignFileName.NameFor(campaignId));
+        Revision++;
+        _log.Information($"Deleted campaign {campaignId} and its {participantCount} participant record(s).");
         return true;
     }
 
     /// <summary>
-    /// Unreadable documents kept aside and not yet removed. They still hold whatever the file held,
-    /// participant labels included, so A-1.10's "no trace remains" is not true of a campaign whose
-    /// data is sitting in one of these — which is why they are listable and deletable rather than
-    /// merely preserved.
+    /// Deletes a file that is on disk but is not a readable campaign. The other half of A-1.10:
+    /// preserving what will not parse is only useful if the DM can subsequently be rid of it.
     /// </summary>
-    public IReadOnlyList<string> PreservedFiles() => _archive.PreservedFiles();
-
-    /// <summary>
-    /// Deletes one preserved file. The name must be one from <see cref="PreservedFiles"/>; the
-    /// archive refuses anything else.
-    /// </summary>
-    /// <param name="name">A name from <see cref="PreservedFiles"/>.</param>
-    public bool DeletePreserved(string name)
+    /// <param name="fileName">A name from <see cref="Unreadable"/>.</param>
+    public bool DeleteUnreadable(string fileName)
     {
-        // No name check here. The archive turns the name into a path and is the layer that guards
-        // it — a copy of that check in this method could never fail, because nothing reaches the
-        // archive except through here.
-        if (!_archive.DeletePreserved(name))
+        var index = _unreadable.FindIndex(entry => entry.FileName == fileName);
+        if (index < 0)
         {
-            _log.Warning($"Could not delete preserved campaign file '{name}'.");
+            _log.Warning($"Refused to delete '{fileName}': it is not a file this store is holding.");
             return false;
         }
 
+        if (!_archive.Delete(fileName))
+        {
+            _log.Warning($"Could not delete '{fileName}'.");
+            return false;
+        }
+
+        _unreadable.RemoveAt(index);
         Revision++;
-        _log.Information($"Deleted preserved campaign file {name}.");
+        _log.Information($"Deleted unreadable campaign file {fileName}.");
         return true;
     }
 
-    /// <summary>Writes the document, stamped with the schema version it is written in.</summary>
-    public void Save()
+    /// <summary>Writes one campaign's file, stamped with the schema version it is written in.</summary>
+    /// <param name="campaign">The campaign to persist.</param>
+    public void Save(Campaign campaign)
     {
-        _archive.Write(CampaignDocumentCodec.Serialize(_document));
+        _archive.WriteCampaign(CampaignFileName.NameFor(campaign.CampaignId), CampaignFileCodec.Serialize(campaign));
         Revision++;
-    }
-
-    private CampaignDocument Load(out CampaignLoadOutcome outcome, out int? loadedVersion)
-    {
-        loadedVersion = null;
-        var stored = _archive.Read();
-
-        if (stored is null)
-        {
-            outcome = CampaignLoadOutcome.FirstRun;
-            _log.Information("No campaign store found. This machine has not saved a campaign before.");
-            return new CampaignDocument();
-        }
-
-        if (CampaignDocumentCodec.TryDeserialize(stored, out var document) && document is not null)
-        {
-            outcome = CampaignLoadOutcome.Loaded;
-            loadedVersion = document.Version;
-            _log.Information(
-                $"Loaded {document.Campaigns.Count} campaign(s), schema version {document.Version}.");
-            return document;
-        }
-
-        outcome = CampaignLoadOutcome.Unreadable;
-        var keptAt = _archive.PreserveUnreadable();
-        _log.Warning(
-            $"The campaign store could not be read and has been kept at {keptAt} rather than " +
-            "overwritten. Starting from an empty store; the campaigns in that file are not lost.");
-        return new CampaignDocument();
     }
 }
