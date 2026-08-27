@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Campaigns;
 /// <b>This takes a directory rather than Dalamud's plugin interface, and that is the point.</b> It
 /// used to take <c>IDalamudPluginInterface</c> purely to read <c>ConfigDirectory</c>, which made
 /// the whole type unreachable from the test assembly — so the guard on
-/// <see cref="DeletePreserved"/> could not be tested where it lives. A guard about paths belongs at
+/// <see cref="Delete"/> could not be tested where it lives. A guard about paths belongs at
 /// the layer holding the path, and it is only worth having if it can be exercised.
 /// </para>
 /// <para>
@@ -34,57 +34,53 @@ namespace DungeonMasterXIV.Campaigns;
 /// </remarks>
 public sealed class CampaignFileArchive : ICampaignArchive
 {
-    private const string FileName = "campaigns.json";
-
     private readonly DirectoryInfo _directory;
 
     /// <param name="directory">Where campaign files live — the plugin's own config directory.</param>
     public CampaignFileArchive(DirectoryInfo directory) => _directory = directory;
 
-    private string FilePath => Path.Combine(_directory.FullName, FileName);
+    /// <inheritdoc />
+    public IReadOnlyList<string> CampaignFiles() =>
+        NamesMatching($"{CampaignFileName.Prefix}*{CampaignFileName.Suffix}", CampaignFileName.IsCampaignFileName);
 
     /// <inheritdoc />
-    public string? Read() => File.Exists(FilePath) ? File.ReadAllText(FilePath) : null;
+    public string? ReadCampaign(string name) =>
+        CampaignFileName.IsCampaignFileName(name) ? ReadIfPresent(name) : null;
 
     /// <inheritdoc />
-    public void Write(string contents)
+    public void WriteCampaign(string name, string contents)
     {
-        _directory.Create();
-        File.WriteAllText(FilePath, contents);
-    }
-
-    /// <inheritdoc />
-    public string PreserveUnreadable()
-    {
-        var keptName = PreservedCampaignFile.NameFor(DateTimeOffset.UtcNow);
-        File.Move(FilePath, Path.Combine(_directory.FullName, keptName));
-        return keptName;
-    }
-
-    /// <inheritdoc />
-    public IReadOnlyList<string> PreservedFiles()
-    {
-        _directory.Refresh();
-        if (!_directory.Exists)
+        if (!CampaignFileName.IsCampaignFileName(name))
         {
-            return Array.Empty<string>();
+            throw new ArgumentException($"Not a campaign file name: '{name}'.", nameof(name));
         }
 
-        return _directory
-            .EnumerateFiles($"{PreservedCampaignFile.Prefix}*{PreservedCampaignFile.Suffix}")
-            .Select(file => file.Name)
-            .Where(PreservedCampaignFile.IsPreservedName)
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToArray();
+        _directory.Create();
+        File.WriteAllText(Path.Combine(_directory.FullName, name), contents);
     }
 
     /// <inheritdoc />
-    public bool DeletePreserved(string name)
+    public string? ReadLegacy() => ReadIfPresent(CampaignFileName.LegacyFileName);
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> OtherOwnedFiles()
     {
-        // The only check on this name, and it is here rather than in the caller because this is the
-        // layer that turns it into a path. Without it, "../../dalamudUI.ini" combines to a real
-        // file outside the config directory and File.Exists below would happily agree.
-        if (!PreservedCampaignFile.IsPreservedName(name))
+        var preserved = NamesMatching(
+            $"{PreservedCampaignFile.Prefix}*{PreservedCampaignFile.Suffix}",
+            PreservedCampaignFile.IsPreservedName);
+
+        return File.Exists(Path.Combine(_directory.FullName, CampaignFileName.LegacyFileName))
+            ? preserved.Prepend(CampaignFileName.LegacyFileName).ToArray()
+            : preserved;
+    }
+
+    /// <inheritdoc />
+    public bool Delete(string name)
+    {
+        // The only check on this name, and it is here because this is the layer that turns it into
+        // a path. Without it "../../dalamudUI.ini" combines to a real file outside the config
+        // directory and File.Exists below would happily agree.
+        if (!IsOurs(name))
         {
             return false;
         }
@@ -97,5 +93,32 @@ public sealed class CampaignFileArchive : ICampaignArchive
 
         File.Delete(path);
         return true;
+    }
+
+    private static bool IsOurs(string? name) =>
+        CampaignFileName.IsCampaignFileName(name)
+        || PreservedCampaignFile.IsPreservedName(name)
+        || string.Equals(name, CampaignFileName.LegacyFileName, StringComparison.Ordinal);
+
+    private string? ReadIfPresent(string name)
+    {
+        var path = Path.Combine(_directory.FullName, name);
+        return File.Exists(path) ? File.ReadAllText(path) : null;
+    }
+
+    private string[] NamesMatching(string pattern, Func<string, bool> keep)
+    {
+        _directory.Refresh();
+        if (!_directory.Exists)
+        {
+            return Array.Empty<string>();
+        }
+
+        return _directory
+            .EnumerateFiles(pattern)
+            .Select(file => file.Name)
+            .Where(keep)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
     }
 }

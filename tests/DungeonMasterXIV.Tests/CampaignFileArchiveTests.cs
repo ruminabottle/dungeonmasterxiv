@@ -7,13 +7,14 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// The file adapter, tested against a real directory. This is what taking a <c>DirectoryInfo</c>
-/// instead of Dalamud's plugin interface bought: the guard that stands between a caller and an
-/// arbitrary file delete is now exercised in the layer that holds the path, rather than asserted
-/// one layer up where it could never fire.
+/// The file adapter, against a real directory. It takes a <c>DirectoryInfo</c> rather than
+/// Dalamud's plugin interface precisely so the guard that stands between a caller and an arbitrary
+/// file delete is exercised in the layer that holds the path.
 /// </summary>
 public sealed class CampaignFileArchiveTests : IDisposable
 {
+    private static readonly Guid AnId = new("2f1d5b8e-0000-4000-8000-000000000001");
+
     private readonly DirectoryInfo _directory;
 
     public CampaignFileArchiveTests()
@@ -30,74 +31,89 @@ public sealed class CampaignFileArchiveTests : IDisposable
     private string PathTo(string name) => Path.Combine(_directory.FullName, name);
 
     [Fact]
-    public void NothingStoredReadsAsNullRatherThanEmpty()
-    {
-        Assert.Null(NewArchive().Read());
-    }
-
-    [Fact]
-    public void WhatIsWrittenIsWhatIsReadBack()
+    public void AnEmptyFolderHoldsNoCampaignsAndNoLegacyFile()
     {
         var archive = NewArchive();
 
-        archive.Write("{\"Version\":1}");
-
-        Assert.Equal("{\"Version\":1}", archive.Read());
+        Assert.Empty(archive.CampaignFiles());
+        Assert.Null(archive.ReadLegacy());
+        Assert.Empty(archive.OtherOwnedFiles());
     }
 
     [Fact]
-    public void PreservingKeepsTheOldFileAndLeavesTheDocumentSlotEmpty()
+    public void ACampaignIsWrittenToItsOwnFileAndReadBack()
     {
         var archive = NewArchive();
-        archive.Write("unreadable");
+        var name = CampaignFileName.NameFor(AnId);
 
-        var keptAs = archive.PreserveUnreadable();
+        archive.WriteCampaign(name, "{\"Version\":1}");
 
-        Assert.Null(archive.Read());
-        Assert.Equal("unreadable", File.ReadAllText(PathTo(keptAs)));
-        Assert.Equal(keptAs, Assert.Single(archive.PreservedFiles()));
+        Assert.Equal(new[] { name }, archive.CampaignFiles().ToArray());
+        Assert.Equal("{\"Version\":1}", archive.ReadCampaign(name));
     }
 
     [Fact]
-    public void DeletingAPreservedFileRemovesItFromDisk()
+    public void TheLegacyFileIsReadableAndIsNotCountedAsACampaignFile()
     {
+        File.WriteAllText(PathTo(CampaignFileName.LegacyFileName), "old store");
         var archive = NewArchive();
-        archive.Write("unreadable");
-        var keptAs = archive.PreserveUnreadable();
 
-        Assert.True(archive.DeletePreserved(keptAs));
-
-        Assert.False(File.Exists(PathTo(keptAs)));
-        Assert.Empty(archive.PreservedFiles());
+        Assert.Equal("old store", archive.ReadLegacy());
+        Assert.Empty(archive.CampaignFiles());
+        Assert.Contains(CampaignFileName.LegacyFileName, archive.OtherOwnedFiles());
     }
 
-    // THE test this move existed to make possible. Every name here is a concrete input that,
-    // without the guard, deletes something it must not — proven by removing the guard and watching
-    // each case fail, not by inspection.
-    //
-    // One case that is NOT here, and why: "campaigns.unreadable-../../outside.txt" looks like the
-    // nastiest of the set and is inert. Path normalisation treats "campaigns.unreadable-.." as a
-    // directory name, so the ".." that follows only cancels it and the path lands back INSIDE this
-    // directory on a file that does not exist. It returns false with or without the guard, which
-    // makes it a case that cannot fail dressed as the most dangerous one. Replaced with a name that
-    // genuinely escapes: a valid preserved name followed by a separator and two levels up.
+    [Fact]
+    public void FilesBelongingToOtherPluginsAreNeitherListedNorDeletable()
+    {
+        File.WriteAllText(PathTo("dalamudUI.ini"), "someone else's file");
+        var archive = NewArchive();
+
+        Assert.Empty(archive.CampaignFiles());
+        Assert.Empty(archive.OtherOwnedFiles());
+        Assert.False(archive.Delete("dalamudUI.ini"));
+        Assert.True(File.Exists(PathTo("dalamudUI.ini")));
+    }
+
+    [Fact]
+    public void DeletingACampaignFileRemovesItFromDisk()
+    {
+        var archive = NewArchive();
+        var name = CampaignFileName.NameFor(AnId);
+        archive.WriteCampaign(name, "{\"Version\":1}");
+
+        Assert.True(archive.Delete(name));
+
+        Assert.False(File.Exists(PathTo(name)));
+        Assert.Empty(archive.CampaignFiles());
+    }
+
+    // Every name here deletes something it must not if the guard is removed — verified by removing
+    // it and watching each case fail, not by inspection. A file outside the directory is written
+    // first and asserted to survive, so "returned false" cannot pass for "deleted nothing".
     [Theory]
     [InlineData("../outside.txt")]
-    [InlineData("campaigns.unreadable-x.json/../../outside.txt")]
-    [InlineData("campaigns.json")]
-    public void ANameThatIsNotAPreservedFileDeletesNothing(string name)
+    [InlineData("campaign-2f1d5b8e-0000-4000-8000-000000000001.json/../../outside.txt")]
+    [InlineData("dalamudUI.ini")]
+    public void ANameOutsideOurOwnFilesDeletesNothing(string name)
     {
         var archive = NewArchive();
         var bystander = new FileInfo(Path.Combine(_directory.FullName, "..", "outside.txt"));
         File.WriteAllText(bystander.FullName, "not ours to delete");
-        archive.Write("{\"Version\":1}");
+        // Written so the "dalamudUI.ini" case is a REAL target. Without this file present,
+        // File.Exists rejects that name on its own and the case passes with or without the guard --
+        // an inert case sitting in a list of dangerous ones. Found by removing the guard and
+        // watching only two of the three fail.
+        File.WriteAllText(PathTo("dalamudUI.ini"), "another plugin's settings");
+        archive.WriteCampaign(CampaignFileName.NameFor(AnId), "{\"Version\":1}");
 
         try
         {
-            Assert.False(archive.DeletePreserved(name));
+            Assert.False(archive.Delete(name));
 
             Assert.True(File.Exists(bystander.FullName), "a file outside the directory was deleted");
-            Assert.NotNull(archive.Read());
+            Assert.True(File.Exists(PathTo("dalamudUI.ini")), "another plugin's file was deleted");
+            Assert.Single(archive.CampaignFiles());
         }
         finally
         {
@@ -106,14 +122,23 @@ public sealed class CampaignFileArchiveTests : IDisposable
     }
 
     [Fact]
-    public void OnlyFilesThisPluginPreservedAreListed()
+    public void WritingUnderANameThatIsNotACampaignFileIsRefusedOutright()
     {
         var archive = NewArchive();
-        File.WriteAllText(PathTo("dalamudUI.ini"), "someone else's file");
-        File.WriteAllText(PathTo("campaigns.json"), "the live document");
-        archive.Write("unreadable");
-        var keptAs = archive.PreserveUnreadable();
 
-        Assert.Equal(new[] { keptAs }, archive.PreservedFiles().ToArray());
+        Assert.Throws<ArgumentException>(() => archive.WriteCampaign("../outside.txt", "anything"));
+        Assert.False(File.Exists(Path.Combine(_directory.FullName, "..", "outside.txt")));
+    }
+
+    [Fact]
+    public void APreservedFileFromAnEarlierBuildIsListedAndDeletable()
+    {
+        var name = PreservedCampaignFile.NameFor(DateTimeOffset.UtcNow);
+        File.WriteAllText(PathTo(name), "kept by an older version");
+        var archive = NewArchive();
+
+        Assert.Contains(name, archive.OtherOwnedFiles());
+        Assert.True(archive.Delete(name));
+        Assert.False(File.Exists(PathTo(name)));
     }
 }

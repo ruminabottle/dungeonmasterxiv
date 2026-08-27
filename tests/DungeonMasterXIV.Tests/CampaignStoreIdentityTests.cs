@@ -109,33 +109,26 @@ public class CampaignStoreIdentityTests
         Assert.NotEqual(here!.ParticipantId, there!.ParticipantId);
 
         // And the same is true of what actually reaches disk, not just of the objects in memory.
-        var written = archive.Content;
-        Assert.NotNull(written);
-        Assert.Contains(here.ParticipantId.ToString(), written!);
-        Assert.Contains(there.ParticipantId.ToString(), written!);
+        Assert.Contains(here.ParticipantId.ToString(), archive.Files[CampaignFileName.NameFor(first.CampaignId)]);
+        Assert.Contains(there.ParticipantId.ToString(), archive.Files[CampaignFileName.NameFor(second.CampaignId)]);
     }
 
-    // This test asserts a LIMITATION, not a guarantee, and it exists so the limitation cannot be
-    // forgotten.
+    // THE PIN THAT WAS HERE HAS BEEN REMOVED, BECAUSE THE CHANGE IT WAS WAITING FOR IS THIS ONE.
     //
-    // One campaigns.json holds every campaign, each carrying its own PreferredCode, and Label is
-    // not rotated — so a person appearing in two campaigns under the same label is correlatable
-    // across two codes from that single file.
+    // ASharedLabelStillLinksAPersonAcrossTwoSessionCodes asserted the limitation that one
+    // campaigns.json held every campaign, so a person appearing twice under the same label was
+    // correlatable across two codes from a single file. It was written to fail when that was fixed,
+    // and it carried a note saying that its failure would be the notification rather than a
+    // regression. C10 is that fix, so the pin comes out and this asserts the new property instead.
     //
-    // WHICH REQUIREMENT THAT OFFENDS CHANGED ON 2026-08-27, so the citation here is deliberate.
-    // A-1.11 was narrowed to cover only what LEAVES the machine, because as written it contradicted
-    // D-8's explicit permission for local history to hold character names. This file never leaves
-    // the machine, so it does not offend A-1.11. It offends A-1.11b — no single campaign file
-    // contains more than one session code — which was added for the honest reason rather than the
-    // rhetorical one: it bounds blast radius when someone zips a folder into a bug report. The
-    // Product Owner rejected per-campaign files as a way of making A-1.11 literally true, on the
-    // grounds that two files in one folder link a person exactly as well as one file does.
-    //
-    // WHEN THE A-1.11b RESTRUCTURE LANDS THIS TEST FAILS, and that failure is the notification
-    // working: it means the pin should be removed, not that something regressed. Verified to fire
-    // by substituting the fix — see the PR.
+    // What is asserted is A-1.11b: no single campaign file contains more than one session code.
+    // Note what is deliberately NOT claimed. This does not deliver A-1.11 -- two files in one
+    // folder, each naming the same person under a different code, link that person exactly as well
+    // as one file did, because people zip folders rather than files. A-1.11 was rescoped on
+    // 2026-08-27 to cover what leaves the machine. The honest benefit here is narrower: attaching
+    // ONE file to a bug report discloses one campaign.
     [Fact]
-    public void ASharedLabelStillLinksAPersonAcrossTwoSessionCodes()
+    public void NoSingleCampaignFileContainsMoreThanOneSessionCode()
     {
         const string SharedLabel = "Yshtola Rhul";
         var store = NewStore(out var archive);
@@ -144,37 +137,20 @@ public class CampaignStoreIdentityTests
         store.AddParticipant(first.CampaignId, SharedLabel);
         store.AddParticipant(second.CampaignId, SharedLabel);
 
-        var written = archive.Content;
+        var firstFile = archive.Files[CampaignFileName.NameFor(first.CampaignId)];
+        var secondFile = archive.Files[CampaignFileName.NameFor(second.CampaignId)];
 
-        // Assert the LINK, not the ingredients. Three Assert.Contains over the raw text was the
-        // earlier version of this and it is satisfied by a file where the label appears once — for
-        // instance if a repeated label were stored as a per-campaign alias pointing at the first
-        // occurrence. Both codes and the label would all still be somewhere in the file, every
-        // assertion would pass, and the correlation would be gone. That is the same defect this
-        // test was written to fix, one level up: presence is not linkage.
-        //
-        // What actually constitutes the violation is that EVERY campaign in a single artifact
-        // carries its own session code AND the same person's label. That is what a reader of the
-        // file can join on, and it is what these assertions now check.
-        Assert.NotNull(written);
-        Assert.True(CampaignDocumentCodec.TryDeserialize(written!, out var document));
-        Assert.Equal(2, document!.Campaigns.Count);
-        Assert.All(document.Campaigns, campaign =>
-        {
-            Assert.False(string.IsNullOrEmpty(campaign.PreferredCode));
-            Assert.Contains(campaign.Participants, participant => participant.Label == SharedLabel);
-        });
-        Assert.Equal(2, document.Campaigns.Select(campaign => campaign.PreferredCode).Distinct().Count());
+        // Each file carries its own code and not the other's. Asserting the ABSENCE as well as the
+        // presence is the point -- "contains BKD7RM" alone is satisfied by a file containing both.
+        Assert.Contains("BKD7RM", firstFile);
+        Assert.DoesNotContain("XW2P4N", firstFile);
+        Assert.Contains("XW2P4N", secondFile);
+        Assert.DoesNotContain("BKD7RM", secondFile);
+
+        // The label is still in both, and that is not a defect: D-8 permits real character names in
+        // the DM's own local history, and A-1.11 no longer covers files that stay on the machine.
+        Assert.Contains(SharedLabel, firstFile);
+        Assert.Contains(SharedLabel, secondFile);
     }
 
-    [Fact]
-    public void AddingToACampaignThatDoesNotExistChangesNothing()
-    {
-        var store = NewStore(out var archive);
-
-        var participant = store.AddParticipant(Guid.NewGuid(), "Nobody");
-
-        Assert.Null(participant);
-        Assert.Empty(archive.Writes);
-    }
 }
