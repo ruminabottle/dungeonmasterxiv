@@ -41,8 +41,31 @@ public sealed record WireEnvelope
     /// <summary>Ciphertext; present on <see cref="WireMessageType.SessionPayload"/> only.</summary>
     public byte[]? Payload { get; private init; }
 
-    /// <summary>SPKI public key; present on <see cref="WireMessageType.JoinRequest"/> only (D-11).</summary>
+    /// <summary>
+    /// The <b>joining client's</b> SPKI public key. Present on
+    /// <see cref="WireMessageType.JoinRequest"/>, and echoed on
+    /// <see cref="WireMessageType.JoinAccepted"/> so the joiner can tell which request was answered.
+    /// Its meaning never changes: it is always the joiner's key (D-14).
+    /// </summary>
     public byte[]? PublicKey { get; private init; }
+
+    /// <summary>
+    /// The <b>host's</b> SPKI public key, on <see cref="WireMessageType.JoinAccepted"/>.
+    /// </summary>
+    /// <remarks>
+    /// A separate field rather than reusing <see cref="PublicKey"/>, because a field that means the
+    /// joiner's key on one message and the host's on another is repurposing — which D-14 forbids —
+    /// and because the ambiguity is the whole defect: without the host's key an admitted joiner is
+    /// routed and permanently unable to decrypt anything, which reads as an encryption bug.
+    /// </remarks>
+    public byte[]? HostPublicKey { get; private init; }
+
+    /// <summary>
+    /// When the admission window closes, as UTC ticks, on
+    /// <see cref="WireMessageType.JoinRequest"/> acknowledgements. Decided once by the DM's client;
+    /// see <see cref="AdmissionDeadline"/>.
+    /// </summary>
+    public long? DeadlineUtcTicks { get; private init; }
 
     /// <summary>
     /// The envelope metadata a payload is bound to: the session it belongs to and what kind of
@@ -85,6 +108,20 @@ public sealed record WireEnvelope
     }
 
     /// <summary>
+    /// The same join request, stamped by the DM's client with the instant its window closes. Only
+    /// the host decides this; a joining client is told (R-1.3c).
+    /// </summary>
+    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey, AdmissionDeadline deadline)
+    {
+        ArgumentNullException.ThrowIfNull(publicKey);
+        return new WireEnvelope(WireMessageType.JoinRequest, code.Value)
+        {
+            PublicKey = publicKey,
+            DeadlineUtcTicks = deadline.UtcTicks,
+        };
+    }
+
+    /// <summary>
     /// Carries an encrypted payload between members. Takes a <see cref="SealedPayload"/> and not
     /// bytes, so there is no overload that would accept plaintext.
     /// </summary>
@@ -109,8 +146,62 @@ public sealed record WireEnvelope
         string sessionCode,
         byte[]? nonce,
         byte[]? payload,
-        byte[]? publicKey) =>
-        new(type, sessionCode) { Nonce = nonce, Payload = payload, PublicKey = publicKey };
+        byte[]? publicKey,
+        byte[]? hostPublicKey,
+        long? deadlineUtcTicks) =>
+        new(type, sessionCode)
+        {
+            Nonce = nonce,
+            Payload = payload,
+            PublicKey = publicKey,
+            HostPublicKey = hostPublicKey,
+            DeadlineUtcTicks = deadlineUtcTicks,
+        };
+
+    /// <summary>
+    /// Host admits a joiner. Carries <b>two</b> keys: the joiner's, echoed so they know which
+    /// request this answers, and the host's, without which the joiner can derive no shared key.
+    /// </summary>
+    public static WireEnvelope ForJoinAccepted(SessionCode code, byte[] joinerPublicKey, byte[] hostPublicKey)
+    {
+        ArgumentNullException.ThrowIfNull(joinerPublicKey);
+        ArgumentNullException.ThrowIfNull(hostPublicKey);
+        return new WireEnvelope(WireMessageType.JoinAccepted, code.Value)
+        {
+            PublicKey = joinerPublicKey,
+            HostPublicKey = hostPublicKey,
+        };
+    }
+
+    /// <summary>Host refuses a joiner (R-1.3b). Carries no key, because nothing follows.</summary>
+    public static WireEnvelope ForJoinDenied(SessionCode code, byte[] joinerPublicKey)
+    {
+        ArgumentNullException.ThrowIfNull(joinerPublicKey);
+        return new WireEnvelope(WireMessageType.JoinDenied, code.Value) { PublicKey = joinerPublicKey };
+    }
+
+    /// <summary>The window closed unanswered (R-1.3c). Distinct from a denial.</summary>
+    public static WireEnvelope ForJoinLapsed(SessionCode code, byte[] joinerPublicKey)
+    {
+        ArgumentNullException.ThrowIfNull(joinerPublicKey);
+        return new WireEnvelope(WireMessageType.JoinLapsed, code.Value) { PublicKey = joinerPublicKey };
+    }
+
+    /// <summary>
+    /// The admission outcome this envelope expresses, or null if it is not an admission answer.
+    /// Consumers go through <see cref="AdmissionOutcome.Match{T}"/>, so none can drop a case.
+    /// </summary>
+    public AdmissionOutcome? TryGetAdmissionOutcome() => Type switch
+    {
+        WireMessageType.JoinAccepted when HostPublicKey is not null => AdmissionOutcome.Accepted(HostPublicKey),
+        WireMessageType.JoinDenied => AdmissionOutcome.Denied(),
+        WireMessageType.JoinLapsed => AdmissionOutcome.Lapsed(),
+        _ => null,
+    };
+
+    /// <summary>The admission deadline carried here, if any.</summary>
+    public AdmissionDeadline? TryGetDeadline() =>
+        DeadlineUtcTicks is { } ticks ? AdmissionDeadline.FromWire(ticks) : null;
 
     /// <summary>
     /// Recovers the sealed payload from a received envelope, or null if this is not a payload

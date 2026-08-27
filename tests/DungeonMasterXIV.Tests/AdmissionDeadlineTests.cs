@@ -1,0 +1,95 @@
+using System;
+using DungeonMasterXIV.Net;
+using Xunit;
+
+namespace DungeonMasterXIV.Tests;
+
+public class AdmissionDeadlineTests
+{
+    private static readonly SessionCode Code = SessionCode.FromValid("BKD7RM");
+    private static readonly DateTimeOffset HostDecidedAt = new(2026, 8, 26, 20, 0, 0, TimeSpan.Zero);
+
+    // The property R-1.3c actually needs, and the one a duration cannot provide. Two clients that
+    // ask at different moments, with different local clocks, must agree on WHEN the window closes —
+    // not on how long is left. Fails if: the deadline is ever re-derived from a duration on receipt.
+    [Fact]
+    public void EveryoneGivenTheSameDeadlineAgreesOnTheInstantHoweverLateTheyLook()
+    {
+        var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+
+        var asHostSeesIt = deadline.Instant;
+        var asAJoinerSeesItTenMinutesLater = AdmissionDeadline.FromWire(deadline.UtcTicks).Instant;
+
+        Assert.Equal(asHostSeesIt, asAJoinerSeesItTenMinutesLater);
+    }
+
+    // Fails if: the deadline is decided anywhere but the host. There is no constructor taking a
+    // TimeSpan, so a client cannot start its own clock — asserted here as the observable
+    // consequence, that the value depends only on when the HOST decided.
+    [Fact]
+    public void TheDeadlineDependsOnlyOnWhenTheHostDecided()
+    {
+        var first = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+        var second = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+
+        Assert.Equal(first, second);
+        Assert.Equal(HostDecidedAt.Add(AdmissionDeadline.Window), first.Instant);
+    }
+
+    // R-1.3c: the player sees the wait is bounded while it is happening. Fails if: remaining time
+    // stops being computable from the instant alone.
+    [Fact]
+    public void RemainingTimeCountsDownTowardTheInstant()
+    {
+        var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+
+        Assert.Equal(AdmissionDeadline.Window, deadline.RemainingAt(HostDecidedAt));
+        Assert.Equal(TimeSpan.FromMinutes(5), deadline.RemainingAt(HostDecidedAt.AddMinutes(10)));
+    }
+
+    // Fails if: a countdown can run negative, which would render as a growing negative number on
+    // screen rather than as a lapse.
+    [Fact]
+    public void RemainingTimeIsFlooredAtZeroRatherThanGoingNegative()
+    {
+        var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+
+        Assert.Equal(TimeSpan.Zero, deadline.RemainingAt(HostDecidedAt.AddHours(3)));
+        Assert.True(deadline.HasLapsedAt(HostDecidedAt.AddHours(3)));
+        Assert.False(deadline.HasLapsedAt(HostDecidedAt.AddMinutes(14)));
+    }
+
+    // Fails if: the deadline is compared in local time. A DM in one timezone and a player in another
+    // must reach the same answer, and a naive DateTime comparison would not.
+    [Fact]
+    public void TheDeadlineIsTimezoneIndependent()
+    {
+        var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+        var sameInstantElsewhere = HostDecidedAt.ToOffset(TimeSpan.FromHours(9)).AddMinutes(10);
+
+        Assert.Equal(TimeSpan.FromMinutes(5), deadline.RemainingAt(sameInstantElsewhere));
+    }
+
+    // Fails if: the deadline stops surviving the wire, at which point the joiner has nothing to
+    // count toward and has to invent a duration — the exact failure this type prevents.
+    [Fact]
+    public void TheDeadlineSurvivesTheWire()
+    {
+        using var joiner = new SessionKeyExchange();
+        var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+        var stamped = WireEnvelope.ForJoinRequest(Code, joiner.PublicKey, deadline);
+
+        Assert.True(EnvelopeCodec.TryDecode(EnvelopeCodec.Encode(stamped), out var received));
+
+        Assert.Equal(deadline, received!.TryGetDeadline());
+    }
+
+    // Fails if: R-1.3a and R-1.3c drift apart. They are the same window seen from two sides and
+    // R-1.3a pairs the 15 minutes with the 11-character fingerprint explicitly — if the expiry ever
+    // goes, the fingerprint must grow to 14 characters. This pins the half that lives in code.
+    [Fact]
+    public void TheWindowIsTheFifteenMinutesRule13aAndRule13cBothName()
+    {
+        Assert.Equal(TimeSpan.FromMinutes(15), AdmissionDeadline.Window);
+    }
+}

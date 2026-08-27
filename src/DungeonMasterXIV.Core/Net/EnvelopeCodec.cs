@@ -31,6 +31,8 @@ public static class EnvelopeCodec
             Nonce = envelope.Nonce,
             Payload = envelope.Payload,
             PublicKey = envelope.PublicKey,
+            HostPublicKey = envelope.HostPublicKey,
+            DeadlineUtcTicks = envelope.DeadlineUtcTicks,
         };
 
         return JsonSerializer.SerializeToUtf8Bytes(wire, Options);
@@ -67,7 +69,21 @@ public static class EnvelopeCodec
             return false;
         }
 
-        envelope = WireEnvelope.FromWire(wire.Type, wire.SessionCode, wire.Nonce, wire.Payload, wire.PublicKey);
+        // D-14: a receiver ignores what it does not recognise, and that ignoring is a property of
+        // THIS method rather than something each handler remembers — otherwise it is inconsistent by
+        // construction. An unrecognised type becomes Unknown and decoding still succeeds, so an old
+        // plugin survives a newer relay instead of refusing it. Rejecting here would be the opposite
+        // of what D-14 asks for.
+        var type = Enum.IsDefined(wire.Type) ? wire.Type : WireMessageType.Unknown;
+
+        envelope = WireEnvelope.FromWire(
+            type,
+            wire.SessionCode,
+            wire.Nonce,
+            wire.Payload,
+            wire.PublicKey,
+            wire.HostPublicKey,
+            wire.DeadlineUtcTicks);
         return true;
     }
 
@@ -87,5 +103,9 @@ public static class EnvelopeCodec
         public byte[]? Payload { get; set; }
 
         public byte[]? PublicKey { get; set; }
+
+        public byte[]? HostPublicKey { get; set; }
+
+        public long? DeadlineUtcTicks { get; set; }
     }
 }
