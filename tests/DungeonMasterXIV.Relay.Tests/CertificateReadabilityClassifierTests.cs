@@ -1,5 +1,6 @@
 using DungeonMasterXIV.Relay;
 using DungeonMasterXIV.Relay.Diagnostics;
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -29,7 +30,17 @@ public sealed class CertificateReadabilityClassifierTests
     /// <b>The gate BUG-20 found missing.</b> A file this process genuinely may not read is
     /// classified as unreadable.
     /// </summary>
+    /// <remarks>
+    /// <b>Attributed rather than guarded with <c>if (!OperatingSystem.IsWindows())</c>, and the
+    /// difference is not cosmetic.</b> CA1416 accepts either, and the probe below does use the
+    /// <c>if</c> — but there it is live logic that decides the answer on Windows. Here the guarded
+    /// body would be dead code, unreachable because <see cref="FileModesBiteFactAttribute"/> skips
+    /// this test wherever modes do not bite, and the only thing it could ever do if reached is
+    /// assert that a readable file is unreadable. The attribute states the contract the skip
+    /// already enforces; the <c>if</c> would state a branch that must never run.
+    /// </remarks>
     [FileModesBiteFact]
+    [UnsupportedOSPlatform("windows")]
     public void AnUnreadableFileIsClassifiedAsUnreadable()
     {
         var directory = Directory.CreateTempSubdirectory("dmx-bug20");
