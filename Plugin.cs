@@ -38,7 +38,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly MainWindow _mainWindow;
     private readonly ConfigWindow _configWindow;
     private readonly SessionWindow _sessionWindow;
-    private readonly RelayTransport _relayTransport;
+    private readonly WebSocketSessionTransport _relayTransport;
     private readonly SessionCoordinator _sessionCoordinator;
     private readonly CampaignListWindow _campaignListWindow;
     private readonly CommandDispatcher _commandDispatcher;
@@ -59,7 +59,7 @@ public sealed class Plugin : IDalamudPlugin
         _windowSystem = new WindowSystem("DungeonMasterXIV");
         _mainWindow = new MainWindow(_configurationStore);
         _configWindow = new ConfigWindow(_configurationStore);
-        _relayTransport = new RelayTransport(log);
+        _relayTransport = new WebSocketSessionTransport(new SessionTransportLog(log));
         _sessionCoordinator = new SessionCoordinator(
             _relayTransport,
             () => _configurationStore.Configuration.Settings.RelayAddress);
