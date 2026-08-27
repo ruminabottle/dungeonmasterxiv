@@ -43,6 +43,16 @@ public sealed class SessionCoordinator
     /// <summary>The requests waiting on the DM (R-1.3).</summary>
     public AdmissionDesk Admissions { get; } = new();
 
+    /// <summary>
+    /// This host's ephemeral key pair for the running session, or null when not hosting.
+    /// </summary>
+    /// <remarks>
+    /// Created when hosting starts and disposed when it ends, so it never outlives the session —
+    /// D-8 forbids an identifier that links a player across two session codes, and a key pair that
+    /// survived would be one.
+    /// </remarks>
+    public SessionKeyExchange? HostKeys { get; private set; }
+
     /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
     public GraceWindow Grace { get; } = new();
 
@@ -55,6 +65,8 @@ public sealed class SessionCoordinator
     /// <summary>Starts hosting under a freshly generated code (R-1.1, R-1.2a).</summary>
     public void StartHosting()
     {
+        HostKeys?.Dispose();
+        HostKeys = new SessionKeyExchange();
         Host.Start(SessionCodeGenerator.Next());
         SynchroniseTransport();
     }
@@ -66,6 +78,8 @@ public sealed class SessionCoordinator
     public void StopHosting()
     {
         Host.Stop();
+        HostKeys?.Dispose();
+        HostKeys = null;
         Audience.Clear();
         Admissions.Clear();
         Grace.Reset();
@@ -84,6 +98,37 @@ public sealed class SessionCoordinator
     public void ReceiveJoinRequest(PendingAdmission request) => Admissions.Receive(request);
 
     /// <summary>
+    /// Builds and records a request from what arrived on the wire.
+    /// </summary>
+    /// <remarks>
+    /// The fingerprint is computed here rather than passed in, so no caller can hand the prompt a
+    /// string that does not correspond to the keys actually exchanged — a fingerprint that does not
+    /// match the keys is worse than none, because the DM compares it and concludes it is safe.
+    /// The deadline is decided here too: R-1.3c puts that decision on the DM's client (D-3), once.
+    /// </remarks>
+    public PendingAdmission? ReceiveJoinRequest(
+        string peerCode,
+        byte[] joinerPublicKey,
+        DateTimeOffset now,
+        bool isRelink = false)
+    {
+        if (HostKeys is null)
+        {
+            return null;
+        }
+
+        var request = new PendingAdmission(
+            peerCode,
+            KeyFingerprint.Of(joinerPublicKey, HostKeys.PublicKey),
+            AdmissionDeadline.DecidedByHost(now),
+            isRelink,
+            joinerPublicKey);
+
+        Admissions.Receive(request);
+        return request;
+    }
+
+    /// <summary>
     /// Admits the pending participant. Only after this does anything become addressable to them —
     /// see <see cref="SessionAudience"/>, which is where D-13's None level is enforced.
     /// </summary>
@@ -96,7 +141,17 @@ public sealed class SessionCoordinator
     public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
     {
         var request = Admissions.Decide(peerCode);
-        return Audience.Admit(peerCode, role, request?.Verification ?? AdmissionVerification.NotCompared);
+        var peer = Audience.Admit(peerCode, role, request?.Verification ?? AdmissionVerification.NotCompared);
+
+        // The acceptance carries the HOST's key as well as echoing the joiner's. Without it the
+        // joiner is admitted, routed, and permanently unable to derive a session key — which
+        // presents as an encryption fault rather than a missing field.
+        if (Host.Code is { } code && HostKeys is not null && request?.JoinerPublicKey is { } joinerKey)
+        {
+            Send(WireEnvelope.ForJoinAccepted(code, joinerKey, HostKeys.PublicKey));
+        }
+
+        return peer;
     }
 
     /// <summary>
@@ -105,13 +160,59 @@ public sealed class SessionCoordinator
     /// </summary>
     public void Deny(string peerCode)
     {
-        Admissions.Decide(peerCode);
+        var request = Admissions.Decide(peerCode);
         Audience.Remove(peerCode);
+
+        // R-1.3b: denial is an explicit message the denied client receives — not a timeout, not
+        // silence, not an absence of acceptance. Silence is indistinguishable from a broken relay,
+        // a wrong code, or a DM who has not looked yet, which is R-1.8's ambiguity arriving through
+        // a different door.
+        if (Host.Code is { } code && request?.JoinerPublicKey is { } joinerKey)
+        {
+            Send(WireEnvelope.ForJoinDenied(code, joinerKey));
+        }
+    }
+
+    private void Send(WireEnvelope envelope) => _transport.Send(EnvelopeCodec.Encode(envelope));
+
+    /// <summary>
+    /// The relay answered again after a drop and confirmed we still hold our code.
+    /// </summary>
+    public void HostReconnected()
+    {
+        Grace.HostReturned();
+    }
+
+    /// <summary>
+    /// The relay answered again after a drop but refused the code — somebody claimed it while we
+    /// were gone.
+    /// </summary>
+    /// <remarks>
+    /// This is the gap R-1.4 opens and the relay cannot close: it frees a code the moment a host
+    /// disconnects, while the grace window keeps the session alive for two minutes. R-1.2a's
+    /// regenerate-and-retry then hands us a different code, and without this the DM would carry on
+    /// hosting under it while every player still holds the old one — nothing erroring, nothing
+    /// looking wrong, and the session simply unjoinable.
+    /// </remarks>
+    public void HostReconnectedWithNewCode()
+    {
+        Grace.HostReturned();
+        Host.CodeSuperseded(SessionCodeGenerator.Next());
     }
 
     /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
     public void Fail(SessionFailure failure)
     {
+        // R-1.4: losing the host is not the end of the session, it is the start of a grace window.
+        // Clients hold their last state and show plainly that it is no longer live; only expiry
+        // ends things. Treating a dropped connection as an immediate end is the "instant kick" the
+        // product decision rules out.
+        if (failure == SessionFailure.ConnectionLost && Host.Phase == HostingPhase.Hosting)
+        {
+            Grace.HostLost();
+            return;
+        }
+
         if (Host.Phase is HostingPhase.Registering or HostingPhase.Hosting)
         {
             Host.Fail(failure);
@@ -183,6 +284,7 @@ public sealed class SessionCoordinator
     {
         ApplyReportedFailure();
         JustLapsed = Admissions.ExpireLapsed(now);
+        AnnounceLapsed();
 
         if (Grace.Tick(sinceLastTick))
         {
@@ -235,6 +337,25 @@ public sealed class SessionCoordinator
         if (failure != SessionFailure.None)
         {
             Fail(failure);
+        }
+    }
+
+    // R-1.3c: a lapsed requester is told it lapsed, never that they were denied. Nobody refused
+    // them, so asking again is reasonable — and being told after fifteen silent minutes is better
+    // than silence and worse than knowing.
+    private void AnnounceLapsed()
+    {
+        if (Host.Code is not { } code)
+        {
+            return;
+        }
+
+        foreach (var request in JustLapsed)
+        {
+            if (request.JoinerPublicKey is { } joinerKey)
+            {
+                Send(WireEnvelope.ForJoinLapsed(code, joinerKey));
+            }
         }
     }
 

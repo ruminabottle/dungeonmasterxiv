@@ -26,12 +26,19 @@ public sealed class PendingAdmission
     /// <param name="fingerprint">The combined fingerprint, rendered per R-1.3a.</param>
     /// <param name="deadline">When the window closes. Decided by the DM's client and carried in C6's vocabulary.</param>
     /// <param name="isRelink">Whether this is a returning participant asking to relink (R-1.5).</param>
-    public PendingAdmission(string peerCode, string fingerprint, AdmissionDeadline deadline, bool isRelink = false)
+    /// <param name="joinerPublicKey">The key they presented, echoed on acceptance (D-11).</param>
+    public PendingAdmission(
+        string peerCode,
+        string fingerprint,
+        AdmissionDeadline deadline,
+        bool isRelink = false,
+        byte[]? joinerPublicKey = null)
     {
         PeerCode = peerCode;
         Fingerprint = fingerprint;
         Deadline = deadline;
         IsRelink = isRelink;
+        JoinerPublicKey = joinerPublicKey;
     }
 
     /// <summary>The requester's session-scoped code.</summary>
@@ -48,6 +55,13 @@ public sealed class PendingAdmission
     /// The DM approves every relink, every session — it is never silent and never automatic (D-8).
     /// </summary>
     public bool IsRelink { get; }
+
+    /// <summary>
+    /// The key this participant presented with their request (D-11). Carried because acceptance must
+    /// echo it — with several requests outstanding it is how the joiner tells which one was answered
+    /// — and because the fingerprint is computed from it together with the host's.
+    /// </summary>
+    public byte[]? JoinerPublicKey { get; }
 
     /// <summary>Whether the DM has said the fingerprint matched. Starts false, always.</summary>
     public bool FingerprintConfirmed { get; private set; }

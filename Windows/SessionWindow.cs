@@ -77,6 +77,14 @@ public sealed class SessionWindow : Window
                 }
             }
 
+            if (_coordinator.Grace.IsRunning)
+            {
+                // R-1.4: state is held but visibly not live, with the wait bounded on screen.
+                ImGui.TextWrapped(
+                    $"Lost contact with the relay. Reconnecting - the session ends in "
+                    + $"{_coordinator.Grace.Remaining:mm\\:ss} if it does not come back.");
+            }
+
             ImGui.TextUnformatted($"Session code: {code.ToDisplayString()}");
             ImGui.TextWrapped(CodeDisclosure);
 

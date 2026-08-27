@@ -1,0 +1,215 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using DungeonMasterXIV.Net;
+using Xunit;
+
+namespace DungeonMasterXIV.Tests;
+
+/// <summary>
+/// The half PR #19 named as unreached: an admission decision that never leaves the machine is not a
+/// decision the other party can act on.
+/// </summary>
+public class AdmissionOnTheWireTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
+
+    // R-1.3b and A-1.4's positive half. Fails if: admitting updates local state only, which is what
+    // shipped in PR #19 — the DM sees a player in the session and the player never hears anything.
+    [Fact]
+    public void AdmittingSendsAnAcceptanceCarryingTheHostsKey()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+
+        coordinator.Admit("PEER-1");
+
+        var sent = Decode(transport).Single(e => e.Type == WireMessageType.JoinAccepted);
+        Assert.Equal(joiner.PublicKey, sent.PublicKey);
+        Assert.Equal(coordinator.HostKeys!.PublicKey, sent.HostPublicKey);
+    }
+
+    // Proves the acceptance is usable rather than merely present: the joiner derives the same key
+    // the host will seal with. Fails if the wrong key is echoed, which a null check would not catch.
+    [Fact]
+    public void TheAdmittedJoinerCanDeriveTheSessionKeyFromWhatItReceives()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+        coordinator.Admit("PEER-1");
+
+        var acceptance = Decode(transport).Single(e => e.Type == WireMessageType.JoinAccepted);
+        var code = coordinator.Host.Code!.Value;
+
+        var joinerKey = acceptance.TryGetAdmissionOutcome()!
+            .Match(hostKey => joiner.DeriveSharedKey(hostKey, code), () => null!, () => null!);
+
+        Assert.Equal(coordinator.HostKeys!.DeriveSharedKey(joiner.PublicKey, code), joinerKey);
+    }
+
+    // R-1.3b: denial is an explicit message, not silence. Fails if: denying is local-only, which
+    // leaves the refused player unable to tell refusal from a broken relay, a wrong code, or a DM
+    // who has not looked yet — R-1.8's ambiguity arriving through another door.
+    [Fact]
+    public void DenyingSendsAnExplicitRefusalRatherThanSilence()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+
+        coordinator.Deny("PEER-1");
+
+        Assert.Contains(Decode(transport), e => e.Type == WireMessageType.JoinDenied);
+    }
+
+    // R-1.3b's other half. Fails if: a denied client is left addressable, which would put session
+    // traffic — even ciphertext they cannot read — in front of someone at D-13's None level.
+    [Fact]
+    public void ADeniedClientIsNotAddressableAndReceivesNoSessionTraffic()
+    {
+        var (coordinator, _) = Hosting();
+        using var joiner = new SessionKeyExchange();
+        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+
+        coordinator.Deny("PEER-1");
+
+        Assert.False(coordinator.Audience.IsAdmitted("PEER-1"));
+        Assert.Empty(coordinator.Audience.Recipients);
+    }
+
+    // R-1.3c and A-1.5h on the wire. Fails if: a lapse is announced as a denial, or not announced at
+    // all. Both leave the player worse off than the truth — one lies, the other is the fifteen
+    // silent minutes the requirement exists to end.
+    [Fact]
+    public void ALapsedRequestIsAnnouncedAsLapsedAndNotAsDenied()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+
+        coordinator.Tick(TimeSpan.Zero, Now.Add(AdmissionDeadline.Window));
+
+        var sent = Decode(transport);
+        Assert.Contains(sent, e => e.Type == WireMessageType.JoinLapsed);
+        Assert.DoesNotContain(sent, e => e.Type == WireMessageType.JoinDenied);
+    }
+
+    // Fails if: the fingerprint is taken from a caller rather than computed from the keys actually
+    // exchanged. A fingerprint that does not match the keys is worse than none — the DM compares it,
+    // it agrees, and they conclude the channel is clean.
+    [Fact]
+    public void TheFingerprintOnThePromptIsComputedFromBothRealKeys()
+    {
+        var (coordinator, _) = Hosting();
+        using var joiner = new SessionKeyExchange();
+
+        var request = coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+
+        Assert.Equal(
+            KeyFingerprint.Of(joiner.PublicKey, coordinator.HostKeys!.PublicKey),
+            request!.Fingerprint);
+    }
+
+    // R-1.4: losing the relay starts the grace window, it does not end the session. Fails if: a drop
+    // is treated as an immediate end, which is the instant kick the product decision rules out.
+    [Fact]
+    public void LosingTheRelayWhileHostingStartsTheGraceWindowRatherThanEndingTheSession()
+    {
+        var (coordinator, _) = Hosting();
+
+        coordinator.Fail(SessionFailure.ConnectionLost);
+
+        Assert.True(coordinator.Grace.IsRunning);
+        Assert.Equal(HostingPhase.Hosting, coordinator.Host.Phase);
+    }
+
+    // Fails if: expiry does not end the session, leaving clients showing stale state as though live.
+    [Fact]
+    public void LettingTheGraceWindowExpireEndsTheSession()
+    {
+        var (coordinator, _) = Hosting();
+        coordinator.Fail(SessionFailure.ConnectionLost);
+
+        coordinator.Tick(GraceWindow.Default, Now);
+
+        Assert.Equal(HostingPhase.NotHosting, coordinator.Host.Phase);
+    }
+
+    // Obligation 3, now reached. Fails if: a code taken during the window is swapped in silently.
+    [Fact]
+    public void ReconnectingToAStolenCodeTellsTheDmTheirPlayersHoldTheOldOne()
+    {
+        var (coordinator, _) = Hosting();
+        var original = coordinator.Host.Code!.Value;
+        coordinator.Fail(SessionFailure.ConnectionLost);
+
+        coordinator.HostReconnectedWithNewCode();
+
+        Assert.True(coordinator.Host.CodeChangedMidSession);
+        Assert.Equal(original, coordinator.Host.SupersededCode);
+        Assert.NotEqual(original, coordinator.Host.Code);
+        Assert.False(coordinator.Grace.IsRunning);
+    }
+
+    // The ordinary case, so the pair cannot be satisfied by always reporting a change.
+    [Fact]
+    public void ReconnectingWithTheSameCodeReportsNoChange()
+    {
+        var (coordinator, _) = Hosting();
+        coordinator.Fail(SessionFailure.ConnectionLost);
+
+        coordinator.HostReconnected();
+
+        Assert.False(coordinator.Host.CodeChangedMidSession);
+        Assert.False(coordinator.Grace.IsRunning);
+    }
+
+    // D-8: the host's key pair is ephemeral per session. Fails if: it survives a session, which
+    // would be an identifier linking a player across two session codes.
+    [Fact]
+    public void TheHostsKeysDoNotSurviveTheSession()
+    {
+        var (coordinator, _) = Hosting();
+        Assert.NotNull(coordinator.HostKeys);
+
+        coordinator.StopHosting();
+
+        Assert.Null(coordinator.HostKeys);
+    }
+
+    private static (SessionCoordinator Coordinator, FakeTransport Transport) Hosting()
+    {
+        var transport = new FakeTransport();
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default);
+        coordinator.StartHosting();
+        coordinator.Host.Registered();
+        transport.Sent.Clear();
+        return (coordinator, transport);
+    }
+
+    private static List<WireEnvelope> Decode(FakeTransport transport) =>
+        transport.Sent
+            .Select(bytes => EnvelopeCodec.TryDecode(bytes, out var e) ? e : null)
+            .Where(e => e is not null)
+            .Select(e => e!)
+            .ToList();
+
+    private sealed class FakeTransport : ISessionTransport
+    {
+        public event Action<SessionFailure>? Failed;
+
+        public bool IsConnected { get; private set; }
+
+        public List<byte[]> Sent { get; } = new();
+
+        public void Connect(Uri relay) => IsConnected = true;
+
+        public void Disconnect() => IsConnected = false;
+
+        public void Send(byte[] envelope) => Sent.Add(envelope);
+
+        public void RaiseFailure(SessionFailure failure) => Failed?.Invoke(failure);
+    }
+}
