@@ -16,7 +16,19 @@
          actually cut disagrees with 0.0.0.0, so the release tool stops and names the rebuild. The
          old literal was the opposite: releasable under any tag, and therefore invisible, because a
          second release repeating a version is not rejected by Dalamud, merely never offered. -->
-    <Version Condition="'$(ReleaseTag)' != ''">$(ReleaseTag.TrimStart('v'))</Version>
+    <!-- BUG-32. ReleaseTagVersion is what the TAG derived to; Version is what the build uses. They
+         were one property, and the defaulting on the second line erased the difference: a bare 'v'
+         derives to an empty string, gets replaced by 0.0.0.0, and every guard downstream is then
+         handed a perfectly good shape that the tag has nothing to do with. A tag of 'v' built
+         silently and stamped 0.0.0.0, indistinguishable from an untagged developer build, while
+         every other malformed shape was named.
+
+         Keeping them apart is what lets a guard ask "what did the TAG give us" rather than "what is
+         the build using", and it closes the whole class rather than the two spellings that were
+         reported: any tag whose derivation leaves nothing is now empty here, not defaulted. -->
+    <ReleaseTagVersion Condition="'$(ReleaseTag)' != ''">$(ReleaseTag.TrimStart('v'))</ReleaseTagVersion>
+
+    <Version Condition="'$(ReleaseTagVersion)' != ''">$(ReleaseTagVersion)</Version>
     <Version Condition="'$(Version)' == ''">0.0.0.0</Version>
     <Description>Tracks dice rolls, initiative, HP and session state for tabletop RP campaigns run in FFXIV.</Description>
     <PackageProjectUrl>https://github.com/ruminabottle/dungeonmasterxiv</PackageProjectUrl>
@@ -66,8 +78,8 @@
          are all shapes the build can turn into a version, and they build exactly as before; the
          release tool refuses them as aliases (BUG-22). Putting that judgement here would be the
          third parser BUG-23 exists to prevent. -->
-    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(Version)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}(-[0-9A-Za-z.-]+)?$'))"
-           Text="ReleaseTag '$(ReleaseTag)' is not a shape this build can turn into a version: '$(Version)' is left after the leading 'v'. A version is one to four dot-separated numbers of at most five digits each, e.g. v0.1.0 or v1.2.3.4. Retag with that shape." />
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ReleaseTagVersion)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}(-[0-9A-Za-z.-]+)?$'))"
+           Text="ReleaseTag '$(ReleaseTag)' is not a shape this build can turn into a version: it leaves '$(ReleaseTagVersion)', and a version is one to four dot-separated numbers of at most five digits each, e.g. v0.1.0 or v1.2.3.4. Retag with that shape." />
 
   </Target>
 
@@ -86,9 +98,9 @@
        by TheBuildAndTheToolReadTheTagAlikeTests. Parsing it here would turn a documented refusal
        into an MSBuild crash. -->
   <Target Name="ReleaseTagFitsAnAssemblyVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
-          Condition="'$(ReleaseTag)' != '' AND $([System.Text.RegularExpressions.Regex]::IsMatch('$(Version)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}$'))">
+          Condition="'$(ReleaseTag)' != '' AND $([System.Text.RegularExpressions.Regex]::IsMatch('$(ReleaseTagVersion)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}$'))">
     <ItemGroup>
-      <ReleaseTagComponent Include="$(Version.Split('.'))" />
+      <ReleaseTagComponent Include="$(ReleaseTagVersion.Split('.'))" />
     </ItemGroup>
 
     <Error Condition="$([System.Int64]::Parse('%(ReleaseTagComponent.Identity)')) &gt; 65534"

@@ -73,7 +73,7 @@ internal static class TheBuild
     /// every case in a theory.
     /// </para>
     /// </remarks>
-    public static bool FailsToBuild(string releaseTag) => RealBuild(releaseTag).ExitCode != 0;
+    public static bool FailsToBuild(string? releaseTag) => RealBuild(releaseTag).ExitCode != 0;
 
     /// <summary>What a real build says when it refuses this tag.</summary>
     /// <remarks>
@@ -82,7 +82,7 @@ internal static class TheBuild
     /// to come from there. Two shapes reached past the guards and failed inside MSBuild itself,
     /// which a single-target invocation would never have shown.
     /// </remarks>
-    public static string RefusalFromARealBuild(string releaseTag)
+    public static string RefusalFromARealBuild(string? releaseTag)
     {
         var (exitCode, output, errors) = RealBuild(releaseTag);
 
@@ -91,7 +91,7 @@ internal static class TheBuild
         return output + errors;
     }
 
-    private static (int ExitCode, string Output, string Errors) RealBuild(string releaseTag) =>
+    private static (int ExitCode, string Output, string Errors) RealBuild(string? releaseTag) =>
         Run(
             $"build \"{PluginProject()}\" -c Release -p:BaseOutputPath=\"{IsolatedOutput.FullName}/\"",
             releaseTag);
