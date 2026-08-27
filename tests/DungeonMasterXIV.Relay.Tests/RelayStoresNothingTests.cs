@@ -27,12 +27,34 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// matters most in two years.
 /// </para>
 /// <para>
-/// <b>What it watches.</b> The content root, the relay's temp directory (via <c>TMPDIR</c>, redirected
-/// into the sandbox for the test, which is why this assembly runs tests one at a time), and the
-/// data-protection key ring under the user profile — the three places an ASP.NET Core application
-/// writes without being told to. It would not see a write to an unrelated absolute path, which is
-/// why the csproj also refuses persistence packages at build time and the container root is
-/// read-only: three mechanisms, because the one that fails is never the one you were watching.
+/// <b>What it watches</b>, per <see cref="RelaySandbox.WatchedRoots"/>: the content root; the relay's
+/// temp directory (via <c>TMPDIR</c>, redirected into the sandbox, which is why this assembly runs
+/// tests one at a time); the reserved key-ring root; <b>and the process's current directory and
+/// <c>AppContext.BaseDirectory</c></b>, which is where a write that names no directory actually lands.
+/// </para>
+/// <para>
+/// <b>Those last two are BUG-10 and they were the likely case, not an exotic one.</b> This comment
+/// used to say only that the instrument could not see "an unrelated absolute path". That understated
+/// it: <c>File.WriteAllText("relay.log", …)</c> names no directory at all, resolves against the
+/// process's current directory, and was unwatched. Measured — a bare append in
+/// <c>RelayLog.ConnectionOpened</c> put ten lines on disk while these six tests passed green. The
+/// instrument was not broken; it was aimed slightly away from where the shot would come from.
+/// </para>
+/// <para>
+/// <b>What it still cannot see, so that confidence matches reach.</b> A write to an unrelated absolute
+/// path outside every watched root. A write from a background thread after the observer is disposed —
+/// unprobed, and claimed for neither. Memory-mapped files and <c>O_TMPFILE</c> handles, which need not
+/// raise a directory event at all — also unprobed. A file written by a process other than this one.
+/// These are named rather than left implicit because the previous version of this list omitted the one
+/// that turned out to matter.
+/// </para>
+/// <para>
+/// <b>The build guard has the same hole, so neither one's coverage implies the other's.</b>
+/// <c>NoDurableStorage</c> in the relay csproj fails the build on a persistence <i>package</i>, and it
+/// is real — it was validated by adding <c>Serilog.Sinks.File</c> on purpose. It cannot catch a bare
+/// <c>File.WriteAllText</c>, which needs no package. Two guards that look independent missing the same
+/// shape is how a gap survives review, which is why the container root being read-only is the third
+/// mechanism rather than a belt-and-braces flourish.
 /// </para>
 /// </remarks>
 public sealed class RelayStoresNothingTests
@@ -42,7 +64,7 @@ public sealed class RelayStoresNothingTests
     {
         using var sandbox = new RelaySandbox();
         var before = FileSystemSnapshot.Of(sandbox.ContentRoot);
-        using var observer = new WriteObserver(sandbox.ContentRoot, sandbox.TempRoot, sandbox.KeyRingRoot);
+        using var observer = new WriteObserver([.. sandbox.WatchedRoots]);
 
         // A clean result is only evidence about the corpus the instrument actually read.
         Assert.Empty(observer.UnwatchedRoots);
@@ -77,7 +99,7 @@ public sealed class RelayStoresNothingTests
     {
         using var sandbox = new RelaySandbox();
         var before = FileSystemSnapshot.Of(sandbox.ContentRoot);
-        using var observer = new WriteObserver(sandbox.ContentRoot, sandbox.TempRoot, sandbox.KeyRingRoot);
+        using var observer = new WriteObserver([.. sandbox.WatchedRoots]);
 
         await using (var relay = await RelayUnderTest.StartAsync(sandbox.ContentRoot))
         {
@@ -108,7 +130,7 @@ public sealed class RelayStoresNothingTests
     {
         using var sandbox = new RelaySandbox();
         var before = FileSystemSnapshot.Of(sandbox.ContentRoot);
-        using var observer = new WriteObserver(sandbox.ContentRoot, sandbox.TempRoot, sandbox.KeyRingRoot);
+        using var observer = new WriteObserver([.. sandbox.WatchedRoots]);
 
         await using (var relay = await RelayUnderTest.StartAsync(sandbox.ContentRoot))
         {
@@ -170,6 +192,62 @@ public sealed class RelayStoresNothingTests
             FullSession.SecretMessage,
             Encoding.UTF8.GetString(result.ForwardedBytes),
             StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// BUG-10: a write that names no directory at all is seen. <b>This is the likely sink, not an
+    /// exotic one</b> — it is what <c>File.WriteAllText("relay.log", …)</c> does when nobody names a
+    /// directory, and it resolves against the process's current directory rather than anywhere under
+    /// the sandbox.
+    /// </summary>
+    /// <remarks>
+    /// Fails if the watch list is ever narrowed back to the sandbox's own three roots, which is the
+    /// regression this guards. <see cref="RelayWritesAreDetected"/> cannot catch that narrowing: it
+    /// writes into the content root, so it stays green on exactly the instrument that let a bare write
+    /// through. No relay is started here on purpose — the claim under test is the watch list's reach,
+    /// and running a session would add a dependency without adding evidence.
+    /// </remarks>
+    [Fact]
+    public Task AWriteThatNamesNoDirectoryIsDetected() =>
+        AssertAmbientWriteIsSeen("bug10-bare-relative.log");
+
+    /// <summary>
+    /// BUG-10: the other place a naive write lands — beside the test assembly, via
+    /// <see cref="AppContext.BaseDirectory"/>.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the bare-relative case rather than folded into it, because the defect being
+    /// guarded was that <i>some</i> sinks were seen and others were not. Two facts stay individually
+    /// attributable; one fact with two assertions would stop at the first miss and hide the second.
+    /// </remarks>
+    [Fact]
+    public Task AWriteBesideTheTestAssemblyIsDetected() =>
+        AssertAmbientWriteIsSeen(Path.Combine(AppContext.BaseDirectory, "bug10-base-directory.log"));
+
+    private static async Task AssertAmbientWriteIsSeen(string path)
+    {
+        using var sandbox = new RelaySandbox();
+        using var observer = new WriteObserver([.. sandbox.WatchedRoots]);
+        Assert.Empty(observer.UnwatchedRoots);
+
+        var full = Path.GetFullPath(path);
+        try
+        {
+            await File.WriteAllTextAsync(full, "BCD-FGH joined");
+            await WriteObserver.SettleAsync();
+
+            // Checked before the detection assertion so that a write which never happened fails as
+            // itself rather than as a blind spot.
+            Assert.True(File.Exists(full), $"the probe never wrote its file, so this proves nothing: {full}");
+            Assert.Contains(observer.Writes, write => write.Contains(Path.GetFileName(full), StringComparison.Ordinal));
+        }
+        finally
+        {
+            if (File.Exists(full))
+            {
+                File.Delete(full);
+            }
+        }
     }
 
     /// <summary>
