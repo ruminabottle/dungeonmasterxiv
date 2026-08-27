@@ -53,8 +53,27 @@ public sealed class RelayOptions
     /// </summary>
     public string? ContentRoot { get; init; }
 
-    /// <summary>The request path the WebSocket upgrade is accepted on.</summary>
-    public string Path { get; init; } = "/relay";
+    /// <summary>
+    /// The request path the WebSocket upgrade is accepted on.
+    /// </summary>
+    /// <remarks>
+    /// <b>Must match the path in <see cref="RelayEndpoint.Default"/>.</b> The client dials that
+    /// address; a relay serving a different path answers the upgrade with a 400, and the plugin
+    /// reports the relay as unreachable — a correctly deployed relay and a correctly configured
+    /// client showing "not responding", with the whole two-machine A-1.5a chain spent chasing NAT
+    /// before anyone reads a path string.
+    /// <para>
+    /// Ruled 2026-08-27: the relay moved rather than the client. The client's default is
+    /// user-visible under R-1.8, so anyone who has written the address down already has this one,
+    /// while the relay's path had no deployed dependency at all — <c>deploy/compose.yaml</c> does
+    /// not set <c>PATH_PREFIX</c>, so nothing anywhere pinned it.
+    /// </para>
+    /// <para>
+    /// It stays configurable, so the value fixes today and
+    /// <c>RelayPathMatchesTheClientDefaultTests</c> fixes the class.
+    /// </para>
+    /// </remarks>
+    public string Path { get; init; } = "/session";
 
     /// <summary>
     /// Largest single envelope accepted. A client that could send an unbounded message could make

@@ -86,7 +86,7 @@ public sealed class RelayUnderTest : IAsyncDisposable
 
         try
         {
-            await client.ConnectAsync(new Uri($"ws://127.0.0.1:{Port}/relay{query}"), CancellationToken.None);
+            await client.ConnectAsync(new Uri($"ws://127.0.0.1:{Port}{Path}{query}"), CancellationToken.None);
             return client;
         }
         catch
@@ -98,6 +98,13 @@ public sealed class RelayUnderTest : IAsyncDisposable
 
     /// <summary>The socket from the last refused connect, for reading its status and headers.</summary>
     public ClientWebSocket? RefusedSocket { get; private set; }
+
+    /// <summary>
+    /// The path this relay serves, read from the options rather than written down again — a harness
+    /// with its own copy of the path would keep passing while the product's two halves diverged,
+    /// which is the exact failure this fix is about.
+    /// </summary>
+    private static string Path => new RelayOptions().Path;
 
     /// <summary>Sends one envelope as a single binary message, matching the framing contract.</summary>
     public static Task SendAsync(WebSocket socket, WireEnvelope envelope) =>
