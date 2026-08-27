@@ -33,26 +33,17 @@
         including the process-global ServicePointManager form, which would affect every test in the
         run. A file-level allowlist would match the actual intent.
 
-      - THE BLOCK-COMMENT SKIP IS BY LINE SHAPE, SO IT COVERS ONLY THE BLOCK COMMENTS WHOSE LINES
-        LOOK LIKE COMMENTS. '/*' opening a block and '* ' continuing one are recognised. An INTERIOR
-        line that is plain indented prose is not, and is scanned as though it were code:
+      - The comment stripper is a REGEX, not a C# lexer. It protects raw, verbatim, ordinary and
+        character literals so that a comment marker inside one cannot open a fake comment, which is
+        the failure that matters: an over-eager strip removes real code and the fence goes SILENT
+        over it. Measured against nine specimens (see TlsBypassFenceTests) — a naive strip of just
+        '/\*[\s\S]*?\*/' blinds the fence on four of them, this one on none.
 
-            /*
-                Do not assign RemoteCertificateValidationCallback here.   (this line still fires)
-            */
-
-        This is BUG-18's own reproduction and it is NOT fixed. The scan is one item-batched
-        condition per line, and ReadLinesFromFile's output carries no metadata naming the file the
-        line came from, so a line cannot ask whether it sits inside a comment. Closing it means
-        scanning per FILE — strip '/\*[\s\S]*?\*/' from the text and match on what is left, which
-        is measured to work — and that changes how the target batches, not what this condition says.
-        Recorded rather than attempted, because it is a different shape of change from the one
-        BUG-18 was dispatched as.
-
-      - The continued-line skip is '* ' — asterisk then space — and not '*', because an asterisk
-        also begins a pointer dereference. So a token named on a line opening with asterisk-space is
-        not scanned, whatever that line turns out to be. No assignment has that shape, but it is a
-        hole rather than a judgement call, so it is written down.
+        What it does not model: interpolated strings whose holes contain quotes, and nested raw
+        string literals. Neither appears in this solution. If one arrives and carries an unbalanced
+        comment marker, the fence could go quiet over the rest of that file — so this is the thing
+        to re-check before writing such a literal, and the reason the specimen list is a test rather
+        than a comment.
 
       - %(Compile) is silent on anything that is not compiled C# from disk, notably source-generated
         files. There are no generators in this solution today.
@@ -67,9 +58,47 @@
     <TlsValidationBypassPermittedIn>DungeonMasterXIV.Relay.Tests</TlsValidationBypassPermittedIn>
   </PropertyGroup>
 
+  <!--
+    The comment stripper. Alternation order is the whole design: the four literal forms are tried
+    FIRST and captured, so '$1$2$3$4' puts them back; the two comment forms are tried last and
+    capture nothing, so they substitute to empty and vanish. That is how a comment gets removed and
+    a string containing "wss://" or "/*" survives, without needing a MatchEvaluator MSBuild cannot
+    give us.
+
+    Kept as a property rather than inlined so it can be read. A guard nobody can read is a guard
+    nobody maintains.
+  -->
+  <PropertyGroup>
+    <TlsFenceCommentPattern>("""[\s\S]*?""")|(@"(?:[^"]|"")*")|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|/\*[\s\S]*?\*/|//[^\r\n]*</TlsFenceCommentPattern>
+  </PropertyGroup>
+
   <Target Name="NoTlsValidationBypass"
           BeforeTargets="Build"
+          Outputs="%(Compile.Identity)"
           Condition="'$(MSBuildProjectName)' != '$(TlsValidationBypassPermittedIn)'">
+
+    <!--
+      ONE BATCH PER FILE, and that is what BUG-18 turned on. The scan used to flatten every line of
+      every file into one list, so a line had no way to ask whether it sat inside a block comment —
+      and an interior line of plain indented prose was scanned as though it were code, failing the
+      build for a comment that told people NOT to do the thing.
+
+      Batching per Compile item means the file's own text is in hand, so the question is answered
+      once for the file instead of guessed at per line.
+    -->
+    <ItemGroup>
+      <_ScannedSourceLine Remove="@(_ScannedSourceLine)" />
+    </ItemGroup>
+
+    <!--
+      THE DECISION. Comments removed, literals kept. A token that survives this is in code or in a
+      string, and both of those fire: a bypass name in a string literal is either reflection reaching
+      for it or documentation that should have been a comment, and the conservative reading is the
+      safe one for a guard whose failure mode is silence.
+    -->
+    <PropertyGroup>
+      <_CodeOutsideComments>$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('%(Compile.FullPath)')), '$(TlsFenceCommentPattern)', '$1$2$3$4'))</_CodeOutsideComments>
+    </PropertyGroup>
 
     <!--
       Reads the source rather than the reference graph, unlike ForbidDalamud and NoDurableStorage:
@@ -85,25 +114,19 @@
       relaxed. The weakening spelling is deliberately NOT matched as a bare name; catching it would
       mean matching an assignment of false, and a token list cannot see an assignment.
     -->
-    <ReadLinesFromFile File="%(Compile.FullPath)">
+    <ReadLinesFromFile File="%(Compile.FullPath)" Condition="$(_CodeOutsideComments.Contains('RemoteCertificateValidationCallback'))
+                                                          Or $(_CodeOutsideComments.Contains('ServerCertificateCustomValidationCallback'))
+                                                          Or $(_CodeOutsideComments.Contains('ServerCertificateValidationCallback'))
+                                                          Or $(_CodeOutsideComments.Contains('userCertificateValidationCallback'))
+                                                          Or $(_CodeOutsideComments.Contains('DangerousAccept'))">
       <Output TaskParameter="Lines" ItemName="_ScannedSourceLine" />
     </ReadLinesFromFile>
 
     <!--
-      Comments are skipped so that other projects may DOCUMENT this rule — an XML doc on the
-      transport type in Core is the natural place to warn the next person, and a rule that forbids
-      explaining itself gets explained wrongly or not at all.
-
-      THREE PREFIXES, because C# has more than one way to write a comment and BUG-18 was the guard
-      permitting only the first: '//' (which covers '///' for free), '/*' opening a block, and '* '
-      continuing one. A closing '*/' needs no case of its own — a line carrying only '*/' holds no
-      token and cannot fire, and one carrying comment TEXT before it opens with '* ' already.
-
-      The skip is '* ' and not '*' deliberately. An asterisk begins a continued comment line and
-      also begins a pointer dereference, so skipping every line that opens with one would silently
-      unfence '*p = handler;'. The space is what separates the two, and the control for it is
-      TlsBypassFenceTests.TheGuardStillFiresOnARealAssignmentBeginningWithAnAsterisk — a skip that
-      widened would go quiet, and silence is also what a clean repository looks like.
+      The line is quoted, not decided on. The decision was made above, over the whole file; this
+      only picks which line to show the reader, and the comment prefixes are here so it does not
+      pick a comment line in a file that also holds a real bypass. Do not mistake this for a second
+      gate — widening it cannot unfence anything, and narrowing it cannot fence anything.
     -->
     <Error Condition="!$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('//'))
                   And !$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('/*'))
@@ -113,7 +136,7 @@
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateValidationCallback'))
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('userCertificateValidationCallback'))
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('DangerousAccept')))"
-           Text="$(MSBuildProjectName) disables TLS certificate validation: &quot;%(_ScannedSourceLine.Identity)&quot;. A client that accepts any certificate has no transport authentication and still looks protected (D-11). Only $(TlsValidationBypassPermittedIn) may do this, and only to reach the throwaway certificate C15's container smoke test mints." />
+           Text="$(MSBuildProjectName) disables TLS certificate validation in %(Compile.Identity): &quot;%(_ScannedSourceLine.Identity)&quot;. A client that accepts any certificate has no transport authentication and still looks protected (D-11). Only $(TlsValidationBypassPermittedIn) may do this, and only to reach the throwaway certificate C15's container smoke test mints." />
 
   </Target>
 

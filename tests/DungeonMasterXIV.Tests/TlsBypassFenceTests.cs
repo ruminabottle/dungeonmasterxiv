@@ -111,12 +111,19 @@ public sealed class TlsBypassFenceTests
     /// the two standard ways of explaining itself and forbade the other. The row list is the fix's
     /// shape: each form a reader might reasonably reach for is now its own case.
     /// </para>
+    /// <para>
+    /// <b>The last row is the one that mattered.</b> Its interior line is plain indented prose, so
+    /// no line-shape rule can tell it from code — it is BUG-18's own reproduction, and it survived
+    /// the first fix while every row above it passed. It is silent now because the guard strips
+    /// comments from the file's whole text rather than judging lines one at a time.
+    /// </para>
     /// </remarks>
     [Theory]
     [InlineData("// never assign {0} in a shipped project")]
     [InlineData("/// <summary>Never assign {0} here.</summary>")]
     [InlineData("/* Never assign {0} in a shipped project. */")]
     [InlineData("/*\n * Never assign {0} in a shipped project.\n */")]
+    [InlineData("/*\n    Never assign {0} in a shipped project.\n*/")]
     public void TheGuardIsSilentOnACommentSoTheRuleCanBeDocumented(string commentFormat)
     {
         var token = TokensDeclaredByTheGuard()[0];
@@ -198,6 +205,73 @@ public sealed class TlsBypassFenceTests
         var output = ScanProbe(permitted, $"class Probe {{ object? Field = \"{token}\"; }}");
 
         Assert.DoesNotContain("disables TLS certificate validation", output, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Code between two block comments is still code.
+    /// </summary>
+    /// <remarks>
+    /// The stripper's <c>[\s\S]*?</c> is non-greedy, and this is what says so. A greedy match would
+    /// run from the first <c>/*</c> to the LAST <c>*/</c>, swallow everything between them, and the
+    /// fence would go silent over exactly the code it exists to watch.
+    /// </remarks>
+    [Fact]
+    public void TheGuardFiresOnCodeBetweenTwoBlockComments()
+    {
+        var token = TokensDeclaredByTheGuard()[0];
+        var output = ScanProbe(
+            "Probe",
+            $"/* first, mentioning {token} */\nclass Probe {{ void M(object h) {{ h.{token} = null; }} }}\n/* second, mentioning {token} */");
+
+        Assert.Contains("disables TLS certificate validation", output, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <b>A comment marker inside a string literal must not open a comment.</b>
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the hazard the per-file rewrite introduced and the reason the stripper protects
+    /// literals instead of removing comments naively. An unbalanced <c>/*</c> in a string opens a
+    /// block that runs to the next <c>*/</c> anywhere in the file, taking real code with it — and
+    /// the fence's failure mode there is SILENCE, which is indistinguishable from a clean file.
+    /// </para>
+    /// <para>
+    /// Not hypothetical: this repository has <c>"wss://…"</c> in several places and a
+    /// <c>**/*.cs</c> in an XML doc. Measured against a naive strip of <c>/*…*/</c> alone, these
+    /// rows blind the guard; they are here so a future simplification of that pattern cannot.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [InlineData("const string G = \"**/*.cs\";", "const string C = \"a */ b\";")]
+    [InlineData("const string G = @\"pattern  /*  \";", "const string C = @\" */ \";")]
+    public void TheGuardIsNotBlindedByACommentMarkerInsideAStringLiteral(string before, string after)
+    {
+        var token = TokensDeclaredByTheGuard()[0];
+        var output = ScanProbe(
+            "Probe",
+            $"class Probe {{\n    {before}\n    void M(object h) {{ h.{token} = null; }}\n    {after}\n}}");
+
+        Assert.Contains("disables TLS certificate validation", output, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A token in a string literal fires, and that is a decision rather than an oversight.
+    /// </summary>
+    /// <remarks>
+    /// Once comments are stripped, a literal is the remaining place a bypass name can sit
+    /// innocently. It fires anyway: a name in a string is either reflection reaching for the
+    /// property or documentation that should have been a comment, and for a guard whose failure
+    /// mode is silence the conservative reading is the safe one. Documenting the rule has four
+    /// working forms, all tested above; none of them is a string.
+    /// </remarks>
+    [Fact]
+    public void TheGuardFiresOnATokenInAStringLiteral()
+    {
+        var token = TokensDeclaredByTheGuard()[0];
+        var output = ScanProbe("Probe", $"class Probe {{ const string S = \"{token}\"; }}");
+
+        Assert.Contains("disables TLS certificate validation", output, StringComparison.Ordinal);
     }
 
     /// <summary>The names inside the guard's <c>Contains('…')</c> conditions, in declaration order.</summary>
