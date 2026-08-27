@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.IO;
 using DungeonMasterXIV.Release;
 using Xunit;
 
@@ -34,8 +32,8 @@ public class VersionHasOneAuthorTests
     [Fact]
     public void TwoTagsProduceTwoVersionsWithNothingHandEdited()
     {
-        var first = VersionTheBuildWouldStamp("v0.1.0");
-        var second = VersionTheBuildWouldStamp("v0.1.1");
+        var first = TheBuild.VersionStampedFor("v0.1.0");
+        var second = TheBuild.VersionStampedFor("v0.1.1");
 
         Assert.NotEqual(first, second);
         Assert.Equal("0.1.0", first);
@@ -48,7 +46,7 @@ public class VersionHasOneAuthorTests
     [Fact]
     public void ABuildNobodyToldATagCarriesNoReleaseVersion()
     {
-        Assert.Equal(TaggedVersion.UntaggedBuild.ToString(), Version.Parse(VersionTheBuildWouldStamp(null)).ToString());
+        Assert.Equal(TaggedVersion.UntaggedBuild.ToString(), Version.Parse(TheBuild.VersionStampedFor(null)).ToString());
     }
 
     // A-7.2a at the release tool. One built artefact cannot be published under two tags, which is
@@ -88,14 +86,18 @@ public class VersionHasOneAuthorTests
         Assert.Contains("-p:ReleaseTag=v0.1.0", failure.Message, StringComparison.Ordinal);
     }
 
-    // The tag the build was given and the version the build stamps are spelled differently -- v0.1.0
-    // against 0.1.0.0 -- and comparing them unpadded would refuse every correct release.
+    // The tag and the version the build stamps are written differently -- v0.1.0 against 0.1.0.0 --
+    // and comparing them unpadded would refuse every correct release.
+    //
+    // This used to also accept "0.1.0" and "v2.3" under the name ...HoweverTheyAreSpelled. That
+    // premise was BUG-22: if several spellings of one version are all legal tags, two releases can
+    // advertise one version and Dalamud never offers the second. Only the canonical spelling is a
+    // tag now, and CanonicalTagTests is where that is asserted.
     [Theory]
     [InlineData("v0.1.0", 0, 1, 0, 0)]
-    [InlineData("0.1.0", 0, 1, 0, 0)]
     [InlineData("v0.0.0.1", 0, 0, 0, 1)]
-    [InlineData("v2.3", 2, 3, 0, 0)]
-    public void ATagAndTheVersionItNamesAgreeHoweverTheyAreSpelled(
+    [InlineData("v1.2.3.4", 1, 2, 3, 4)]
+    public void APaddedVersionStillAgreesWithTheTagThatNamesIt(
         string tag, int major, int minor, int build, int revision)
     {
         Inputs(tag, new Version(major, minor, build, revision)).Validate();
@@ -103,47 +105,4 @@ public class VersionHasOneAuthorTests
 
     private static ReleaseInputs Inputs(string tag, Version assemblyVersion) =>
         new(tag, assemblyVersion, 13, Repo, Assets.Any());
-
-    /// <summary>
-    /// The <c>Version</c> the real plugin project evaluates to for a given tag, with no file edited.
-    /// </summary>
-    private static string VersionTheBuildWouldStamp(string? releaseTag)
-    {
-        var project = Path.Combine(RepositoryRoot().FullName, "DungeonMasterXIV.csproj");
-        var arguments = $"msbuild \"{project}\" -getProperty:Version";
-
-        if (releaseTag is not null)
-        {
-            arguments += $" -p:ReleaseTag={releaseTag}";
-        }
-
-        using var msbuild = Process.Start(new ProcessStartInfo("dotnet", arguments)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        })!;
-
-        var version = msbuild.StandardOutput.ReadToEnd().Trim();
-        var errors = msbuild.StandardError.ReadToEnd().Trim();
-        msbuild.WaitForExit();
-
-        Assert.True(
-            msbuild.ExitCode == 0,
-            $"`dotnet {arguments}` failed, so this says nothing about the derivation:\n{version}\n{errors}");
-
-        return version;
-    }
-
-    private static DirectoryInfo RepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "DungeonMasterXIV.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.NotNull(directory);
-        return directory!;
-    }
 }

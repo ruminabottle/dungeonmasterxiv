@@ -44,10 +44,16 @@ public static class TaggedVersion
     /// two are not equal. Comparing them unpadded would refuse every correct release — an instrument
     /// that produces false failures, which is worse than one that cannot fail.
     /// </remarks>
-    /// <param name="tag">The git tag, with or without its leading <c>v</c>.</param>
-    /// <exception cref="ArgumentException">The tag does not name a version.</exception>
+    /// <param name="tag">The git tag, e.g. <c>v0.1.0</c>.</param>
+    /// <exception cref="ArgumentException">
+    /// The tag does not name a version, or names one it is not the canonical spelling of.
+    /// </exception>
     public static Version Of(string tag)
     {
+        // Read leniently, judge strictly. Stripping a capital V and surrounding whitespace here is
+        // not permission to use them -- the canonical comparison below rejects both. It is so the
+        // refusal can say "you meant v0.1.0" instead of "that is not a version", which is the
+        // difference between ending an investigation and starting one.
         var withoutPrefix = (tag ?? string.Empty).Trim().TrimStart('v', 'V');
 
         if (!Version.TryParse(withoutPrefix, out var named))
@@ -58,7 +64,44 @@ public static class TaggedVersion
                 "has to read like v0.1.0, because the build takes its version from it.");
         }
 
-        return Pad(named);
+        var padded = Pad(named);
+        var canonical = CanonicalTagFor(padded);
+
+        // BUG-22. Tag to version is MANY-to-one: v0.1.0, v0.1.0.0, v01.2.3 and vv0.1.0 all pad to a
+        // version another tag also names. Two such tags are two distinct git refs carrying two
+        // distinct assets, and they advertise ONE version -- so Dalamud never offers the second,
+        // which is BUG-14's consequence surviving BUG-14's fix. Requiring the canonical spelling
+        // makes the aliasing unrepresentable instead of merely unlikely.
+        if (!string.Equals(tag, canonical, StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                $"The release tag '{tag}' is not the canonical spelling of version {padded}; that is " +
+                $"'{canonical}'. Both spellings advertise the same version, so releasing under one " +
+                "after the other gives two refs, two assets and one version — and Dalamud does not " +
+                "reject the second, it never offers it. Re-cut the tag as " +
+                $"'{canonical}', or pick a genuinely different version.");
+        }
+
+        return padded;
+    }
+
+    /// <summary>The one spelling of <paramref name="version"/> a release may be tagged with.</summary>
+    /// <remarks>
+    /// <b>Three components, or four when the fourth is not zero.</b> The build pads whatever it is
+    /// given to four (<c>v0.1.0</c> is stamped <c>0.1.0.0</c>), so a version has many spellings and
+    /// exactly one of them has to be legal or two tags can name it. Three is the choice because it is
+    /// what every example in this repository already uses — PRD-7, <c>Program.cs</c>'s documented
+    /// command, and A-7.2a's own wording all say <c>v0.1.0</c> — so the canonical form is the one
+    /// people are already writing. A four-component tag stays legal when its revision is non-zero,
+    /// because <c>v0.0.0.1</c> has no shorter spelling.
+    /// </remarks>
+    public static string CanonicalTagFor(Version version)
+    {
+        var padded = Pad(version);
+
+        return padded.Revision == 0
+            ? $"v{padded.Major}.{padded.Minor}.{padded.Build}"
+            : $"v{padded}";
     }
 
     /// <summary>The same version with unspecified components as zero, so two spellings compare equal.</summary>

@@ -34,6 +34,22 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
+  <!-- BUG-23. Without this, `-p:ReleaseTag=V0.1.0` dies inside NuGet restore with
+       "error MSB4181: The RestoreTask task returned false but did not log an error" — a message
+       naming neither the tag, nor the version, nor this file. Git tags are case-sensitive and a
+       capital V is a real convention, so that is a reachable spelling with an unreadable failure.
+
+       A SHAPE check, deliberately not a version parse. The version rule lives in TaggedVersion and
+       is the release tool's to enforce; a second parser here is what BUG-23 is about. This only
+       asserts the one thing the build itself needs — that what follows is a version and not a
+       prefixed one — and hands everything else to the tool, which refuses with the canonical
+       spelling in hand. -->
+  <Target Name="ReleaseTagIsSpeltForTheBuild" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
+          Condition="'$(ReleaseTag)' != ''">
+    <Error Condition="!$(ReleaseTag.StartsWith('v'))"
+           Text="ReleaseTag '$(ReleaseTag)' must begin with a lowercase 'v', e.g. v0.1.0. The tag is the one place the advertised version is authored (D-16, R-7.4a), and the release tool refuses any other spelling of it." />
+  </Target>
+
   <!-- The plugin project sits at the repo root, so its default glob would otherwise swallow the
        sources of the projects nested under it. -->
   <ItemGroup>

@@ -33,22 +33,9 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </remarks>
 public class ManifestMatchesTheBuiltPluginTests
 {
-    private static DirectoryInfo RepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "DungeonMasterXIV.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.NotNull(directory);
-        return directory!;
-    }
-
     private static string BuiltPluginPath()
     {
-        var root = RepositoryRoot();
+        var root = TheBuild.RepositoryRoot();
         var candidates = new DirectoryInfo(Path.Combine(root.FullName, "bin")).Exists
             ? new DirectoryInfo(Path.Combine(root.FullName, "bin"))
                 .GetFiles("DungeonMasterXIV.dll", SearchOption.AllDirectories)
@@ -74,12 +61,15 @@ public class ManifestMatchesTheBuiltPluginTests
         var fromTheArtefact = PluginAssemblyVersion.Of(assemblyPath);
 
         var plugin = JsonSerializer.Deserialize<PluginManifest>(
-            File.ReadAllText(Path.Combine(RepositoryRoot().FullName, "DungeonMasterXIV.json")))!;
+            File.ReadAllText(Path.Combine(TheBuild.RepositoryRoot().FullName, "DungeonMasterXIV.json")))!;
         // The tag names whatever this tree was actually built as. A literal "v0.1.0" here would now
         // be refused against any other build -- correctly, and it would make this test about the
-        // tag check rather than about the manifest.
+        // tag check rather than about the manifest. Asked for by name rather than spelt as
+        // $"v{version}", because since BUG-22 only one spelling of a version is a legal tag and
+        // "v0.0.0.0" is not it.
         var manifest = RepositoryManifest.Build(
-            new ReleaseInputs($"v{fromTheArtefact}", fromTheArtefact, 13, plugin.RepoUrl, Assets.Any()),
+            new ReleaseInputs(
+                TaggedVersion.CanonicalTagFor(fromTheArtefact), fromTheArtefact, 13, plugin.RepoUrl, Assets.Any()),
             plugin);
 
         using var document = JsonDocument.Parse(manifest);
@@ -105,7 +95,7 @@ public class ManifestMatchesTheBuiltPluginTests
     public void TheProjectDeclaresNoHandAuthoredReleaseVersion()
     {
         var declared = Regex.Matches(
-            File.ReadAllText(Path.Combine(RepositoryRoot().FullName, "DungeonMasterXIV.csproj")),
+            File.ReadAllText(Path.Combine(TheBuild.RepositoryRoot().FullName, "DungeonMasterXIV.csproj")),
             @"<Version[^>]*>([^<]+)</Version>");
 
         // Without these two the loop below passes over an empty match set -- a check that cannot
@@ -134,7 +124,7 @@ public class ManifestMatchesTheBuiltPluginTests
     [Fact]
     public void ReadingSomethingThatIsNotAnAssemblyFails()
     {
-        var notAnAssembly = Path.Combine(RepositoryRoot().FullName, "DungeonMasterXIV.json");
+        var notAnAssembly = Path.Combine(TheBuild.RepositoryRoot().FullName, "DungeonMasterXIV.json");
 
         Assert.ThrowsAny<Exception>(() => PluginAssemblyVersion.Of(notAnAssembly));
     }
