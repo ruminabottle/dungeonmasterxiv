@@ -33,6 +33,7 @@ public static class EnvelopeCodec
             PublicKey = envelope.PublicKey,
             HostPublicKey = envelope.HostPublicKey,
             DeadlineUtcTicks = envelope.DeadlineUtcTicks,
+            ClaimedParticipantId = envelope.ClaimedParticipantId,
         };
 
         return JsonSerializer.SerializeToUtf8Bytes(wire, Options);
@@ -81,36 +82,8 @@ public static class EnvelopeCodec
         // of what D-14 asks for.
         var type = Enum.IsDefined(wire.Type) ? wire.Type : WireMessageType.Unknown;
 
-        envelope = WireEnvelope.FromWire(
-            type,
-            wire.SessionCode,
-            wire.Nonce,
-            wire.Payload,
-            wire.PublicKey,
-            wire.HostPublicKey,
-            wire.DeadlineUtcTicks);
+        envelope = WireEnvelope.FromWire(type, wire.SessionCode, wire);
         return true;
     }
 
-    /// <summary>
-    /// The serialised shape, kept separate from <see cref="WireEnvelope"/> so that the envelope can
-    /// keep a locked-down construction path. A serializer needs a type it can freely populate; the
-    /// envelope is a type that deliberately cannot be.
-    /// </summary>
-    private sealed class WireShape
-    {
-        public WireMessageType Type { get; set; }
-
-        public string? SessionCode { get; set; }
-
-        public byte[]? Nonce { get; set; }
-
-        public byte[]? Payload { get; set; }
-
-        public byte[]? PublicKey { get; set; }
-
-        public byte[]? HostPublicKey { get; set; }
-
-        public long? DeadlineUtcTicks { get; set; }
-    }
 }

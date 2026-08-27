@@ -68,6 +68,19 @@ public sealed record WireEnvelope
     public long? DeadlineUtcTicks { get; private init; }
 
     /// <summary>
+    /// The participant a returning client claims to be, on
+    /// <see cref="WireMessageType.JoinRequest"/> (R-1.5). Null means no claim was made.
+    /// </summary>
+    /// <remarks>
+    /// <b>A claim, never a credential.</b> It is unauthenticated text from the joining client, so
+    /// nothing may be granted on the strength of it. Its entire effect is to let the host look the
+    /// participant up and change what the DM's prompt <i>says</i>; the DM still approves every
+    /// relink, every session (R-1.5, D-8). Resolving it is <c>CampaignRelink</c>'s job (it lives in the campaign layer, which reads this field but is not referenced from here), and
+    /// what the prompt shows is derived from what resolved rather than from what was claimed.
+    /// </remarks>
+    public string? ClaimedParticipantId { get; private init; }
+
+    /// <summary>
     /// The envelope metadata a payload is bound to: the session it belongs to and what kind of
     /// message it is. Authenticated by <see cref="SessionCipher"/> but never transmitted — the
     /// receiver rebuilds it from the envelope in front of it, so a re-framed payload fails its tag
@@ -133,6 +146,26 @@ public sealed record WireEnvelope
     }
 
     /// <summary>
+    /// A join request from a returning client, claiming a participant it believes is its own (R-1.5).
+    /// </summary>
+    /// <remarks>
+    /// The claim is carried, not trusted. A host that does not recognise it simply shows an ordinary
+    /// join prompt, and a host that does recognise it still shows a prompt the DM must answer.
+    /// </remarks>
+    /// <param name="code">The session being joined.</param>
+    /// <param name="publicKey">The joiner's ephemeral public key (D-11).</param>
+    /// <param name="claimedParticipantId">The participant UUID this client believes is its own.</param>
+    public static WireEnvelope ForRelinkRequest(SessionCode code, byte[] publicKey, Guid claimedParticipantId)
+    {
+        ArgumentNullException.ThrowIfNull(publicKey);
+        return new WireEnvelope(WireMessageType.JoinRequest, code.Value)
+        {
+            PublicKey = publicKey,
+            ClaimedParticipantId = claimedParticipantId.ToString("D"),
+        };
+    }
+
+    /// <summary>
     /// Carries an encrypted payload between members. Takes a <see cref="SealedPayload"/> and not
     /// bytes, so there is no overload that would accept plaintext.
     /// </summary>
@@ -152,21 +185,15 @@ public sealed record WireEnvelope
     /// only for <see cref="EnvelopeCodec"/>: bytes arriving from a relay are already whatever they
     /// are, and refusing to represent them would just move the problem.
     /// </summary>
-    internal static WireEnvelope FromWire(
-        WireMessageType type,
-        string sessionCode,
-        byte[]? nonce,
-        byte[]? payload,
-        byte[]? publicKey,
-        byte[]? hostPublicKey,
-        long? deadlineUtcTicks) =>
+    internal static WireEnvelope FromWire(WireMessageType type, string sessionCode, WireShape wire) =>
         new(type, sessionCode)
         {
-            Nonce = nonce,
-            Payload = payload,
-            PublicKey = publicKey,
-            HostPublicKey = hostPublicKey,
-            DeadlineUtcTicks = deadlineUtcTicks,
+            Nonce = wire.Nonce,
+            Payload = wire.Payload,
+            PublicKey = wire.PublicKey,
+            HostPublicKey = wire.HostPublicKey,
+            DeadlineUtcTicks = wire.DeadlineUtcTicks,
+            ClaimedParticipantId = wire.ClaimedParticipantId,
         };
 
     /// <summary>
