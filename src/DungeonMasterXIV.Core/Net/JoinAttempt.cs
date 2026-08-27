@@ -24,6 +24,18 @@ public sealed class JoinAttempt
     public SessionFailure Failure { get; private set; } = SessionFailure.None;
 
     /// <summary>
+    /// When this request lapses, as told to us by the DM's client. Null until the host answers.
+    /// </summary>
+    /// <remarks>
+    /// <b>Given, never started here.</b> R-1.3c requires the admission wait and R-1.3a's prompt
+    /// expiry to be the same window seen from two sides; a duration this client counted for itself
+    /// would be a second clock, and the two drift on network delay, clock skew or a suspended
+    /// client. The drift is not cosmetic — it produces a player told the request lapsed while the DM
+    /// still holds a live prompt, so the DM accepts into nothing and neither side sees a fault.
+    /// </remarks>
+    public AdmissionDeadline? Deadline { get; private set; }
+
+    /// <summary>
     /// Whether this client may receive session state.
     /// </summary>
     /// <remarks>
@@ -39,10 +51,19 @@ public sealed class JoinAttempt
         Phase = JoinPhase.Contacting;
         Code = code;
         Failure = SessionFailure.None;
+        Deadline = null;
     }
 
-    /// <summary>The relay delivered the request and the DM has not decided yet.</summary>
-    public void AwaitDecision()
+    /// <summary>
+    /// The relay delivered the request and the DM has not decided yet.
+    /// </summary>
+    /// <param name="deadline">
+    /// When the DM's client says the window closes. Carried so this client can show a countdown
+    /// toward it — R-1.3c requires the player to see the wait is bounded <i>while it runs</i>, not
+    /// only when it ends. Being told after fifteen silent minutes is better than silence and worse
+    /// than knowing.
+    /// </param>
+    public void AwaitDecision(AdmissionDeadline? deadline = null)
     {
         if (Phase != JoinPhase.Contacting)
         {
@@ -50,7 +71,32 @@ public sealed class JoinAttempt
         }
 
         Phase = JoinPhase.AwaitingDecision;
+        Deadline = deadline;
     }
+
+    /// <summary>
+    /// The window closed with no answer (R-1.3c, A-1.5h).
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <see cref="Denied"/>. Nobody refused this player — the DM may have been
+    /// mid-encounter — so asking again is reasonable and the UI must say so. Reporting a lapse as a
+    /// refusal tells someone they were turned away when nobody looked, and the two call for
+    /// different behaviour: a lapsed player may re-request, a denied one should not be invited to.
+    /// </remarks>
+    public void Lapsed()
+    {
+        Phase = JoinPhase.Lapsed;
+        Failure = SessionFailure.None;
+    }
+
+    /// <summary>
+    /// Whether this attempt can simply be tried again without a new code (A-1.5h).
+    /// </summary>
+    public bool MayRequestAgain => Phase is JoinPhase.Lapsed or JoinPhase.Failed or JoinPhase.Idle;
+
+    /// <summary>How long the player has left, for the countdown. Zero when there is no deadline.</summary>
+    public TimeSpan RemainingAt(DateTimeOffset now) =>
+        Deadline?.RemainingAt(now) ?? TimeSpan.Zero;
 
     /// <summary>The DM accepted.</summary>
     public void Admitted()

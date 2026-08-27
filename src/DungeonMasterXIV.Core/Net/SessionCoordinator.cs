@@ -25,7 +25,6 @@ public sealed class SessionCoordinator
         _transport.Failed += OnTransportFailed;
     }
 
-    private readonly List<string> _pendingRequests = new();
     private readonly object _reportedFailureLock = new();
     private SessionFailure _reportedFailure = SessionFailure.None;
     private TimeSpan _timeInPhase;
@@ -41,17 +40,17 @@ public sealed class SessionCoordinator
     /// <summary>Who may receive session state. See <see cref="SessionAudience"/> for the D-13 levels.</summary>
     public SessionAudience Audience { get; } = new();
 
+    /// <summary>The requests waiting on the DM (R-1.3).</summary>
+    public AdmissionDesk Admissions { get; } = new();
+
+    /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
+    public GraceWindow Grace { get; } = new();
+
     /// <summary>
-    /// Every participant awaiting a decision, by session-scoped code. Never a character name —
-    /// R-1.3 requires the prompt to identify a requester by code.
+    /// Participants whose request lapsed on the most recent tick, so the caller can tell them it
+    /// lapsed rather than leaving them waiting — and, per R-1.3c, never tell them they were denied.
     /// </summary>
-    /// <remarks>
-    /// A list rather than one slot because four players clicking join at the start of a session is
-    /// the ordinary case, not an edge. A single slot silently strands everyone but the last, and
-    /// each stranded player sits on "waiting for the DM to decide" forever — which looks to them
-    /// exactly like a DM who is ignoring them.
-    /// </remarks>
-    public IReadOnlyList<string> PendingRequests => _pendingRequests.AsReadOnly();
+    public IReadOnlyList<PendingAdmission> JustLapsed { get; private set; } = Array.Empty<PendingAdmission>();
 
     /// <summary>Starts hosting under a freshly generated code (R-1.1, R-1.2a).</summary>
     public void StartHosting()
@@ -68,7 +67,9 @@ public sealed class SessionCoordinator
     {
         Host.Stop();
         Audience.Clear();
-        _pendingRequests.Clear();
+        Admissions.Clear();
+        Grace.Reset();
+        JustLapsed = Array.Empty<PendingAdmission>();
         SynchroniseTransport();
     }
 
@@ -80,22 +81,22 @@ public sealed class SessionCoordinator
     }
 
     /// <summary>Records that a participant is asking to be let in.</summary>
-    public void ReceiveJoinRequest(string peerCode)
-    {
-        if (!_pendingRequests.Contains(peerCode))
-        {
-            _pendingRequests.Add(peerCode);
-        }
-    }
+    public void ReceiveJoinRequest(PendingAdmission request) => Admissions.Receive(request);
 
     /// <summary>
     /// Admits the pending participant. Only after this does anything become addressable to them —
     /// see <see cref="SessionAudience"/>, which is where D-13's None level is enforced.
     /// </summary>
-    public AdmittedPeer Admit(string peerCode)
+    /// <param name="peerCode">The requester's session-scoped code.</param>
+    /// <param name="role">What they may do (E-11). Admission itself stays DM-only.</param>
+    /// <remarks>
+    /// Whether the DM compared the fingerprint is taken from the request rather than passed in, so
+    /// an admission cannot be recorded as verified unless the DM actually said so (R-1.3a).
+    /// </remarks>
+    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
     {
-        _pendingRequests.Remove(peerCode);
-        return Audience.Admit(peerCode);
+        var request = Admissions.Decide(peerCode);
+        return Audience.Admit(peerCode, role, request?.Verification ?? AdmissionVerification.NotCompared);
     }
 
     /// <summary>
@@ -104,7 +105,7 @@ public sealed class SessionCoordinator
     /// </summary>
     public void Deny(string peerCode)
     {
-        _pendingRequests.Remove(peerCode);
+        Admissions.Decide(peerCode);
         Audience.Remove(peerCode);
     }
 
@@ -173,9 +174,22 @@ public sealed class SessionCoordinator
     /// </para>
     /// </remarks>
     /// <param name="sinceLastTick">Elapsed time since the previous call.</param>
-    public void Tick(TimeSpan sinceLastTick)
+    /// <param name="now">
+    /// The current instant, for deadlines that were decided elsewhere. Passed in rather than read,
+    /// so a lapse is drivable from a test without waiting fifteen minutes — and so this type never
+    /// starts a clock of its own, which is what R-1.3c forbids.
+    /// </param>
+    public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
+        JustLapsed = Admissions.ExpireLapsed(now);
+
+        if (Grace.Tick(sinceLastTick))
+        {
+            StopHosting();
+            return;
+        }
+
 
         if (Host.Phase != _tickedHostPhase || Join.Phase != _tickedJoinPhase)
         {

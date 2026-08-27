@@ -26,6 +26,26 @@ public sealed class HostSession
     public SessionFailure Failure { get; private set; } = SessionFailure.None;
 
     /// <summary>
+    /// The code the players were given, when it is no longer the code this session holds.
+    /// </summary>
+    /// <remarks>
+    /// <b>This exists because of a gap the relay cannot close.</b> The relay frees a session code the
+    /// moment the host disconnects, but R-1.4 keeps the session alive through a grace window — so for
+    /// those two minutes the DM believes they still hold their code while anyone may claim it. If
+    /// somebody does, R-1.2a's regenerate-and-retry hands the host a <b>new</b> code, and the DM
+    /// carries on hosting while every player is holding the old one. Nothing is broken, nothing errors,
+    /// and the session quietly cannot be joined.
+    /// <para>
+    /// Silence is the failure. The DM has to be told the code changed and told to read out the new
+    /// one, which is why this is recorded rather than swapped in behind them.
+    /// </para>
+    /// </remarks>
+    public SessionCode? SupersededCode { get; private set; }
+
+    /// <summary>Whether the code changed mid-session and the players have not been told.</summary>
+    public bool CodeChangedMidSession => SupersededCode is not null;
+
+    /// <summary>
     /// Whether the transport should be holding a relay connection right now.
     /// </summary>
     /// <remarks>
@@ -43,6 +63,19 @@ public sealed class HostSession
         Code = code;
         Failure = SessionFailure.None;
     }
+
+    /// <summary>
+    /// The relay refused to give the code back after a reconnection and issued a different one.
+    /// Keeps the old code so the DM can be told what their players are still holding.
+    /// </summary>
+    public void CodeSuperseded(SessionCode replacement)
+    {
+        SupersededCode = Code;
+        Code = replacement;
+    }
+
+    /// <summary>The DM has read the new code out. Stops nagging them about it.</summary>
+    public void AcknowledgeCodeChange() => SupersededCode = null;
 
     /// <summary>The relay confirmed the code. The session is live.</summary>
     public void Registered()
@@ -64,6 +97,7 @@ public sealed class HostSession
         Phase = HostingPhase.NotHosting;
         Code = null;
         Failure = SessionFailure.None;
+        SupersededCode = null;
     }
 
     /// <summary>Records a transport failure and leaves hosting.</summary>
