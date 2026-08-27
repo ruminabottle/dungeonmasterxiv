@@ -146,10 +146,25 @@ public class CampaignStoreIdentityTests
 
         var written = archive.Content;
 
+        // Assert the LINK, not the ingredients. Three Assert.Contains over the raw text was the
+        // earlier version of this and it is satisfied by a file where the label appears once — for
+        // instance if a repeated label were stored as a per-campaign alias pointing at the first
+        // occurrence. Both codes and the label would all still be somewhere in the file, every
+        // assertion would pass, and the correlation would be gone. That is the same defect this
+        // test was written to fix, one level up: presence is not linkage.
+        //
+        // What actually constitutes the violation is that EVERY campaign in a single artifact
+        // carries its own session code AND the same person's label. That is what a reader of the
+        // file can join on, and it is what these assertions now check.
         Assert.NotNull(written);
-        Assert.Contains("BKD7RM", written!);
-        Assert.Contains("XW2P4N", written!);
-        Assert.Contains(SharedLabel, written!);
+        Assert.True(CampaignDocumentCodec.TryDeserialize(written!, out var document));
+        Assert.Equal(2, document!.Campaigns.Count);
+        Assert.All(document.Campaigns, campaign =>
+        {
+            Assert.False(string.IsNullOrEmpty(campaign.PreferredCode));
+            Assert.Contains(campaign.Participants, participant => participant.Label == SharedLabel);
+        });
+        Assert.Equal(2, document.Campaigns.Select(campaign => campaign.PreferredCode).Distinct().Count());
     }
 
     [Fact]
