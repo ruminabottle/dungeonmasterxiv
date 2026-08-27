@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DungeonMasterXIV.Release;
 
@@ -65,6 +67,21 @@ public static class TaggedVersion
         }
 
         var padded = Pad(named);
+
+        // BUG-25. An assembly version component caps at 65534, so a tag above that names a version
+        // no artefact can ever carry -- the build refuses it and the release could never verify
+        // against anything. Refused HERE as well as in the csproj because the two must agree: a tag
+        // the tool accepts and the build refuses is the invariant
+        // TheBuildAndTheToolReadTheTagAlikeTests exists to forbid, and making the build's refusal
+        // merely prettier would have left that invariant false while a test claimed it.
+        if (Components(padded).Any(component => component > AssemblyVersionComponentCap))
+        {
+            throw new ArgumentException(
+                $"The release tag '{tag}' names version {padded}, which no assembly can carry: a " +
+                $"version component cannot exceed {AssemblyVersionComponentCap}. The build refuses it " +
+                "too. Pick a version whose parts are all within that range.");
+        }
+
         var canonical = CanonicalTagFor(padded);
 
         // BUG-22. Tag to version is MANY-to-one: v0.1.0, v0.1.0.0, v01.2.3 and vv0.1.0 all pad to a
@@ -84,6 +101,15 @@ public static class TaggedVersion
 
         return padded;
     }
+
+    /// <summary>
+    /// The largest value an assembly-version component can hold. Above this the C# compiler refuses
+    /// the generated <c>AssemblyVersionAttribute</c> with CS7034, so no artefact can carry it.
+    /// </summary>
+    private const int AssemblyVersionComponentCap = 65534;
+
+    private static IEnumerable<int> Components(Version version) =>
+        new[] { version.Major, version.Minor, version.Build, version.Revision };
 
     /// <summary>The one spelling of <paramref name="version"/> a release may be tagged with.</summary>
     /// <remarks>
