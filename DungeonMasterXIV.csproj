@@ -27,6 +27,11 @@
     <None Remove="src/**" />
     <Compile Remove="tests/**" />
     <None Remove="tests/**" />
+    <!-- Release tooling. It sits under the repo root like src/ and tests/, so the plugin's default
+         glob would otherwise compile it, including the obj/ output. That fails the build with
+         duplicate assembly attributes, an error that names nothing resembling the real cause. -->
+    <Compile Remove="tools/**" />
+    <None Remove="tools/**" />
   </ItemGroup>
 
   <!-- The Dalamud-free half of the plugin. See DungeonMasterXIV.Core.csproj for why it is split. -->
