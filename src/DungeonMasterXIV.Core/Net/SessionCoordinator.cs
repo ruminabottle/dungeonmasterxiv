@@ -30,6 +30,8 @@ public sealed class SessionCoordinator
     private JoinPhase _tickedJoinPhase = JoinPhase.Idle;
     private string? _requestedCode;
 
+    private string? _requestedJoinCode;
+
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();
 
@@ -105,6 +107,11 @@ public sealed class SessionCoordinator
         JoinerKeys = new SessionKeyExchange();
         SessionKey = null;
         Join.Request(code);
+
+        // Cleared so asking again for the SAME code re-sends. R-1.3c makes that the ordinary case —
+        // a lapse means the DM was mid-encounter, not that they refused — and the host's equivalent
+        // never needs it because R-1.2a regenerates a fresh code on every refusal.
+        _requestedJoinCode = null;
         SynchroniseTransport();
     }
 
@@ -352,6 +359,7 @@ public sealed class SessionCoordinator
         ApplyReportedFailure();
         SessionKey = _inbox.Drain(Join, JoinerKeys, Host, key => AdmitToTheQueue(key, now)) ?? SessionKey;
         RegisterWithRelayWhenReady();
+        SendJoinRequestWhenReady();
         JustLapsed = Admissions.ExpireLapsed(now);
         AnnounceLapsed();
 
@@ -420,6 +428,49 @@ public sealed class SessionCoordinator
 
         _requestedCode = code.Value;
         _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(code)));
+    }
+
+    /// <summary>
+    /// Asks to be admitted, once the socket can actually carry the request (R-1.3).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>BUG-40, and it is BUG-36's twin one message along.</b> <c>WireEnvelope.ForJoinRequest</c>
+    /// had no production call site at all: the joiner connected, sent nothing, and sat in
+    /// <see cref="JoinPhase.Contacting"/> until it timed out and told the player the relay was
+    /// unreachable — while the relay held the connection open waiting for the client to speak. The
+    /// host half of this was found and fixed and nobody asked the same question of this side.
+    /// </para>
+    /// <para>
+    /// <b>On readiness, not on connection</b>, for the reason
+    /// <see cref="RegisterWithRelayWhenReady"/> records: <see cref="ISessionTransport.Send"/>
+    /// discards a frame that arrives before the socket opens, and <c>IsConnected</c> is already true
+    /// while a connect is in flight. Sending from <see cref="RequestJoin"/> would look right and
+    /// reproduce BUG-40 with a fix in place.
+    /// </para>
+    /// <para>
+    /// <b>This sends <see cref="WireEnvelope.ForJoinRequest(SessionCode, byte[])"/> and never
+    /// <see cref="WireEnvelope.ForRelinkRequest"/>.</b> That is a decision, not an oversight: no
+    /// production path reaches a relink. Nothing on this side holds the participant id a claim would
+    /// carry, and nothing on the host side reads <c>ClaimedParticipantId</c> back off the wire, so
+    /// wiring the relink factory here would need both ends invented. Making a relink send a plain
+    /// join request to look complete is the specific thing that must not happen — R-1.5's claim would
+    /// be silently dropped while every test passed.
+    /// </para>
+    /// </remarks>
+    private void SendJoinRequestWhenReady()
+    {
+        if (Join.Phase != JoinPhase.Contacting
+            || Join.Code is not { } code
+            || JoinerKeys is null
+            || string.Equals(_requestedJoinCode, code.Value, StringComparison.Ordinal)
+            || !_link.IsReadyToSend)
+        {
+            return;
+        }
+
+        _requestedJoinCode = code.Value;
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinRequest(code, JoinerKeys.PublicKey)));
     }
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
