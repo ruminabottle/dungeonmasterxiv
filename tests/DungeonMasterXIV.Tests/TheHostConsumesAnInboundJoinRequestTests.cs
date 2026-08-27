@@ -109,6 +109,50 @@ public class TheHostConsumesAnInboundJoinRequestTests
         Assert.Equal(2, coordinator.Admissions.Pending.Select(p => p.PeerCode).Distinct().Count());
     }
 
+    // A-1.2a, added by the Spec Owner when they answered SQ-16: the SAME joiner presenting to two
+    // different sessions must get two different peer codes. "A value that is identical across two
+    // session codes fails, even though it renders correctly in both prompts" -- so the failing input
+    // is a derivation that ignores the session, and one key is reused across both hosts to make that
+    // the only thing that can vary. D-8: the same person must not present the same value twice.
+    [Fact]
+    public void TheSameJoinerGetsADifferentPeerCodeInEachSession()
+    {
+        using var joiner = new SessionKeyExchange();
+        var (first, firstTransport) = Hosting();
+        var (second, secondTransport) = Hosting();
+
+        Assert.NotEqual(first.Host.Code!.Value, second.Host.Code!.Value);
+
+        firstTransport.Deliver(WireEnvelope.ForJoinRequest(first.Host.Code!.Value, joiner.PublicKey));
+        secondTransport.Deliver(WireEnvelope.ForJoinRequest(second.Host.Code!.Value, joiner.PublicKey));
+        first.Tick(TimeSpan.Zero, Now);
+        second.Tick(TimeSpan.Zero, Now);
+
+        Assert.NotEqual(
+            Assert.Single(first.Admissions.Pending).PeerCode,
+            Assert.Single(second.Admissions.Pending).PeerCode);
+    }
+
+    // The other half of A-1.2a's first clause, so the pair cannot be satisfied by a value that is
+    // simply random: within ONE session the same joiner is the same requester, and a code that
+    // changed per frame would make the DM's prompt unanswerable.
+    [Fact]
+    public void TheSameJoinerKeepsOnePeerCodeWithinASession()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, joiner.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+        var first = Assert.Single(coordinator.Admissions.Pending).PeerCode;
+
+        coordinator.Admissions.Clear();
+        transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, joiner.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal(first, Assert.Single(coordinator.Admissions.Pending).PeerCode);
+    }
+
     // A client that is not hosting must not build prompts out of traffic addressed to a host.
     [Fact]
     public void AClientThatIsNotHostingIgnoresAJoinRequest()
