@@ -155,20 +155,18 @@ public sealed class CampaignStore
     public IReadOnlyList<string> PreservedFiles() => _archive.PreservedFiles();
 
     /// <summary>
-    /// Deletes one preserved file. Refuses any name that is not one this plugin wrote, because the
-    /// name reaches a file delete.
+    /// Deletes one preserved file. The name must be one from <see cref="PreservedFiles"/>; the
+    /// archive refuses anything else.
     /// </summary>
     /// <param name="name">A name from <see cref="PreservedFiles"/>.</param>
     public bool DeletePreserved(string name)
     {
-        if (!PreservedCampaignFile.IsPreservedName(name))
-        {
-            _log.Warning($"Refused to delete '{name}': not a file this plugin preserved.");
-            return false;
-        }
-
+        // No name check here. The archive turns the name into a path and is the layer that guards
+        // it — a copy of that check in this method could never fail, because nothing reaches the
+        // archive except through here.
         if (!_archive.DeletePreserved(name))
         {
+            _log.Warning($"Could not delete preserved campaign file '{name}'.");
             return false;
         }
 

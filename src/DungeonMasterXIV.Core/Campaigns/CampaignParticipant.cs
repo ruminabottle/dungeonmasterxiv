@@ -16,13 +16,19 @@ namespace DungeonMasterXIV.Campaigns;
 /// are uncorrelated across campaigns</b> (D-8).
 /// </para>
 /// <para>
-/// <b>That is necessary for A-1.11 and it is not sufficient, so do not read it as the whole
-/// promise.</b> <see cref="Label"/> is not rotated and is the field most likely to be identical
-/// across two campaigns, because it is how the DM recognises someone — so a reader of the stored
-/// file can still correlate a person across two session codes by label alone. The label is
-/// retained deliberately: D-8 permits real character names in the DM's own local history and
-/// forbids them only in exports and in lines we log. Whether that retention satisfies A-1.11 as
-/// written is an open product question, not an oversight here.
+/// <b>That is necessary and not sufficient, so do not read it as the whole promise.</b>
+/// <see cref="Label"/> is not rotated and is the field most likely to be identical across two
+/// campaigns, because it is how the DM recognises someone — so a reader of the stored file can
+/// still correlate a person across two session codes by label alone.
+/// </para>
+/// <para>
+/// That is permitted here and forbidden elsewhere, and the split is deliberate. <b>A-1.11 was
+/// narrowed on 2026-08-27 to cover what leaves the machine</b> — exports and relay traffic — after
+/// it was found to contradict D-8, which explicitly allows real character names in the DM's own
+/// local history. So retaining a label locally is correct rather than tolerated. What the single
+/// shared file is inconsistent with is <b>A-1.11b</b> (no one campaign file holds more than one
+/// session code), which exists to bound blast radius when someone attaches a file to a bug
+/// report — not as a claim that per-campaign files deliver A-1.11.
 /// </para>
 /// </remarks>
 public sealed class CampaignParticipant

@@ -54,7 +54,7 @@ public sealed class Plugin : IDalamudPlugin
 
         _configurationStore = new ConfigurationStore(pluginInterface, log);
         _campaignStore = new CampaignStore(
-            new CampaignFileArchive(pluginInterface),
+            new CampaignFileArchive(pluginInterface.ConfigDirectory),
             new CampaignStoreLog(log));
         _windowSystem = new WindowSystem("DungeonMasterXIV");
         _mainWindow = new MainWindow(_configurationStore);

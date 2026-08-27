@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Dalamud.Plugin;
-using DungeonMasterXIV.Campaigns;
 
-namespace DungeonMasterXIV.Data;
+namespace DungeonMasterXIV.Campaigns;
 
 /// <summary>
 /// Keeps the campaign document in a file in the plugin's config directory.
@@ -14,7 +12,14 @@ namespace DungeonMasterXIV.Data;
 /// <para>
 /// Deliberately mechanism only: paths, bytes and renames. Every decision about what to do with
 /// what comes back — first run, unreadable, preserve rather than replace — belongs to
-/// <see cref="CampaignStore"/>, which is testable because it holds no Dalamud type.
+/// <see cref="CampaignStore"/>.
+/// </para>
+/// <para>
+/// <b>This takes a directory rather than Dalamud's plugin interface, and that is the point.</b> It
+/// used to take <c>IDalamudPluginInterface</c> purely to read <c>ConfigDirectory</c>, which made
+/// the whole type unreachable from the test assembly — so the guard on
+/// <see cref="DeletePreserved"/> could not be tested where it lives. A guard about paths belongs at
+/// the layer holding the path, and it is only worth having if it can be exercised.
 /// </para>
 /// <para>
 /// A separate file rather than Dalamud's plugin config: the config mechanism is one blob for
@@ -33,9 +38,8 @@ public sealed class CampaignFileArchive : ICampaignArchive
 
     private readonly DirectoryInfo _directory;
 
-    /// <param name="pluginInterface">Supplies the plugin's own config directory.</param>
-    public CampaignFileArchive(IDalamudPluginInterface pluginInterface) =>
-        _directory = pluginInterface.ConfigDirectory;
+    /// <param name="directory">Where campaign files live — the plugin's own config directory.</param>
+    public CampaignFileArchive(DirectoryInfo directory) => _directory = directory;
 
     private string FilePath => Path.Combine(_directory.FullName, FileName);
 
@@ -77,8 +81,9 @@ public sealed class CampaignFileArchive : ICampaignArchive
     /// <inheritdoc />
     public bool DeletePreserved(string name)
     {
-        // Checked here as well as in the store: this is the layer holding the path, so it does not
-        // rely on a caller having validated first.
+        // The only check on this name, and it is here rather than in the caller because this is the
+        // layer that turns it into a path. Without it, "../../dalamudUI.ini" combines to a real
+        // file outside the config directory and File.Exists below would happily agree.
         if (!PreservedCampaignFile.IsPreservedName(name))
         {
             return false;

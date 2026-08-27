@@ -31,17 +31,22 @@ public class CampaignStorePreservedFileTests
         Assert.Empty(store.PreservedFiles());
     }
 
-    // Fails if the store hands an unvalidated caller-supplied name straight to the file layer.
+    // The name guard itself is the archive's and is tested there, against a real directory, in
+    // CampaignFileArchiveTests. What belongs here is the store's half: a refusal is reported rather
+    // than swallowed, and nothing is dropped from the listing on the way.
     [Fact]
-    public void ANameThisPluginDidNotWriteIsRefusedAndLogged()
+    public void ARefusedDeletionIsReportedAndChangesNothing()
     {
         var archive = new FakeCampaignArchive("{ not json");
         var log = new RecordingCampaignLog();
         var store = new CampaignStore(archive, log);
+        var revisionBefore = store.Revision;
 
         Assert.False(store.DeletePreserved("../../dalamudUI.ini"));
+
         Assert.Single(store.PreservedFiles());
-        Assert.Contains(log.Warnings, line => line.Contains("Refused to delete"));
+        Assert.Equal(revisionBefore, store.Revision);
+        Assert.Contains(log.Warnings, line => line.Contains("Could not delete"));
     }
 
     // The window rebuilds its cached rows and its preserved-file list from this, so a deletion the

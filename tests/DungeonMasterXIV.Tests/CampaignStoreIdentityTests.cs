@@ -116,18 +116,24 @@ public class CampaignStoreIdentityTests
     }
 
     // This test asserts a LIMITATION, not a guarantee, and it exists so the limitation cannot be
-    // forgotten while it is being decided.
+    // forgotten.
     //
-    // A-1.11 says no file the plugin writes contains an identifier linking a player across two
-    // session codes. Rotating the participant UUID does not achieve that on its own: one
-    // campaigns.json holds every campaign, each carrying its own PreferredCode, and Label is not
-    // rotated — so a person who appears in two campaigns under the same label is correlatable
+    // One campaigns.json holds every campaign, each carrying its own PreferredCode, and Label is
+    // not rotated — so a person appearing in two campaigns under the same label is correlatable
     // across two codes from that single file.
     //
-    // Retaining the label is deliberate under D-8 (local history may hold character names).
-    // Whether that satisfies A-1.11 as written is with the Product Owner. WHEN THAT RULING LANDS
-    // THIS TEST CHANGES — if storage moves to per-campaign files the assertions below should start
-    // failing, and that failure is the signal that the gap is closed rather than a regression.
+    // WHICH REQUIREMENT THAT OFFENDS CHANGED ON 2026-08-27, so the citation here is deliberate.
+    // A-1.11 was narrowed to cover only what LEAVES the machine, because as written it contradicted
+    // D-8's explicit permission for local history to hold character names. This file never leaves
+    // the machine, so it does not offend A-1.11. It offends A-1.11b — no single campaign file
+    // contains more than one session code — which was added for the honest reason rather than the
+    // rhetorical one: it bounds blast radius when someone zips a folder into a bug report. The
+    // Product Owner rejected per-campaign files as a way of making A-1.11 literally true, on the
+    // grounds that two files in one folder link a person exactly as well as one file does.
+    //
+    // WHEN THE A-1.11b RESTRUCTURE LANDS THIS TEST FAILS, and that failure is the notification
+    // working: it means the pin should be removed, not that something regressed. Verified to fire
+    // by substituting the fix — see the PR.
     [Fact]
     public void ASharedLabelStillLinksAPersonAcrossTwoSessionCodes()
     {
