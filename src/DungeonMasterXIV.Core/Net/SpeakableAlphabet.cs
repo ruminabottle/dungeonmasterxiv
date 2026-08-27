@@ -20,6 +20,29 @@ namespace DungeonMasterXIV.Net;
 /// profanity filter we would otherwise have to build and maintain. L, S, Z, Q, 0, 1 and 5 are
 /// absent because they are confusable spoken or written with 1, 5, 2, O, I/L and S.
 /// </para>
+/// <para>
+/// <b>Known limitation, recorded deliberately and NOT fixed. Read the cost before changing this.</b>
+/// The exclusion list above is essentially Crockford base32 and is sound and complete as a list of
+/// <i>written</i> confusions. The <i>spoken</i> problem is structurally worse and this alphabet does
+/// not address it: <c>B C D G P T V</c> are all the English "ee" rhyme class — seven of the
+/// seventeen letters, 41%, every member rhyming with every other. Over a voice channel that is the
+/// realistic misread, not <c>O</c> for <c>0</c>.
+/// </para>
+/// <para>
+/// <b>It is not fixed because the fix costs more than the problem.</b> Keeping one representative of
+/// that rhyme class removes six letters, putting the alphabet near 18 and an 11-character fingerprint
+/// at about <b>45.9 bits — below the 50.4 that R-1.3a's length was priced against</b>. De-confusing
+/// the alphabet therefore forces a <i>longer</i> fingerprint to hold the same security, and a longer
+/// fingerprint is harder to read aloud than a shorter one with rhyming letters. The two goals pull
+/// directly against each other, and grouping into threes plus an expiring admission prompt are
+/// already the right mitigations for a spoken channel.
+/// </para>
+/// <para>
+/// So: if you are here because of a misread-code bug report, start from this paragraph rather than
+/// from scratch — the analysis is done. If you are here to "fix" the alphabet, the six letters and
+/// the 4.5 bits are the price, and it needs a decision about fingerprint length taken with it rather
+/// than after it.
+/// </para>
 /// </remarks>
 public static class SpeakableAlphabet
 {
