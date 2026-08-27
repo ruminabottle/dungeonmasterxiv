@@ -31,6 +31,8 @@ public static class EnvelopeCodec
             Nonce = envelope.Nonce,
             Payload = envelope.Payload,
             PublicKey = envelope.PublicKey,
+            HostPublicKey = envelope.HostPublicKey,
+            DeadlineUtcTicks = envelope.DeadlineUtcTicks,
         };
 
         return JsonSerializer.SerializeToUtf8Bytes(wire, Options);
@@ -62,12 +64,31 @@ public static class EnvelopeCodec
             return false;
         }
 
-        if (wire?.SessionCode is null)
+        // Rejecting a code that is not a session code is what makes the routing key trustworthy for
+        // everything downstream — including the associated-data binding, whose unambiguity argument
+        // depends on the code containing no separator. Unlike an unknown message TYPE, which D-14
+        // requires be tolerated, a malformed routing key is not a message from the future: nothing
+        // can be done with it and no later version makes it meaningful.
+        if (wire?.SessionCode is null || !SessionCode.TryParse(wire.SessionCode, out _))
         {
             return false;
         }
 
-        envelope = WireEnvelope.FromWire(wire.Type, wire.SessionCode, wire.Nonce, wire.Payload, wire.PublicKey);
+        // D-14: a receiver ignores what it does not recognise, and that ignoring is a property of
+        // THIS method rather than something each handler remembers — otherwise it is inconsistent by
+        // construction. An unrecognised type becomes Unknown and decoding still succeeds, so an old
+        // plugin survives a newer relay instead of refusing it. Rejecting here would be the opposite
+        // of what D-14 asks for.
+        var type = Enum.IsDefined(wire.Type) ? wire.Type : WireMessageType.Unknown;
+
+        envelope = WireEnvelope.FromWire(
+            type,
+            wire.SessionCode,
+            wire.Nonce,
+            wire.Payload,
+            wire.PublicKey,
+            wire.HostPublicKey,
+            wire.DeadlineUtcTicks);
         return true;
     }
 
@@ -87,5 +108,9 @@ public static class EnvelopeCodec
         public byte[]? Payload { get; set; }
 
         public byte[]? PublicKey { get; set; }
+
+        public byte[]? HostPublicKey { get; set; }
+
+        public long? DeadlineUtcTicks { get; set; }
     }
 }

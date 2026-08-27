@@ -23,4 +23,12 @@ public enum JoinPhase
 
     /// <summary>The attempt failed before any decision. See <see cref="JoinAttempt.Failure"/>.</summary>
     Failed = 5,
+
+    /// <summary>
+    /// The window closed and the DM never answered (R-1.3c). Deliberately not
+    /// <see cref="Denied"/>: nobody refused this player, so asking again is reasonable and the UI
+    /// should say so. Telling someone they were refused when nobody looked is a different and worse
+    /// message than telling them nobody looked.
+    /// </summary>
+    Lapsed = 6,
 }
