@@ -127,7 +127,7 @@ public sealed class SessionCoordinator
         string peerCode,
         byte[] joinerPublicKey,
         DateTimeOffset now,
-        bool isRelink = false)
+        RelinkClaim relink = default)
     {
         if (HostKeys is null)
         {
@@ -138,7 +138,7 @@ public sealed class SessionCoordinator
             peerCode,
             KeyFingerprint.Of(joinerPublicKey, HostKeys.PublicKey),
             AdmissionDeadline.DecidedByHost(now),
-            isRelink,
+            relink,
             joinerPublicKey);
 
         Admissions.Receive(request);

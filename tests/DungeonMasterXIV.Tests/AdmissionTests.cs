@@ -9,7 +9,10 @@ public class AdmissionTests
     private static readonly DateTimeOffset Now = new(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
 
     private static PendingAdmission Request(string peerCode = "PEER-1", bool relink = false) =>
-        new(peerCode, "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), relink);
+        new(peerCode,
+            "BKD-7RM-CDF-GH",
+            AdmissionDeadline.DecidedByHost(Now),
+            relink ? new RelinkClaim(true, "Ysera") : RelinkClaim.None);
 
     // R-1.3a's hardest clause. Fails if: confirmation can be defaulted, constructed or initialised
     // into. A pre-ticked box is forbidden in terms, and the way to make that unavailable is for
