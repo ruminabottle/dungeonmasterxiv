@@ -50,7 +50,9 @@ public class ManifestMatchesTheBuiltPluginTests
         Assert.True(
             candidates.Length > 0,
             "No built DungeonMasterXIV.dll under bin/. A-7.2 compares the manifest against the ARTEFACT, " +
-            "so this fails rather than skips: build the plugin before running these tests.");
+            "so this fails rather than skips. BUG-12: `dotnet test` alone never builds the plugin, because no " +
+            "test project references it and that isolation is deliberate. Run `dotnet build` first, then " +
+            "`dotnet test`. This tree is not broken; the command was incomplete.");
 
         return candidates.OrderByDescending(file => file.LastWriteTimeUtc).First().FullName;
     }
