@@ -44,6 +44,9 @@ public sealed class RelayStoresNothingTests
         var before = FileSystemSnapshot.Of(sandbox.ContentRoot);
         using var observer = new WriteObserver(sandbox.ContentRoot, sandbox.TempRoot, sandbox.KeyRingRoot);
 
+        // A clean result is only evidence about the corpus the instrument actually read.
+        Assert.Empty(observer.UnwatchedRoots);
+
         await using (var relay = await RelayUnderTest.StartAsync(sandbox.ContentRoot))
         {
             await FullSession.RunAsync(relay, SessionCode.FromValid("BCDFGH"));
@@ -167,5 +170,25 @@ public sealed class RelayStoresNothingTests
             FullSession.SecretMessage,
             Encoding.UTF8.GetString(result.ForwardedBytes),
             StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The instrument says so when it could not watch what it was asked to watch.
+    /// </summary>
+    /// <remarks>
+    /// Without this, pointing the no-write test at a key-ring path that does not exist yet would
+    /// produce a green run over an empty corpus — a D-2 instrument reporting clean because it read
+    /// nothing. The probe is the same shape as the create-then-delete one: prove the failure is
+    /// reachable rather than assert the guarantee.
+    /// </remarks>
+    [Fact]
+    public void ARootThatDoesNotExistIsReportedRatherThanSkippedSilently()
+    {
+        using var sandbox = new RelaySandbox();
+        var missing = Path.Combine(sandbox.ContentRoot, "a-key-ring-nobody-created-yet");
+
+        using var observer = new WriteObserver(sandbox.ContentRoot, missing);
+
+        Assert.Equal([missing], observer.UnwatchedRoots);
     }
 }

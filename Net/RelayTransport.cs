@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Net;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,6 +68,11 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         _socket.Options.KeepAliveInterval = TransportContract.KeepAliveInterval;
         _socket.Options.KeepAliveTimeout = TransportContract.KeepAliveTimeout;
 
+        // Kept so a refused upgrade can be read (R-1.7b). Without it the status and headers are
+        // discarded and a version mismatch is indistinguishable from an unreachable relay, which is
+        // the generic failure R-1.7b exists to prevent.
+        _socket.Options.CollectHttpResponseDetails = true;
+
         // Logged without the address: a relay a user configured is their business, and the log is
         // the one artifact most likely to be pasted into a bug report.
         _log.Information("Connecting to the configured session relay.");
@@ -73,7 +80,9 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         // The socket and token are passed as locals, never re-read from the fields. A body that
         // read _socket could observe a LATER connection's socket after a Disconnect/Connect pair and
         // drive somebody else's object.
-        _ = ConnectAsync(socket, relay, lifetime.Token);
+        // The version travels on the connect request itself, so a mismatch is refused before a
+        // socket exists rather than after one is established (R-1.7b).
+        _ = ConnectAsync(socket, ProtocolVersion.AppendTo(relay), lifetime.Token);
     }
 
     /// <inheritdoc />
@@ -141,6 +150,25 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         }
     }
 
+    /// <summary>
+    /// Reads the refusal off the socket and hands the decision to the contract.
+    /// </summary>
+    /// <remarks>
+    /// Thin on purpose: everything but reading two values off a Dalamud-adjacent object lives in
+    /// <see cref="ProtocolVersion.ClassifyRefusal"/>, where it can be tested without a socket.
+    /// </remarks>
+    private static SessionFailure ClassifyRefusal(ClientWebSocket socket)
+    {
+        var stated = socket.HttpResponseHeaders is not null
+            && socket.HttpResponseHeaders.TryGetValue(ProtocolVersion.Header, out var values)
+                ? values.FirstOrDefault()
+                : null;
+
+        return ProtocolVersion.ClassifyRefusal(
+            socket.HttpStatusCode == HttpStatusCode.UpgradeRequired,
+            stated);
+    }
+
     private async Task ConnectAsync(ClientWebSocket socket, Uri relay, CancellationToken token)
     {
         try
@@ -157,8 +185,14 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         {
             // Narrower catches let ObjectDisposedException and InvalidOperationException escape into
             // an unobserved task, where the failure vanishes and the user waits on a spinner.
-            _log.Warning(exception, "Could not reach the session relay.");
-            Failed?.Invoke(SessionFailure.RelayUnreachable);
+            var failure = ClassifyRefusal(socket);
+            _log.Warning(
+                exception,
+                failure == SessionFailure.RelayUnreachable
+                    ? "Could not reach the session relay."
+                    : "The session relay refused this build's protocol version.");
+
+            Failed?.Invoke(failure);
         }
         finally
         {

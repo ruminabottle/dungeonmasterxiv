@@ -63,13 +63,41 @@ public sealed class RelayUnderTest : IAsyncDisposable
         return new RelayUnderTest(app, RelayApp.BoundPort(app));
     }
 
-    /// <summary>Opens a client WebSocket to this relay.</summary>
-    public async Task<ClientWebSocket> ConnectAsync()
+    /// <summary>
+    /// Opens a client WebSocket to this relay, stating this build's protocol version.
+    /// </summary>
+    /// <remarks>
+    /// Every test in this suite therefore goes through the version gate on its way in, so the happy
+    /// path of R-1.7b is exercised by all fifty-odd of them rather than only by its own tests.
+    /// </remarks>
+    public Task<ClientWebSocket> ConnectAsync() => ConnectStatingAsync($"{ProtocolVersion.Current}");
+
+    /// <summary>
+    /// Opens a client WebSocket stating <paramref name="version"/>, or stating none when it is null.
+    /// </summary>
+    /// <remarks>
+    /// Throws if the relay refuses. The caller reads <see cref="ClientWebSocket.HttpStatusCode"/>
+    /// and the response headers off the socket, which is what a refused client does in the product.
+    /// </remarks>
+    public async Task<ClientWebSocket> ConnectStatingAsync(string? version)
     {
-        var client = new ClientWebSocket();
-        await client.ConnectAsync(new Uri($"ws://127.0.0.1:{Port}/relay"), CancellationToken.None);
-        return client;
+        var client = new ClientWebSocket { Options = { CollectHttpResponseDetails = true } };
+        var query = version is null ? string.Empty : $"?{ProtocolVersion.QueryParameter}={version}";
+
+        try
+        {
+            await client.ConnectAsync(new Uri($"ws://127.0.0.1:{Port}/relay{query}"), CancellationToken.None);
+            return client;
+        }
+        catch
+        {
+            RefusedSocket = client;
+            throw;
+        }
     }
+
+    /// <summary>The socket from the last refused connect, for reading its status and headers.</summary>
+    public ClientWebSocket? RefusedSocket { get; private set; }
 
     /// <summary>Sends one envelope as a single binary message, matching the framing contract.</summary>
     public static Task SendAsync(WebSocket socket, WireEnvelope envelope) =>
