@@ -40,7 +40,7 @@ public static class RelayEndpoint
     /// while the deployed relay was running and correct (BUG-35). Nothing said it was a placeholder:
     /// the summary above describes the <i>role</i> and gives a reader no reason to check the
     /// <i>value</i>, which is why it survived a release.
-    /// <see cref="TheShippedDefaultRelayCanResolveTests"/> now fails the build on any reserved TLD,
+    /// <c>TheShippedDefaultRelayCanResolveTests</c> now fails the build on any reserved TLD,
     /// because a placeholder here is not visible in review and is invisible in a green suite:
     /// every test that exercises the relay supplies its own endpoint, so none of them ever dialled
     /// this value.
