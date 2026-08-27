@@ -5,13 +5,11 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Dalamud.Plugin.Services;
-using DungeonMasterXIV.Net;
 
-namespace DungeonMasterXIV.Transport;
+namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// The relay socket. The only place in the plugin that opens one, per the standards.
+/// The relay socket. The only place in this product that opens one, per the standards.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,20 +19,29 @@ namespace DungeonMasterXIV.Transport;
 /// no discovery, and no address compiled in besides the default the user may replace.
 /// </para>
 /// <para>
+/// It lives in Core rather than beside the plugin's other Dalamud-touching code for one reason: a
+/// socket nothing can construct is a socket nothing can test. Its only Dalamud dependency was the
+/// log, so the log became a seam and the mechanics came with it.
+/// </para>
+/// <para>
 /// Deliberately thin: it opens, closes and writes. Every decision about whether a connection should
 /// exist belongs to <see cref="HostSession.RequiresRelayConnection"/>, so this cannot hold one open
 /// through a rule it forgot.
 /// </para>
 /// </remarks>
-public sealed class RelayTransport : ISessionTransport, IDisposable
+public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
 {
-    private readonly IPluginLog _log;
+    private readonly ISessionTransportLog _log;
     private ClientWebSocket? _socket;
     private CancellationTokenSource? _lifetime;
     private bool _connecting;
 
-    /// <param name="log">Dalamud's log. Never receives a character name (D-8).</param>
-    public RelayTransport(IPluginLog log) => _log = log;
+    /// <param name="log">
+    /// Where this type reports. An abstraction rather than Dalamud's <c>IPluginLog</c>, so the
+    /// transport lives in a project a test can reference — which is what makes the socket
+    /// reachable from a test at all. Never receives a character name or a relay address (D-8).
+    /// </param>
+    public WebSocketSessionTransport(ISessionTransportLog log) => _log = log;
 
     /// <inheritdoc />
     public event Action<SessionFailure>? Failed;
@@ -52,6 +59,22 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
     /// one lands.
     /// </remarks>
     public bool IsConnected => _connecting || _socket?.State == WebSocketState.Open;
+
+    /// <summary>
+    /// Whether a frame sent right now would actually go out.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="IsConnected"/>, which deliberately counts a connect in flight so
+    /// that <see cref="SessionCoordinator.SynchroniseTransport"/> does not stack a second one. That
+    /// conflation leaves callers no way to ask the different question "is it safe to send yet",
+    /// and <see cref="Send"/> drops a frame that arrives before the socket opens.
+    /// <para>
+    /// Not reachable in the product today — a host connects when it starts a session and admits
+    /// somebody much later — but it is the same silent-loss shape this project keeps finding, so it
+    /// is named rather than left implicit.
+    /// </para>
+    /// </remarks>
+    public bool IsReadyToSend => _socket?.State == WebSocketState.Open;
 
     /// <inheritdoc />
     public void Connect(Uri relay)
