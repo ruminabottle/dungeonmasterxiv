@@ -45,6 +45,22 @@ public enum SessionFailure
     /// wasted.
     /// </remarks>
     RegistrationNotAnswered = 6,
+
+    /// <summary>
+    /// The relay address in settings could not be parsed, so nothing was contacted (BUG-37).
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="RelayUnreachable"/> because <b>no connection was attempted</b>. The
+    /// address never became a URL, so no socket was opened and this build has learned nothing about
+    /// whether the relay is up. Reporting it as "unreachable" blamed a third party for the user's
+    /// own typo, and sent them to a relay status page over a missing "s" in "wss".
+    /// <para>
+    /// The pair with <see cref="RegistrationNotAnswered"/> is the point: that one says the relay was
+    /// reached, this one says nothing was. Between them, <see cref="RelayUnreachable"/> is left to
+    /// mean what it says.
+    /// </para>
+    /// </remarks>
+    RelayAddressUnreadable = 7,
 }
 
 /// <summary>
@@ -82,6 +98,10 @@ public static class SessionFailureMessage
             "That relay is older than this plugin and cannot speak to it. Nothing on your side is "
             + "wrong: the relay has to be updated, or you can point the plugin at a different one in "
             + "settings.",
+        SessionFailure.RelayAddressUnreadable =>
+            "The relay address in settings could not be read, so nothing was contacted — this says "
+            + "nothing about the relay or about your own network. Check what you typed in settings: "
+            + "it has to be a full address beginning with wss://, like " + RelayEndpoint.Default + ".",
         SessionFailure.RegistrationNotAnswered =>
             "The relay accepted the connection but never confirmed the session code. The relay is "
             + "reachable, so this is not your network — try starting the session again, and if it "

@@ -99,7 +99,10 @@ public class RelayLinkTests
 
         var failure = link.Synchronise(wanted: true);
 
-        Assert.Equal(SessionFailure.RelayUnreachable, failure);
+        // RelayAddressUnreadable, not RelayUnreachable (BUG-37). Nothing was dialled, so nothing was
+        // contacted and this build has learned nothing about the relay — and ConnectCount == 0 on the
+        // next line is the proof of exactly that, which is why the two assertions belong together.
+        Assert.Equal(SessionFailure.RelayAddressUnreadable, failure);
         Assert.Equal(0, transport.ConnectCount);
         Assert.False(transport.IsConnected);
     }
@@ -113,7 +116,7 @@ public class RelayLinkTests
         var configured = "not-a-relay";
         var (link, transport) = Link(() => configured);
 
-        Assert.Equal(SessionFailure.RelayUnreachable, link.Synchronise(wanted: true));
+        Assert.Equal(SessionFailure.RelayAddressUnreadable, link.Synchronise(wanted: true));
 
         // R-1.8: changing the relay in settings takes effect on the next session, without a reload.
         configured = Usable;

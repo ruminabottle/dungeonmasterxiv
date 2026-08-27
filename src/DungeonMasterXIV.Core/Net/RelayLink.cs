@@ -85,7 +85,11 @@ public sealed class RelayLink
         {
             if (!RelayEndpoint.TryParse(_relayAddress(), out var relay))
             {
-                return SessionFailure.RelayUnreachable;
+                // NOT RelayUnreachable. The address never parsed, so no socket was opened and
+                // nothing was contacted — this build has learned nothing about the relay, and
+                // saying it is unreachable blames a third party for the operator's own typo.
+                // See BUG-37.
+                return SessionFailure.RelayAddressUnreadable;
             }
 
             _transport.Connect(relay!);
