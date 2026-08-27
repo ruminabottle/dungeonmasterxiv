@@ -102,6 +102,17 @@ public sealed class AdmissionInbox
                 continue;
             }
 
+            // The relay refusing a code the JOINER asked for means no session is live under it —
+            // in practice a mistyped code, which is the most common thing a joiner ever does. The
+            // same message means something different to a host ("that code is taken, pick another"),
+            // which is why this is a separate arm rather than a widened ApplyRegistration: one
+            // function serving both readings is how the host's arm gets hijacked (BUG-43).
+            if (envelope.Type == WireMessageType.CodeRefused && attempt.Phase == JoinPhase.Contacting)
+            {
+                attempt.Fail(SessionFailure.SessionCodeNotActive);
+                continue;
+            }
+
             // Pending notices first, and they are not outcomes. A pending notice says the DM is
             // looking; applying it is what gives this client something to compare while the
             // decision is still open (R-1.3a-i, A-1.3f-1).
@@ -145,6 +156,15 @@ public sealed class AdmissionInbox
     /// </remarks>
     private static bool ApplyRegistration(WireEnvelope envelope, HostSession host)
     {
+        // Only a host that is REGISTERING is waiting on one of these, and saying "handled" when it
+        // is not was BUG-43: a JOINER's CodeRefused matched the arm below, was discarded by
+        // CodeAlreadyLive's own phase guard, and the `return true` then stopped it ever reaching a
+        // joiner arm. The frame was consumed by a branch that did nothing with it.
+        if (host.Phase != HostingPhase.Registering)
+        {
+            return false;
+        }
+
         switch (envelope.Type)
         {
             case WireMessageType.CodeAccepted:
