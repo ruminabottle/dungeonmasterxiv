@@ -183,9 +183,20 @@ public sealed class SessionWindow : Window
                 ImGui.TextWrapped(UnverifiedWarning);
             }
 
+            // The prompt starts with NEITHER answer selected, for a relink exactly as for a first
+            // join. Pre-selecting Accept for a recognised returning player would be the helpful
+            // thing and it is forbidden: a DM pressing Enter on a focused button leaves the same
+            // record as a DM who compared the fingerprint, which makes the record false rather than
+            // merely weaker (R-1.5, R-1.3a). The favoured action is decided in Core so a change of
+            // mind has to happen where a test is watching.
             if (ImGui.Button($"Admit##{request.PeerCode}"))
             {
                 _coordinator.Admit(request.PeerCode);
+            }
+
+            if (AdmissionPrompt.Favoured(request) == AdmissionAction.Admit)
+            {
+                ImGui.SetItemDefaultFocus();
             }
 
             ImGui.SameLine();
