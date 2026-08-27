@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DungeonMasterXIV.Campaigns;
 
@@ -30,8 +31,17 @@ internal sealed class FakeCampaignArchive : ICampaignArchive
 
     public string PreserveUnreadable()
     {
+        var name = PreservedCampaignFile.NameFor(DateTimeOffset.UtcNow);
         Preserved = Content;
         Content = null;
-        return "campaigns.unreadable-test.json";
+        PreservedNames.Add(name);
+        return name;
     }
+
+    /// <summary>Preserved files still present, as the DM would see them listed.</summary>
+    public List<string> PreservedNames { get; } = new();
+
+    public IReadOnlyList<string> PreservedFiles() => PreservedNames;
+
+    public bool DeletePreserved(string name) => PreservedNames.Remove(name);
 }

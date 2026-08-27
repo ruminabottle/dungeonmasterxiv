@@ -84,17 +84,25 @@ public class CampaignStoreIdentityTests
         Assert.NotEqual(Guid.Empty, campaign.CampaignId);
     }
 
+    // Named for exactly what it checks: IDENTIFIERS are not shared. That is necessary for A-1.11
+    // and not sufficient for it, and this test does not claim otherwise — see
+    // ASharedLabelStillLinksAPersonAcrossTwoSessionCodes below for the half that does not hold.
+    //
+    // Deliberately uses two DIFFERENT labels. The previous version of this test gave both
+    // participants the same label, which put every ingredient of an A-1.11 violation into the
+    // fixture and then asserted only that the UUIDs differed — so a reader saw two codes and one
+    // label and concluded the property was under test. Building the counterexample and measuring
+    // something else is worse than not building it, because the fixture does the arguing.
     [Fact]
-    public void TheSamePersonInTwoCampaignsSharesNoIdentifier()
+    public void ParticipantIdentifiersAreNeverSharedBetweenCampaigns()
     {
-        // A-1.11 and D-8. Fails the moment a participant id is derived from the label, or reused
-        // across campaigns for convenience.
+        // Fails the moment a participant id is derived from the label, or reused across campaigns.
         var store = NewStore(out var archive);
         var first = store.Create(SessionCode.FromValid("BKD7RM"));
         var second = store.Create(SessionCode.FromValid("XW2P4N"));
 
         var here = store.AddParticipant(first.CampaignId, "Yshtola Rhul");
-        var there = store.AddParticipant(second.CampaignId, "Yshtola Rhul");
+        var there = store.AddParticipant(second.CampaignId, "Thancred Waters");
 
         Assert.NotNull(here);
         Assert.NotNull(there);
@@ -105,6 +113,37 @@ public class CampaignStoreIdentityTests
         Assert.NotNull(written);
         Assert.Contains(here.ParticipantId.ToString(), written!);
         Assert.Contains(there.ParticipantId.ToString(), written!);
+    }
+
+    // This test asserts a LIMITATION, not a guarantee, and it exists so the limitation cannot be
+    // forgotten while it is being decided.
+    //
+    // A-1.11 says no file the plugin writes contains an identifier linking a player across two
+    // session codes. Rotating the participant UUID does not achieve that on its own: one
+    // campaigns.json holds every campaign, each carrying its own PreferredCode, and Label is not
+    // rotated — so a person who appears in two campaigns under the same label is correlatable
+    // across two codes from that single file.
+    //
+    // Retaining the label is deliberate under D-8 (local history may hold character names).
+    // Whether that satisfies A-1.11 as written is with the Product Owner. WHEN THAT RULING LANDS
+    // THIS TEST CHANGES — if storage moves to per-campaign files the assertions below should start
+    // failing, and that failure is the signal that the gap is closed rather than a regression.
+    [Fact]
+    public void ASharedLabelStillLinksAPersonAcrossTwoSessionCodes()
+    {
+        const string SharedLabel = "Yshtola Rhul";
+        var store = NewStore(out var archive);
+        var first = store.Create(SessionCode.FromValid("BKD7RM"));
+        var second = store.Create(SessionCode.FromValid("XW2P4N"));
+        store.AddParticipant(first.CampaignId, SharedLabel);
+        store.AddParticipant(second.CampaignId, SharedLabel);
+
+        var written = archive.Content;
+
+        Assert.NotNull(written);
+        Assert.Contains("BKD7RM", written!);
+        Assert.Contains("XW2P4N", written!);
+        Assert.Contains(SharedLabel, written!);
     }
 
     [Fact]

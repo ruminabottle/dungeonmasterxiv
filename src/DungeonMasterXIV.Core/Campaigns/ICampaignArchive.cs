@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace DungeonMasterXIV.Campaigns;
 
 /// <summary>
@@ -27,4 +29,16 @@ public interface ICampaignArchive
     /// </summary>
     /// <returns>A description of where it was kept, for the log. Never contains a participant label.</returns>
     string PreserveUnreadable();
+
+    /// <summary>
+    /// The names of every unreadable document kept aside and not yet removed. These still contain
+    /// whatever the unreadable file contained, participant labels included, which is why the DM
+    /// needs to be able to see and delete them (A-1.10).
+    /// </summary>
+    IReadOnlyList<string> PreservedFiles();
+
+    /// <summary>Removes one preserved file.</summary>
+    /// <param name="name">A name from <see cref="PreservedFiles"/>.</param>
+    /// <returns>Whether a file was removed.</returns>
+    bool DeletePreserved(string name);
 }

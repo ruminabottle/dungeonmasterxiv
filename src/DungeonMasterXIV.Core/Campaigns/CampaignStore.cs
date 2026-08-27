@@ -83,8 +83,12 @@ public sealed class CampaignStore
 
     /// <summary>
     /// Records a participant in a campaign and returns them, with a UUID generated fresh for this
-    /// campaign. The same person in another campaign gets an unrelated UUID, which is what makes
-    /// A-1.11 true rather than merely intended.
+    /// campaign, so the same person in another campaign gets an unrelated identifier.
+    /// <para>
+    /// <b>That rotation is necessary for A-1.11 and not sufficient for it.</b> The label is not
+    /// rotated, and it is the field most likely to match across campaigns; see
+    /// <see cref="CampaignParticipant"/> for what is and is not guaranteed.
+    /// </para>
     /// </summary>
     /// <param name="campaignId">The campaign they played in.</param>
     /// <param name="label">What the DM calls them locally. May be a character name; never logged.</param>
@@ -139,6 +143,37 @@ public sealed class CampaignStore
         Save();
         _log.Information(
             $"Deleted campaign {campaignId} and its {participantCount} participant record(s).");
+        return true;
+    }
+
+    /// <summary>
+    /// Unreadable documents kept aside and not yet removed. They still hold whatever the file held,
+    /// participant labels included, so A-1.10's "no trace remains" is not true of a campaign whose
+    /// data is sitting in one of these — which is why they are listable and deletable rather than
+    /// merely preserved.
+    /// </summary>
+    public IReadOnlyList<string> PreservedFiles() => _archive.PreservedFiles();
+
+    /// <summary>
+    /// Deletes one preserved file. Refuses any name that is not one this plugin wrote, because the
+    /// name reaches a file delete.
+    /// </summary>
+    /// <param name="name">A name from <see cref="PreservedFiles"/>.</param>
+    public bool DeletePreserved(string name)
+    {
+        if (!PreservedCampaignFile.IsPreservedName(name))
+        {
+            _log.Warning($"Refused to delete '{name}': not a file this plugin preserved.");
+            return false;
+        }
+
+        if (!_archive.DeletePreserved(name))
+        {
+            return false;
+        }
+
+        Revision++;
+        _log.Information($"Deleted preserved campaign file {name}.");
         return true;
     }
 

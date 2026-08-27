@@ -65,6 +65,34 @@ public class CampaignDocumentCodecTests
         Assert.Empty(document.Campaigns);
     }
 
+    // Fails if System.Text.Json is left to drop properties it does not recognise. Under D-12 a
+    // tester rolling back from a newer build is the EXPECTED case, not a corruption scenario: the
+    // newer build's fields arrive, are not understood, and — without JsonExtensionData — vanish on
+    // the next save with no error and nothing in the log.
+    //
+    // This does not replace the schema version gate and is not meant to. A document from a higher
+    // schema version is still refused outright; this covers fields added without a version bump,
+    // which is the case the gate cannot see.
+    [Fact]
+    public void PropertiesThisBuildDoesNotUnderstandSurviveALoadAndSave()
+    {
+        const string FromANewerBuild =
+            "{\"Version\":1,\"SomethingNew\":\"keep me\",\"Campaigns\":[" +
+            "{\"CampaignId\":\"2f1d5b8e-0000-4000-8000-000000000001\",\"CampaignColour\":\"blue\"," +
+            "\"Participants\":[{\"ParticipantId\":\"2f1d5b8e-0000-4000-8000-000000000002\"," +
+            "\"Label\":\"Yshtola Rhul\",\"Pronouns\":\"they/them\"}]}]}";
+
+        Assert.True(CampaignDocumentCodec.TryDeserialize(FromANewerBuild, out var loaded));
+        var rewritten = CampaignDocumentCodec.Serialize(loaded!);
+
+        Assert.Contains("SomethingNew", rewritten);
+        Assert.Contains("keep me", rewritten);
+        Assert.Contains("CampaignColour", rewritten);
+        Assert.Contains("blue", rewritten);
+        Assert.Contains("Pronouns", rewritten);
+        Assert.Contains("they/them", rewritten);
+    }
+
     [Fact]
     public void SerializingStampsTheCurrentVersionOverWhateverTheDocumentCarried()
     {

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Dalamud.Plugin;
 using DungeonMasterXIV.Campaigns;
 
@@ -50,8 +52,45 @@ public sealed class CampaignFileArchive : ICampaignArchive
     /// <inheritdoc />
     public string PreserveUnreadable()
     {
-        var keptName = $"campaigns.unreadable-{DateTimeOffset.UtcNow:yyyyMMddTHHmmssZ}.json";
+        var keptName = PreservedCampaignFile.NameFor(DateTimeOffset.UtcNow);
         File.Move(FilePath, Path.Combine(_directory.FullName, keptName));
         return keptName;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> PreservedFiles()
+    {
+        _directory.Refresh();
+        if (!_directory.Exists)
+        {
+            return Array.Empty<string>();
+        }
+
+        return _directory
+            .EnumerateFiles($"{PreservedCampaignFile.Prefix}*{PreservedCampaignFile.Suffix}")
+            .Select(file => file.Name)
+            .Where(PreservedCampaignFile.IsPreservedName)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public bool DeletePreserved(string name)
+    {
+        // Checked here as well as in the store: this is the layer holding the path, so it does not
+        // rely on a caller having validated first.
+        if (!PreservedCampaignFile.IsPreservedName(name))
+        {
+            return false;
+        }
+
+        var path = Path.Combine(_directory.FullName, name);
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        File.Delete(path);
+        return true;
     }
 }

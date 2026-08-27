@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DungeonMasterXIV.Campaigns;
 
@@ -27,4 +29,18 @@ public sealed class CampaignDocument
 
     /// <summary>Every campaign this machine holds.</summary>
     public List<Campaign> Campaigns { get; set; } = new();
+
+    /// <summary>
+    /// Properties this build does not know about, kept so a load-and-save cycle does not silently
+    /// delete them. Without this, <c>System.Text.Json</c> drops unrecognised fields on read and the
+    /// next write erases them — data loss with no error, in someone else's build.
+    /// </summary>
+    /// <remarks>
+    /// Under D-12 a tester rolling back to an older build is an expected case rather than a
+    /// corruption scenario, which is what makes this worth carrying. It does not replace the schema
+    /// version gate: a document from a NEWER schema version is still refused and preserved rather
+    /// than read through this. This covers fields added without a version bump.
+    /// </remarks>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? UnknownProperties { get; set; }
 }

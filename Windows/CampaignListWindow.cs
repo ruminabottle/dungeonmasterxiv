@@ -21,6 +21,7 @@ public sealed class CampaignListWindow : Window
     private readonly CampaignStore _store;
 
     private IReadOnlyList<CampaignRow> _rows = Array.Empty<CampaignRow>();
+    private IReadOnlyList<string> _preserved = Array.Empty<string>();
     private int _rowsBuiltAtRevision = -1;
     private Guid? _awaitingConfirmation;
 
@@ -54,12 +55,50 @@ public sealed class CampaignListWindow : Window
         if (_rows.Count == 0)
         {
             ImGui.TextDisabled("No campaigns stored yet.");
-            return;
         }
 
+        // Iterating the cached snapshot, NOT _store.Campaigns. This is what makes the Delete
+        // button below safe: Delete mutates the store's list while this loop is running, and
+        // iterating the live collection here would throw. The safety is not incidental — do not
+        // "simplify" this to walk the store directly.
         foreach (var row in _rows)
         {
             DrawRow(row);
+        }
+
+        DrawPreserved();
+    }
+
+    // A-1.10 says no trace of a deleted campaign remains on disk. A campaign whose data sits in a
+    // preserved unreadable file is a trace, and those files hold participant labels — so they are
+    // listed and removable here rather than accumulating unseen in a folder people zip into bug
+    // reports.
+    private void DrawPreserved()
+    {
+        if (_preserved.Count == 0)
+        {
+            return;
+        }
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Unreadable files kept aside");
+        ImGui.TextWrapped(
+            "These were kept instead of being overwritten, so nothing was lost. They still contain " +
+            "whatever the unreadable file held, including participant names. Delete one once you no " +
+            "longer need it.");
+
+        foreach (var name in _preserved)
+        {
+            ImGui.PushID(name);
+            ImGui.TextUnformatted(name);
+            ImGui.SameLine();
+
+            if (ImGui.Button("Delete file"))
+            {
+                _store.DeletePreserved(name);
+            }
+
+            ImGui.PopID();
         }
     }
 
@@ -71,6 +110,7 @@ public sealed class CampaignListWindow : Window
         }
 
         _rows = CampaignListView.Build(_store.Campaigns);
+        _preserved = _store.PreservedFiles();
         _rowsBuiltAtRevision = _store.Revision;
     }
 
