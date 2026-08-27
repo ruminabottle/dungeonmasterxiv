@@ -87,6 +87,36 @@ public class RelinkRequiresApprovalTests
         Assert.Equal(joining.Admissions.Pending.Count, relinking.Admissions.Pending.Count);
     }
 
+    // The sharper failing input. A prompt that opens with Accept selected STILL REQUIRES APPROVAL
+    // and still records that approval happened -- so it passes every test above. It is forbidden for
+    // the same reason a nudged-past fingerprint check is worse than no check: the DM who pressed
+    // Enter on a focused button leaves the record of a DM who compared out of band, and R-1.3a's
+    // design rests on those two being distinguishable.
+    [Fact]
+    public void ThePromptFavoursNeitherAnswerOnAResolvedRelink()
+    {
+        var (coordinator, claim) = HostWithAReturningPlayer();
+
+        var request = coordinator.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
+
+        Assert.Equal(AdmissionAction.None, AdmissionPrompt.Favoured(request!));
+    }
+
+    // And a relink is favoured no differently from a first-time join, so "helpful for people we
+    // recognise" cannot creep in as an asymmetry between the two paths.
+    [Fact]
+    public void ARelinkPromptFavoursTheSameAnswerAsAFirstTimeJoinPrompt()
+    {
+        var (relinking, claim) = HostWithAReturningPlayer();
+        var (joining, _) = HostWithAReturningPlayer();
+
+        var relink = relinking.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
+        var join = joining.ReceiveJoinRequest("PEER-4", new byte[] { 1, 2, 3 }, Now, RelinkClaim.None);
+
+        Assert.Equal(AdmissionPrompt.Favoured(join!), AdmissionPrompt.Favoured(relink!));
+        Assert.Equal(AdmissionAction.None, AdmissionPrompt.Favoured(relink!));
+    }
+
     // Denying a relink denies it. Fails if a resolved claim survives a denial in any form.
     [Fact]
     public void AResolvedRelinkCanStillBeDenied()
