@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net;
+using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,6 +38,9 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
 
     /// <inheritdoc />
     public event Action<SessionFailure>? Failed;
+
+    /// <inheritdoc />
+    public event Action<byte[]>? Received;
 
     /// <summary>
     /// Whether a connection exists or is being established.
@@ -174,6 +178,7 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
         try
         {
             await socket.ConnectAsync(relay, token).ConfigureAwait(false);
+            await ReceiveLoopAsync(socket, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -200,6 +205,42 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
             {
                 _connecting = false;
             }
+        }
+    }
+
+    /// <summary>
+    /// Reads frames until the socket closes or we are cancelled.
+    /// </summary>
+    /// <remarks>
+    /// One <see cref="WireEnvelope"/> per frame, per the transport contract, so a complete message
+    /// is a complete frame and no reassembly is needed at this layer. A frame larger than the buffer
+    /// is read across continuations rather than truncated — truncating would hand the decoder a
+    /// prefix that might still parse, which is worse than a frame that plainly does not.
+    /// </remarks>
+    private async Task ReceiveLoopAsync(ClientWebSocket socket, CancellationToken token)
+    {
+        var buffer = new byte[8192];
+
+        while (socket.State == WebSocketState.Open && !token.IsCancellationRequested)
+        {
+            using var frame = new MemoryStream();
+            ValueWebSocketReceiveResult result;
+
+            do
+            {
+                result = await socket.ReceiveAsync(buffer.AsMemory(), token).ConfigureAwait(false);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    Failed?.Invoke(SessionFailure.ConnectionLost);
+                    return;
+                }
+
+                frame.Write(buffer, 0, result.Count);
+            }
+            while (!result.EndOfMessage);
+
+            Received?.Invoke(frame.ToArray());
         }
     }
 }

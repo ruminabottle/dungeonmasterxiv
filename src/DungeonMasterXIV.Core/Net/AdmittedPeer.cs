@@ -21,7 +21,12 @@ namespace DungeonMasterXIV.Net;
 /// </remarks>
 public sealed class AdmittedPeer
 {
-    internal AdmittedPeer(string peerCode) => PeerCode = peerCode;
+    internal AdmittedPeer(string peerCode, SessionRole role, AdmissionVerification verification)
+    {
+        PeerCode = peerCode;
+        Role = role;
+        Verification = verification;
+    }
 
     /// <summary>
     /// The session-scoped code identifying this participant. Never a character name — R-1.3 requires
@@ -29,4 +34,17 @@ public sealed class AdmittedPeer
     /// file or an export.
     /// </summary>
     public string PeerCode { get; }
+
+    /// <summary>
+    /// What this participant may do (E-11). An Assistant runs the table; only the DM controls who is
+    /// at it, which is why admission does not branch on this.
+    /// </summary>
+    public SessionRole Role { get; }
+
+    /// <summary>
+    /// Whether the DM compared the fingerprint before admitting (R-1.3a). Recorded rather than
+    /// inferred, because "we did not check" and "we checked and it matched" are different facts and
+    /// the UI must not present the first as the second.
+    /// </summary>
+    public AdmissionVerification Verification { get; }
 }

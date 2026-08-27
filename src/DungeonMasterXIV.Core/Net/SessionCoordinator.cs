@@ -23,10 +23,13 @@ public sealed class SessionCoordinator
         _transport = transport;
         _relayAddress = relayAddress;
         _transport.Failed += OnTransportFailed;
+        _transport.Received += _inbox.Receive;
+        _announcer = new AdmissionAnnouncer(transport);
     }
 
-    private readonly List<string> _pendingRequests = new();
+    private readonly AdmissionAnnouncer _announcer;
     private readonly object _reportedFailureLock = new();
+    private readonly AdmissionInbox _inbox = new();
     private SessionFailure _reportedFailure = SessionFailure.None;
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
@@ -41,21 +44,42 @@ public sealed class SessionCoordinator
     /// <summary>Who may receive session state. See <see cref="SessionAudience"/> for the D-13 levels.</summary>
     public SessionAudience Audience { get; } = new();
 
+    /// <summary>The requests waiting on the DM (R-1.3).</summary>
+    public AdmissionDesk Admissions { get; } = new();
+
     /// <summary>
-    /// Every participant awaiting a decision, by session-scoped code. Never a character name —
-    /// R-1.3 requires the prompt to identify a requester by code.
+    /// This host's ephemeral key pair for the running session, or null when not hosting.
     /// </summary>
     /// <remarks>
-    /// A list rather than one slot because four players clicking join at the start of a session is
-    /// the ordinary case, not an edge. A single slot silently strands everyone but the last, and
-    /// each stranded player sits on "waiting for the DM to decide" forever — which looks to them
-    /// exactly like a DM who is ignoring them.
+    /// Created when hosting starts and disposed when it ends, so it never outlives the session —
+    /// D-8 forbids an identifier that links a player across two session codes, and a key pair that
+    /// survived would be one.
     /// </remarks>
-    public IReadOnlyList<string> PendingRequests => _pendingRequests.AsReadOnly();
+    public SessionKeyExchange? HostKeys { get; private set; }
+
+    /// <summary>This client's key pair when joining somebody else's session, or null.</summary>
+    public SessionKeyExchange? JoinerKeys { get; private set; }
+
+    /// <summary>
+    /// The key this client derived on being admitted, or null. Present only once the host's key has
+    /// arrived — which is why the acceptance has to carry it.
+    /// </summary>
+    public byte[]? SessionKey { get; private set; }
+
+    /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
+    public GraceWindow Grace { get; } = new();
+
+    /// <summary>
+    /// Participants whose request lapsed on the most recent tick, so the caller can tell them it
+    /// lapsed rather than leaving them waiting — and, per R-1.3c, never tell them they were denied.
+    /// </summary>
+    public IReadOnlyList<PendingAdmission> JustLapsed { get; private set; } = Array.Empty<PendingAdmission>();
 
     /// <summary>Starts hosting under a freshly generated code (R-1.1, R-1.2a).</summary>
     public void StartHosting()
     {
+        HostKeys?.Dispose();
+        HostKeys = new SessionKeyExchange();
         Host.Start(SessionCodeGenerator.Next());
         SynchroniseTransport();
     }
@@ -67,35 +91,81 @@ public sealed class SessionCoordinator
     public void StopHosting()
     {
         Host.Stop();
+        HostKeys?.Dispose();
+        HostKeys = null;
         Audience.Clear();
-        _pendingRequests.Clear();
+        Admissions.Clear();
+        _inbox.Clear();
+        Grace.Reset();
+        JustLapsed = Array.Empty<PendingAdmission>();
         SynchroniseTransport();
     }
 
     /// <summary>Requests to join <paramref name="code"/>. A human action (R-1.3).</summary>
     public void RequestJoin(SessionCode code)
     {
+        JoinerKeys?.Dispose();
+        JoinerKeys = new SessionKeyExchange();
+        SessionKey = null;
         Join.Request(code);
         SynchroniseTransport();
     }
 
     /// <summary>Records that a participant is asking to be let in.</summary>
-    public void ReceiveJoinRequest(string peerCode)
+    public void ReceiveJoinRequest(PendingAdmission request) => Admissions.Receive(request);
+
+    /// <summary>
+    /// Builds and records a request from what arrived on the wire.
+    /// </summary>
+    /// <remarks>
+    /// The fingerprint is computed here rather than passed in, so no caller can hand the prompt a
+    /// string that does not correspond to the keys actually exchanged — a fingerprint that does not
+    /// match the keys is worse than none, because the DM compares it and concludes it is safe.
+    /// The deadline is decided here too: R-1.3c puts that decision on the DM's client (D-3), once.
+    /// </remarks>
+    public PendingAdmission? ReceiveJoinRequest(
+        string peerCode,
+        byte[] joinerPublicKey,
+        DateTimeOffset now,
+        bool isRelink = false)
     {
-        if (!_pendingRequests.Contains(peerCode))
+        if (HostKeys is null)
         {
-            _pendingRequests.Add(peerCode);
+            return null;
         }
+
+        var request = new PendingAdmission(
+            peerCode,
+            KeyFingerprint.Of(joinerPublicKey, HostKeys.PublicKey),
+            AdmissionDeadline.DecidedByHost(now),
+            isRelink,
+            joinerPublicKey);
+
+        Admissions.Receive(request);
+        return request;
     }
 
     /// <summary>
     /// Admits the pending participant. Only after this does anything become addressable to them —
     /// see <see cref="SessionAudience"/>, which is where D-13's None level is enforced.
     /// </summary>
-    public AdmittedPeer Admit(string peerCode)
+    /// <param name="peerCode">The requester's session-scoped code.</param>
+    /// <param name="role">What they may do (E-11). Admission itself stays DM-only.</param>
+    /// <remarks>
+    /// Whether the DM compared the fingerprint is taken from the request rather than passed in, so
+    /// an admission cannot be recorded as verified unless the DM actually said so (R-1.3a).
+    /// </remarks>
+    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
     {
-        _pendingRequests.Remove(peerCode);
-        return Audience.Admit(peerCode);
+        var request = Admissions.Decide(peerCode);
+        var peer = Audience.Admit(peerCode, role, request?.Verification ?? AdmissionVerification.NotCompared);
+
+        if (Host.Code is { } code && HostKeys is not null && request?.JoinerPublicKey is { } joinerKey)
+        {
+            _announcer.Accepted(code, joinerKey, HostKeys.PublicKey);
+        }
+
+        return peer;
     }
 
     /// <summary>
@@ -104,13 +174,53 @@ public sealed class SessionCoordinator
     /// </summary>
     public void Deny(string peerCode)
     {
-        _pendingRequests.Remove(peerCode);
+        var request = Admissions.Decide(peerCode);
         Audience.Remove(peerCode);
+
+        if (Host.Code is { } code && request?.JoinerPublicKey is { } joinerKey)
+        {
+            _announcer.Denied(code, joinerKey);
+        }
+    }
+
+    /// <summary>
+    /// The relay answered again after a drop and confirmed we still hold our code.
+    /// </summary>
+    public void HostReconnected()
+    {
+        Grace.HostReturned();
+    }
+
+    /// <summary>
+    /// The relay answered again after a drop but refused the code — somebody claimed it while we
+    /// were gone.
+    /// </summary>
+    /// <remarks>
+    /// This is the gap R-1.4 opens and the relay cannot close: it frees a code the moment a host
+    /// disconnects, while the grace window keeps the session alive for two minutes. R-1.2a's
+    /// regenerate-and-retry then hands us a different code, and without this the DM would carry on
+    /// hosting under it while every player still holds the old one — nothing erroring, nothing
+    /// looking wrong, and the session simply unjoinable.
+    /// </remarks>
+    public void HostReconnectedWithNewCode()
+    {
+        Grace.HostReturned();
+        Host.CodeSuperseded(SessionCodeGenerator.Next());
     }
 
     /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
     public void Fail(SessionFailure failure)
     {
+        // R-1.4: losing the host is not the end of the session, it is the start of a grace window.
+        // Clients hold their last state and show plainly that it is no longer live; only expiry
+        // ends things. Treating a dropped connection as an immediate end is the "instant kick" the
+        // product decision rules out.
+        if (failure == SessionFailure.ConnectionLost && Host.Phase == HostingPhase.Hosting)
+        {
+            Grace.HostLost();
+            return;
+        }
+
         if (Host.Phase is HostingPhase.Registering or HostingPhase.Hosting)
         {
             Host.Fail(failure);
@@ -173,9 +283,24 @@ public sealed class SessionCoordinator
     /// </para>
     /// </remarks>
     /// <param name="sinceLastTick">Elapsed time since the previous call.</param>
-    public void Tick(TimeSpan sinceLastTick)
+    /// <param name="now">
+    /// The current instant, for deadlines that were decided elsewhere. Passed in rather than read,
+    /// so a lapse is drivable from a test without waiting fifteen minutes — and so this type never
+    /// starts a clock of its own, which is what R-1.3c forbids.
+    /// </param>
+    public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
+        SessionKey = _inbox.Drain(Join, JoinerKeys) ?? SessionKey;
+        JustLapsed = Admissions.ExpireLapsed(now);
+        AnnounceLapsed();
+
+        if (Grace.Tick(sinceLastTick))
+        {
+            StopHosting();
+            return;
+        }
+
 
         if (Host.Phase != _tickedHostPhase || Join.Phase != _tickedJoinPhase)
         {
@@ -197,7 +322,11 @@ public sealed class SessionCoordinator
     }
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
-    public void Detach() => _transport.Failed -= OnTransportFailed;
+    public void Detach()
+    {
+        _transport.Failed -= OnTransportFailed;
+        _transport.Received -= _inbox.Receive;
+    }
 
     // Raised off the framework thread by the transport, so it is only recorded here and applied on
     // the next tick. Mutating session state from a socket callback would race the draw.
@@ -221,6 +350,14 @@ public sealed class SessionCoordinator
         if (failure != SessionFailure.None)
         {
             Fail(failure);
+        }
+    }
+
+    private void AnnounceLapsed()
+    {
+        if (Host.Code is { } code)
+        {
+            _announcer.Lapsed(code, JustLapsed);
         }
     }
 

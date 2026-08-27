@@ -1,3 +1,4 @@
+using System;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -148,7 +149,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnCommand(string command, string arguments) => _commandDispatcher.Execute(arguments);
 
-    private void OnFrameworkUpdate(IFramework framework) => _sessionCoordinator.Tick(framework.UpdateDelta);
+    private void OnFrameworkUpdate(IFramework framework) => _sessionCoordinator.Tick(framework.UpdateDelta, DateTimeOffset.UtcNow);
 
     private void OnCampaignsCommand(string command, string arguments) => _campaignListWindow.Open();
 }

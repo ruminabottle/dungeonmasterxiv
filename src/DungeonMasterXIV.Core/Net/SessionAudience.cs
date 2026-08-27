@@ -60,7 +60,16 @@ public sealed class SessionAudience
     /// Admitting the same participant twice returns the existing token rather than adding a second
     /// entry, so a retried admission cannot inflate the host's count or duplicate a recipient.
     /// </remarks>
-    public AdmittedPeer Admit(string peerCode)
+    /// <param name="peerCode">The participant's session-scoped code.</param>
+    /// <param name="role">What they may do (E-11). Defaults to a plain player.</param>
+    /// <param name="verification">
+    /// Whether the DM compared the fingerprint (R-1.3a). Defaults to <b>not compared</b>, so an
+    /// admission is only ever recorded as verified when a caller says so explicitly.
+    /// </param>
+    public AdmittedPeer Admit(
+        string peerCode,
+        SessionRole role = SessionRole.Player,
+        AdmissionVerification verification = AdmissionVerification.NotCompared)
     {
         var existing = _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
         if (existing is not null)
@@ -68,7 +77,7 @@ public sealed class SessionAudience
             return existing;
         }
 
-        var peer = new AdmittedPeer(peerCode);
+        var peer = new AdmittedPeer(peerCode, role, verification);
         _admitted.Add(peer);
         return peer;
     }
@@ -85,6 +94,18 @@ public sealed class SessionAudience
 
     /// <summary>Whether this participant may receive session state.</summary>
     public bool IsAdmitted(string peerCode) => _admitted.Any(peer => peer.PeerCode == peerCode);
+
+    /// <summary>The admitted participant with this code, or null.</summary>
+    public AdmittedPeer? Find(string peerCode) =>
+        _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
+
+    /// <summary>
+    /// How many admitted participants had their fingerprint compared. For the host's own display:
+    /// a session with unverified admissions is not protected against interception and the UI must
+    /// not say otherwise (R-1.3a, D-8).
+    /// </summary>
+    public int ConfirmedCount =>
+        _admitted.Count(peer => peer.Verification == AdmissionVerification.Confirmed);
 
     /// <summary>Drops every participant, for the end of a session.</summary>
     public void Clear() => _admitted.Clear();

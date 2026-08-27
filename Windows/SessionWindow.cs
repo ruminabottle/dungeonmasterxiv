@@ -19,6 +19,22 @@ public sealed class SessionWindow : Window
     private const string AdmissionDisclosure =
         "This request shows a code, not a character name. Only admit people you arranged to play with.";
 
+    // Not R-1.7a copy — R-1.7a covers the session window, the admission prompt and settings, and does
+    // not supply wording for these. Written here under the same constraint: no phrasing from its
+    // forbidden list, and no claim that a session is protected when nobody checked.
+    private const string CompareOutOfBand =
+        "Ask the joining player to read their code back to you over voice or chat, and confirm it "
+        + "matches. Do not ask them for it through the plugin - a channel someone has tampered with "
+        + "cannot prove it has not been tampered with.";
+
+    private const string UnverifiedWarning =
+        "Admitted without the code being compared. This session is not protected against someone "
+        + "sitting in the middle of it.";
+
+    private const string CodeChangedWarning =
+        "Your session code changed while you were disconnected, because it was taken by another "
+        + "session. Your players are still holding the old one - read them the new code below.";
+
     private readonly SessionCoordinator _coordinator;
     private string _codeEntry = string.Empty;
 
@@ -52,9 +68,33 @@ public sealed class SessionWindow : Window
 
         if (host.Phase == HostingPhase.Hosting && host.Code is { } code)
         {
+            if (host.CodeChangedMidSession)
+            {
+                ImGui.TextWrapped(CodeChangedWarning);
+                if (ImGui.Button("I have told them"))
+                {
+                    _coordinator.Host.AcknowledgeCodeChange();
+                }
+            }
+
+            if (_coordinator.Grace.IsRunning)
+            {
+                // R-1.4: state is held but visibly not live, with the wait bounded on screen.
+                ImGui.TextWrapped(
+                    $"Lost contact with the relay. Reconnecting - the session ends in "
+                    + $"{_coordinator.Grace.Remaining:mm\\:ss} if it does not come back.");
+            }
+
             ImGui.TextUnformatted($"Session code: {code.ToDisplayString()}");
             ImGui.TextWrapped(CodeDisclosure);
-            ImGui.TextUnformatted($"Players admitted: {_coordinator.Audience.Count}");
+
+            var audience = _coordinator.Audience;
+            ImGui.TextUnformatted($"Players admitted: {audience.Count}");
+            if (audience.Count > audience.ConfirmedCount)
+            {
+                ImGui.TextWrapped(
+                    $"{audience.Count - audience.ConfirmedCount} admitted without the code being compared.");
+            }
 
             if (ImGui.Button("End session"))
             {
@@ -80,7 +120,13 @@ public sealed class SessionWindow : Window
         var join = _coordinator.Join;
         ImGui.TextUnformatted($"Joining: {DescribeJoin(join.Phase)}");
 
-        if (join.Phase is JoinPhase.Idle or JoinPhase.Denied or JoinPhase.Failed)
+        if (join.Phase == JoinPhase.AwaitingDecision)
+        {
+            // R-1.3c's harder half: the bound is visible while the wait runs, not only at the end.
+            ImGui.TextUnformatted($"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");
+        }
+
+        if (join.MayRequestAgain || join.Phase == JoinPhase.Denied)
         {
             ImGui.InputText("Session code", ref _codeEntry, 16);
             if (ImGui.Button("Request to join") && SessionCode.TryParse(_codeEntry, out var code))
@@ -96,7 +142,7 @@ public sealed class SessionWindow : Window
 
         // Every pending request gets its own prompt. One slot would strand all but the newest, and
         // the stranded players would see a DM who appears to be ignoring them.
-        var pending = _coordinator.PendingRequests;
+        var pending = _coordinator.Admissions.Pending;
         if (pending.Count == 0)
         {
             return;
@@ -105,20 +151,45 @@ public sealed class SessionWindow : Window
         ImGui.Separator();
         ImGui.TextWrapped(AdmissionDisclosure);
 
-        // Copied because Admit and Deny mutate the pending list, and this is a draw callback.
-        foreach (var requester in pending.ToArray())
-        {
-            ImGui.TextUnformatted($"Join request from {requester}");
+        var now = DateTimeOffset.UtcNow;
 
-            if (ImGui.Button($"Admit##{requester}"))
+        // Copied because Admit and Deny mutate the pending list, and this is a draw callback.
+        foreach (var request in pending.ToArray())
+        {
+            ImGui.Separator();
+            ImGui.TextUnformatted(request.IsRelink
+                ? $"Relink request from {request.PeerCode}"
+                : $"Join request from {request.PeerCode}");
+
+            ImGui.TextUnformatted($"Code to compare: {request.Fingerprint}");
+            ImGui.TextWrapped(CompareOutOfBand);
+
+            // R-1.3c: the wait is visibly bounded WHILE it runs, not only when it ends.
+            var remaining = request.RemainingAt(now);
+            ImGui.TextUnformatted($"This request lapses in {remaining:mm\\:ss}");
+
+            // R-1.3a: a deliberate act, never a pre-ticked box. Starts false every time.
+            var confirmed = request.FingerprintConfirmed;
+            if (ImGui.Checkbox($"The code matched what they read to me##{request.PeerCode}", ref confirmed)
+                && confirmed)
             {
-                _coordinator.Admit(requester);
+                request.ConfirmFingerprintMatched();
+            }
+
+            if (!request.FingerprintConfirmed)
+            {
+                ImGui.TextWrapped(UnverifiedWarning);
+            }
+
+            if (ImGui.Button($"Admit##{request.PeerCode}"))
+            {
+                _coordinator.Admit(request.PeerCode);
             }
 
             ImGui.SameLine();
-            if (ImGui.Button($"Deny##{requester}"))
+            if (ImGui.Button($"Deny##{request.PeerCode}"))
             {
-                _coordinator.Deny(requester);
+                _coordinator.Deny(request.PeerCode);
             }
         }
     }
@@ -140,6 +211,7 @@ public sealed class SessionWindow : Window
         JoinPhase.AwaitingDecision => "waiting for the DM to decide",
         JoinPhase.Admitted => "in the session",
         JoinPhase.Denied => "not admitted",
+        JoinPhase.Lapsed => "the DM did not answer in time - you can ask again",
         _ => "stopped after a problem",
     };
 }

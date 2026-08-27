@@ -91,11 +91,11 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.ReceiveJoinRequest("PEER-1");
+        coordinator.ReceiveJoinRequest(Request("PEER-1"));
 
         coordinator.Deny("PEER-1");
 
-        Assert.Empty(coordinator.PendingRequests);
+        Assert.Empty(coordinator.Admissions.Pending);
         Assert.False(coordinator.Audience.IsAdmitted("PEER-1"));
         Assert.Equal(0, coordinator.Audience.Count);
     }
@@ -107,11 +107,11 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.ReceiveJoinRequest("PEER-1");
+        coordinator.ReceiveJoinRequest(Request("PEER-1"));
 
         coordinator.Admit("PEER-1");
 
-        Assert.Empty(coordinator.PendingRequests);
+        Assert.Empty(coordinator.Admissions.Pending);
         Assert.True(coordinator.Audience.IsAdmitted("PEER-1"));
     }
 
@@ -139,8 +139,8 @@ public class SessionCoordinatorTests
         var (coordinator, transport) = Build();
         coordinator.StartHosting();
 
-        coordinator.Tick(TimeSpan.Zero);                              // settle into the phase
-        coordinator.Tick(HostSession.RegistrationTimeout);
+        coordinator.Tick(TimeSpan.Zero, Now);                              // settle into the phase
+        coordinator.Tick(HostSession.RegistrationTimeout, Now);
 
         Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
         Assert.Equal(SessionFailure.RelayUnreachable, coordinator.Host.Failure);
@@ -154,12 +154,12 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.Tick(TimeSpan.Zero);
-        coordinator.Tick(HostSession.RegistrationTimeout - TimeSpan.FromSeconds(1));
+        coordinator.Tick(TimeSpan.Zero, Now);
+        coordinator.Tick(HostSession.RegistrationTimeout - TimeSpan.FromSeconds(1), Now);
 
         coordinator.Host.Registered();
-        coordinator.Tick(TimeSpan.Zero);
-        coordinator.Tick(TimeSpan.FromSeconds(2));
+        coordinator.Tick(TimeSpan.Zero, Now);
+        coordinator.Tick(TimeSpan.FromSeconds(2), Now);
 
         Assert.Equal(HostingPhase.Hosting, coordinator.Host.Phase);
     }
@@ -174,7 +174,7 @@ public class SessionCoordinatorTests
         coordinator.StartHosting();
 
         transport.RaiseFailure(SessionFailure.ConnectionLost);
-        coordinator.Tick(TimeSpan.Zero);
+        coordinator.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
         Assert.Equal(SessionFailure.ConnectionLost, coordinator.Host.Failure);
@@ -189,11 +189,11 @@ public class SessionCoordinatorTests
         var (coordinator, _) = Build();
         coordinator.StartHosting();
 
-        coordinator.ReceiveJoinRequest("PEER-1");
-        coordinator.ReceiveJoinRequest("PEER-2");
-        coordinator.ReceiveJoinRequest("PEER-3");
+        coordinator.ReceiveJoinRequest(Request("PEER-1"));
+        coordinator.ReceiveJoinRequest(Request("PEER-2"));
+        coordinator.ReceiveJoinRequest(Request("PEER-3"));
 
-        Assert.Equal(3, coordinator.PendingRequests.Count);
+        Assert.Equal(3, coordinator.Admissions.Pending.Count);
     }
 
     // Fails if: deciding one request clears the others, which is the same stranding by a different
@@ -203,13 +203,13 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.ReceiveJoinRequest("PEER-1");
-        coordinator.ReceiveJoinRequest("PEER-2");
+        coordinator.ReceiveJoinRequest(Request("PEER-1"));
+        coordinator.ReceiveJoinRequest(Request("PEER-2"));
 
         coordinator.Admit("PEER-1");
 
-        Assert.Single(coordinator.PendingRequests);
-        Assert.Contains("PEER-2", coordinator.PendingRequests);
+        Assert.Single(coordinator.Admissions.Pending);
+        Assert.Contains(coordinator.Admissions.Pending, r => r.PeerCode == "PEER-2");
         Assert.True(coordinator.Audience.IsAdmitted("PEER-1"));
         Assert.False(coordinator.Audience.IsAdmitted("PEER-2"));
     }
@@ -220,11 +220,16 @@ public class SessionCoordinatorTests
     public void ARepeatedRequestFromTheSamePeerDoesNotStack()
     {
         var (coordinator, _) = Build();
-        coordinator.ReceiveJoinRequest("PEER-1");
-        coordinator.ReceiveJoinRequest("PEER-1");
+        coordinator.ReceiveJoinRequest(Request("PEER-1"));
+        coordinator.ReceiveJoinRequest(Request("PEER-1"));
 
-        Assert.Single(coordinator.PendingRequests);
+        Assert.Single(coordinator.Admissions.Pending);
     }
+
+    private static readonly DateTimeOffset Now = new(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
+
+    private static PendingAdmission Request(string peerCode) =>
+        new(peerCode, "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now));
 
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Build()
     {
@@ -235,6 +240,12 @@ public class SessionCoordinatorTests
     private sealed class FakeTransport : ISessionTransport
     {
         public event Action<SessionFailure>? Failed;
+
+        public event Action<byte[]>? Received;
+
+        public void Deliver(WireEnvelope envelope) => Received?.Invoke(EnvelopeCodec.Encode(envelope));
+
+        public void DeliverRaw(byte[] frame) => Received?.Invoke(frame);
 
         public void RaiseFailure(SessionFailure failure) => Failed?.Invoke(failure);
 
