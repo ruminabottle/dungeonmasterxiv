@@ -119,6 +119,45 @@ public class JoinOverASocketTests
         Assert.Equal(coordinator.HostKeys!.PublicKey, envelope.HostPublicKey);
     }
 
+    // The probe found this gap rather than the plan: truncating a frame by one byte failed both
+    // inbound tests, but every payload here fits in one 8 KB read, so the reassembly loop that
+    // stitches a frame across continuations was never exercised at all. A defect there would only
+    // appear once a real session carried something large — a roster, an encounter — which is a long
+    // way from here.
+    //
+    // Fails if: the receive loop stops reassembling and treats the first continuation as the whole
+    // frame.
+    [Fact]
+    public async Task AFrameLargerThanOneReadIsReassembledRatherThanTruncated()
+    {
+        await using var server = new TestWebSocketServer();
+        using var transport = new WebSocketSessionTransport(new SilentLog());
+        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString());
+        using var host = new SessionKeyExchange();
+
+        coordinator.RequestJoin(Code);
+        await server.Connected.WaitAsync(Patience);
+        coordinator.Join.AwaitDecision(AdmissionDeadline.DecidedByHost(Now));
+
+        // Padded past the 8 KB receive buffer by an unknown field, which D-14 requires be ignored —
+        // so the frame stays valid while forcing the multi-read path.
+        var accepted = EnvelopeCodec.Encode(
+            WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+        var json = System.Text.Encoding.UTF8.GetString(accepted);
+        var padded = json[..^1] + ",\"PaddingFromAFutureVersion\":\"" + new string('x', 20_000) + "\"}";
+        Assert.True(padded.Length > 8192);
+
+        await server.SendAsync(System.Text.Encoding.UTF8.GetBytes(padded));
+
+        await WaitForAsync(() =>
+        {
+            coordinator.Tick(TimeSpan.Zero, Now);
+            return coordinator.Join.Phase == JoinPhase.Admitted;
+        });
+
+        Assert.Equal(JoinPhase.Admitted, coordinator.Join.Phase);
+    }
+
     private static async Task WaitForAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow + Patience;
