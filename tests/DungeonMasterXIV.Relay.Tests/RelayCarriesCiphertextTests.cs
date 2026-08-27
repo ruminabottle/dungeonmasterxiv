@@ -76,11 +76,17 @@ public sealed class RelayCarriesCiphertextTests
         await RelayUnderTest.ReceiveAsync(host);
 
         using var joinerKeys = new SessionKeyExchange();
+        using var hostKeys = new SessionKeyExchange();
         await RelayUnderTest.SendAsync(joiner, WireEnvelope.ForJoinRequest(code, joinerKeys.PublicKey));
-        await RelayUnderTest.ReceiveAsync(host);
+        var (request, _) = await RelayUnderTest.ReceiveAsync(host);
 
-        // Arranged, not sent — the admission message is C6's. See FullSession.
-        Assert.True(relay.Registry.TryAdmit(code.Value, joinerKeys.PublicKey, out _));
+        // Admitted by a real message, not arranged through the registry. The arrangement was a
+        // leftover from before C6 merged, and it was the one thing in this file whose ordering
+        // depended on relay state rather than on a message having arrived.
+        await RelayUnderTest.SendAsync(
+            host,
+            WireEnvelope.ForJoinAccepted(code, request.PublicKey!, hostKeys.PublicKey));
+        await RelayUnderTest.ReceiveAsync(joiner);
 
         // The substitution: a "sealed" payload whose ciphertext is the plaintext.
         var nullSealed = SealedPayload.FromWire(new byte[SessionCipher.NonceSize], SecretBytes);

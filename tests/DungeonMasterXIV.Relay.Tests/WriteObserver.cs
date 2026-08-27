@@ -23,10 +23,31 @@ public sealed class WriteObserver : IDisposable
     private readonly Lock _gate = new();
     private readonly List<string> _writes = [];
 
-    /// <summary>Starts watching <paramref name="roots"/>, recursively. Missing roots are watched
-    /// by their parent, so a directory the relay creates is itself a write.</summary>
+    /// <summary>
+    /// Starts watching <paramref name="roots"/>, recursively.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A root that does not exist is NOT watched, and is reported in
+    /// <see cref="UnwatchedRoots"/> rather than skipped quietly.</b> An earlier version of this
+    /// comment claimed missing roots were watched via their parent; the code filtered them out
+    /// instead, so the two disagreed. Harmless while every root was pre-created, and live the moment
+    /// anyone pointed it at a real key-ring path that did not exist yet — at which point this
+    /// instrument would have watched nothing and reported clean, which is a D-2 check passing over an
+    /// empty corpus.
+    /// </para>
+    /// <para>
+    /// The comment was the wrong half to keep. Watching a missing root's nearest existing ancestor
+    /// means recursively watching whatever that turns out to be — for a user-profile key-ring path,
+    /// the home directory — which is a real hazard traded for a narrow gain. So the behaviour stands
+    /// and the silence goes: callers assert <see cref="UnwatchedRoots"/> is empty, which turns
+    /// "I did not read that" from an invisible gap into a failing test.
+    /// </para>
+    /// </remarks>
     public WriteObserver(params string[] roots)
     {
+        UnwatchedRoots = roots.Where(root => !Directory.Exists(root)).ToArray();
+
         foreach (var root in roots.Where(Directory.Exists))
         {
             var watcher = new FileSystemWatcher(root)
@@ -44,6 +65,16 @@ public sealed class WriteObserver : IDisposable
             _watchers.Add(watcher);
         }
     }
+
+    /// <summary>
+    /// Roots this was asked to watch and could not, because they did not exist when it started.
+    /// </summary>
+    /// <remarks>
+    /// A caller that does not check this is trusting a result about a corpus that may be empty. The
+    /// tests assert it is empty for exactly that reason — a clean run is only evidence about what
+    /// the instrument actually read.
+    /// </remarks>
+    public IReadOnlyList<string> UnwatchedRoots { get; }
 
     /// <summary>Everything written since this began, whether or not it still exists.</summary>
     public IReadOnlyList<string> Writes
