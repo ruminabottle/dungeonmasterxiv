@@ -1,10 +1,11 @@
 # Relay service policy
 
-Written in plain language on purpose. Every central claim here **about the software** is checkable in
-published source and provable from the test suite, which is a rarer position than most privacy
-policies occupy. Exactly one central promise is not — how long anything is kept — because that is
-about how the service is run rather than what the code does, and it says so plainly where it
-appears. A document written to limit liability would undersell what is actually true.
+Written in plain language on purpose. The claims here about **what the software does** are checkable
+in published source and provable from the test suite, which is a rarer position than most privacy
+policies occupy. Some of what follows is a **promise about how the service is run** instead — those
+are marked where they appear rather than blended in with the rest, because blending the two is how a
+policy comes to be trusted instead of checked. A document written to limit liability would undersell
+what is actually true.
 
 ---
 
@@ -71,7 +72,8 @@ key.
 Two of those three are facts about the code and you can check them. **The seven days is not** — the
 relay writes only to standard output and has no file of its own, which is exactly what makes the
 "stores nothing" test above possible. Retention is therefore a property of how the service is run,
-not of what the software does. It is a promise, and it is the only one on this page that is.
+not of what the software does. It is a promise rather than a fact about the
+code, and this page marks that difference wherever it matters.
 
 ## What we will do to keep it running
 
@@ -88,12 +90,17 @@ This relay is funded by optional community support and run by a person, not a co
 eventually stop.
 
 **If it is going to shut down, we will say so at least 30 days in advance**, in the repository and
-through an in-plugin notice, so groups have time to move.
+through an in-plugin notice, so groups have time to move. That is a promise about how the service is
+run, not something the code enforces.
 
-**You are not dependent on us.** The plugin lets you point at a **different relay** — the setting is
-in the plugin, not buried — and the relay's source is public, so anyone technical can run one. We do
-not test that path and do not promise it works effortlessly, but it exists and it is why this
-service ending is not the plugin ending.
+**If this relay stops, expect the plugin to stop working with it.** That is the honest position and it
+follows from a deliberate choice: making the plugin outlive this service would mean testing that it
+can, and we do not test it.
+
+There is an escape hatch, and it is real but unproven. The plugin lets you point at a **different
+relay** — the setting is in the plugin, not buried — and the relay's source is public, so someone
+technical could run one. We have never tested that path and do not promise it works. It is worth
+knowing about; it is not a reason to assume this service ending is survivable.
 
 ## What is stored on your own machine
 
