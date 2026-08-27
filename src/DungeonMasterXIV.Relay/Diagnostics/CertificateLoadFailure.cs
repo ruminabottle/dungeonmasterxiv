@@ -66,11 +66,24 @@ public static class CertificateLoadFailure
     /// in one syscall, on every platform, in the same process and therefore as the same uid.
     /// <para>
     /// A file that is missing, locked or a directory is not a permissions finding and must not be
-    /// reported as one; only an outright refusal counts.
+    /// reported as one; only an outright refusal counts. The directory case is checked explicitly
+    /// rather than left to the exception type, which cannot tell it apart from a refusal — this
+    /// paragraph described an intention the code did not have until BUG-21.
     /// </para>
     /// </remarks>
     public static bool CannotBeRead(string path)
     {
+        // Asked before the open, because the open cannot answer it. On Unix File.OpenRead throws
+        // UnauthorizedAccessException for a DIRECTORY as well as for a refusal, so the exception
+        // type cannot separate "you may not read this" from "this is not a file" and a directory
+        // reached the permissions arm. An operator who wrote /run/secrets where they meant
+        // /run/secrets/relay-certificate was told to chown a directory whose ownership was fine.
+        // BUG-21.
+        if (Directory.Exists(path))
+        {
+            return false;
+        }
+
         try
         {
             using var stream = File.OpenRead(path);
