@@ -119,6 +119,68 @@ public sealed class SessionCoordinator
     public void ReceiveJoinRequest(PendingAdmission request) => Admissions.Receive(request);
 
     /// <summary>
+    /// Turns a <see cref="WireMessageType.JoinRequest"/> that arrived on the wire into a prompt the
+    /// DM can answer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This is the arm BUG-42 was missing.</b> Everything below it existed and was tested; the
+    /// relay forwarded every request to a host that had no path to it, so
+    /// <see cref="Admissions"/> stayed empty and no prompt was ever shown. Returning null when
+    /// <see cref="HostKeys"/> is null is what keeps a joiner-only client from building prompts out
+    /// of traffic meant for a host.
+    /// </para>
+    /// <para>
+    /// <b>No relink claim is read here, deliberately.</b> The envelope can carry
+    /// <c>ClaimedParticipantId</c>, and resolving it needs both ends of a conversation that does not
+    /// exist yet (BUG-41). Passing the default is leaving that alone rather than half-building it.
+    /// </para>
+    /// </remarks>
+    private void AdmitToTheQueue(byte[] joinerPublicKey, DateTimeOffset now) =>
+        ReceiveJoinRequest(PeerCodeFor(joinerPublicKey), joinerPublicKey, now);
+
+    /// <summary>
+    /// The session-scoped code the DM's prompt names this requester by (R-1.3, D-8).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Derived from the joiner's key rather than assigned, because their key is the only thing
+    /// that identifies them.</b> Nothing on the wire carries a peer code: a
+    /// <see cref="WireMessageType.JoinRequest"/> carries the session code and the joiner's key, and
+    /// the answer is addressed back by that same key. So a code invented here is the only one
+    /// available, and deriving it keeps two requests from one joiner naming one requester.
+    /// </para>
+    /// <para>
+    /// <b>Session-scoped because the session code is hashed in</b> — the same person joining two
+    /// sessions is named differently in each, which is what D-8 asks of anything shown about a
+    /// participant.
+    /// </para>
+    /// <para>
+    /// <b>Not a security value and deliberately not the fingerprint.</b> The fingerprint is computed
+    /// from BOTH keys and exists so two humans can compare one string; this only has to tell two
+    /// requesters apart on one screen. <b>What the DM should actually see here is a product
+    /// question</b> — PRD-1 requires a session-scoped code and does not say how it is formed, and
+    /// nothing sends this code to the joiner, so the two of them cannot yet read the same label
+    /// aloud. Raised with the Spec Owner rather than settled here.
+    /// </para>
+    /// </remarks>
+    private string PeerCodeFor(byte[] joinerPublicKey)
+    {
+        var scope = System.Text.Encoding.UTF8.GetBytes(Host.Code?.Value ?? string.Empty);
+        var digest = System.Security.Cryptography.SHA256.HashData([.. scope, .. joinerPublicKey]);
+        var value = new System.Numerics.BigInteger(digest, isUnsigned: true, isBigEndian: true);
+
+        var rendered = new char[SessionCode.Length];
+        for (var i = rendered.Length - 1; i >= 0; i--)
+        {
+            value = System.Numerics.BigInteger.DivRem(value, SpeakableAlphabet.Length, out var symbol);
+            rendered[i] = SpeakableAlphabet.Characters[(int)symbol];
+        }
+
+        return new string(rendered);
+    }
+
+    /// <summary>
     /// Builds and records a request from what arrived on the wire.
     /// </summary>
     /// <remarks>
@@ -295,7 +357,7 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
-        SessionKey = _inbox.Drain(Join, JoinerKeys, Host) ?? SessionKey;
+        SessionKey = _inbox.Drain(Join, JoinerKeys, Host, key => AdmitToTheQueue(key, now)) ?? SessionKey;
         RegisterWithRelayWhenReady();
         SendJoinRequestWhenReady();
         JustLapsed = Admissions.ExpireLapsed(now);
