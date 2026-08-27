@@ -39,8 +39,25 @@
            Text="DungeonMasterXIV.Relay must never reference Dalamud (found reference '%(Reference.Identity)'). The relay does not run in a game client." />
     <Error Condition="$([System.String]::Copy('%(PackageReference.Identity)').Contains('Dalamud'))"
            Text="DungeonMasterXIV.Relay must never reference Dalamud (found package '%(PackageReference.Identity)')." />
-    <Error Condition="'%(ProjectReference.Filename)' == 'DungeonMasterXIV'"
-           Text="DungeonMasterXIV.Relay must never reference the plugin project." />
+  </Target>
+
+  <!--
+    D-15: the relay depends on the shared contract ONLY, so it stays mechanically extractable into
+    its own repository at any time. Dependencies run plugin -> contract and relay -> contract, never
+    relay -> plugin.
+
+    An ALLOWLIST, and the distinction is the whole point. This replaced
+    '%(ProjectReference.Filename)' == 'DungeonMasterXIV', which named the one project that existed
+    when it was written — so it was correct that day and immunised by having been right once. Any
+    NEW plugin-facing project passed it cleanly, and it would have kept passing every build right up
+    to the moment it mattered. Naming what is permitted cannot go stale as the repository grows;
+    enumerating what is forbidden goes stale the first time somebody adds a project.
+
+    Batched over %(Identity) like the targets above, for the reason their comment records.
+  -->
+  <Target Name="RelayReferencesContractOnly" BeforeTargets="Build">
+    <Error Condition="'%(ProjectReference.Filename)' != 'DungeonMasterXIV.Core'"
+           Text="DungeonMasterXIV.Relay may reference only DungeonMasterXIV.Core (found '%(ProjectReference.Filename)'). D-15: the relay depends on the shared contract only, so it stays extractable into its own repository. If this project is genuinely shared, it belongs in the contract." />
   </Target>
 
   <!--
