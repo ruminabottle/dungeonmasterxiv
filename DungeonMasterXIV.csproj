@@ -49,6 +49,26 @@
     <Error Condition="!$(ReleaseTag.StartsWith('v'))"
            Text="ReleaseTag '$(ReleaseTag)' must begin with a lowercase 'v', e.g. v0.1.0. The tag is the one place the advertised version is authored (D-16, R-7.4a), and the release tool refuses any other spelling of it." />
 
+    <!-- BUG-30. Asks the ONE question the build has to answer before anything parses: is what the
+         tag leaves behind a shape this build can turn into a version? Deliberately a shape gate
+         rather than another special case. Two shapes had reached past the guards into MSBuild's own
+         error text - a five-component tag died in restore as MSB4181, byte-for-byte the message
+         BUG-23 was filed to remove, and a twenty-digit component overflowed Int64.Parse as MSB4184,
+         the crash the range target's own comment says it was shaped to avoid. Both were the same
+         defect: the guards enumerated the shapes we had hit rather than the shape we accept.
+
+         One to four components of at most five digits, with an optional prerelease suffix. Five
+         digits because 65534 is five digits; WHICH five-digit values are allowed is the range
+         target's question, not this one. The bound is also what makes that target's Int64.Parse
+         safe by construction rather than by a condition someone has to keep correct.
+
+         What this deliberately does NOT judge: canonical form. v0.1.0.0, v01.2.3, vv0.1.0 and v2.3
+         are all shapes the build can turn into a version, and they build exactly as before; the
+         release tool refuses them as aliases (BUG-22). Putting that judgement here would be the
+         third parser BUG-23 exists to prevent. -->
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(Version)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}(-[0-9A-Za-z.-]+)?$'))"
+           Text="ReleaseTag '$(ReleaseTag)' is not a shape this build can turn into a version: '$(Version)' is left after the leading 'v'. A version is one to four dot-separated numbers of at most five digits each, e.g. v0.1.0 or v1.2.3.4. Retag with that shape." />
+
   </Target>
 
   <!-- BUG-25. Assembly-version components cap at 65534. Without this the build fails as
@@ -66,7 +86,7 @@
        by TheBuildAndTheToolReadTheTagAlikeTests. Parsing it here would turn a documented refusal
        into an MSBuild crash. -->
   <Target Name="ReleaseTagFitsAnAssemblyVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
-          Condition="'$(ReleaseTag)' != '' AND $([System.Text.RegularExpressions.Regex]::IsMatch('$(Version)', '^[0-9]+(\.[0-9]+)*$'))">
+          Condition="'$(ReleaseTag)' != '' AND $([System.Text.RegularExpressions.Regex]::IsMatch('$(Version)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}$'))">
     <ItemGroup>
       <ReleaseTagComponent Include="$(Version.Split('.'))" />
     </ItemGroup>

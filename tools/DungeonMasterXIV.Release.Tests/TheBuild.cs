@@ -73,10 +73,28 @@ internal static class TheBuild
     /// every case in a theory.
     /// </para>
     /// </remarks>
-    public static bool FailsToBuild(string releaseTag) =>
+    public static bool FailsToBuild(string releaseTag) => RealBuild(releaseTag).ExitCode != 0;
+
+    /// <summary>What a real build says when it refuses this tag.</summary>
+    /// <remarks>
+    /// <b>The real build, not the guard target (BUG-30).</b> The claim being tested is that the
+    /// operator gets a readable refusal, and the operator runs <c>dotnet build</c> — so the text has
+    /// to come from there. Two shapes reached past the guards and failed inside MSBuild itself,
+    /// which a single-target invocation would never have shown.
+    /// </remarks>
+    public static string RefusalFromARealBuild(string releaseTag)
+    {
+        var (exitCode, output, errors) = RealBuild(releaseTag);
+
+        Assert.True(exitCode != 0, $"Expected a real build of '{releaseTag}' to fail, and it succeeded.");
+
+        return output + errors;
+    }
+
+    private static (int ExitCode, string Output, string Errors) RealBuild(string releaseTag) =>
         Run(
             $"build \"{PluginProject()}\" -c Release -p:BaseOutputPath=\"{IsolatedOutput.FullName}/\"",
-            releaseTag).ExitCode != 0;
+            releaseTag);
 
     private static readonly DirectoryInfo IsolatedOutput =
         Directory.CreateTempSubdirectory("dmxiv-tag-builds");
