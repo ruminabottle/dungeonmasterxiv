@@ -20,16 +20,21 @@ public sealed class CampaignListWindow : Window
 {
     private readonly CampaignStore _store;
 
+    private readonly DeletionPrompt _prompt;
+
     private IReadOnlyList<CampaignRow> _rows = Array.Empty<CampaignRow>();
     private IReadOnlyList<UnreadableRow> _unreadable = Array.Empty<UnreadableRow>();
     private int _rowsBuiltAtRevision = -1;
-    private Guid? _awaitingConfirmation;
 
     /// <param name="store">The campaigns this window lists and deletes.</param>
     public CampaignListWindow(CampaignStore store)
         : base("Dungeon Master XIV campaigns###dmx-campaigns")
     {
         _store = store;
+
+        // Built once. Draw runs every frame over every row, so the delete callbacks must not be
+        // resolved per row per frame.
+        _prompt = new DeletionPrompt(id => _store.Delete(id), name => _store.DeleteUnreadable(name));
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -101,9 +106,16 @@ public sealed class CampaignListWindow : Window
             ImGui.TextUnformatted(row.FileName);
             ImGui.TextWrapped(row.Detail);
 
-            if (ImGui.Button("Delete file"))
+            // Was a direct DeleteUnreadable call: one click, irreversible, on the row the user can
+            // reason about least (BUG-9). Same confirmation as the readable rows above, because the
+            // point is that they have already taught the user what deleting looks like here.
+            if (_prompt.IsAwaiting(row.FileName))
             {
-                _store.DeleteUnreadable(row.FileName);
+                DrawConfirmation();
+            }
+            else if (ImGui.Button("Delete file"))
+            {
+                _prompt.Request(row.FileName);
             }
 
             ImGui.Separator();
@@ -118,35 +130,37 @@ public sealed class CampaignListWindow : Window
         ImGui.TextDisabled(row.Detail);
         ImGui.SameLine();
 
-        if (_awaitingConfirmation == row.CampaignId)
+        if (_prompt.IsAwaiting(row.CampaignId))
         {
-            DrawConfirmation(row.CampaignId);
+            DrawConfirmation();
         }
         else if (ImGui.Button("Delete"))
         {
-            _awaitingConfirmation = row.CampaignId;
+            _prompt.Request(row.CampaignId);
         }
 
         ImGui.Separator();
         ImGui.PopID();
     }
 
-    private void DrawConfirmation(Guid campaignId)
+    // Shared by both row kinds on purpose: same words, same order, same affordances. Two renderers
+    // would be free to drift, and the whole value of confirming here is that it looks identical
+    // wherever the user meets it.
+    private void DrawConfirmation()
     {
         ImGui.TextUnformatted("Delete permanently?");
         ImGui.SameLine();
 
         if (ImGui.Button("Yes, delete"))
         {
-            _store.Delete(campaignId);
-            _awaitingConfirmation = null;
+            _prompt.Confirm();
         }
 
         ImGui.SameLine();
 
         if (ImGui.Button("Cancel"))
         {
-            _awaitingConfirmation = null;
+            _prompt.Cancel();
         }
     }
 }
