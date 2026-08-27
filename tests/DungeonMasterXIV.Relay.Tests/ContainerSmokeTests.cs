@@ -56,9 +56,15 @@ public sealed class ContainerSmokeTests
     {
         using var client = new ClientWebSocket { Options = { CollectHttpResponseDetails = true } };
 
-        // The one place in this repository that accepts an unverified certificate, and it is
-        // enforced as the one place by NoTlsValidationBypass in Directory.Build.targets, which
-        // fails the build of every other project if either of these names appears in its source.
+        // The one place in this repository that accepts an unverified certificate. That is enforced
+        // as far as a text scan can enforce it: NoTlsValidationBypass in Directory.Build.targets
+        // fails the build of every other project if one of the NAMES it lists appears in its source.
+        //
+        // Read that as what it is. It catches the copy-paste route, which is the one that actually
+        // happens. It does NOT catch a positional callback — an SslStream handed a validation
+        // delegate as an argument rather than assigned to a named property — and closing that needs
+        // a Roslyn analyser with the semantic model, not more tokens. A guard trusted further than
+        // it reaches is worse than the gap in it.
         //
         // Why it is here at all: the certificate this dials is minted on the box at smoke-test time
         // and destroyed afterwards, because a real one for the deployed name requires the host to be

@@ -13,7 +13,33 @@
     undo the transport guarantee RelayEndpoint's TLS requirement is there to make.
 
     A comment saying "test only" is not a control; it is the thing that gets copied along with the
-    line. This is the control.
+    line. This is a control, and the next paragraph is the rest of the sentence.
+
+    WHAT IT ACTUALLY CATCHES, AND WHAT IT DOES NOT. It matches the NAMES below, textually, line by
+    line. It does not understand C#, so a POSITIONAL callback — an SslStream constructed with a
+    validation delegate passed as an argument rather than assigned to a named property — is NOT
+    caught, and neither is a delegate reached through a variable or a helper. Closing that needs a
+    Roslyn analyser with the semantic model; it is not a longer token list, and adding tokens will
+    keep looking like progress while the hole stays exactly where it is.
+
+    Say so here, because a guard people trust further than it reaches is the failure mode — worse
+    than the gap itself. What this buys is the copy-paste route, which is the one that actually
+    happens.
+
+    Two more edges, recorded rather than fixed:
+
+      - The allowlist's granularity is the PROJECT. All of DungeonMasterXIV.Relay.Tests is unfenced,
+        not just the one method that needs it, so a second test there could reach for the same line —
+        including the process-global ServicePointManager form, which would affect every test in the
+        run. A file-level allowlist would match the actual intent.
+
+      - MSBuild items split on ';', so a COMMENT containing a semicolon is scanned as two fragments
+        and its tail no longer looks like a comment. That fragment can still fire. The skip below
+        removes the ordinary case, not that one — same root cause as the positional callback, and
+        the same fix.
+
+      - %(Compile) is silent on anything that is not compiled C# from disk, notably source-generated
+        files. There are no generators in this solution today.
   -->
 
   <PropertyGroup>
@@ -31,18 +57,33 @@
 
     <!--
       Reads the source rather than the reference graph, unlike ForbidDalamud and NoDurableStorage:
-      a bypass arrives as a line somebody typed, not as a dependency somebody added. The lines split
-      on ';' the way every MSBuild item does, which is harmless here because none of the tokens
-      below contains one — a split fragment still carries the token.
+      a bypass arrives as a line somebody typed, not as a dependency somebody added.
+
+      EVERY NAME HERE IS ONE YOU ASSIGN A CALLBACK TO IN ORDER TO STOP VALIDATING. None of them is a
+      substring of a hardening spelling, and that is a property to re-check before adding one:
+      CheckCertificateRevocation was in this list, and it is a contiguous substring of
+      CheckCertificateRevocationList — the property you set TRUE to make revocation checking
+      STRICTER. So the guard failed the build on code that hardened TLS, with a message asserting
+      the author had disabled it. An instrument that produces false FAILs is worse than one that
+      cannot fail: the first person to hit it concludes the guard is noise, and a noisy guard gets
+      relaxed. The weakening spelling is deliberately NOT matched as a bare name; catching it would
+      mean matching an assignment of false, and a token list cannot see an assignment.
     -->
     <ReadLinesFromFile File="%(Compile.FullPath)">
       <Output TaskParameter="Lines" ItemName="_ScannedSourceLine" />
     </ReadLinesFromFile>
 
-    <Error Condition="$([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('RemoteCertificateValidationCallback'))
-                   Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateCustomValidationCallback'))
-                   Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('DangerousAccept'))
-                   Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('CheckCertificateRevocation'))"
+    <!--
+      Comments are skipped so that other projects may DOCUMENT this rule — an XML doc on the
+      transport type in Core is the natural place to warn the next person, and a rule that forbids
+      explaining itself gets explained wrongly or not at all.
+    -->
+    <Error Condition="!$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('//'))
+                  And ($([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('RemoteCertificateValidationCallback'))
+                    Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateCustomValidationCallback'))
+                    Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateValidationCallback'))
+                    Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('userCertificateValidationCallback'))
+                    Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('DangerousAccept')))"
            Text="$(MSBuildProjectName) disables TLS certificate validation: &quot;%(_ScannedSourceLine.Identity)&quot;. A client that accepts any certificate has no transport authentication and still looks protected (D-11). Only $(TlsValidationBypassPermittedIn) may do this, and only to reach the throwaway certificate C15's container smoke test mints." />
 
   </Target>
