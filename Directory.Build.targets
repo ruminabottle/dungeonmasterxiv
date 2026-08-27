@@ -1,0 +1,50 @@
+<Project>
+
+  <!--
+    C15's fence. The relay's container smoke test has to dial wss:// at a throwaway self-signed
+    certificate, so it disables certificate validation on its client socket. That line is the risk,
+    not the certificate: a client that accepts any certificate has no transport authentication and
+    still LOOKS protected, which is worse than plain ws:// and is what D-11 exists to prevent.
+
+    Before C15 this repository contained no such line anywhere. That is the only moment fencing one
+    off is free, so it is fenced now rather than after the second copy exists. It is the most
+    copy-pasted line in .NET networking, and the next person debugging a self-hosted relay would
+    otherwise find it in our own test project and carry it into the plugin — where it would silently
+    undo the transport guarantee RelayEndpoint's TLS requirement is there to make.
+
+    A comment saying "test only" is not a control; it is the thing that gets copied along with the
+    line. This is the control.
+  -->
+
+  <PropertyGroup>
+    <!--
+      An ALLOWLIST of the projects permitted to hold a bypass, for C18's reason: naming what is
+      forbidden goes stale the first time somebody adds a project, and the new project passes
+      cleanly. Naming what is permitted means a project added tomorrow is scanned by default.
+    -->
+    <TlsValidationBypassPermittedIn>DungeonMasterXIV.Relay.Tests</TlsValidationBypassPermittedIn>
+  </PropertyGroup>
+
+  <Target Name="NoTlsValidationBypass"
+          BeforeTargets="Build"
+          Condition="'$(MSBuildProjectName)' != '$(TlsValidationBypassPermittedIn)'">
+
+    <!--
+      Reads the source rather than the reference graph, unlike ForbidDalamud and NoDurableStorage:
+      a bypass arrives as a line somebody typed, not as a dependency somebody added. The lines split
+      on ';' the way every MSBuild item does, which is harmless here because none of the tokens
+      below contains one — a split fragment still carries the token.
+    -->
+    <ReadLinesFromFile File="%(Compile.FullPath)">
+      <Output TaskParameter="Lines" ItemName="_ScannedSourceLine" />
+    </ReadLinesFromFile>
+
+    <Error Condition="$([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('RemoteCertificateValidationCallback'))
+                   Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateCustomValidationCallback'))
+                   Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('DangerousAccept'))
+                   Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('CheckCertificateRevocation'))"
+           Text="$(MSBuildProjectName) disables TLS certificate validation: &quot;%(_ScannedSourceLine.Identity)&quot;. A client that accepts any certificate has no transport authentication and still looks protected (D-11). Only $(TlsValidationBypassPermittedIn) may do this, and only to reach the throwaway certificate C15's container smoke test mints." />
+
+  </Target>
+
+</Project>
