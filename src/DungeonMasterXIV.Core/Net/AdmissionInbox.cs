@@ -43,6 +43,11 @@ public sealed class AdmissionInbox
     /// into one queue, so the relay's answer to a code request is drained here too rather than by a
     /// second consumer that would race this one for the same frames (BUG-36).
     /// </param>
+    /// <param name="onJoinRequest">
+    /// Called with the joiner's public key for each inbound <see cref="WireMessageType.JoinRequest"/>,
+    /// when this client is a host. Null when there is nobody to tell, which is every joiner-only
+    /// client (BUG-42).
+    /// </param>
     /// <returns>The derived session key if this drain admitted us, otherwise null.</returns>
     /// <remarks>
     /// A frame that does not parse is dropped rather than raised — anything can arrive from a relay
@@ -50,7 +55,11 @@ public sealed class AdmissionInbox
     /// arrives as <see cref="WireMessageType.Unknown"/> from the deserializer and falls through
     /// without a handler needing to remember to ignore it (D-14).
     /// </remarks>
-    public byte[]? Drain(JoinAttempt attempt, SessionKeyExchange? keys, HostSession? host = null)
+    public byte[]? Drain(
+        JoinAttempt attempt,
+        SessionKeyExchange? keys,
+        HostSession? host = null,
+        Action<byte[]>? onJoinRequest = null)
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
@@ -75,6 +84,21 @@ public sealed class AdmissionInbox
             // never sent, so the answer never came and no handler was missed.
             if (host is not null && ApplyRegistration(envelope, host))
             {
+                continue;
+            }
+
+            // A joiner asking to be let in. The consumer existed and was well tested from the day it
+            // was written; nothing routed to it, so the relay forwarded every request to a host that
+            // dropped it and no prompt was ever shown (BUG-42). Handled before the outcome arms
+            // because a JoinRequest is not an outcome and matches none of them -- which is exactly
+            // how it fell through to nothing.
+            if (envelope.Type == WireMessageType.JoinRequest)
+            {
+                if (onJoinRequest is not null && envelope.PublicKey is { } joinerPublicKey)
+                {
+                    onJoinRequest(joinerPublicKey);
+                }
+
                 continue;
             }
 
