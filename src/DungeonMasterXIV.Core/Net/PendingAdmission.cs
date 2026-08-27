@@ -25,19 +25,19 @@ public sealed class PendingAdmission
     /// <param name="peerCode">The requester's session-scoped code. Never a character name.</param>
     /// <param name="fingerprint">The combined fingerprint, rendered per R-1.3a.</param>
     /// <param name="deadline">When the window closes. Decided by the DM's client and carried in C6's vocabulary.</param>
-    /// <param name="isRelink">Whether this is a returning participant asking to relink (R-1.5).</param>
+    /// <param name="relink">What the host resolved about a claimed participant, if anything (R-1.5).</param>
     /// <param name="joinerPublicKey">The key they presented, echoed on acceptance (D-11).</param>
     public PendingAdmission(
         string peerCode,
         string fingerprint,
         AdmissionDeadline deadline,
-        bool isRelink = false,
+        RelinkClaim relink = default,
         byte[]? joinerPublicKey = null)
     {
         PeerCode = peerCode;
         Fingerprint = fingerprint;
         Deadline = deadline;
-        IsRelink = isRelink;
+        Relink = relink;
         JoinerPublicKey = joinerPublicKey;
     }
 
@@ -51,10 +51,23 @@ public sealed class PendingAdmission
     public AdmissionDeadline Deadline { get; }
 
     /// <summary>
-    /// Whether this is a returning participant relinking to a character in a known campaign (R-1.5).
-    /// The DM approves every relink, every session — it is never silent and never automatic (D-8).
+    /// What the host resolved about a claimed participant. Information only — it confers nothing.
     /// </summary>
-    public bool IsRelink { get; }
+    public RelinkClaim Relink { get; }
+
+    /// <summary>
+    /// Whether this is a returning participant relinking to a character in a known campaign (R-1.5).
+    /// <b>The DM approves every relink, every session</b> — it is never silent and never automatic
+    /// (D-8), and nothing on this type behaves differently because it is true. It changes what the
+    /// prompt says and not what the prompt requires.
+    /// </summary>
+    public bool IsRelink => Relink.Matched;
+
+    /// <summary>
+    /// The label of the participant this request resolved to, for the prompt to name. Taken from
+    /// the campaign store, never from the request (precondition 12).
+    /// </summary>
+    public string? RelinkLabel => Relink.Label;
 
     /// <summary>
     /// The key this participant presented with their request (D-11). Carried because acceptance must

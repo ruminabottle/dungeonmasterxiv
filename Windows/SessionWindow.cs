@@ -157,9 +157,11 @@ public sealed class SessionWindow : Window
         foreach (var request in pending.ToArray())
         {
             ImGui.Separator();
-            ImGui.TextUnformatted(request.IsRelink
-                ? $"Relink request from {request.PeerCode}"
-                : $"Join request from {request.PeerCode}");
+            // The ONLY thing a resolved relink changes. Everything below this line — the
+            // fingerprint, the out-of-band warning, the deliberate confirmation, the two buttons —
+            // is identical for a relink and a first-time join, and must stay identical. R-1.5:
+            // the DM approves every relink, every session, and a match must not shorten the path.
+            ImGui.TextUnformatted(AdmissionPrompt.Headline(request));
 
             ImGui.TextUnformatted($"Code to compare: {request.Fingerprint}");
             ImGui.TextWrapped(CompareOutOfBand);
