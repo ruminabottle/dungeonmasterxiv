@@ -16,7 +16,11 @@ WORKDIR /build
 
 # Restore against the project files alone first, so a source-only change does not re-resolve
 # packages. Directory.Build.props is copied because every project under the repo root imports it.
-COPY Directory.Build.props ./
+#
+# Directory.Build.targets carries the build-time guards that are not written in any one project —
+# NoTlsValidationBypass among them. Left out, the image would build from source the fence had never
+# been run over, so the one build that actually ships would be the one build that is unguarded.
+COPY Directory.Build.props Directory.Build.targets ./
 COPY src/DungeonMasterXIV.Core/DungeonMasterXIV.Core.csproj src/DungeonMasterXIV.Core/
 COPY src/DungeonMasterXIV.Relay/DungeonMasterXIV.Relay.csproj src/DungeonMasterXIV.Relay/
 RUN dotnet restore src/DungeonMasterXIV.Relay/DungeonMasterXIV.Relay.csproj
