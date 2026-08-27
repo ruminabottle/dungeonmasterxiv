@@ -7,7 +7,8 @@ namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
 /// C19. The asset is identified by the file on disk, and the file is checked against the assembly
-/// the manifest describes (A-7.2).
+/// the manifest describes (A-7.2a, A-7.2b — A-7.2 was replaced 2026-08-27 because it could not fail
+/// against BUG-14).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -22,8 +23,13 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <b>Neither name nor version can separate those builds.</b> Five were on this machine at once,
 /// 61KB to 119KB across two days, all named <c>latest.zip</c> and all carrying <c>0.0.0.1</c> —
 /// measured, not assumed. A version-only check passes on every one of them. Only the bytes differ,
-/// which is what <see cref="ReleaseAsset.MustMatchTheAssembly"/> compares and what makes A-7.2's
-/// "the built assembly <i>it links to</i>" a claim that can come out negative.
+/// which is what <see cref="ReleaseAsset.MustMatchTheAssembly"/> compares and what makes "the built
+/// assembly <i>it links to</i>" a claim that can come out negative.
+/// </para>
+/// <para>
+/// <b>The assembly is only half the archive.</b> The same zip carries the manifest Dalamud installs,
+/// and comparing it is a separate question with a separate failure mode — see
+/// <see cref="ZipManifestMatchesTheBuildTests"/> (BUG-16).
 /// </para>
 /// </remarks>
 public class ReleaseAssetTests

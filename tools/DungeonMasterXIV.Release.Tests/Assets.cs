@@ -30,6 +30,12 @@ internal static class Assets
     /// <summary>The entry <see cref="ReleaseAsset.MustMatchTheAssembly"/> compares.</summary>
     public const string PluginAssembly = "DungeonMasterXIV.dll";
 
+    /// <summary>
+    /// The entry <see cref="ReleaseAsset.MustCarryTheSameMetadataAs"/> compares — the manifest
+    /// Dalamud actually reads when it installs (BUG-16).
+    /// </summary>
+    public const string PluginManifestName = "DungeonMasterXIV.json";
+
     private static readonly DirectoryInfo Root = Directory.CreateTempSubdirectory("dmxiv-release-tests");
 
     private static int counter;
