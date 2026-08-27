@@ -8,9 +8,14 @@ using DungeonMasterXIV.Release;
 //
 //   dotnet run --project tools/DungeonMasterXIV.Release --                 \
 //       --assembly bin/x64/Release/DungeonMasterXIV.dll                    \
-//       --plugin-manifest DungeonMasterXIV.json                            \
-//       --tag v0.1.0 --api-level <confirmed> --out repo.json               \
-//       [--dry-run]
+//       --plugin-manifest bin/x64/Release/DungeonMasterXIV.json            \
+//       --tag v0.1.0 --out repo.json [--dry-run]
+//
+// --plugin-manifest is the BUILT manifest beside the assembly, not the source one at the repository
+// root. The build stamps DalamudApiLevel and AssemblyVersion onto it; the source has neither. There
+// is deliberately no --api-level: R-7.3a requires it copied from the artefact, and an override would
+// reintroduce the typed value the requirement removes -- and would be used the first time somebody
+// was in a hurry.
 //
 // --dry-run prints the manifest and writes nothing. It is how this is verified without cutting a
 // release, which is the whole point of the current gate: a manifest today would deliver a plugin
@@ -18,28 +23,50 @@ using DungeonMasterXIV.Release;
 
 var options = ParseArguments(args);
 
-if (!options.TryGetValue("assembly", out var assemblyPath) ||
-    !options.TryGetValue("plugin-manifest", out var pluginManifestPath) ||
-    !options.TryGetValue("tag", out var tag) ||
-    !options.TryGetValue("api-level", out var apiLevelText))
+// Rejected rather than ignored. Silently accepting a flag that no longer does anything lets someone
+// believe they set the API level, which is worse than the flag never having existed.
+if (options.ContainsKey("api-level"))
 {
     Console.Error.WriteLine(
-        "Required: --assembly <path> --plugin-manifest <path> --tag <git tag> --api-level <n>. " +
-        "Optional: --out <path>, --dry-run. Nothing is defaulted; see ReleaseInputs.");
+        "--api-level no longer exists. The API level is copied from the built plugin manifest " +
+        "(R-7.3a) so that it is never typed. Pass the BUILT manifest to --plugin-manifest.");
     return 2;
 }
 
-if (!int.TryParse(apiLevelText, out var apiLevel))
+if (!options.TryGetValue("assembly", out var assemblyPath) ||
+    !options.TryGetValue("plugin-manifest", out var pluginManifestPath) ||
+    !options.TryGetValue("tag", out var tag))
 {
-    Console.Error.WriteLine($"--api-level must be a number; got '{apiLevelText}'.");
+    Console.Error.WriteLine(
+        "Required: --assembly <path> --plugin-manifest <BUILT manifest> --tag <git tag>. " +
+        "Optional: --out <path>, --dry-run. Nothing is defaulted or typed; see ReleaseInputs.");
     return 2;
 }
 
-var plugin = JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(pluginManifestPath))
-    ?? throw new InvalidOperationException($"'{pluginManifestPath}' is not a plugin manifest.");
+PluginManifest plugin;
+ReleaseInputs inputs;
+string manifest;
 
-var inputs = new ReleaseInputs(tag, PluginAssemblyVersion.Of(assemblyPath), apiLevel, plugin.RepoUrl);
-var manifest = RepositoryManifest.Build(inputs, plugin);
+// A refusal has to READ like a refusal. These stops are the mechanism working -- a missing API level
+// means the build did not produce what we expected -- and a stack trace buries the one sentence that
+// says what to do about it. Caught narrowly: anything else still crashes loudly.
+try
+{
+    plugin = (JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(pluginManifestPath))
+        ?? throw new InvalidOperationException($"'{pluginManifestPath}' is not a plugin manifest."))
+        .RequireBuilt(pluginManifestPath);
+
+    inputs = new ReleaseInputs(
+        tag, PluginAssemblyVersion.Of(assemblyPath), plugin.DalamudApiLevel!.Value, plugin.RepoUrl);
+    manifest = RepositoryManifest.Build(inputs, plugin);
+}
+catch (Exception failure) when (
+    failure is InvalidOperationException or ArgumentException or FileNotFoundException or JsonException)
+{
+    Console.Error.WriteLine(failure.Message);
+    Console.Error.WriteLine("No manifest generated. No tag created, no artefact published.");
+    return 2;
+}
 
 if (options.ContainsKey("dry-run") || !options.TryGetValue("out", out var outputPath))
 {

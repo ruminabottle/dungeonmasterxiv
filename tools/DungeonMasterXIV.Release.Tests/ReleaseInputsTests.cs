@@ -26,15 +26,19 @@ public class ReleaseInputsTests
     }
 
     // A wrong API level makes Dalamud never offer the plugin, with nothing written anywhere we would
-    // see. Guessing it is worse than failing to generate.
+    // see. Since R-7.3a the value is copied from the built manifest rather than typed, so an unusable
+    // one means the BUILD did not produce what we expected -- and the message has to say that, not
+    // that a number is missing. "A number is missing" reads as a queue somebody clears by guessing,
+    // which is the behaviour deriving the value exists to remove.
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void AMissingApiLevelIsRefused(int apiLevel)
+    public void AnApiLevelTheBuildDidNotProduceIsRefused(int apiLevel)
     {
         var failure = Assert.Throws<ArgumentException>(() => Valid(apiLevel: apiLevel).Validate());
 
-        Assert.Contains("confirmed", failure.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("built plugin manifest", failure.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not something to supply by hand", failure.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
