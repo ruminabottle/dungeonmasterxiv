@@ -48,6 +48,31 @@
           Condition="'$(ReleaseTag)' != ''">
     <Error Condition="!$(ReleaseTag.StartsWith('v'))"
            Text="ReleaseTag '$(ReleaseTag)' must begin with a lowercase 'v', e.g. v0.1.0. The tag is the one place the advertised version is authored (D-16, R-7.4a), and the release tool refuses any other spelling of it." />
+
+  </Target>
+
+  <!-- BUG-25. Assembly-version components cap at 65534. Without this the build fails as
+       "error CS7034 ... '70000.0.0.0' does not conform" pointing at
+       obj/x64/Release/DungeonMasterXIV.AssemblyInfo.cs: a generated file the operator never wrote,
+       quoting the PADDED version and never naming the tag they typed. Batched over the components
+       so the refusal names the offending one, the way the spelling guard above names the tag.
+
+       A SEPARATE target, conditioned so it can be skipped whole. An Error batched over %(...) still
+       runs ONCE with empty metadata when the item list is empty, so guarding only the ItemGroup left
+       Int64.Parse('') crashing with MSB4184 - measured, not assumed.
+
+       Only numeric versions are checked. A prerelease tag such as v0.1.0-rc1 is left alone
+       deliberately: the build accepts it today and the release tool refuses it, a divergence pinned
+       by TheBuildAndTheToolReadTheTagAlikeTests. Parsing it here would turn a documented refusal
+       into an MSBuild crash. -->
+  <Target Name="ReleaseTagFitsAnAssemblyVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
+          Condition="'$(ReleaseTag)' != '' AND $([System.Text.RegularExpressions.Regex]::IsMatch('$(Version)', '^[0-9]+(\.[0-9]+)*$'))">
+    <ItemGroup>
+      <ReleaseTagComponent Include="$(Version.Split('.'))" />
+    </ItemGroup>
+
+    <Error Condition="$([System.Int64]::Parse('%(ReleaseTagComponent.Identity)')) &gt; 65534"
+           Text="ReleaseTag '$(ReleaseTag)' has the component %(ReleaseTagComponent.Identity), and an assembly version component cannot exceed 65534. Pick a version whose parts are all 65534 or below." />
   </Target>
 
   <!-- The plugin project sits at the repo root, so its default glob would otherwise swallow the

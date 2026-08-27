@@ -53,15 +53,56 @@ public class TheBuildAndTheToolReadTheTagAlikeTests
 
     // Direction 2, the one that would strand an operator: a tag the tool is happy to release but the
     // build refuses to produce. That set must be empty.
+    //
+    // THIS ASKS A REAL BUILD (BUG-25). It used to ask the spelling guard, which runs one target and
+    // never reaches the compiler -- so v70000.0.0 passed it four times over while the real build
+    // exited 1 with CS7034. A test whose reach is narrower than the claim it makes reports success
+    // about a case it never visited.
+    //
+    // Scoped to representative tags rather than every spelling, because a real build is ~0.7s
+    // against a few milliseconds for the guard: the two ordinary shapes, the boundary that must
+    // still work, and BUG-25's counter-example.
     [Theory]
     [InlineData("v0.1.0")]
     [InlineData("v1.2.3.4")]
-    [InlineData("v0.0.0.1")]
-    public void NoTagTheToolAcceptsIsOneTheBuildRefuses(string tag)
+    [InlineData("v65534.0.0")]
+    public void NoTagTheToolAcceptsFailsARealBuild(string tag)
     {
         TaggedVersion.Of(tag);
 
-        Assert.False(TheBuild.RefusesTag(tag), $"The tool accepts '{tag}' but the build refuses it.");
+        Assert.False(TheBuild.FailsToBuild(tag), $"The tool accepts '{tag}' but a real build of it fails.");
+    }
+
+    // The control for the helper above. Without it, a FailsToBuild that answered false for
+    // everything -- a mistyped argument, a swallowed exit code -- would make that theory pass over
+    // nothing, which is precisely how BUG-25 got here.
+    [Fact]
+    public void TheRealBuildHelperCanSeeAFailure()
+    {
+        Assert.True(TheBuild.FailsToBuild("V0.1.0"));
+    }
+
+    // BUG-25's counter-example, from both sides. 65534 is the largest component an assembly version
+    // can carry, so a tag above it names a version no artefact can ever hold. Making only the
+    // build's refusal prettier would have left invariant 2 false while this file asserted it, so the
+    // tool refuses it too and the two agree.
+    [Theory]
+    [InlineData("v65535.0.0")]
+    [InlineData("v70000.0.0")]
+    public void ATagNoAssemblyCouldCarryIsRefusedByBothReaders(string tag)
+    {
+        var failure = Assert.Throws<ArgumentException>(() => TaggedVersion.Of(tag));
+        Assert.Contains("65534", failure.Message, StringComparison.Ordinal);
+
+        Assert.True(TheBuild.FailsToBuild(tag), $"The tool refuses '{tag}' but the build accepts it.");
+    }
+
+    // The boundary itself, on the legal side, so the cap is asserted as a boundary rather than as
+    // "big numbers are refused".
+    [Fact]
+    public void TheLargestVersionAnAssemblyCanCarryIsStillReleasable()
+    {
+        Assert.Equal(new Version(65534, 0, 0, 0), TaggedVersion.Of("v65534.0.0"));
     }
 
     // BUG-23's headline. Before the guard this died inside NuGet restore as
@@ -71,7 +112,7 @@ public class TheBuildAndTheToolReadTheTagAlikeTests
     [Fact]
     public void ACapitalVIsRefusedByTheBuildRatherThanFailingInsideRestore()
     {
-        Assert.True(TheBuild.RefusesTag("V0.1.0"));
+        Assert.True(TheBuild.GuardRefusesTag("V0.1.0"));
 
         // And the tool refuses it too, naming the spelling that works -- so whichever the operator
         // reaches first, they are told the same thing.
