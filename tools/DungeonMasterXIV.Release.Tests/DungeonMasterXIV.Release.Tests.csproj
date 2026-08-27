@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!--
+    Its own project rather than folding these into DungeonMasterXIV.Tests, which references Core and
+    nothing else on purpose. That constraint is what keeps Dalamud out of the plugin's test assembly,
+    and it is worth more than saving a csproj.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\DungeonMasterXIV.Release\DungeonMasterXIV.Release.csproj" />
+  </ItemGroup>
+
+</Project>

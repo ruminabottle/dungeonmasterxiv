@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The release mechanism: generates the REPOSITORY manifest a user pastes into Dalamud as a custom
+    repository. That is a different artefact from DungeonMasterXIV.json in the repo root, which is
+    the plugin's OWN manifest and ships inside the zip.
+
+    Deliberately outside the plugin: nothing here is shipped to a user, and it must never become a
+    reason for the plugin assembly to carry release tooling. It references neither the plugin nor
+    Dalamud, so its logic is testable like any other.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>DungeonMasterXIV.Release</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>
