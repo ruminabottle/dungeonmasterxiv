@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using DungeonMasterXIV.Release;
 using Xunit;
 
@@ -87,4 +88,51 @@ internal static class TheRepository
 
     /// <summary>The committed repository manifest, at the root where a tester's URL serves it from.</summary>
     public static string ManifestPath() => Path.Combine(TheBuild.RepositoryRoot().FullName, "repo.json");
+
+    /// <summary>
+    /// The plugin manifest as BUILT, which is the only source for the Dalamud API level.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The one field the repository manifest cannot be regenerated without.</b> Thirteen of its
+    /// fifteen fields come from the source manifest, the tag or the tool's own rules; the two API
+    /// level fields are stamped by the SDK at build time and appear nowhere in source. An ORDINARY
+    /// <c>dotnet build</c> supplies them — no Release configuration and no tag — so requiring this
+    /// adds nothing beyond what BUG-12 already documents for this test project.
+    /// </para>
+    /// <para>
+    /// <b>A second copy of this walk, deliberately.</b> <c>ApiLevelIsCopiedFromTheBuildTests</c> has
+    /// the first. This file's own rule is that two copies are cheaper than a shared file and three
+    /// are not, so the third one extracts them both — and a hotfix is the wrong moment to refactor a
+    /// passing test.
+    /// </para>
+    /// </remarks>
+    public static PluginManifest BuiltPluginManifest()
+    {
+        var bin = new DirectoryInfo(Path.Combine(TheBuild.RepositoryRoot().FullName, "bin"));
+
+        var candidates = bin.Exists
+            ? bin.GetFiles("DungeonMasterXIV.json", SearchOption.AllDirectories)
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .ToArray()
+            : Array.Empty<FileInfo>();
+
+        Assert.True(
+            candidates.Length > 0,
+            "No built DungeonMasterXIV.json under bin/. The repository manifest is checked by " +
+            "REGENERATING it, and the Dalamud API level exists only on the built artefact — so this " +
+            "fails rather than skips. BUG-12: `dotnet test` alone never builds the plugin, because " +
+            "no test project references it and that isolation is deliberate. Run `dotnet build` " +
+            "first, then `dotnet test`. This tree is not broken; the command was incomplete.");
+
+        var built = JsonSerializer.Deserialize<PluginManifest>(File.ReadAllText(candidates[0].FullName));
+
+        Assert.NotNull(built);
+        Assert.True(
+            built!.DalamudApiLevel > 0,
+            $"'{candidates[0].FullName}' carries no Dalamud API level, so regenerating the " +
+            "repository manifest from it would compare against a value the build did not produce.");
+
+        return built;
+    }
 }
