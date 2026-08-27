@@ -60,10 +60,7 @@ public static class RelayApp
                     // is the one nobody would think to name. Nothing is swallowed — the original is
                     // the inner exception, and its text is quoted in the message. See BUG-15.
                     throw new InvalidOperationException(
-                        CertificateLoadFailure.Describe(
-                            options.CertificatePath,
-                            CertificateLoadFailure.CurrentIdentity(),
-                            failure.Message),
+                        CertificateLoadFailure.Describe(options.CertificatePath, failure.Message),
                         failure);
                 }
             }));

@@ -10,22 +10,83 @@ namespace DungeonMasterXIV.Relay.Diagnostics;
 /// <c>error:10080002:BIO routines::system lib</c> on Linux — which names neither the file nor the
 /// reason, so it reads like a corrupt or wrong-password PKCS#12 and sends the operator to inspect
 /// the one thing that is not wrong. The container runs unprivileged and a bind-mounted secret keeps
-/// its ownership from the host, so "the process may not read it" is the likely cause and is the
-/// thing the message has to say out loud.
+/// its ownership from the host, so "the process may not read it" is a likely cause and is a thing
+/// the message has to be able to say out loud.
+/// <para>
+/// BUG-17: <b>and it must say it only when it is true.</b> The first version of this said it for
+/// every load failure, so a wrong <c>CERT_PASSWORD</c> on a perfectly readable file produced sixty-
+/// five words instructing the operator to <c>chown</c> it — BUG-15 pointing the other way, sending
+/// them to inspect the one thing that was not wrong. The underlying cause now leads, and the
+/// permissions advice is a suffix conditioned on <see cref="CannotBeRead"/>.
+/// </para>
 /// </remarks>
 public static class CertificateLoadFailure
 {
     /// <summary>
-    /// The operator-facing message for a certificate at <paramref name="path"/> that the process
-    /// running as <paramref name="identity"/> could not load, because of <paramref name="reason"/>.
+    /// The operator-facing message for a certificate at <paramref name="path"/> that could not be
+    /// loaded, because of <paramref name="reason"/>.
     /// </summary>
-    public static string Describe(string path, string identity, string reason) =>
-        $"Could not load the TLS certificate at '{path}'. The relay runs as {identity}, and that "
-        + "identity must be able to read that file. A bind-mounted secret keeps the ownership it "
-        + "has on the host, so a key that is 0600 and owned by someone else is unreadable here "
-        + "however correct it looks outside the container — give the file to that uid rather than "
-        + "widening its mode, because a private key readable by everyone is the worse outcome. "
-        + $"Underlying error: {reason}";
+    public static string Describe(string path, string reason) =>
+        Compose(path, CurrentIdentity(), reason, CannotBeRead(path));
+
+    /// <summary>
+    /// The message itself, with nothing measured — <paramref name="cannotBeRead"/> is the caller's
+    /// finding rather than this method's, so the wording can be tested without a fixture that has
+    /// to be made unreadable first.
+    /// </summary>
+    /// <remarks>
+    /// <b>The underlying reason comes first and unconditionally.</b> It is the only clause backed by
+    /// evidence in every case, and an operator reads top-down: whatever leads is what they act on.
+    /// </remarks>
+    public static string Compose(string path, string identity, string reason, bool cannotBeRead)
+    {
+        var cause = $"Could not load the TLS certificate at '{path}': {reason}";
+
+        if (!cannotBeRead)
+        {
+            return cause;
+        }
+
+        return cause
+            + $" The relay runs as {identity}, and that identity must be able to read that file. "
+            + "A bind-mounted secret keeps the ownership it has on the host, so a key that is 0600 "
+            + "and owned by someone else is unreadable here however correct it looks outside the "
+            + "container — give the file to that uid rather than widening its mode, because a "
+            + "private key readable by everyone is the worse outcome.";
+    }
+
+    /// <summary>
+    /// Whether this process is refused read access to <paramref name="path"/>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Asks the filesystem rather than reading the crypto layer's message.</b> Matching on
+    /// "BIO routines" or "Permission denied" would put the platform-specific string back in, one
+    /// layer along, and defeat the reason <see cref="RelayApp"/> catches broadly in the first place
+    /// — the failure that matters is the one nobody would think to name. Opening the file settles it
+    /// in one syscall, on every platform, in the same process and therefore as the same uid.
+    /// <para>
+    /// A file that is missing, locked or a directory is not a permissions finding and must not be
+    /// reported as one; only an outright refusal counts.
+    /// </para>
+    /// </remarks>
+    public static bool CannotBeRead(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+        catch (IOException)
+        {
+            // Missing, locked, or otherwise unopenable for a reason that is not permission. The
+            // underlying error already leads the message and says what it was.
+            return false;
+        }
+    }
 
     /// <summary>
     /// Who this process is running as, as the message should name it.
