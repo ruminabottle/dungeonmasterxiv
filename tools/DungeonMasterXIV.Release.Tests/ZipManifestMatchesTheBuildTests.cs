@@ -173,6 +173,33 @@ public class ZipManifestMatchesTheBuildTests
 
     // ---- the archive itself is not what we assumed ------------------------------------------
 
+    // An explicit "Tags": null used to escape as the raw "Value cannot be null. (Parameter 'values')"
+    // from string.Join, which names neither field nor file nor action. Null and an empty list mean
+    // the same thing, so the zip is ACCEPTED when the build has no tags either -- and refused, by
+    // name, when it has.
+    [Fact]
+    public void AZipSpellingNoTagsAsNullIsReadAsNoTags()
+    {
+        var built = Built();
+        built.Tags = new List<string>();
+
+        Check(ZipCarrying(Json(built).Replace("\"Tags\": []", "\"Tags\": null", StringComparison.Ordinal)), built);
+    }
+
+    [Fact]
+    public void AZipWithNullTagsAgainstABuildThatHasThemIsRefusedByName()
+    {
+        var built = Built();
+        var stale = Built();
+        stale.Tags = new List<string>();
+
+        var failure = Assert.Throws<InvalidOperationException>(
+            () => Check(ZipCarrying(Json(stale).Replace("\"Tags\": []", "\"Tags\": null", StringComparison.Ordinal)), built));
+
+        Assert.Contains("Tags", failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Value cannot be null", failure.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void AZipWithNoManifestInItIsRefusedAsSuch()
     {
