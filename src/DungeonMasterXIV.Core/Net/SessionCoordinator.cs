@@ -387,7 +387,7 @@ public sealed class SessionCoordinator
     /// reproduce BUG-40 with a fix in place.
     /// </para>
     /// <para>
-    /// <b>This sends <see cref="WireEnvelope.ForJoinRequest"/> and never
+    /// <b>This sends <see cref="WireEnvelope.ForJoinRequest(SessionCode, byte[])"/> and never
     /// <see cref="WireEnvelope.ForRelinkRequest"/>.</b> That is a decision, not an oversight: no
     /// production path reaches a relink. Nothing on this side holds the participant id a claim would
     /// carry, and nothing on the host side reads <c>ClaimedParticipantId</c> back off the wire, so
