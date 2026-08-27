@@ -39,11 +39,45 @@
         over it. Measured against nine specimens (see TlsBypassFenceTests) — a naive strip of just
         '/\*[\s\S]*?\*/' blinds the fence on four of them, this one on none.
 
-        What it does not model: interpolated strings whose holes contain quotes, and nested raw
-        string literals. Neither appears in this solution. If one arrives and carries an unbalanced
-        comment marker, the fence could go quiet over the rest of that file — so this is the thing
-        to re-check before writing such a literal, and the reason the specimen list is a test rather
-        than a comment.
+        WHAT IT DOES NOT MODEL, and the shape to look for is an ODD number of double-quote
+        characters inside an interpolated hole — a char literal '"' is the way it happens — which
+        leaves the regex's quote pairing misaligned and can expose a '/*'. Everything from there to
+        the next '*/' anywhere in the file is then stripped, and any bypass in that span goes
+        unseen. Nested raw string literals ('""""') misalign it the same way. BUG-26 demonstrated
+        both by construction rather than by reasoning.
+
+        Counted on 2026-08-27, against the files rather than from memory:
+
+          - Nested raw string literals: NONE.
+          - Interpolated holes containing quotes: THREE, all benign because their quote count is
+            EVEN. Relay/Transport/ProtocolVersionGate.cs (shipped relay source),
+            Relay.Tests/ConnectionRolesAreASetTests.cs, and
+            Release.Tests/EveryFieldTheManifestCarriesIsComparedTests.cs.
+          - And the direct measurement, which is what actually settles it: a bypass line was
+            inserted at EVERY line position of EVERY .cs file in the solution — 19,035 insertion
+            points across 176 files — and stripped with this pattern. It survived all of them.
+            Nothing here is blind.
+
+        Do not restate that as "the stripper leaves these files unchanged". It does not: they hold
+        '//' and '///' comments, which it removes correctly. Unchanged is the wrong claim and it is
+        the one that sounds right.
+
+        This paragraph previously said the construct did not appear here and to re-check before
+        writing one. It appeared three times while that sentence sat above it (BUG-26). So do not
+        read the count as current — read the SHAPE, and if you are adding a double-quote inside an
+        interpolated hole, count them.
+
+        NOT ENFORCED BY A TEST, deliberately, and the attempt is worth recording so nobody rebuilds
+        it. Appending a bypass to each file and checking it survives the strip does NOT work: the
+        danger depends on the bypass's POSITION relative to the fake comment span, and a file whose
+        own '*/' closes that span before the appended line lets it survive. That test passes against
+        a file constructed to blind the fence, so it is a test that cannot fail. The position-aware
+        version — checking that marker-free code lines are still present after stripping — does
+        detect it and flags none of this solution's files, but it FAILS on any file holding a
+        genuine '/* */' block comment, because a real comment's interior lines legitimately vanish.
+        Telling a genuine block opener from one inside a string literal is the same lexing question
+        this stripper only approximates. A guard that false-FAILs on the documentation form BUG-18
+        was filed to permit would be worse than this paragraph.
 
       - %(Compile) is silent on anything that is not compiled C# from disk, notably source-generated
         files. There are no generators in this solution today.
