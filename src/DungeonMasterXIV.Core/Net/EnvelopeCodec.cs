@@ -64,7 +64,12 @@ public static class EnvelopeCodec
             return false;
         }
 
-        if (wire?.SessionCode is null)
+        // Rejecting a code that is not a session code is what makes the routing key trustworthy for
+        // everything downstream — including the associated-data binding, whose unambiguity argument
+        // depends on the code containing no separator. Unlike an unknown message TYPE, which D-14
+        // requires be tolerated, a malformed routing key is not a message from the future: nothing
+        // can be done with it and no later version makes it meaningful.
+        if (wire?.SessionCode is null || !SessionCode.TryParse(wire.SessionCode, out _))
         {
             return false;
         }

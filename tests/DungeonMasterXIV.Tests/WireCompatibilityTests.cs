@@ -58,6 +58,36 @@ public class WireCompatibilityTests
         Assert.Equal(WireMessageType.CodeRequest, received!.Type);
     }
 
+    // Finding 2's substance, and PR #4's finding 8 closed. Fails if: TryDecode stops validating the
+    // routing key. A code that is not a session code is not a message from the future — D-14's
+    // tolerance is for things a later version gives meaning to, and nothing ever makes a
+    // ten-thousand-character routing key meaningful. It is also what the associated-data binding's
+    // unambiguity argument rests on: the code must contain no separator, and only this check makes
+    // that true of the instance method as well as the static one.
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\"NOTACODE\"")]
+    [InlineData("\"AEIOUY\"")]
+    [InlineData("\"BKD7RM:9\"")]
+    public void AnEnvelopeWhoseRoutingKeyIsNotASessionCodeIsRejected(string code)
+    {
+        var bytes = Encoding.UTF8.GetBytes($"{{\"Type\":1,\"SessionCode\":{code}}}");
+
+        Assert.False(EnvelopeCodec.TryDecode(bytes, out var received));
+        Assert.Null(received);
+    }
+
+    // Fails if: validation is tightened past what a human may type. A code arrives on the wire
+    // unhyphenated, and rejecting the hyphenated form a person pasted would break joining.
+    [Fact]
+    public void AValidRoutingKeyStillDecodes()
+    {
+        var bytes = Encoding.UTF8.GetBytes("{\"Type\":1,\"SessionCode\":\"BKD7RM\"}");
+
+        Assert.True(EnvelopeCodec.TryDecode(bytes, out var received));
+        Assert.Equal("BKD7RM", received!.SessionCode);
+    }
+
     // Fails if: a new optional field becomes required. An older sender omits it, and D-14 forbids
     // that being a decode failure.
     [Fact]

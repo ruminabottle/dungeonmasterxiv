@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using DungeonMasterXIV.Net;
 using Xunit;
 
@@ -18,7 +19,7 @@ public class AdmissionDeadlineTests
         var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
 
         var asHostSeesIt = deadline.Instant;
-        var asAJoinerSeesItTenMinutesLater = AdmissionDeadline.FromWire(deadline.UtcTicks).Instant;
+        var asAJoinerSeesItTenMinutesLater = AdmissionDeadline.TryFromWire(deadline.UtcTicks)!.Value.Instant;
 
         Assert.Equal(asHostSeesIt, asAJoinerSeesItTenMinutesLater);
     }
@@ -82,6 +83,46 @@ public class AdmissionDeadlineTests
         Assert.True(EnvelopeCodec.TryDecode(EnvelopeCodec.Encode(stamped), out var received));
 
         Assert.Equal(deadline, received!.TryGetDeadline());
+    }
+
+    // THE BLOCKING FINDING FROM PR #10, and it is tested through the FULL DECODE PATH rather than
+    // against the factory. Asserting TryFromWire in isolation proves the factory; the defect was
+    // that a hostile envelope decoded SUCCESSFULLY and produced a deadline that threw when read, so
+    // only bytes-in-to-countdown-out shows that stopped.
+    //
+    // Fails if: the range check is removed, or moved to a call site and left off this path. A relay
+    // sending long.MaxValue used to decode cleanly, yield a non-null deadline, and throw from
+    // Instant when RemainingAt read it — and R-1.3c puts that read in a draw path, so it was a
+    // crash mid-frame from one hostile field.
+    [Theory]
+    [InlineData(long.MaxValue)]
+    [InlineData(long.MinValue)]
+    [InlineData(-1L)]
+    public void AHostileDeadlineDecodesToNothingRatherThanCrashingTheCountdown(long hostileTicks)
+    {
+        var hostile = Encoding.UTF8.GetBytes(
+            $"{{\"Type\":4,\"SessionCode\":\"BKD7RM\",\"DeadlineUtcTicks\":{hostileTicks}}}");
+
+        Assert.True(EnvelopeCodec.TryDecode(hostile, out var received));
+
+        var deadline = received!.TryGetDeadline();
+        Assert.Null(deadline);
+        Assert.Null(Record.Exception(() => received.TryGetDeadline()));
+    }
+
+    // The other half of the same defect: a value inside the range must still work, or the fix would
+    // have been "reject everything", which passes the test above and breaks the feature.
+    [Fact]
+    public void ADeadlineInsideTheRepresentableRangeStillArrives()
+    {
+        using var joiner = new SessionKeyExchange();
+        var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
+        var wire = EnvelopeCodec.Encode(WireEnvelope.ForJoinRequest(Code, joiner.PublicKey, deadline));
+
+        Assert.True(EnvelopeCodec.TryDecode(wire, out var received));
+
+        Assert.Equal(deadline, received!.TryGetDeadline());
+        Assert.Equal(AdmissionDeadline.Window, received.TryGetDeadline()!.Value.RemainingAt(HostDecidedAt));
     }
 
     // Fails if: R-1.3a and R-1.3c drift apart. They are the same window seen from two sides and

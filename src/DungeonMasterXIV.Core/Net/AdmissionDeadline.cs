@@ -30,8 +30,11 @@ public readonly struct AdmissionDeadline : IEquatable<AdmissionDeadline>
     /// window being bounded at all, not that it is short.
     /// </summary>
     /// <remarks>
-    /// R-1.3a pairs this with the 11-character fingerprint: if the expiry is ever removed, the
-    /// fingerprint must go to 14 characters. Do not change one without the other.
+    /// R-1.3a pairs this with the fingerprint length: if the expiry is ever removed, the fingerprint
+    /// must go from 11 characters to 14. The other half of the pair is
+    /// <see cref="KeyFingerprint.Characters"/> in <c>Net/KeyFingerprint.cs</c>, and the guard on that
+    /// side names <c>AdmissionDeadlineTests</c> back. One constraint recorded in two places with
+    /// neither naming the other is how somebody deletes one half and leaves the other green.
     /// </remarks>
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(15);
 
@@ -51,8 +54,26 @@ public readonly struct AdmissionDeadline : IEquatable<AdmissionDeadline>
     public static AdmissionDeadline DecidedByHost(DateTimeOffset decidedAt) =>
         new(decidedAt.Add(Window).ToUniversalTime().Ticks);
 
-    /// <summary>Rebuilds a deadline received from the wire.</summary>
-    public static AdmissionDeadline FromWire(long utcTicks) => new(utcTicks);
+    /// <summary>
+    /// Rebuilds a deadline received from the wire, or null if the value cannot be one.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Returns null rather than throwing, and the unvalidated construction path does not exist at
+    /// all, because this is the method that reads a number a relay chose. <see cref="Instant"/>
+    /// builds a <see cref="DateTimeOffset"/> from these ticks and throws outside
+    /// <c>[0, DateTime.MaxValue.Ticks]</c>; <see cref="RemainingAt"/> and
+    /// <see cref="HasLapsedAt"/> both read it, and R-1.3c puts that countdown in front of a waiting
+    /// player — so an out-of-range value is not a bad number, it is a crash in a draw path.
+    /// </para>
+    /// <para>
+    /// Validating here rather than at the call site is deliberate. A clamp where we expect the
+    /// problem is correct until something else reconstructs a deadline, and then it is silently
+    /// wrong; the way to stop an unvalidated path being used is for it not to exist.
+    /// </para>
+    /// </remarks>
+    public static AdmissionDeadline? TryFromWire(long utcTicks) =>
+        utcTicks >= 0 && utcTicks <= DateTime.MaxValue.Ticks ? new AdmissionDeadline(utcTicks) : null;
 
     /// <summary>
     /// How long is left at <paramref name="now"/>, floored at zero so a countdown never runs

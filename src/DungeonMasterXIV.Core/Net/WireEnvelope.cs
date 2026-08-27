@@ -74,9 +74,20 @@ public sealed record WireEnvelope
     /// check rather than decrypting under a type or session code it was never sealed for.
     /// </summary>
     /// <remarks>
-    /// The encoding is unambiguous because a session code is always exactly
-    /// <see cref="SessionCode.Length"/> characters drawn from an alphabet that contains no
-    /// separator, so no pair of inputs can produce the same bytes.
+    /// <para>
+    /// The encoding is unambiguous because the separator cannot occur in either part: a session code
+    /// is drawn from an alphabet with no colon, and the type is rendered as digits. That is what is
+    /// actually relied on, and it holds for <see cref="AssociatedData"/> as well as for this method
+    /// — <see cref="EnvelopeCodec.TryDecode"/> rejects an envelope whose code is not a session code,
+    /// so the instance method cannot be reached with an arbitrary wire string.
+    /// </para>
+    /// <para>
+    /// The earlier wording justified this by the code being exactly
+    /// <see cref="SessionCode.Length"/> characters, which was true of this method and false of
+    /// <see cref="AssociatedData"/>. Fixed-length would also stop being the reason the moment a
+    /// second string field joined the binding, and a reason that is false of a path it covers is
+    /// worse than none: the next reader checks it where it holds and extends the pattern.
+    /// </para>
     /// </remarks>
     public static byte[] AssociatedDataFor(SessionCode code, WireMessageType type) =>
         Encoding.UTF8.GetBytes($"{code.Value}:{(int)type}");
@@ -201,7 +212,7 @@ public sealed record WireEnvelope
 
     /// <summary>The admission deadline carried here, if any.</summary>
     public AdmissionDeadline? TryGetDeadline() =>
-        DeadlineUtcTicks is { } ticks ? AdmissionDeadline.FromWire(ticks) : null;
+        DeadlineUtcTicks is { } ticks ? AdmissionDeadline.TryFromWire(ticks) : null;
 
     /// <summary>
     /// Recovers the sealed payload from a received envelope, or null if this is not a payload
