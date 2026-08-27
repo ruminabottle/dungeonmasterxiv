@@ -139,13 +139,26 @@ public sealed class ReleaseAsset
     /// noisy guard gets relaxed rather than fixed.
     /// </para>
     /// <para>
-    /// <b>The fields compared are exactly the ones the repository entry republishes</b>, plus
-    /// <c>AssemblyVersion</c>. That boundary is the check's own question — <i>does the entry
-    /// describe the artefact it links to?</i> — rather than a list someone has to keep in step: a
-    /// field nobody advertises cannot make the entry a false description, and every field that is
-    /// advertised can. <c>InternalName</c> is deliberately absent: it is derived from the project
-    /// name, so two builds cannot disagree on it without also disagreeing on the assembly's file
-    /// name, which <see cref="MustMatchTheAssembly"/> already refuses.
+    /// <b>The fields are enumerated by hand, and a test keeps the enumeration complete.</b> The
+    /// list covers every property <see cref="PluginManifest"/> carries, which is also every field
+    /// the repository entry republishes. An earlier version of this comment said the list was
+    /// derived from <see cref="RepositoryManifest.Build"/> "so it moves when that does" — that
+    /// described how the list was written and guaranteed nothing (BUG-24): a ninth property was
+    /// added, republished, and compared by nothing, with the whole suite green. The guarantee now
+    /// lives in <c>EveryFieldTheManifestCarriesIsComparedTests</c>, which varies each property in
+    /// turn and requires this method to refuse and name it.
+    /// <para>
+    /// It stays hand-written rather than reflective because the per-field message is the point:
+    /// <i>"Punchline: the build says X, the zip says Y"</i> ends an investigation where "the
+    /// manifests differ" starts one. What is mechanical is the proof of completeness, not the
+    /// comparison.
+    /// </para>
+    /// <para>
+    /// <c>InternalName</c> is absent and is not a property: it is a constant the entry republishes
+    /// directly, the source manifest carries no such field, and building under another assembly
+    /// name fails outright — so there is no build-produced zip whose <c>InternalName</c> differs
+    /// while a matching <c>DungeonMasterXIV.dll</c> is present.
+    /// </para>
     /// </para>
     /// </remarks>
     /// <param name="built">The built manifest the repository entry is generated from.</param>
@@ -182,7 +195,12 @@ public sealed class ReleaseAsset
             ("Punchline", built.Punchline, packaged.Punchline),
             ("Description", built.Description, packaged.Description),
             ("RepoUrl", built.RepoUrl, packaged.RepoUrl),
-            ("Tags", string.Join(", ", built.Tags), string.Join(", ", packaged.Tags)),
+            // Coalesced because an explicit "Tags": null in the zip deserialises to null and
+            // string.Join threw "Value cannot be null. (Parameter 'values')" -- a refusal naming
+            // neither the field, the file, nor what to do, in a method whose other refusals all do.
+            // Treated as no tags rather than as an error: null and [] mean the same thing here, so
+            // a zip carrying one against a build carrying the other is not a difference.
+            ("Tags", Spelt(built.Tags), Spelt(packaged.Tags)),
             ("DalamudApiLevel", $"{built.DalamudApiLevel}", $"{packaged.DalamudApiLevel}"),
             ("AssemblyVersion", built.AssemblyVersion, packaged.AssemblyVersion),
         })
@@ -193,6 +211,8 @@ public sealed class ReleaseAsset
             }
         }
     }
+
+    private static string Spelt(List<string>? tags) => string.Join(", ", tags ?? new List<string>());
 
     private PluginManifest PackagedManifest()
     {
