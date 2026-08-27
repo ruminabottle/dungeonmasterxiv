@@ -118,12 +118,28 @@ public class ReleaseAssetTests
 
     // The assembly side of the comparison gets the same treatment as the asset side: absent means
     // stop, not "nothing to compare against, so it matches".
-    [Fact]
-    public void AnAssemblyThatIsNotThereIsRefusedRatherThanTreatedAsAMatch()
+    //
+    // THE ASSERTION IS THE POINT, and it used to be ThrowsAny<Exception>. A CRASH SATISFIES THAT.
+    // Both cases below reach File.ReadAllBytes, but a missing DIRECTORY throws
+    // DirectoryNotFoundException -- a sibling of FileNotFoundException under IOException, not a
+    // subclass -- which escapes Program.cs's filter and aborts the run with a stack trace. The loose
+    // assertion passed either way, so it could not tell the working tool from the broken one. Naming
+    // the exception and asserting the message is what makes that difference visible.
+    [Theory]
+    [InlineData("no-such-directory-here")]
+    [InlineData(null)]
+    public void AnAssemblyThatIsNotThereIsRefusedRatherThanTreatedAsAMatch(string? missingDirectory)
     {
         var asset = ReleaseAsset.At(Assets.Zip(Assets.PackagerName, (Assets.PluginAssembly, ABuild)));
 
-        Assert.ThrowsAny<Exception>(
-            () => asset.MustMatchTheAssembly(Path.Combine(Path.GetTempPath(), "no-such", "DungeonMasterXIV.dll")));
+        // null exercises the easier case: the directory exists and only the file is absent.
+        var absent = missingDirectory is null
+            ? Assets.PathBeside(Assets.PluginAssembly)
+            : Path.Combine(Path.GetTempPath(), missingDirectory, Assets.PluginAssembly);
+
+        var failure = Assert.Throws<FileNotFoundException>(() => asset.MustMatchTheAssembly(absent));
+
+        Assert.Contains(absent, failure.Message, StringComparison.Ordinal);
+        Assert.Contains("Build the plugin", failure.Message, StringComparison.Ordinal);
     }
 }

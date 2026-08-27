@@ -73,6 +73,9 @@ internal static class Assets
     public static ReleaseAsset Any(string name = PackagerName) =>
         ReleaseAsset.At(Zip(name, (PluginAssembly, "a build")));
 
+    /// <summary>A path in a directory that DOES exist, for the file-absent-but-directory-present case.</summary>
+    public static string PathBeside(string name) => Fresh(name);
+
     private static string Fresh(string name)
     {
         var directory = Directory.CreateDirectory(

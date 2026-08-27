@@ -80,6 +80,20 @@ public sealed class ReleaseAsset
     /// <param name="assemblyPath">The built assembly the manifest's version was read from.</param>
     public void MustMatchTheAssembly(string assemblyPath)
     {
+        // This runs BEFORE PluginAssemblyVersion.Of, which used to be the first thing to touch
+        // --assembly and carried this guard. Without it here, reading a path whose DIRECTORY is
+        // missing throws DirectoryNotFoundException -- a SIBLING of FileNotFoundException under
+        // IOException, not a subclass -- so it escapes Program.cs's filter and the run ends in a
+        // stack trace instead of a sentence. Widening that filter to IOException would stop the
+        // crash and lose the sentence, which is the trade this file exists to refuse.
+        if (!System.IO.File.Exists(assemblyPath))
+        {
+            throw new FileNotFoundException(
+                $"No built plugin assembly at '{assemblyPath}' to compare the zip against. " +
+                "Build the plugin before generating a manifest.",
+                assemblyPath);
+        }
+
         using var archive = OpenZip();
 
         var packaged = archive.GetEntry(PluginAssemblyName)
