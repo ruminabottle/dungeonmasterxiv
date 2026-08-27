@@ -20,6 +20,7 @@
     "DownloadLinkTesting": "https://github.com/ruminabottle/dungeonmasterxiv/releases/download/v0.1.0/latest.zip",
     "DownloadLinkInstall": "https://github.com/ruminabottle/dungeonmasterxiv/releases/download/v0.1.0/latest.zip",
     "DownloadLinkUpdate": "https://github.com/ruminabottle/dungeonmasterxiv/releases/download/v0.1.0/latest.zip",
-    "DalamudApiLevel": 15
+    "DalamudApiLevel": 15,
+    "AssemblyVersion": "0.1.0.0"
   }
 ]
