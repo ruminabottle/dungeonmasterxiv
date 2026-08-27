@@ -126,6 +126,34 @@ public sealed class SessionRegistry
     public bool TryDeny(string code, byte[] joinerPublicKey, [NotNullWhen(true)] out string? connectionId) =>
         TryResolvePending(code, joinerPublicKey, admit: false, out connectionId);
 
+    /// <summary>
+    /// The connection waiting under <paramref name="joinerPublicKey"/>, <b>without resolving it</b>.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <see cref="TryAdmit"/> or <see cref="TryDeny"/> with a flag. Both of those
+    /// <b>remove</b> the pending entry, because both answer the request. A pending notice answers
+    /// nothing — it carries the host's key to a joiner who is still waiting (R-1.3a-i) — so routing
+    /// it must leave the gate exactly as it found it. A lookup that mutated would admit or strand
+    /// the joiner as a side effect of telling them something.
+    /// </remarks>
+    public bool TryGetPending(string code, byte[] joinerPublicKey, [NotNullWhen(true)] out string? connectionId)
+    {
+        ArgumentNullException.ThrowIfNull(joinerPublicKey);
+
+        lock (_gate)
+        {
+            connectionId = null;
+            if (!_byCode.TryGetValue(code, out var session)
+                || !session.Pending.TryGetValue(Convert.ToBase64String(joinerPublicKey), out var pending))
+            {
+                return false;
+            }
+
+            connectionId = pending;
+            return true;
+        }
+    }
+
     /// <summary>The connection hosting <paramref name="code"/>, if a session is live under it.</summary>
     public bool TryGetHost(string code, [NotNullWhen(true)] out string? hostConnectionId)
     {

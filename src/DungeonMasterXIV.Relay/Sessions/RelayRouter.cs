@@ -56,6 +56,12 @@ public sealed class RelayRouter(SessionRegistry registry)
             WireMessageType.JoinDenied or WireMessageType.JoinLapsed =>
                 RouteAdmission(envelope, code, senderConnectionId, admit: false),
 
+            // The host's key on its way to a joiner who is still waiting (R-1.3a-i). Its own arm and
+            // NOT RouteAdmission with a flag: that method resolves the pending entry as well as
+            // forwarding, so reusing it with admit:false would deliver this notice and deny the
+            // joiner in the same call. A message that answers nothing must move no gate.
+            WireMessageType.JoinPending => RouteJoinPending(envelope, code, senderConnectionId),
+
             // CodeAccepted and CodeRefused are the relay's own answers. A client sending one is not
             // a case the plugin can produce, so it is something hand-rolled talking to us, and the
             // relay must not launder it onward as though it had arbitrated.
@@ -170,6 +176,46 @@ public sealed class RelayRouter(SessionRegistry registry)
 
         return _registry.TryDeny(code.Value, envelope.PublicKey, out var rejected)
             ? RelayDecision.Forward(RelayOutcome.JoinerRejected, [rejected], closeAfterwards: true)
+            : RelayDecision.Drop(RelayOutcome.UnknownJoiner);
+    }
+
+    /// <summary>
+    /// Carries the host's public key to a joiner that is still waiting, so it can compare the
+    /// fingerprint before the DM decides (R-1.3a-i, A-1.3f-1).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Host-only, and that check is load-bearing rather than symmetry with
+    /// <see cref="RouteAdmission"/>.</b> This message is how a joiner learns which key to expect. A
+    /// relay that forwarded it from any connection would let a third party post a key of their own
+    /// choosing to the joiner, who would then compare the fingerprint of the substituted key and
+    /// find it matches — inverting the defence rather than weakening it. Refused, not obeyed.
+    /// </para>
+    /// <para>
+    /// <b>The gate is not touched.</b> The joiner stays pending: nobody has decided anything, and a
+    /// notice that quietly admitted or dropped its recipient would make "the DM is looking at your
+    /// request" into an answer (R-1.3b).
+    /// </para>
+    /// </remarks>
+    private RelayDecision RouteJoinPending(WireEnvelope envelope, SessionCode code, string senderConnectionId)
+    {
+        if (!_registry.TryGetHost(code.Value, out var hostConnectionId))
+        {
+            return RelayDecision.Drop(RelayOutcome.SessionNotFound);
+        }
+
+        if (!string.Equals(hostConnectionId, senderConnectionId, StringComparison.Ordinal))
+        {
+            return RelayDecision.Drop(RelayOutcome.AdmissionFromNonHost);
+        }
+
+        if (envelope.PublicKey is null)
+        {
+            return RelayDecision.Drop(RelayOutcome.MalformedEnvelope);
+        }
+
+        return _registry.TryGetPending(code.Value, envelope.PublicKey, out var waiting)
+            ? RelayDecision.Forward(RelayOutcome.PendingNoticeForwarded, [waiting])
             : RelayDecision.Drop(RelayOutcome.UnknownJoiner);
     }
 
