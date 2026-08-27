@@ -173,15 +173,24 @@ public class RelayLinkTests
         Assert.Equal(SessionFailure.RelayUnreachable, failure);
     }
 
-    // The reason the lock exists, exercised rather than described. Failures arrive off the socket
-    // thread while the game thread drains them. Fails if: the pair is not mutually excluded — as a
-    // torn read, a lost update, or a throw out of the collection underneath.
+    // THIS DOES NOT TEST THE LOCK, and I measured that rather than assuming it either way.
     //
-    // This cannot prove thread safety, and no test can. It is a pressure test: it fails reliably on
-    // an unsynchronised implementation and cannot certify a synchronised one. Said here so a green
-    // run is not read as a proof it is not.
+    // I first wrote this as a lock test, claiming it "fails reliably on an unsynchronised
+    // implementation". That was false. Removing BOTH locks from RelayLink leaves this green, three
+    // runs out of three: SessionFailure is an enum, so its read and write are already atomic, there
+    // is nothing to tear, and a lost update is indistinguishable from ordinary interleaving. The
+    // claim was the confident kind that never gets checked because it sounds like diligence.
+    //
+    // What it DOES establish: the two entry points can be driven concurrently without throwing, and
+    // every value that comes out is one that went in — which would catch an implementation that
+    // buffered into a plain collection, or one that composed a value rather than passing it through.
+    // That is worth having and is not what the lock is for.
+    //
+    // The lock's actual property — that a socket-thread callback cannot interleave with a drain — is
+    // not observable through this type's public surface. Reported as a finding rather than papered
+    // over with a test that would imply coverage it does not have.
     [Fact]
-    public async Task FailuresArrivingOffThreadAreNeverTornOrLost()
+    public async Task ConcurrentFailureTrafficNeitherThrowsNorInventsValues()
     {
         var (link, transport) = Link();
         var seen = new List<SessionFailure>();
