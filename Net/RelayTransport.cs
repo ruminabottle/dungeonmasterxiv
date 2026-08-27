@@ -92,8 +92,13 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
             return;
         }
 
-        _socket.Dispose();
+        // Cleared before the close is attempted, not after: the close is a bounded wait, and for its
+        // duration IsConnected must already read false rather than reporting a connection that is on
+        // its way out.
+        var socket = _socket;
         _socket = null;
+
+        CloseThenDispose(socket);
         _log.Information("Session relay connection closed.");
     }
 
@@ -111,6 +116,30 @@ public sealed class RelayTransport : ISessionTransport, IDisposable
 
     /// <inheritdoc />
     public void Dispose() => Disconnect();
+
+    // BUG-5. Disposing a socket never puts a close frame on the wire, so the relay is not told and
+    // holds the connection until its own idle reaper fires -- which then absorbs every ordinary
+    // disconnect as though it were a client that vanished. The output-only close is deliberate: this
+    // end has nothing further to say and does not need the peer's reply, so there is no round trip
+    // to wait on. A socket that never reached Open has no frame to send and is only disposed.
+    private void CloseThenDispose(ClientWebSocket socket)
+    {
+        if (socket.State is not (WebSocketState.Open or WebSocketState.CloseReceived))
+        {
+            socket.Dispose();
+            return;
+        }
+
+        var failure = TransportShutdown.CloseThenDispose(
+            token => socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, statusDescription: null, token),
+            socket.Dispose,
+            TransportShutdown.CloseTimeout);
+
+        if (failure is not null)
+        {
+            _log.Warning(failure, "The session relay connection was disposed without a completed close handshake.");
+        }
+    }
 
     private async Task ConnectAsync(ClientWebSocket socket, Uri relay, CancellationToken token)
     {

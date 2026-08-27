@@ -13,17 +13,17 @@ namespace DungeonMasterXIV.Net;
 public readonly struct SessionCode : IEquatable<SessionCode>
 {
     /// <summary>
-    /// The 24 permitted characters. Vowels are absent so a code cannot spell a word, which is what
-    /// removes the need for a profanity filter; L, S, Z, Q, 0, 1 and 5 are absent because they are
-    /// confusable read aloud or written down. R-1.2a states both reasons.
+    /// The 24 permitted characters. Defined by <see cref="SpeakableAlphabet"/>, which session
+    /// codes share with key fingerprints (R-1.3a) so the product has one alphabet rather than two
+    /// copies that must agree. Kept here as the name existing callers already use.
     /// </summary>
-    public const string Alphabet = "BCDFGHJKMNPRTVWXY2346789";
+    public const string Alphabet = SpeakableAlphabet.Characters;
 
     /// <summary>Characters per code. R-1.2a forbids lengthening this to improve guess resistance.</summary>
     public const int Length = 6;
 
-    /// <summary>Characters per displayed group, as in <c>BKD-7RM</c>.</summary>
-    public const int GroupSize = 3;
+    /// <summary>Characters per displayed group, as in <c>BKD-7RM</c>. Shared — see <see cref="Alphabet"/>.</summary>
+    public const int GroupSize = SpeakableAlphabet.GroupSize;
 
     private readonly string? _value;
 
@@ -72,7 +72,7 @@ public readonly struct SessionCode : IEquatable<SessionCode>
     }
 
     /// <summary>Renders the code the way it is read aloud and shown in the UI: <c>BKD-7RM</c>.</summary>
-    public string ToDisplayString() => $"{Value[..GroupSize]}-{Value[GroupSize..]}";
+    public string ToDisplayString() => SpeakableAlphabet.Group(Value);
 
     /// <inheritdoc />
     public bool Equals(SessionCode other) => string.Equals(_value, other._value, StringComparison.Ordinal);
