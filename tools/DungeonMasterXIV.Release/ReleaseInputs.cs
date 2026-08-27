@@ -9,10 +9,13 @@ namespace DungeonMasterXIV.Release;
 /// <b>Every one of these is required and none has a default.</b> A default would be a value this
 /// tool invented and presented to Dalamud as fact.
 /// <para>
-/// <b>None of them is typed at a command line either, except the tag.</b> The API level and the
-/// assembly version are read off the built artefact (R-7.3a). Against a field whose failure mode is
-/// silence — a wrong API level makes Dalamud never offer the plugin, with nothing written anywhere
-/// on our side — <b>a value nobody types is worth more than a value somebody confirms.</b>
+/// <b>No value here is typed at a command line except the tag.</b> The API level and the assembly
+/// version are read off the built artefact, and the asset name off the asset (R-7.3a). Paths to
+/// those artefacts are typed; the values taken from them are not, which is the distinction that
+/// matters — a path that is wrong fails immediately and loudly, a value that is wrong does not fail
+/// at all. Against a field whose failure mode is silence — a wrong API level makes Dalamud never
+/// offer the plugin, and a wrong asset name gives a tester a 404, with nothing written anywhere on
+/// our side — <b>a value nobody types is worth more than a value somebody confirms.</b>
 /// Confirmation is the step that degrades under time pressure; derivation does not.
 /// </para>
 /// </remarks>
@@ -23,11 +26,13 @@ namespace DungeonMasterXIV.Release;
 /// typed and never defaulted (R-7.3a).
 /// </param>
 /// <param name="RepoUrl">The plugin repository, for <c>RepoUrl</c> and for building download links.</param>
-public sealed record ReleaseInputs(string Tag, Version AssemblyVersion, int DalamudApiLevel, string RepoUrl)
+/// <param name="Asset">
+/// The built zip the release will carry. Supplied as a file rather than a name so that the name in
+/// the download link is read off the artefact and cannot be typed (R-7.3a's rule, third outing).
+/// </param>
+public sealed record ReleaseInputs(
+    string Tag, Version AssemblyVersion, int DalamudApiLevel, string RepoUrl, ReleaseAsset Asset)
 {
-    /// <summary>The asset name attached to the release, produced by DalamudPackager.</summary>
-    public const string AssetName = "DungeonMasterXIV.zip";
-
     /// <summary>
     /// Throws unless every input is present and usable. Called before anything is generated, so a
     /// bad input fails loudly at release time instead of producing a manifest that installs nothing.
@@ -55,5 +60,5 @@ public sealed record ReleaseInputs(string Tag, Version AssemblyVersion, int Dala
     }
 
     /// <summary>The download link for this release's asset. Always a tagged release, never a branch.</summary>
-    public string DownloadLink => $"{RepoUrl.TrimEnd('/')}/releases/download/{Tag}/{AssetName}";
+    public string DownloadLink => $"{RepoUrl.TrimEnd('/')}/releases/download/{Tag}/{Asset.Name}";
 }

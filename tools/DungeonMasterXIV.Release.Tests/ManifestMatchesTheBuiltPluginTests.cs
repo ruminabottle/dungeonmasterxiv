@@ -69,7 +69,7 @@ public class ManifestMatchesTheBuiltPluginTests
         var plugin = JsonSerializer.Deserialize<PluginManifest>(
             File.ReadAllText(Path.Combine(RepositoryRoot().FullName, "DungeonMasterXIV.json")))!;
         var manifest = RepositoryManifest.Build(
-            new ReleaseInputs("v0.1.0", fromTheArtefact, 13, plugin.RepoUrl), plugin);
+            new ReleaseInputs("v0.1.0", fromTheArtefact, 13, plugin.RepoUrl, Assets.Any()), plugin);
 
         using var document = JsonDocument.Parse(manifest);
         var fromTheManifest = document.RootElement.EnumerateArray().Single()

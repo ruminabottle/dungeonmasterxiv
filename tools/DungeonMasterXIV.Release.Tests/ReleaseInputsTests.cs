@@ -6,8 +6,10 @@ namespace DungeonMasterXIV.Release.Tests;
 
 public class ReleaseInputsTests
 {
-    private static ReleaseInputs Valid(string tag = "v0.1.0", int apiLevel = 13) =>
-        new(tag, new Version(0, 0, 0, 1), apiLevel, "https://github.com/ruminabottle/dungeonmasterxiv");
+    private const string Repo = "https://github.com/ruminabottle/dungeonmasterxiv";
+
+    private static ReleaseInputs Valid(string tag = "v0.1.0", int apiLevel = 13, string? assetName = null) =>
+        new(tag, new Version(0, 0, 0, 1), apiLevel, Repo, Assets.Any(assetName ?? Assets.PackagerName));
 
     [Fact]
     public void CompleteInputsValidate()
@@ -48,7 +50,7 @@ public class ReleaseInputsTests
     [InlineData("not a url")]
     public void ARepositoryUrlThatIsNotAbsoluteHttpsIsRefused(string repoUrl)
     {
-        var inputs = new ReleaseInputs("v0.1.0", new Version(1, 0), 13, repoUrl);
+        var inputs = new ReleaseInputs("v0.1.0", new Version(1, 0), 13, repoUrl, Assets.Any());
 
         Assert.Throws<ArgumentException>(inputs.Validate);
     }
@@ -58,7 +60,21 @@ public class ReleaseInputsTests
     public void TheDownloadLinkPointsAtTheTaggedReleaseAsset()
     {
         Assert.Equal(
-            "https://github.com/ruminabottle/dungeonmasterxiv/releases/download/v0.1.0/DungeonMasterXIV.zip",
+            $"{Repo}/releases/download/v0.1.0/{Assets.PackagerName}",
             Valid().DownloadLink);
+    }
+
+    // C19. The file name in the link is READ OFF THE ASSET, so the link moves when the file does.
+    // It used to be the constant "DungeonMasterXIV.zip", a name DalamudPackager has never written --
+    // it writes latest.zip -- which made every link 404 while the manifest, the release and the
+    // plugin were all fine. Two names rather than one: against the old constant the first case fails
+    // and the second passes, and a single case named latest.zip could be a constant that happened to
+    // be right rather than a name that was derived.
+    [Theory]
+    [InlineData("latest.zip")]
+    [InlineData("DungeonMasterXIV-v0.1.0.zip")]
+    public void TheLinkNamesTheFileTheAssetActuallyIs(string assetName)
+    {
+        Assert.EndsWith($"/{assetName}", Valid(assetName: assetName).DownloadLink, StringComparison.Ordinal);
     }
 }

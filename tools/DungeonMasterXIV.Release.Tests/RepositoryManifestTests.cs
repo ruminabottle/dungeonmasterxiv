@@ -26,7 +26,7 @@ public class RepositoryManifestTests
 
     private static JsonElement Entry(Version? version = null, string tag = "v0.1.0", int apiLevel = 13)
     {
-        var inputs = new ReleaseInputs(tag, version ?? new Version(0, 0, 0, 1), apiLevel, Repo);
+        var inputs = new ReleaseInputs(tag, version ?? new Version(0, 0, 0, 1), apiLevel, Repo, Assets.Any());
         var document = JsonDocument.Parse(RepositoryManifest.Build(inputs, APlugin()));
 
         Assert.Equal(JsonValueKind.Array, document.RootElement.ValueKind);
@@ -39,7 +39,7 @@ public class RepositoryManifestTests
     public void TheManifestIsAJsonArrayOfPluginEntries()
     {
         var manifest = RepositoryManifest.Build(
-            new ReleaseInputs("v0.1.0", new Version(0, 0, 0, 1), 13, Repo), APlugin());
+            new ReleaseInputs("v0.1.0", new Version(0, 0, 0, 1), 13, Repo, Assets.Any()), APlugin());
 
         using var document = JsonDocument.Parse(manifest);
 
@@ -169,7 +169,7 @@ public class RepositoryManifestTests
     [Fact]
     public void AManifestIsNotProducedFromIncompleteInputs()
     {
-        var inputs = new ReleaseInputs(string.Empty, new Version(1, 0), 13, Repo);
+        var inputs = new ReleaseInputs(string.Empty, new Version(1, 0), 13, Repo, Assets.Any());
 
         Assert.Throws<ArgumentException>(() => RepositoryManifest.Build(inputs, APlugin()));
     }
