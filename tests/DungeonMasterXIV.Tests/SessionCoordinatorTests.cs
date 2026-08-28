@@ -115,12 +115,12 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.ReceiveJoinRequest(Request("PEER-1"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD2"));
 
-        coordinator.Deny("PEER-1");
+        coordinator.Deny("PRBCD2");
 
         Assert.Empty(coordinator.Admissions.Pending);
-        Assert.False(coordinator.Audience.IsAdmitted("PEER-1"));
+        Assert.False(coordinator.Audience.IsAdmitted(PeerCodes.Of("PRBCD2")));
         Assert.Equal(0, coordinator.Audience.Count);
     }
 
@@ -131,12 +131,12 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.ReceiveJoinRequest(Request("PEER-1"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD2"));
 
-        coordinator.Admit("PEER-1");
+        coordinator.Admit("PRBCD2");
 
         Assert.Empty(coordinator.Admissions.Pending);
-        Assert.True(coordinator.Audience.IsAdmitted("PEER-1"));
+        Assert.True(coordinator.Audience.IsAdmitted(PeerCodes.Of("PRBCD2")));
     }
 
     // Fails if: ending a session leaves participants addressable, which would let state flow to
@@ -146,7 +146,7 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.Admit("PEER-1");
+        coordinator.Admit("PRBCD2");
 
         coordinator.StopHosting();
 
@@ -216,9 +216,9 @@ public class SessionCoordinatorTests
         var (coordinator, _) = Build();
         coordinator.StartHosting();
 
-        coordinator.ReceiveJoinRequest(Request("PEER-1"));
-        coordinator.ReceiveJoinRequest(Request("PEER-2"));
-        coordinator.ReceiveJoinRequest(Request("PEER-3"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD2"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD3"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD4"));
 
         Assert.Equal(3, coordinator.Admissions.Pending.Count);
     }
@@ -230,15 +230,15 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.ReceiveJoinRequest(Request("PEER-1"));
-        coordinator.ReceiveJoinRequest(Request("PEER-2"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD2"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD3"));
 
-        coordinator.Admit("PEER-1");
+        coordinator.Admit("PRBCD2");
 
         Assert.Single(coordinator.Admissions.Pending);
-        Assert.Contains(coordinator.Admissions.Pending, r => r.PeerCode == "PEER-2");
-        Assert.True(coordinator.Audience.IsAdmitted("PEER-1"));
-        Assert.False(coordinator.Audience.IsAdmitted("PEER-2"));
+        Assert.Contains(coordinator.Admissions.Pending, r => r.PeerCode == PeerCodes.Of("PRBCD3"));
+        Assert.True(coordinator.Audience.IsAdmitted(PeerCodes.Of("PRBCD2")));
+        Assert.False(coordinator.Audience.IsAdmitted(PeerCodes.Of("PRBCD3")));
     }
 
     // Fails if: a duplicate request adds a second prompt for the same person, which the DM would
@@ -247,8 +247,8 @@ public class SessionCoordinatorTests
     public void ARepeatedRequestFromTheSamePeerDoesNotStack()
     {
         var (coordinator, _) = Build();
-        coordinator.ReceiveJoinRequest(Request("PEER-1"));
-        coordinator.ReceiveJoinRequest(Request("PEER-1"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD2"));
+        coordinator.ReceiveJoinRequest(Request("PRBCD2"));
 
         Assert.Single(coordinator.Admissions.Pending);
     }
@@ -256,7 +256,7 @@ public class SessionCoordinatorTests
     private static readonly DateTimeOffset Now = new(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
 
     private static PendingAdmission Request(string peerCode) =>
-        new(peerCode, "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now));
+        new(PeerCodes.Of(peerCode), "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now));
 
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Build()
     {

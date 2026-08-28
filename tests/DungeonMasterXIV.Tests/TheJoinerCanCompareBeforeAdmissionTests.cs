@@ -138,7 +138,7 @@ public class TheJoinerCanCompareBeforeAdmissionTests
     // under test is the product's own rather than one the test arranged.
     private sealed class TwoClients
     {
-        private const string PeerCode = "PEER-1";
+        private const string PeerCode = "PRBCD2";
 
         private readonly FakeTransport _hostTransport = new();
         private readonly FakeTransport _joinerTransport = new();

@@ -74,7 +74,7 @@ internal sealed class RosterBroadcast
         }
 
         var roster = _audience.Recipients
-            .Select(peer => new RosterEntry(peer.PeerCode, peer.DisplayName.Value, peer.Role))
+            .Select(peer => new RosterEntry(peer.PeerCode.Value, peer.DisplayName.Value, peer.Role))
             .ToList();
 
         if (roster.Count == 0)

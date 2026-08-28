@@ -29,7 +29,7 @@ public sealed class PendingAdmission
     /// <param name="joinerPublicKey">The key they presented, echoed on acceptance (D-11).</param>
     /// <param name="displayName">What they call themselves (R-1.3e). Shown, never acted on.</param>
     public PendingAdmission(
-        string peerCode,
+        PeerCode peerCode,
         string fingerprint,
         AdmissionDeadline deadline,
         RelinkClaim relink = default,
@@ -54,7 +54,13 @@ public sealed class PendingAdmission
     public DisplayName DisplayName { get; }
 
     /// <summary>The requester's session-scoped code.</summary>
-    public string PeerCode { get; }
+    /// <remarks>
+    /// A <see cref="Net.PeerCode"/> rather than a <c>string</c>. This is the value every action is
+    /// keyed on, so it is the one that must not be forgeable into the queue — see
+    /// <see cref="DisplayName"/> directly above for the label that deliberately behaves the
+    /// opposite way.
+    /// </remarks>
+    public PeerCode PeerCode { get; }
 
     /// <summary>The fingerprint both parties compare out of band.</summary>
     public string Fingerprint { get; }

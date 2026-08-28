@@ -21,9 +21,9 @@ public class AdmissionOnTheWireTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+        coordinator.ReceiveJoinRequest("PRBCD2", joiner.PublicKey, Now);
 
-        coordinator.Admit("PEER-1");
+        coordinator.Admit("PRBCD2");
 
         var sent = Decode(transport).Single(e => e.Type == WireMessageType.JoinAccepted);
         Assert.Equal(joiner.PublicKey, sent.PublicKey);
@@ -37,8 +37,8 @@ public class AdmissionOnTheWireTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
-        coordinator.Admit("PEER-1");
+        coordinator.ReceiveJoinRequest("PRBCD2", joiner.PublicKey, Now);
+        coordinator.Admit("PRBCD2");
 
         var acceptance = Decode(transport).Single(e => e.Type == WireMessageType.JoinAccepted);
         var code = coordinator.Host.Code!.Value;
@@ -57,9 +57,9 @@ public class AdmissionOnTheWireTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+        coordinator.ReceiveJoinRequest("PRBCD2", joiner.PublicKey, Now);
 
-        coordinator.Deny("PEER-1");
+        coordinator.Deny("PRBCD2");
 
         Assert.Contains(Decode(transport), e => e.Type == WireMessageType.JoinDenied);
     }
@@ -71,11 +71,11 @@ public class AdmissionOnTheWireTests
     {
         var (coordinator, _) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+        coordinator.ReceiveJoinRequest("PRBCD2", joiner.PublicKey, Now);
 
-        coordinator.Deny("PEER-1");
+        coordinator.Deny("PRBCD2");
 
-        Assert.False(coordinator.Audience.IsAdmitted("PEER-1"));
+        Assert.False(coordinator.Audience.IsAdmitted(PeerCodes.Of("PRBCD2")));
         Assert.Empty(coordinator.Audience.Recipients);
     }
 
@@ -87,7 +87,7 @@ public class AdmissionOnTheWireTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+        coordinator.ReceiveJoinRequest("PRBCD2", joiner.PublicKey, Now);
 
         coordinator.Tick(TimeSpan.Zero, Now.Add(AdmissionDeadline.Window));
 
@@ -105,7 +105,7 @@ public class AdmissionOnTheWireTests
         var (coordinator, _) = Hosting();
         using var joiner = new SessionKeyExchange();
 
-        var request = coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
+        var request = coordinator.ReceiveJoinRequest("PRBCD2", joiner.PublicKey, Now);
 
         Assert.Equal(
             KeyFingerprint.Of(joiner.PublicKey, coordinator.HostKeys!.PublicKey),

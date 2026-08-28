@@ -51,6 +51,15 @@ public sealed class SessionContent
 /// names are self-declared and two participants may hold the same one (A-1.2d), so nothing may key
 /// on <see cref="DisplayName"/>. <see cref="PeerCode"/> is session-scoped and derived, so it
 /// identifies within this session and links nothing across two (A-1.2a).
+/// <para>
+/// <b>Both are raw strings here on purpose, and that is not the door <see cref="PeerCode"/> closes.</b>
+/// This is the wire DTO: it is what System.Text.Json reads and writes, so the fields must stay the
+/// primitives the format declares (D-14 additive-only — changing a field's serialised shape is a
+/// wire change, not a refactor). Validation belongs at the boundary that decodes it, which is
+/// <see cref="SessionContentCodec"/>, and the validated types live on the domain side in
+/// <see cref="AdmittedPeer"/> and <see cref="PendingAdmission"/>. <see cref="DisplayName"/> was
+/// already carried this way for exactly this reason.
+/// </para>
 /// </remarks>
 /// <param name="PeerCode">The participant's session-scoped code.</param>
 /// <param name="DisplayName">What they call themselves. Shown, never acted on.</param>

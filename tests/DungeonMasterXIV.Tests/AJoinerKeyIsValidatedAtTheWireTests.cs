@@ -106,7 +106,7 @@ public class AJoinerKeyIsValidatedAtTheWireTests
         // Snapshot first: Admit decides the request, which mutates the pending list underneath us.
         foreach (var peerCode in coordinator.Admissions.Pending.Select(request => request.PeerCode).ToList())
         {
-            coordinator.Admit(peerCode);
+            coordinator.Admit(peerCode.Value);
         }
 
         var code = coordinator.Host.Code!.Value;
