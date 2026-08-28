@@ -25,6 +25,24 @@ namespace DungeonMasterXIV.Tests;
 /// </remarks>
 public class TheRosterTravelsSealedTests
 {
+    /// <summary>
+    /// A peer code of the shape the product actually produces.
+    /// </summary>
+    /// <remarks>
+    /// <b>Derived, not typed.</b> These fixtures used <c>"PEER-1"</c>, which
+    /// <c>AdmissionControl.PeerCodeFor</c> can never emit — <c>E</c>, <c>-</c> and <c>1</c> are not
+    /// in <see cref="SpeakableAlphabet.Characters"/>. That was invisible while nothing checked, and
+    /// BUG-57 added the check. Built from the same two constants the codec validates against, so it
+    /// cannot become impossible again if the alphabet or the length ever moves.
+    /// <para>
+    /// <b>The TAIL of the alphabet, not the head, and that is load-bearing.</b> The head is
+    /// <c>"BCDFGH"</c>, which is also the session code these fixtures use — and a session code
+    /// travels in the CLEAR, because the relay has to read it to route. A peer code equal to it
+    /// makes "the roster is ciphertext" fail for a reason that has nothing to do with the roster.
+    /// </para>
+    /// </remarks>
+    private static readonly string PeerCode = SpeakableAlphabet.Characters[^SessionCode.Length..];
+
     private static readonly DateTimeOffset Now = new(2026, 8, 28, 4, 0, 0, TimeSpan.Zero);
 
     // The channel, end to end on the host side: the roster is sealed to the participant's own key
@@ -34,13 +52,13 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
-        coordinator.Admit("PEER-1");
+        coordinator.Admit(PeerCode);
 
         var content = OpenAs(joiner, coordinator, transport);
         var entry = Assert.Single(content.Roster!);
-        Assert.Equal("PEER-1", entry.PeerCode);
+        Assert.Equal(PeerCode, entry.PeerCode);
         Assert.Equal("Ysera", entry.DisplayName);
     }
 
@@ -53,13 +71,13 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
-        coordinator.Admit("PEER-1");
+        coordinator.Admit(PeerCode);
 
         var payload = Payloads(transport).Single();
         Assert.DoesNotContain("Ysera", System.Text.Encoding.UTF8.GetString(payload.Payload!));
-        Assert.DoesNotContain("PEER-1", System.Text.Encoding.UTF8.GetString(payload.Payload!));
+        Assert.DoesNotContain(PeerCode, System.Text.Encoding.UTF8.GetString(payload.Payload!));
 
         // And the seal is a real one: a stranger holding the session code still cannot open it.
         // ThrowsAny, not Throws: .NET raises AuthenticationTagMismatchException, a SUBCLASS of
@@ -82,11 +100,11 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
-        coordinator.Admit("PEER-1");
+        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.Admit(PeerCode);
         var before = Payloads(transport).Count;
 
-        coordinator.Admit("PEER-1");
+        coordinator.Admit(PeerCode);
 
         Assert.Single(coordinator.Audience.Recipients);
         Assert.True(Payloads(transport).Count > before, "Re-admitting sent no roster, so a reconnecting client would see nothing.");
@@ -100,9 +118,9 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, _) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
-        var peer = coordinator.Admit("PEER-1");
+        var peer = coordinator.Admit(PeerCode);
 
         Assert.Equal(joiner.PublicKey, peer.PublicKey);
         Assert.Equal("Ysera", peer.DisplayName.Value);
@@ -118,14 +136,14 @@ public class TheRosterTravelsSealedTests
         var (coordinator, transport) = Hosting();
         using var good = new SessionKeyExchange();
         coordinator.ReceiveJoinRequest("PEER-JUNK", [1, 2, 3], Now, displayName: DisplayName.OrNone("Mallory"));
-        coordinator.ReceiveJoinRequest("PEER-1", good.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCode, good.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
         coordinator.Admit("PEER-JUNK");
-        coordinator.Admit("PEER-1");
+        coordinator.Admit(PeerCode);
 
         // The good participant is still reachable, and the junk one is admitted but unaddressable.
         var content = OpenAs(good, coordinator, transport);
-        Assert.Contains(content.Roster!, e => e.PeerCode == "PEER-1");
+        Assert.Contains(content.Roster!, e => e.PeerCode == PeerCode);
         Assert.Equal(2, coordinator.Audience.Recipients.Count);
     }
 
@@ -142,7 +160,7 @@ public class TheRosterTravelsSealedTests
         player.Tick(TimeSpan.Zero, Now);
 
         var entry = Assert.Single(player.Roster);
-        Assert.Equal("PEER-1", entry.PeerCode);
+        Assert.Equal(PeerCode, entry.PeerCode);
         Assert.Equal("Ysera", entry.DisplayName);
     }
 
@@ -171,7 +189,7 @@ public class TheRosterTravelsSealedTests
     {
         var plaintext = SessionContentCodec.Encode(new SessionContent
         {
-            Roster = [new RosterEntry("PEER-1", name, SessionRole.Player)],
+            Roster = [new RosterEntry(PeerCode, name, SessionRole.Player)],
         });
 
         var sealedPayload = SessionCipher.Seal(
@@ -235,7 +253,7 @@ public class TheRosterTravelsSealedTests
         transport.Deliver(Sealed(hostKeys, player, code, "Ysera\nforged"));
         player.Tick(TimeSpan.Zero, Now);
 
-        Assert.Equal("PEER-1", Assert.Single(player.Roster).PeerCode);
+        Assert.Equal(PeerCode, Assert.Single(player.Roster).PeerCode);
     }
 
     // D-11: after this chunk these bytes are load-bearing for a seal, so a handed-out array is one a
@@ -246,8 +264,8 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, _) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
-        var peer = coordinator.Admit("PEER-1");
+        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        var peer = coordinator.Admit(PeerCode);
 
         var handedOut = peer.PublicKey!;
         handedOut[0] ^= 0xFF;
