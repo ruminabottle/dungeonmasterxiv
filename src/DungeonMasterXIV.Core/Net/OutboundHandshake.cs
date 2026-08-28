@@ -109,7 +109,7 @@ internal sealed class OutboundHandshake
     /// </para>
     /// <para>
     /// <b>On readiness, not on connection, and the difference is the whole reason this is here
-    /// rather than in <see cref="SynchroniseTransport"/>.</b>
+    /// rather than in <see cref="SessionCoordinator.SynchroniseTransport"/>.</b>
     /// <see cref="ISessionTransport.Send"/> discards a frame that arrives before the socket opens,
     /// and <see cref="ISessionTransport.IsConnected"/> is already true while a connect is in flight.
     /// Sending on the return from <c>Connect</c> would therefore have produced the same silence

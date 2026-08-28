@@ -107,9 +107,12 @@ public class TheJoinerCanClaimAParticipantTests
 
         public bool IsReadyToSend => IsConnected;
 
-        public event Action<SessionFailure>? Failed;
+        // Declared because the interface requires them and deliberately never raised: these tests
+        // assert only what the client SENDS. Empty accessors rather than a suppression, so the fact
+        // that nothing arrives here is visible at the member instead of hidden behind a pragma.
+        public event Action<SessionFailure>? Failed { add { } remove { } }
 
-        public event Action<byte[]>? Received;
+        public event Action<byte[]>? Received { add { } remove { } }
 
         public void Connect(Uri relay) => IsConnected = true;
 
