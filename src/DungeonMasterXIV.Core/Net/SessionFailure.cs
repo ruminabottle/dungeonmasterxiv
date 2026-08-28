@@ -61,6 +61,23 @@ public enum SessionFailure
     /// </para>
     /// </remarks>
     RelayAddressUnreadable = 7,
+
+    /// <summary>
+    /// The connection to the relay never finished opening before the clock ran out (BUG-38).
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="RegistrationNotAnswered"/>, which is the case where the socket DID
+    /// open and the relay then said nothing. Reporting this as that one told a user whose firewall
+    /// was dropping the connection that the relay had accepted it and that their network was not the
+    /// problem — ruling out the actual cause by name, which is worse than merely naming the wrong
+    /// party.
+    /// <para>
+    /// A refused port fails in about a millisecond and never reaches here. A DROPPED one hangs the
+    /// full timeout, which is why this is invisible on a machine whose network refuses and shows up
+    /// on the other end of "test it with a friend".
+    /// </para>
+    /// </remarks>
+    ConnectionNeverOpened = 8,
 }
 
 /// <summary>
@@ -102,6 +119,12 @@ public static class SessionFailureMessage
             "The relay address in settings could not be read, so nothing was contacted — this says "
             + "nothing about the relay or about your own network. Check what you typed in settings: "
             + "it has to be a full address beginning with wss://, like " + RelayEndpoint.Default + ".",
+        SessionFailure.ConnectionNeverOpened =>
+            "The connection to the relay never finished opening — it was still being attempted when "
+            + "time ran out. That can be the relay, and it can equally be something between you and "
+            + "it: a firewall that silently drops a connection looks exactly like a relay that is "
+            + "not there, where one that refuses fails immediately. Check your own network as well "
+            + "as the relay address in settings.",
         SessionFailure.RegistrationNotAnswered =>
             "The relay accepted the connection but never confirmed the session code. The relay is "
             + "reachable, so this is not your network — try starting the session again, and if it "

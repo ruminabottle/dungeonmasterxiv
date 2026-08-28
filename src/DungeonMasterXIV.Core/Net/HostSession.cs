@@ -134,18 +134,23 @@ public sealed class HostSession
     /// open-ended spinner (A-1.5b).
     /// </summary>
     /// <param name="elapsedSinceStart">How long the current registration has been running.</param>
+    /// <param name="requestWasSent">
+    /// Whether the code request actually went out. The caller knows; this type cannot. Without it a
+    /// timeout cannot tell "the relay heard us and said nothing" from "we never reached the relay",
+    /// and reported the first for both (BUG-38).
+    /// </param>
     /// <returns>True if this call ended the attempt.</returns>
-    public bool ExpireIfRegistrationTimedOut(TimeSpan elapsedSinceStart)
+    public bool ExpireIfRegistrationTimedOut(TimeSpan elapsedSinceStart, bool requestWasSent)
     {
         if (Phase != HostingPhase.Registering || elapsedSinceStart < RegistrationTimeout)
         {
             return false;
         }
 
-        // NOT RelayUnreachable. Reaching this line means the connection was made and the relay never
-        // confirmed the code — a relay that could not be reached fails earlier and elsewhere
-        // (BUG-36).
-        Fail(SessionFailure.RegistrationNotAnswered);
+        Fail(requestWasSent
+            ? SessionFailure.RegistrationNotAnswered
+            : SessionFailure.ConnectionNeverOpened);
+
         return true;
     }
 }

@@ -262,7 +262,11 @@ public sealed class SessionCoordinator
 
         _timeInPhase += sinceLastTick;
 
-        var expired = Host.ExpireIfRegistrationTimedOut(_timeInPhase);
+        // _requestedCode is set only after the socket reported ready and the CodeRequest actually
+        // went out, so it is the record of whether we ever got to speak. Without it the timeout
+        // could not tell "the relay heard us and said nothing" from "we never reached the relay",
+        // and reported the first for both (BUG-38).
+        var expired = Host.ExpireIfRegistrationTimedOut(_timeInPhase, _requestedCode is not null);
         expired |= Join.ExpireIfContactTimedOut(_timeInPhase);
 
         if (expired)

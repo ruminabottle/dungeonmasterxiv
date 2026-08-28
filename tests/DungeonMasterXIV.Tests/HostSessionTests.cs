@@ -68,15 +68,32 @@ public class HostSessionTests
         var session = new HostSession();
         session.Start(Code);
 
-        Assert.True(session.ExpireIfRegistrationTimedOut(HostSession.RegistrationTimeout));
+        Assert.True(session.ExpireIfRegistrationTimedOut(HostSession.RegistrationTimeout, requestWasSent: true));
 
         Assert.Equal(HostingPhase.Failed, session.Phase);
 
-        // NOT RelayUnreachable, and the change is the point rather than a detail (BUG-36). Reaching
-        // a registration timeout means the connection succeeded and the relay never confirmed the
-        // code; saying "unreachable" sent an evening into DNS and TLS on a healthy relay.
+        // NOT RelayUnreachable (BUG-36) — but note this now says so because the CALLER states the
+        // request went out, not because reaching a timeout implies it. The old comment here claimed
+        // the latter as a guarantee of the code path, and it was false: a hung connect reached this
+        // line having never connected (BUG-38). The sentence is gone rather than corrected, because
+        // it is the sentence that misled three readers in one evening.
         Assert.Equal(SessionFailure.RegistrationNotAnswered, session.Failure);
         Assert.False(session.RequiresRelayConnection);
+    }
+
+    // BUG-38, at the unit the decision is made in. Fails if: a timeout reached WITHOUT the request
+    // ever going out is reported as one the relay heard and ignored — which told a user whose
+    // firewall was dropping the connection that their network was not the problem.
+    [Fact]
+    public void ATimeoutReachedWithoutSendingTheRequestIsNotAnUnansweredRegistration()
+    {
+        var session = new HostSession();
+        session.Start(Code);
+
+        Assert.True(session.ExpireIfRegistrationTimedOut(HostSession.RegistrationTimeout, requestWasSent: false));
+
+        Assert.Equal(SessionFailure.ConnectionNeverOpened, session.Failure);
+        Assert.NotEqual(SessionFailure.RegistrationNotAnswered, session.Failure);
     }
 
     // Fails if: the timeout fires early and kills a registration that was still in progress.
@@ -86,7 +103,7 @@ public class HostSessionTests
         var session = new HostSession();
         session.Start(Code);
 
-        Assert.False(session.ExpireIfRegistrationTimedOut(HostSession.RegistrationTimeout - TimeSpan.FromSeconds(1)));
+        Assert.False(session.ExpireIfRegistrationTimedOut(HostSession.RegistrationTimeout - TimeSpan.FromSeconds(1), requestWasSent: true));
 
         Assert.Equal(HostingPhase.Registering, session.Phase);
     }
@@ -100,7 +117,7 @@ public class HostSessionTests
         session.Start(Code);
         session.Registered();
 
-        Assert.False(session.ExpireIfRegistrationTimedOut(TimeSpan.FromHours(3)));
+        Assert.False(session.ExpireIfRegistrationTimedOut(TimeSpan.FromHours(3), requestWasSent: true));
 
         Assert.Equal(HostingPhase.Hosting, session.Phase);
     }
