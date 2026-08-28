@@ -56,9 +56,15 @@ public class TheAdmissionPromptCopyIsTheRuledCopyTests
     [InlineData("AdmissionDisclosure", RuledDisclosure)]
     [InlineData("CompareOutOfBand", RuledCompareOutOfBand)]
     [InlineData("UnverifiedWarning", RuledUnverifiedWarning)]
-    public void TheShippedStringIsTheRuledString(string constant, string ruled)
+    // The parameter is named for the CONSTRAINT, not for a pin. It was "ruled:", which asserted a
+    // provenance two of these three do not have: SQ-38 settled that R-1.7a governs only the strings
+    // it QUOTES, and CompareOutOfBand and UnverifiedWarning are engineering-authored under its
+    // constraints instead. They are byte-pinned here because they were reviewed and must not drift,
+    // which is a different claim from having been ruled -- and A-1.7e is what actually holds their
+    // class, in ShippedCopyMeetsItsConstraintsTests.
+    public void TheShippedStringIsTheRuledString(string constant, string required)
     {
-        Assert.Equal(ruled, ShippedConstant(constant));
+        Assert.Equal(required, ShippedConstant(constant));
     }
 
     // The defect this replaces, named so a revert is loud rather than merely different. The old
