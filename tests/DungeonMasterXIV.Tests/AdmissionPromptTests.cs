@@ -9,12 +9,15 @@ public class AdmissionPromptTests
     private static readonly DateTimeOffset Now = new(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
 
     private static PendingAdmission Request(RelinkClaim relink) =>
-        new("PEER-3", "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), relink);
+        Request(relink, DisplayName.OrNone("Bob"));
+
+    private static PendingAdmission Request(RelinkClaim relink, DisplayName name) =>
+        new("PEER-3", "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), relink, null, name);
 
     [Fact]
     public void AnOrdinaryRequestAsksToJoin()
     {
-        Assert.Equal("PEER-3 is asking to join", AdmissionPrompt.Headline(Request(RelinkClaim.None)));
+        Assert.Equal("Bob (PEER-3) is asking to join", AdmissionPrompt.Headline(Request(RelinkClaim.None)));
     }
 
     [Fact]
@@ -22,12 +25,12 @@ public class AdmissionPromptTests
     {
         var headline = AdmissionPrompt.Headline(Request(new RelinkClaim(true, "Ysera")));
 
-        Assert.Equal("PEER-3 is asking to relink as Ysera", headline);
+        Assert.Equal("Bob (PEER-3) is asking to relink as Ysera", headline);
     }
 
-    // The prompt still identifies the REQUESTER by their session-scoped code, never by a character
-    // name (R-1.3, D-8). The relink label names who they claim to be within this campaign; it does
-    // not replace the peer code, and both appear.
+    // The prompt still identifies the REQUESTER by their session-scoped code. R-1.3e reversed the
+    // old show-no-name rule, so a name now appears too - but it did NOT make the name an
+    // identifier, and the relink label still does not replace the peer code. All three appear.
     [Fact]
     public void TheRequesterIsStillIdentifiedByPeerCodeOnARelink()
     {
@@ -53,7 +56,35 @@ public class AdmissionPromptTests
     {
         var headline = AdmissionPrompt.Headline(Request(new RelinkClaim(true, string.Empty)));
 
-        Assert.Equal("PEER-3 is asking to join", headline);
+        Assert.Equal("Bob (PEER-3) is asking to join", headline);
         Assert.DoesNotContain("relink as", headline);
+    }
+
+    // R-1.3e, and the criterion that would be missed: names are self-declared and nothing prevents
+    // two requesters sending the same one (A-1.2d). Two identical names must still read as two
+    // different requesters, and the peer code is the only thing in the headline that can do it.
+    [Fact]
+    public void TwoRequestersWithTheSameNameAreStillToldApart()
+    {
+        var name = DisplayName.OrNone("Bob");
+        var first = new PendingAdmission("PEER-3", "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), default, null, name);
+        var second = new PendingAdmission("PEER-9", "CDF-GHJ-KMN-PR", AdmissionDeadline.DecidedByHost(Now), default, null, name);
+
+        Assert.NotEqual(AdmissionPrompt.Headline(first), AdmissionPrompt.Headline(second));
+        Assert.Contains("PEER-3", AdmissionPrompt.Headline(first));
+        Assert.Contains("PEER-9", AdmissionPrompt.Headline(second));
+    }
+
+    // A requester that sent no name - an older build, or one whose name was refused - still gets a
+    // prompt, and it says so rather than rendering a gap where a name would be. A DM meeting a
+    // blank would read it as a rendering fault and look past the fingerprint beside it.
+    [Fact]
+    public void ARequesterThatNamedItselfNothingIsStillNamedSomething()
+    {
+        var headline = AdmissionPrompt.Headline(Request(RelinkClaim.None, DisplayName.None));
+
+        Assert.Contains(DisplayName.Unstated, headline);
+        Assert.Contains("PEER-3", headline);
+        Assert.DoesNotContain("()", headline);
     }
 }

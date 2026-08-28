@@ -33,6 +33,7 @@ public static class EnvelopeCodec
             PublicKey = envelope.PublicKey,
             HostPublicKey = envelope.HostPublicKey,
             DeadlineUtcTicks = envelope.DeadlineUtcTicks,
+            DisplayName = envelope.DisplayName,
             ClaimedParticipantId = envelope.ClaimedParticipantId,
         };
 

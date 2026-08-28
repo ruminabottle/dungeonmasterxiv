@@ -48,7 +48,8 @@ public sealed class Plugin : IDalamudPlugin
         IDalamudPluginInterface pluginInterface,
         ICommandManager commandManager,
         IPluginLog log,
-        IFramework framework)
+        IFramework framework,
+        IObjectTable objects)
     {
         _log = log;
 
@@ -63,7 +64,7 @@ public sealed class Plugin : IDalamudPlugin
         _sessionCoordinator = new SessionCoordinator(
             _relayTransport,
             () => _configurationStore.Configuration.Settings.RelayAddress);
-        _sessionWindow = new SessionWindow(_sessionCoordinator);
+        _sessionWindow = new SessionWindow(_sessionCoordinator, new LocalCharacterName(objects).Current);
         _mainWindow.OpenSession = _sessionWindow.Open;
         _campaignListWindow = new CampaignListWindow(_campaignStore);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);

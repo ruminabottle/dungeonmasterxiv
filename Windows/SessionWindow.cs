@@ -53,13 +53,23 @@ public sealed class SessionWindow : Window
         + "session. Your players are still holding the old one - read them the new code below.";
 
     private readonly SessionCoordinator _coordinator;
+
+    /// <summary>
+    /// What to call ourselves when asking to join (R-1.3e). A function rather than a value because
+    /// the answer changes with who is logged in, and a name captured once is stale exactly when a
+    /// player switches character — see <c>LocalCharacterName</c>.
+    /// </summary>
+    private readonly Func<DisplayName> _displayName;
+
     private string _codeEntry = string.Empty;
 
     /// <param name="coordinator">The session layer this window reflects.</param>
-    public SessionWindow(SessionCoordinator coordinator)
+    /// <param name="displayName">What to call ourselves when joining (R-1.3e). Asked each time.</param>
+    public SessionWindow(SessionCoordinator coordinator, Func<DisplayName> displayName)
         : base("Dungeon Master XIV session###dmx-session")
     {
         _coordinator = coordinator;
+        _displayName = displayName;
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new System.Numerics.Vector2(420, 260),
@@ -187,7 +197,10 @@ public sealed class SessionWindow : Window
             ImGui.InputText("Session code", ref _codeEntry, 16);
             if (ImGui.Button("Request to join") && SessionCode.TryParse(_codeEntry, out var code))
             {
-                _coordinator.RequestJoin(code);
+                // R-1.3e: we name ourselves on the request, so the DM's prompt has a name without a
+                // second round trip. It is a label and never a credential — the fingerprint the DM
+                // compares is what decides, and it is unaffected by whatever this returns.
+                _coordinator.RequestJoin(code, _displayName());
             }
         }
 
