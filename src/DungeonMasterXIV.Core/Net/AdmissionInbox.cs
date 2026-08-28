@@ -109,6 +109,12 @@ public sealed class AdmissionInbox
     /// What this client does with what arrives — see <see cref="InboundHandlers"/>. Omitting it
     /// drains without acting, which is what a caller that only wants the derived key wants.
     /// </param>
+    /// <param name="log">
+    /// Where this drain reports content it accepted but had to strip — see
+    /// <see cref="SessionContentCodec.TryDecode"/>. Optional because a caller that only wants
+    /// the derived key has nobody to tell; a null log makes the strip silent, which is the
+    /// condition BUG-70 was about rather than an accepted default.
+    /// </param>
     /// <returns>The derived session key if this drain admitted us, otherwise null.</returns>
     /// <remarks>
     /// A frame that does not parse is dropped rather than raised — anything can arrive from a relay

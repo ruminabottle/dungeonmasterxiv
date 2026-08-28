@@ -129,6 +129,13 @@ public static class SessionContentCodec
     /// </summary>
     /// <param name="plaintext">Bytes returned by <see cref="SessionCipher.Open"/>.</param>
     /// <param name="content">The decoded document, or null.</param>
+    /// <param name="log">
+    /// Where a stripped roster entry is reported. Optional, and null is the silent case: the
+    /// entry is refused either way, so this decides whether a developer finds out, not whether
+    /// the door holds (BUG-70). The rejected value is deliberately never written — a log is the
+    /// artefact most likely to be pasted into a bug report, so echoing an attacker-chosen
+    /// string here would be a disclosure decision, not a formatting one.
+    /// </param>
     /// <returns>Whether the bytes were a document this build understands.</returns>
     public static bool TryDecode(
         byte[] plaintext,
