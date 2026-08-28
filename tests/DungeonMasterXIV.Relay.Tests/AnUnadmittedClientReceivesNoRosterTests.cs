@@ -30,6 +30,24 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// </remarks>
 public sealed class AnUnadmittedClientReceivesNoRosterTests
 {
+    /// <summary>
+    /// A peer code of the shape the product actually produces.
+    /// </summary>
+    /// <remarks>
+    /// <b>Derived, not typed.</b> These fixtures used <c>"PEER-1"</c>, which
+    /// <c>AdmissionControl.PeerCodeFor</c> can never emit — <c>E</c>, <c>-</c> and <c>1</c> are not
+    /// in <see cref="SpeakableAlphabet.Characters"/>. That was invisible while nothing checked, and
+    /// BUG-57 added the check. Built from the same two constants the codec validates against, so it
+    /// cannot become impossible again if the alphabet or the length ever moves.
+    /// <para>
+    /// <b>The TAIL of the alphabet, not the head, and that is load-bearing.</b> The head is
+    /// <c>"BCDFGH"</c>, which is also the session code these fixtures use — and a session code
+    /// travels in the CLEAR, because the relay has to read it to route. A peer code equal to it
+    /// makes "the roster is ciphertext" fail for a reason that has nothing to do with the roster.
+    /// </para>
+    /// </remarks>
+    private static readonly string PeerCode = SpeakableAlphabet.Characters[^SessionCode.Length..];
+
     /// <summary>Long enough that a real forward would have landed, short enough not to stall a run.</summary>
     private static readonly TimeSpan LongEnoughToHaveArrived = TimeSpan.FromMilliseconds(750);
 
@@ -97,7 +115,7 @@ public sealed class AnUnadmittedClientReceivesNoRosterTests
             forwarded.AssociatedData());
 
         Assert.True(SessionContentCodec.TryDecode(plaintext, out var content));
-        Assert.Equal("PEER-1", Assert.Single(content!.Roster!).PeerCode);
+        Assert.Equal(PeerCode, Assert.Single(content!.Roster!).PeerCode);
     }
 
     /// <summary>
@@ -107,7 +125,7 @@ public sealed class AnUnadmittedClientReceivesNoRosterTests
     {
         var plaintext = SessionContentCodec.Encode(new SessionContent
         {
-            Roster = [new RosterEntry("PEER-1", "Ysera", SessionRole.Player)],
+            Roster = [new RosterEntry(PeerCode, "Ysera", SessionRole.Player)],
         });
 
         var sealedPayload = SessionCipher.Seal(
@@ -132,6 +150,6 @@ public sealed class AnUnadmittedClientReceivesNoRosterTests
         var onTheWire = Encoding.UTF8.GetString(EnvelopeCodec.Encode(envelope));
 
         Assert.DoesNotContain("Ysera", onTheWire, StringComparison.Ordinal);
-        Assert.DoesNotContain("PEER-1", onTheWire, StringComparison.Ordinal);
+        Assert.DoesNotContain(PeerCode, onTheWire, StringComparison.Ordinal);
     }
 }
