@@ -1,0 +1,160 @@
+using System;
+using System.Collections.Generic;
+using DungeonMasterXIV.Net;
+using Xunit;
+
+namespace DungeonMasterXIV.Tests;
+
+/// <summary>
+/// A-1.17a and BUG-53: exclusivity ends when the SEAT ends, never when the link does.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>An admitted joiner whose link drops was offered "Start session" while the DM was still holding
+/// their place</b> — R-1.3h violated by the commonest failure there is, a network hiccup. A-1.17a is
+/// the machine criterion for it and <b>nothing referenced it before this file</b>.
+/// </para>
+/// <para>
+/// <b>Driven through the COORDINATOR, deliberately.</b> QA-3's repro drives <see cref="JoinAttempt"/>
+/// in isolation, which is enough to demonstrate the bug and not enough to test the fix: at that level
+/// the seat clock does not exist, so a build that keyed the decision on the coordinator would pass
+/// while a build that keyed it on the attempt's phase would too. The predicate under test is the one
+/// the window actually calls.
+/// </para>
+/// <para>
+/// <b>Both halves, and the second is not optional.</b> Suppression alone locks a user out of hosting
+/// forever, because nothing would ever expire the seat — a safe-looking partial that removes a
+/// working control, which is worse than the bug.
+/// </para>
+/// </remarks>
+public class ADroppedJoinerKeepsItsSeatTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 8, 28, 18, 0, 0, TimeSpan.Zero);
+    private static readonly SessionCode Code = SessionCode.FromValid("BKD7RM");
+
+    /// <summary>Longer than any window this client holds, so expiry is reached in one tick.</summary>
+    private static readonly TimeSpan PastEveryWindow = TimeSpan.FromHours(1);
+
+    // The bug. Fails on origin/main before this fix: the phase moves to Failed and the window offers
+    // a host affordance while the seat is still resumable.
+    [Fact]
+    public void AnAdmittedJoinerWhoseLinkDropsIsStillInASession()
+    {
+        var (joiner, _) = Admitted();
+
+        joiner.Fail(SessionFailure.ConnectionLost);
+
+        Assert.Equal(JoinPhase.Failed, joiner.Join.Phase);
+        Assert.True(joiner.InAJoinedSession, "The seat is still resumable, so hosting must not be offered.");
+    }
+
+    // The other half. Without it the suppression above never lifts and the user can never host again
+    // — which is why this could not ship as a quick one-line hotfix.
+    [Fact]
+    public void OnceTheSeatWindowExpiresHostingIsOfferedAgain()
+    {
+        var (joiner, _) = Admitted();
+        joiner.Fail(SessionFailure.ConnectionLost);
+
+        joiner.Tick(PastEveryWindow, Now);
+
+        Assert.False(joiner.InAJoinedSession, "The seat has lapsed, so hosting must be available again.");
+    }
+
+    // The discrimination the phase cannot make. A join that never succeeded holds no seat, so a
+    // blanket "Failed means still in a session" would lock this user out of hosting for the window —
+    // and would contradict MayRequestAgain, which treats Failed as retryable.
+    [Fact]
+    public void AJoinThatNeverSucceededHoldsNoSeat()
+    {
+        var transport = new FakeTransport();
+        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default);
+        joiner.RequestJoin(Code, DisplayName.OrNone("Bob"));
+        joiner.SynchroniseTransport();
+        joiner.Tick(TimeSpan.Zero, Now);
+
+        joiner.Fail(SessionFailure.ConnectionLost);
+
+        Assert.Equal(JoinPhase.Failed, joiner.Join.Phase);
+        Assert.False(joiner.InAJoinedSession, "Never admitted, so there is no seat to hold.");
+        Assert.True(joiner.Join.MayRequestAgain);
+    }
+
+    // R-1.5a: a deliberate quit removes the seat immediately. Asking to join again is that, so the
+    // suppression must lift at once rather than waiting out a window nobody is using.
+    [Fact]
+    public void AskingToJoinAgainReleasesTheSeatAtOnce()
+    {
+        var (joiner, _) = Admitted();
+        joiner.Fail(SessionFailure.ConnectionLost);
+        Assert.True(joiner.InAJoinedSession);
+
+        joiner.RequestJoin(Code, DisplayName.OrNone("Bob"));
+
+        Assert.False(joiner.Grace.IsRunning);
+        Assert.True(joiner.InAJoinedSession, "Contacting again is itself being in a session.");
+
+        joiner.Fail(SessionFailure.SessionCodeNotActive);
+        Assert.False(joiner.InAJoinedSession, "The new attempt never reached Admitted, so no seat.");
+    }
+
+    // The seat clock is NOT the grace window, and starting one must not start the other. Grace is
+    // what this client allows a lost HOST; the seat is how long its own place is worth waiting on.
+    [Fact]
+    public void ADroppedJoinerDoesNotStartTheHostsGraceWindow()
+    {
+        var (joiner, _) = Admitted();
+
+        joiner.Fail(SessionFailure.ConnectionLost);
+
+        Assert.False(joiner.Grace.IsRunning, "Grace is the host's window; a joiner dropping is not that.");
+    }
+
+    /// <summary>A coordinator driven to Admitted the way a real joiner reaches it.</summary>
+    private static (SessionCoordinator Joiner, SessionKeyExchange HostKeys) Admitted()
+    {
+        var transport = new FakeTransport();
+        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default);
+        var hostKeys = new SessionKeyExchange();
+
+        joiner.RequestJoin(Code, DisplayName.OrNone("Bob"));
+        joiner.SynchroniseTransport();
+        joiner.Tick(TimeSpan.Zero, Now);
+
+        // The host answers the request before it decides (R-1.3a-i), which is what moves the joiner
+        // to AwaitingDecision — Admitted is unreachable from Contacting.
+        transport.Deliver(WireEnvelope.ForJoinPending(
+            Code,
+            joiner.JoinerKeys!.PublicKey,
+            hostKeys.PublicKey,
+            AdmissionDeadline.DecidedByHost(Now)));
+        joiner.Tick(TimeSpan.Zero, Now);
+
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, joiner.JoinerKeys!.PublicKey, hostKeys.PublicKey));
+        joiner.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal(JoinPhase.Admitted, joiner.Join.Phase);
+        return (joiner, hostKeys);
+    }
+
+    private sealed class FakeTransport : ISessionTransport
+    {
+        public List<byte[]> Sent { get; } = new();
+
+        public bool IsConnected { get; private set; }
+
+        public bool IsReadyToSend => IsConnected;
+
+        public event Action<SessionFailure>? Failed { add { } remove { } }
+
+        public event Action<byte[]>? Received;
+
+        public void Connect(Uri relay) => IsConnected = true;
+
+        public void Disconnect() => IsConnected = false;
+
+        public void Send(byte[] envelope) => Sent.Add(envelope);
+
+        public void Deliver(WireEnvelope envelope) => Received?.Invoke(EnvelopeCodec.Encode(envelope));
+    }
+}
