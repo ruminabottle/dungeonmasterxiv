@@ -280,7 +280,16 @@ public class DisplayNameAliasTests
     {
         public event Action<SessionFailure>? Failed;
 
-        public event Action<byte[]>? Received;
+        // Explicit accessors rather than a field-like event, because nothing here delivers an
+        // inbound frame: A-1.2g is about what LEAVES the client, so this double is send-only. A
+        // field-like event nothing raises is CS0067, and the alternatives were both worse — a
+        // Deliver method no test calls is dead code, and inventing an inbound test to justify the
+        // event would be writing a test to satisfy a compiler rather than a requirement.
+        public event Action<byte[]>? Received
+        {
+            add { }
+            remove { }
+        }
 
         public List<byte[]> Sent { get; } = new();
 
