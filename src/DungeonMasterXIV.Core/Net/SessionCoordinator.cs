@@ -24,19 +24,15 @@ public sealed class SessionCoordinator
             new AdmissionAnnouncer(transport),
             () => Host.Code,
             () => HostKeys);
+        _handshake = new OutboundHandshake(_link, Host, Join, () => JoinerKeys);
     }
 
     private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
+    private readonly OutboundHandshake _handshake;
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
     private JoinPhase _tickedJoinPhase = JoinPhase.Idle;
-    private string? _requestedCode;
-
-    private string? _requestedJoinCode;
-
-    /// <summary>What we call ourselves on the join request we are about to send (R-1.3e).</summary>
-    private DisplayName _joinDisplayName;
 
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();
@@ -87,7 +83,7 @@ public sealed class SessionCoordinator
         HostKeys?.Dispose();
         HostKeys = new SessionKeyExchange();
         Host.Start(SessionCodeGenerator.Next());
-        _requestedCode = null;
+        _handshake.ForgetHostRegistration();
         SynchroniseTransport();
     }
 
@@ -103,7 +99,7 @@ public sealed class SessionCoordinator
         _admissions.Clear();
         _inbox.Clear();
         Grace.Reset();
-        _requestedCode = null;
+        _handshake.ForgetHostRegistration();
         SynchroniseTransport();
     }
 
@@ -129,7 +125,7 @@ public sealed class SessionCoordinator
     /// <param name="name">What to call ourselves in the DM's prompt. Never authenticates.</param>
     public void RequestJoin(SessionCode code, DisplayName name)
     {
-        _joinDisplayName = name;
+        _handshake.JoiningAs(name);
         JoinerKeys?.Dispose();
         JoinerKeys = new SessionKeyExchange();
         SessionKey = null;
@@ -138,7 +134,7 @@ public sealed class SessionCoordinator
         // Cleared so asking again for the SAME code re-sends. R-1.3c makes that the ordinary case —
         // a lapse means the DM was mid-encounter, not that they refused — and the host's equivalent
         // never needs it because R-1.2a regenerates a fresh code on every refusal.
-        _requestedJoinCode = null;
+        _handshake.ForgetJoinRequest();
         SynchroniseTransport();
     }
 
@@ -265,8 +261,7 @@ public sealed class SessionCoordinator
         ApplyReportedFailure();
         SessionKey = _inbox.Drain(Join, JoinerKeys, Host, (key, name) => _admissions.AdmitToTheQueue(key, now, name))
             ?? SessionKey;
-        RegisterWithRelayWhenReady();
-        SendJoinRequestWhenReady();
+        _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);
 
         if (Grace.Tick(sinceLastTick))
@@ -286,11 +281,10 @@ public sealed class SessionCoordinator
 
         _timeInPhase += sinceLastTick;
 
-        // _requestedCode is set only after the socket reported ready and the CodeRequest actually
-        // went out, so it is the record of whether we ever got to speak. Without it the timeout
-        // could not tell "the relay heard us and said nothing" from "we never reached the relay",
-        // and reported the first for both (BUG-38).
-        var expired = Host.ExpireIfRegistrationTimedOut(_timeInPhase, _requestedCode is not null);
+        // Whether we ever got to speak, which is the difference between "the relay heard us and
+        // said nothing" and "we never reached the relay" (BUG-38). It lives on the handshake now,
+        // because the handshake is what knows whether the request left.
+        var expired = Host.ExpireIfRegistrationTimedOut(_timeInPhase, _handshake.RegistrationWasSent);
         expired |= Join.ExpireIfContactTimedOut(_timeInPhase);
 
         if (expired)
@@ -299,90 +293,6 @@ public sealed class SessionCoordinator
         }
     }
 
-    /// <summary>
-    /// Claims the session's code with the relay, once the socket can actually carry the request
-    /// (R-1.2a).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>This is the step BUG-36 was missing entirely.</b> <c>WireEnvelope.ForCodeRequest</c> had no
-    /// production call site at all: the host connected, sent nothing, and sat in
-    /// <see cref="HostingPhase.Registering"/> until it timed out and told the DM the relay was
-    /// unreachable — while the relay held the connection open waiting for the client to speak first.
-    /// </para>
-    /// <para>
-    /// <b>On readiness, not on connection, and the difference is the whole reason this is here
-    /// rather than in <see cref="SynchroniseTransport"/>.</b>
-    /// <see cref="ISessionTransport.Send"/> discards a frame that arrives before the socket opens,
-    /// and <see cref="ISessionTransport.IsConnected"/> is already true while a connect is in flight.
-    /// Sending on the return from <c>Connect</c> would therefore have produced the same silence
-    /// through a different door — and left a fix that looked right in review and failed in the
-    /// product.
-    /// </para>
-    /// <para>
-    /// Guarded by <b>which code was requested</b> rather than by a "have we sent one" flag. R-1.2a
-    /// answers a refusal by regenerating and asking again, so the interesting question is whether
-    /// the code currently held has been claimed — a boolean would be true after the refused attempt
-    /// and the replacement code would never be requested.
-    /// </para>
-    /// </remarks>
-    private void RegisterWithRelayWhenReady()
-    {
-        if (Host.Phase != HostingPhase.Registering
-            || Host.Code is not { } code
-            || string.Equals(_requestedCode, code.Value, StringComparison.Ordinal)
-            || !_link.IsReadyToSend)
-        {
-            return;
-        }
-
-        _requestedCode = code.Value;
-        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(code)));
-    }
-
-    /// <summary>
-    /// Asks to be admitted, once the socket can actually carry the request (R-1.3).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>BUG-40, and it is BUG-36's twin one message along.</b> <c>WireEnvelope.ForJoinRequest</c>
-    /// had no production call site at all: the joiner connected, sent nothing, and sat in
-    /// <see cref="JoinPhase.Contacting"/> until it timed out and told the player the relay was
-    /// unreachable — while the relay held the connection open waiting for the client to speak. The
-    /// host half of this was found and fixed and nobody asked the same question of this side.
-    /// </para>
-    /// <para>
-    /// <b>On readiness, not on connection</b>, for the reason
-    /// <see cref="RegisterWithRelayWhenReady"/> records: <see cref="ISessionTransport.Send"/>
-    /// discards a frame that arrives before the socket opens, and <c>IsConnected</c> is already true
-    /// while a connect is in flight. Sending from <see cref="RequestJoin(SessionCode)"/> would look right and
-    /// reproduce BUG-40 with a fix in place.
-    /// </para>
-    /// <para>
-    /// <b>This sends <see cref="WireEnvelope.ForJoinRequest(SessionCode, byte[])"/> and never
-    /// <see cref="WireEnvelope.ForRelinkRequest"/>.</b> That is a decision, not an oversight: no
-    /// production path reaches a relink. Nothing on this side holds the participant id a claim would
-    /// carry, and nothing on the host side reads <c>ClaimedParticipantId</c> back off the wire, so
-    /// wiring the relink factory here would need both ends invented. Making a relink send a plain
-    /// join request to look complete is the specific thing that must not happen — R-1.5's claim would
-    /// be silently dropped while every test passed.
-    /// </para>
-    /// </remarks>
-    private void SendJoinRequestWhenReady()
-    {
-        if (Join.Phase != JoinPhase.Contacting
-            || Join.Code is not { } code
-            || JoinerKeys is null
-            || string.Equals(_requestedJoinCode, code.Value, StringComparison.Ordinal)
-            || !_link.IsReadyToSend)
-        {
-            return;
-        }
-
-        _requestedJoinCode = code.Value;
-        _link.Send(EnvelopeCodec.Encode(
-            WireEnvelope.ForJoinRequest(code, JoinerKeys.PublicKey, _joinDisplayName)));
-    }
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
     public void Detach() => _link.Detach();
