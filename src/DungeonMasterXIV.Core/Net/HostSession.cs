@@ -31,7 +31,7 @@ public sealed class HostSession
     /// <remarks>
     /// <b>This exists because of a gap the relay cannot close.</b> The relay frees a session code the
     /// moment the host disconnects, but R-1.4 keeps the session alive through a grace window — so for
-    /// those two minutes the DM believes they still hold their code while anyone may claim it. If
+    /// that window the DM believes they still hold their code while anyone may claim it. If
     /// somebody does, R-1.2a's regenerate-and-retry hands the host a <b>new</b> code, and the DM
     /// carries on hosting while every player is holding the old one. Nothing is broken, nothing errors,
     /// and the session quietly cannot be joined.
