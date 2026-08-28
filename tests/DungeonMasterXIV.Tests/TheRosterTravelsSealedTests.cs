@@ -52,9 +52,9 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCodes.Of(PeerCode), joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
-        coordinator.Admit(PeerCode);
+        coordinator.Admit(PeerCodes.Of(PeerCode));
 
         var content = OpenAs(joiner, coordinator, transport);
         var entry = Assert.Single(content.Roster!);
@@ -71,9 +71,9 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCodes.Of(PeerCode), joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
-        coordinator.Admit(PeerCode);
+        coordinator.Admit(PeerCodes.Of(PeerCode));
 
         var payload = Payloads(transport).Single();
         Assert.DoesNotContain("Ysera", System.Text.Encoding.UTF8.GetString(payload.Payload!));
@@ -100,11 +100,11 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, transport) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
-        coordinator.Admit(PeerCode);
+        coordinator.ReceiveJoinRequest(PeerCodes.Of(PeerCode), joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.Admit(PeerCodes.Of(PeerCode));
         var before = Payloads(transport).Count;
 
-        coordinator.Admit(PeerCode);
+        coordinator.Admit(PeerCodes.Of(PeerCode));
 
         Assert.Single(coordinator.Audience.Recipients);
         Assert.True(Payloads(transport).Count > before, "Re-admitting sent no roster, so a reconnecting client would see nothing.");
@@ -118,9 +118,9 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, _) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCodes.Of(PeerCode), joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
-        var peer = coordinator.Admit(PeerCode);
+        var peer = coordinator.Admit(PeerCodes.Of(PeerCode));
 
         Assert.Equal(joiner.PublicKey, peer.PublicKey);
         Assert.Equal("Ysera", peer.DisplayName.Value);
@@ -135,11 +135,11 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, transport) = Hosting();
         using var good = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("JNKBCD", [1, 2, 3], Now, displayName: DisplayName.OrNone("Mallory"));
-        coordinator.ReceiveJoinRequest(PeerCode, good.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        coordinator.ReceiveJoinRequest(PeerCodes.Of("JNKBCD"), [1, 2, 3], Now, displayName: DisplayName.OrNone("Mallory"));
+        coordinator.ReceiveJoinRequest(PeerCodes.Of(PeerCode), good.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
 
-        coordinator.Admit("JNKBCD");
-        coordinator.Admit(PeerCode);
+        coordinator.Admit(PeerCodes.Of("JNKBCD"));
+        coordinator.Admit(PeerCodes.Of(PeerCode));
 
         // The good participant is still reachable, and the junk one is admitted but unaddressable.
         var content = OpenAs(good, coordinator, transport);
@@ -264,8 +264,8 @@ public class TheRosterTravelsSealedTests
     {
         var (coordinator, _) = Hosting();
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest(PeerCode, joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
-        var peer = coordinator.Admit(PeerCode);
+        coordinator.ReceiveJoinRequest(PeerCodes.Of(PeerCode), joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        var peer = coordinator.Admit(PeerCodes.Of(PeerCode));
 
         var handedOut = peer.PublicKey!;
         handedOut[0] ^= 0xFF;

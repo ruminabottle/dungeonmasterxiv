@@ -117,7 +117,7 @@ public class SessionCoordinatorTests
         coordinator.StartHosting();
         coordinator.ReceiveJoinRequest(Request("PRBCD2"));
 
-        coordinator.Deny("PRBCD2");
+        coordinator.Deny(PeerCodes.Of("PRBCD2"));
 
         Assert.Empty(coordinator.Admissions.Pending);
         Assert.False(coordinator.Audience.IsAdmitted(PeerCodes.Of("PRBCD2")));
@@ -133,7 +133,7 @@ public class SessionCoordinatorTests
         coordinator.StartHosting();
         coordinator.ReceiveJoinRequest(Request("PRBCD2"));
 
-        coordinator.Admit("PRBCD2");
+        coordinator.Admit(PeerCodes.Of("PRBCD2"));
 
         Assert.Empty(coordinator.Admissions.Pending);
         Assert.True(coordinator.Audience.IsAdmitted(PeerCodes.Of("PRBCD2")));
@@ -146,7 +146,7 @@ public class SessionCoordinatorTests
     {
         var (coordinator, _) = Build();
         coordinator.StartHosting();
-        coordinator.Admit("PRBCD2");
+        coordinator.Admit(PeerCodes.Of("PRBCD2"));
 
         coordinator.StopHosting();
 
@@ -233,7 +233,7 @@ public class SessionCoordinatorTests
         coordinator.ReceiveJoinRequest(Request("PRBCD2"));
         coordinator.ReceiveJoinRequest(Request("PRBCD3"));
 
-        coordinator.Admit("PRBCD2");
+        coordinator.Admit(PeerCodes.Of("PRBCD2"));
 
         Assert.Single(coordinator.Admissions.Pending);
         Assert.Contains(coordinator.Admissions.Pending, r => r.PeerCode == PeerCodes.Of("PRBCD3"));

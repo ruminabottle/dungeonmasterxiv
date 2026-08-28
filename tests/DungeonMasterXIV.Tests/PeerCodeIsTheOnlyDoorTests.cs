@@ -28,11 +28,12 @@ namespace DungeonMasterXIV.Tests;
 /// <item><b>The wire DTO</b> — <c>RosterEntry</c> carries primitives because that is what the JSON
 /// format declares, and changing a serialised field's shape is a wire change, not a refactor (D-14).
 /// This one is permanent.</item>
-/// <item><b>The held-file seam</b> — <c>SessionCoordinator</c> and the <c>string</c> overloads on
-/// <c>AdmissionControl</c> that exist to feed it. <c>SessionCoordinator.cs</c> is held by DMXENG-12,
-/// the v0.1.5 release blocker. <b>When that merges, those entries are deleted from this list and the
-/// overloads with them, and this test must still pass.</b> That is the whole remaining task, written
-/// down where it cannot be forgotten.</item>
+/// <item><b>The held-file seam — GONE, and its removal is the point.</b> Six entries lived here
+/// while <c>SessionCoordinator.cs</c> was held by DMXENG-12: its three <c>string</c> methods, and
+/// the three <c>AdmissionControl</c> overloads that existed only to feed them. Those signatures now
+/// take <see cref="PeerCode"/>, the overloads are deleted, and the six entries went with them while
+/// this file stayed green. <b>The control caught the intermediate state</b> — doors closed, entries
+/// left behind — which is what checking an allowlist in BOTH directions buys.</item>
 /// </list>
 /// <para>
 /// <b>What a green run does NOT mean.</b> It means no member takes or exposes a peer code as a bare
@@ -60,19 +61,6 @@ public sealed class PeerCodeIsTheOnlyDoorTests
             + "alone was listed, which is the point of deriving this rather than naming members "
             + "by hand. PERMANENT.",
 
-        ["SessionCoordinator.ReceiveJoinRequest"] =
-            "SessionCoordinator.cs is HELD by DMXENG-12 (v0.1.5 release blocker). CLOSES when it merges.",
-        ["SessionCoordinator.Admit"] =
-            "SessionCoordinator.cs is HELD by DMXENG-12 (v0.1.5 release blocker). CLOSES when it merges.",
-        ["SessionCoordinator.Deny"] =
-            "SessionCoordinator.cs is HELD by DMXENG-12 (v0.1.5 release blocker). CLOSES when it merges.",
-
-        ["AdmissionControl.Receive"] =
-            "The string overload exists ONLY to feed the held coordinator. CLOSES with it.",
-        ["AdmissionControl.Admit"] =
-            "The string overload exists ONLY to feed the held coordinator. CLOSES with it.",
-        ["AdmissionControl.Deny"] =
-            "The string overload exists ONLY to feed the held coordinator. CLOSES with it.",
     };
 
     // THE UNIVERSAL. Fails when a member takes a peer code as a bare string without being listed --

@@ -138,37 +138,6 @@ public sealed class AdmissionControl
     /// match the keys is worse than none, because the DM compares it and concludes it is safe.
     /// The deadline is decided here too: R-1.3c puts that decision on the DM's client (D-3), once.
     /// </remarks>
-    /// <remarks>
-    /// <b>THE LAST RAW-STRING DOOR, and it is deliberately still open.</b> Every other entrance to a
-    /// peer code in this assembly now takes a <see cref="Net.PeerCode"/>. This overload survives
-    /// because <c>SessionCoordinator</c> calls it with a <c>string</c> and that file is held by
-    /// DMXENG-12, the v0.1.5 release blocker. It is the one seam left, it is named here so nobody has
-    /// to find it, and it closes in the same PR the moment the coordinator is free.
-    /// <para>
-    /// A code that does not parse yields <c>null</c> — <b>no request is recorded</b>. That is the
-    /// drop rather than the degrade: see <see cref="Net.PeerCode"/> for why an identity behaves the
-    /// opposite way from a <see cref="DisplayName"/>.
-    /// </para>
-    /// </remarks>
-    public PendingAdmission? Receive(
-        string peerCode,
-        byte[] joinerPublicKey,
-        DateTimeOffset now,
-        RelinkClaim relink = default,
-        DisplayName displayName = default) =>
-        PeerCode.TryParse(peerCode, out var parsed)
-            ? Receive(parsed, joinerPublicKey, now, relink, displayName)
-            : null;
-
-    /// <summary>
-    /// Builds and records a request from what arrived on the wire.
-    /// </summary>
-    /// <remarks>
-    /// The fingerprint is computed here rather than passed in, so no caller can hand the prompt a
-    /// string that does not correspond to the keys actually exchanged — a fingerprint that does not
-    /// match the keys is worse than none, because the DM compares it and concludes it is safe.
-    /// The deadline is decided here too: R-1.3c puts that decision on the DM's client (D-3), once.
-    /// </remarks>
     public PendingAdmission? Receive(
         PeerCode peerCode,
         byte[] joinerPublicKey,
@@ -214,33 +183,6 @@ public sealed class AdmissionControl
     /// Whether the DM compared the fingerprint is taken from the request rather than passed in, so
     /// an admission cannot be recorded as verified unless the DM actually said so (R-1.3a).
     /// </remarks>
-    /// <remarks>
-    /// The <c>string</c> seam, for the same held-file reason as <see cref="Receive(string, byte[], DateTimeOffset, RelinkClaim, DisplayName)"/>.
-    /// <para>
-    /// <b>A code this product could not have generated THROWS rather than admitting anybody.</b>
-    /// It cannot arrive from the wire — the production path is the prompt handing back a
-    /// <see cref="Net.PeerCode"/> it was given — so reaching here with an unparseable code is a
-    /// programming error, and the previous behaviour was to admit a participant under it.
-    /// </para>
-    /// </remarks>
-    /// <exception cref="ArgumentException">The code is not one this product generates.</exception>
-    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player) =>
-        PeerCode.TryParse(peerCode, out var parsed)
-            ? Admit(parsed, role)
-            : throw new ArgumentException(
-                $"'{peerCode}' is not a peer code this product generates, so there is nobody to admit.",
-                nameof(peerCode));
-
-    /// <summary>
-    /// Admits the pending participant. Only after this does anything become addressable to them —
-    /// see <see cref="SessionAudience"/>, which is where D-13's None level is enforced.
-    /// </summary>
-    /// <param name="peerCode">The requester's session-scoped code.</param>
-    /// <param name="role">What they may do (E-11). Admission itself stays DM-only.</param>
-    /// <remarks>
-    /// Whether the DM compared the fingerprint is taken from the request rather than passed in, so
-    /// an admission cannot be recorded as verified unless the DM actually said so (R-1.3a).
-    /// </remarks>
     public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player)
     {
         var request = Desk.Decide(peerCode);
@@ -266,20 +208,6 @@ public sealed class AdmissionControl
     /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
     /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
     /// </summary>
-    /// <remarks>
-    /// The <c>string</c> seam, for the same held-file reason as <see cref="Receive(string, byte[], DateTimeOffset, RelinkClaim, DisplayName)"/>.
-    /// A code this product could not have generated denies nobody, because it named nobody. Silent
-    /// rather than throwing: unlike <see cref="Admit(string, SessionRole)"/> there is no participant
-    /// to get wrong, and refusing to deny is the same outcome as denying somebody who is not there.
-    /// </remarks>
-    public void Deny(string peerCode)
-    {
-        if (PeerCode.TryParse(peerCode, out var parsed))
-        {
-            Deny(parsed);
-        }
-    }
-
     /// <summary>
     /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
     /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).

@@ -86,7 +86,7 @@ public class TheHostConsumesAnInboundJoinRequestTests
         transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, joiner.PublicKey));
         coordinator.Tick(TimeSpan.Zero, Now);
 
-        coordinator.Admit(Assert.Single(coordinator.Admissions.Pending).PeerCode.Value);
+        coordinator.Admit(Assert.Single(coordinator.Admissions.Pending).PeerCode);
 
         var accepted = Sent(transport).Single(e => e.Type == WireMessageType.JoinAccepted);
         Assert.Equal(joiner.PublicKey, accepted.PublicKey);
@@ -184,7 +184,7 @@ public class TheHostConsumesAnInboundJoinRequestTests
 
         var chosen = coordinator.Admissions.Pending
             .Single(p => p.JoinerPublicKey!.SequenceEqual(keys[admitted]));
-        coordinator.Admit(chosen.PeerCode.Value);
+        coordinator.Admit(chosen.PeerCode);
 
         // The other is still waiting on the DM, not silently let in alongside.
         var stillPending = Assert.Single(coordinator.Admissions.Pending);

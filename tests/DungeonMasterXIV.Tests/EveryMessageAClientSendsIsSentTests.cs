@@ -88,15 +88,15 @@ public class EveryMessageAClientSendsIsSentTests
 
         [WireMessageType.JoinPending] = new(
             Origin.Client, "the host sends its key before deciding (R-1.3a-i)",
-            s => { s.Hosting(); s.Coordinator.ReceiveJoinRequest("PRBCD2", s.JoinerKey, Now); }),
+            s => { s.Hosting(); s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now); }),
 
         [WireMessageType.JoinAccepted] = new(
             Origin.Client, "the host admits (R-1.3b)",
             s =>
             {
                 s.Hosting();
-                s.Coordinator.ReceiveJoinRequest("PRBCD2", s.JoinerKey, Now);
-                s.Coordinator.Admit("PRBCD2");
+                s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now);
+                s.Coordinator.Admit(PeerCodes.Of("PRBCD2"));
             }),
 
         [WireMessageType.JoinDenied] = new(
@@ -104,8 +104,8 @@ public class EveryMessageAClientSendsIsSentTests
             s =>
             {
                 s.Hosting();
-                s.Coordinator.ReceiveJoinRequest("PRBCD2", s.JoinerKey, Now);
-                s.Coordinator.Deny("PRBCD2");
+                s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now);
+                s.Coordinator.Deny(PeerCodes.Of("PRBCD2"));
             }),
 
         [WireMessageType.JoinLapsed] = new(
@@ -113,7 +113,7 @@ public class EveryMessageAClientSendsIsSentTests
             s =>
             {
                 s.Hosting();
-                s.Coordinator.ReceiveJoinRequest("PRBCD2", s.JoinerKey, Now);
+                s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now);
                 s.Coordinator.Tick(TimeSpan.Zero, Now + TimeSpan.FromHours(1));
             }),
 

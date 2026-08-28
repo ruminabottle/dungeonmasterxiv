@@ -110,7 +110,7 @@ internal sealed class AdmissionPromptView
             // mind has to happen where a test is watching.
             if (ImGui.Button($"Admit##{request.PeerCode}"))
             {
-                _coordinator.Admit(request.PeerCode.Value);
+                _coordinator.Admit(request.PeerCode);
             }
 
             if (AdmissionPrompt.Favoured(request) == AdmissionAction.Admit)
@@ -121,7 +121,7 @@ internal sealed class AdmissionPromptView
             ImGui.SameLine();
             if (ImGui.Button($"Deny##{request.PeerCode}"))
             {
-                _coordinator.Deny(request.PeerCode.Value);
+                _coordinator.Deny(request.PeerCode);
             }
         }
     }
