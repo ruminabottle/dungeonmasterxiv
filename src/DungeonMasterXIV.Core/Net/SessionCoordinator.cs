@@ -31,9 +31,11 @@ public sealed class SessionCoordinator
         ISessionTransport transport,
         Func<string> relayAddress,
         TimeSpan window,
-        Func<SessionKeyExchange>? newKeys = null)
+        Func<SessionKeyExchange>? newKeys = null,
+        ISessionTransportLog? log = null)
     {
         _newKeys = newKeys ?? (static () => new SessionKeyExchange());
+        _log = log;
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
         _admissions = new AdmissionControl(
             new AdmissionAnnouncer(transport),
@@ -45,6 +47,7 @@ public sealed class SessionCoordinator
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
+    private readonly ISessionTransportLog? _log;
     private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
@@ -335,7 +338,8 @@ public sealed class SessionCoordinator
             new InboundHandlers(
                 OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
                 OpenWith: SessionKey,
-                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster))
+                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster),
+            _log)
             ?? SessionKey;
         _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);
