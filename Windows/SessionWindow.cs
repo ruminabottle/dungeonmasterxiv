@@ -239,15 +239,30 @@ public sealed class SessionWindow : Window
             SeedNameFromSettings();
             ImGui.InputText("Name they will see", ref _nameEntry, DisplayName.MaxLength + 1);
 
+            // RESOLVED ONCE, then shown and sent. A-1.2n says the name that WILL BE SENT is shown,
+            // so the box alone does not satisfy it: DisplayName refuses a large class of ordinary
+            // invented names — Bob_123, Bob!, Bob (DM), an emoji — and a field showing one of those
+            // beside a wire carrying "a player who gave no name" makes the criterion's own sentence
+            // false, under a label that is literally the promise being broken.
+            //
+            // One value, used twice. The two cannot disagree by construction rather than by anyone
+            // remembering to keep them in step.
+            var willSend = DisplayName.OrNone(_nameEntry);
+
+            ImGui.TextWrapped(willSend.WasStated
+                ? $"They will see: {willSend.Value}"
+                : $"That name cannot be sent, so they will see \"{DisplayName.Unstated}\". Letters, "
+                  + "digits, spaces, apostrophes and hyphens work.");
+
             if (ImGui.Button("Request to join") && SessionCode.TryParse(_codeEntry, out var code))
             {
                 // R-1.3e: we name ourselves on the request, so the DM's prompt has a name without a
                 // second round trip. It is a label and never a credential — the fingerprint the DM
                 // compares is what decides, and it is unaffected by whatever this returns.
                 //
-                // Sent from the FIELD, not from settings. If those two could disagree the control
-                // above would be decoration, which is the precise failure A-1.2n names.
-                _coordinator.RequestJoin(code, DisplayName.OrNone(_nameEntry));
+                // Sent from the same resolved value that was SHOWN, not re-resolved here: a second
+                // call would be a second chance to disagree with the line above.
+                _coordinator.RequestJoin(code, willSend);
             }
         }
 
@@ -262,22 +277,15 @@ public sealed class SessionWindow : Window
     /// Pre-fills the name field from settings, without ever overwriting what the user typed.
     /// </summary>
     /// <remarks>
-    /// <b>The decision is <see cref="JoinFlowName.ShouldReplace"/>'s, not this method's.</b> It is a
-    /// three-state rule and nothing here could test it — no test project links the plugin — so it
-    /// lives in Core where it has a defect surface. What is left here is the assignment.
+    /// <b>The decision AND its invariant are <see cref="JoinFlowName"/>'s, not this method's.</b>
+    /// The rule is untestable here — no test project links the plugin — and so was the pairing it
+    /// rests on: the field and the seed it was written from must move together, and while this
+    /// method assigned them separately that precondition sat exactly where the rule had just been
+    /// taken from. Core returns both, so this is one destructuring assignment and there is no way
+    /// to update one without the other.
     /// </remarks>
-    private void SeedNameFromSettings()
-    {
-        var fromSettings = _displayName().Value;
-
-        if (!JoinFlowName.ShouldReplace(fromSettings, _seededFrom, _nameEntry))
-        {
-            return;
-        }
-
-        _nameEntry = fromSettings;
-        _seededFrom = fromSettings;
-    }
+    private void SeedNameFromSettings() =>
+        (_nameEntry, _seededFrom) = JoinFlowName.Resolve(_displayName().Value, _seededFrom, _nameEntry);
 
     // Every phase gets a sentence. R-1.3 forbids leaving anyone looking at an ambiguous spinner,
     // so there is no state here that renders as "..." and nothing else.

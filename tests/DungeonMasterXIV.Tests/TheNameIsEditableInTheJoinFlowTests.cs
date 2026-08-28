@@ -43,20 +43,38 @@ public class TheNameIsEditableInTheJoinFlowTests
         Assert.NotNull(NameField(code));
     }
 
-    // The half that stops the control being decoration. A field the user can type into, whose value
-    // is then ignored in favour of the stored setting, satisfies "editable" and fails the criterion:
-    // the user would be shown one name and send another.
+    // A-1.2n's own sentence: the name that WILL BE SENT is shown. A box the user types into whose
+    // contents are then re-resolved on the way out satisfies "editable" and breaks the criterion —
+    // DisplayName refuses a large class of ordinary invented names, so the field would show Bob_123
+    // while the wire carried "a player who gave no name", under a label that is the very promise.
+    //
+    // So this asserts the STRONGER property the fix establishes: one resolved value, rendered and
+    // sent. Not "both mention the field" — the SAME identifier in both places, which is what makes
+    // the criterion true by construction rather than by anyone keeping two expressions in step.
     [Fact]
-    public void TheNameThatIsSentComesFromThatControl()
+    public void TheValueShownIsTheSameValueSent()
     {
         var code = JoinFlowCode();
         var field = NameField(code);
-
         Assert.NotNull(field);
 
-        var requestJoin = code.FirstOrDefault(line => line.Contains("RequestJoin(", StringComparison.Ordinal));
-        Assert.NotNull(requestJoin);
-        Assert.Contains(field!, requestJoin!, StringComparison.Ordinal);
+        // The field is resolved exactly once, into a named local.
+        var resolved = code
+            .Select(line => Regex.Match(line, @"var (\w+) = DisplayName\.OrNone\(" + Regex.Escape(field!) + @"\)"))
+            .FirstOrDefault(m => m.Success)?.Groups[1].Value;
+
+        Assert.True(resolved is not null, $"The join flow never resolves '{field}' through DisplayName.");
+
+        var shown = code.FirstOrDefault(l => l.Contains("ImGui.Text", StringComparison.Ordinal) && l.Contains(resolved!, StringComparison.Ordinal))
+            ?? code.FirstOrDefault(l => l.Contains(resolved!, StringComparison.Ordinal) && l.Contains("They will see", StringComparison.Ordinal));
+        Assert.True(shown is not null, $"'{resolved}' is sent but never shown; A-1.2n requires the sent name be the shown one.");
+
+        var sent = code.FirstOrDefault(l => l.Contains("RequestJoin(", StringComparison.Ordinal));
+        Assert.NotNull(sent);
+        Assert.Contains(resolved!, sent!, StringComparison.Ordinal);
+
+        // And the raw field is NOT what goes on the wire — that is the defect this replaced.
+        Assert.DoesNotContain($"RequestJoin(code, {field})", sent!, StringComparison.Ordinal);
     }
 
     // THE CONTROL ON THE CONTROL, and the reason the two tests above are worth anything. A scan that
