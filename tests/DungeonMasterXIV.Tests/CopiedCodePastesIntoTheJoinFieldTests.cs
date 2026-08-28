@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -64,30 +65,68 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// </remarks>
     private static string WhatTheButtonPutsOnTheClipboard()
     {
-        var source = File.ReadAllText(SessionWindowSource());
-        var calls = Regex.Matches(source, @"SetClipboardText\(\s*(?<argument>[^;]*?)\s*\)\s*;");
+        var calls = WindowSources()
+            .SelectMany(source => Regex
+                .Matches(File.ReadAllText(source), @"SetClipboardText\(\s*(?<argument>[^;]*?)\s*\)\s*;")
+                .Select(match => match.Groups["argument"].Value))
+            .ToList();
 
-        // Exactly one, so a second copy path cannot appear beside this one unnoticed -- which is the
-        // same defect one layer along, and the reason this asserts the count rather than taking the
-        // first match.
+        // Exactly one, ACROSS EVERY WINDOW, so a second copy path cannot appear beside this one
+        // unnoticed. BUG-48: this read only SessionWindow.cs while saying that, so the sentence was
+        // true inside one file and false one file along — which is precisely the case it is about.
+        // A copy path added to any other window was invisible to it.
         Assert.Single(calls);
 
-        return calls[0].Groups["argument"].Value;
+        return calls[0];
     }
 
-    private static string SessionWindowSource()
+    /// <summary>
+    /// Every window's source, enumerated from disk rather than named.
+    /// </summary>
+    /// <remarks>
+    /// Listing the windows here would put the guard's reach in a second place that has to be kept
+    /// up to date, and a window added tomorrow would be unscanned with nothing to say so — the same
+    /// shape as the defect this replaces, moved into the test file.
+    /// </remarks>
+    private static IReadOnlyList<string> WindowSources() =>
+        Directory.EnumerateFiles(WindowsDirectory(), "*.cs")
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+    private static string WindowsDirectory()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            var candidate = Path.Combine(directory.FullName, "Windows", "SessionWindow.cs");
-            if (File.Exists(candidate))
+            var candidate = Path.Combine(directory.FullName, "Windows");
+            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "SessionWindow.cs")))
             {
                 return candidate;
             }
         }
 
         throw new InvalidOperationException(
-            $"No Windows/SessionWindow.cs above {AppContext.BaseDirectory}; the window this reads is missing.");
+            $"No Windows/ containing SessionWindow.cs above {AppContext.BaseDirectory}; the windows this reads are missing.");
+    }
+
+    // BUG-48. Fails if: the guard above is pointed back at one named file. The comment on it claims
+    // a property of the CODEBASE — that no second copy path can appear unnoticed — and Assert.Single
+    // counts only what it was handed, so a reader looking at one window makes that sentence false
+    // one file along while it still reads clean.
+    [Fact]
+    public void TheClipboardGuardReadsEveryWindowRatherThanOneNamedFile()
+    {
+        var scanned = WindowSources().Select(Path.GetFileName).ToList();
+        var onDisk = Directory.EnumerateFiles(WindowsDirectory(), "*.cs").Select(Path.GetFileName).ToList();
+
+        // Derived from disk on both sides, so a window added tomorrow is covered without anyone
+        // remembering to add it here.
+        Assert.Equal(onDisk.OrderBy(name => name, StringComparer.Ordinal), scanned.OrderBy(name => name, StringComparer.Ordinal));
+
+        // And the part that fails if it is narrowed back: more than one file is actually read.
+        Assert.True(
+            scanned.Count > 1,
+            $"The guard scanned {scanned.Count} file(s). It must read every window, or its claim that "
+            + "a second copy path cannot appear unnoticed is false one file along.");
     }
 
     // BUG-44. A-1.18 requires the copied value to be accepted VERBATIM by the join field, and the
