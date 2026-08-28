@@ -177,8 +177,14 @@ public sealed class SessionWindow : Window
     /// <c>Failed</c> are deliberately absent: the attempt is over, the client is in no session,
     /// and hosting becomes offerable again.
     /// </remarks>
-    private bool InAJoinedSession() =>
-        _coordinator.Join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted;
+    /// <remarks>
+    /// <b>Asks Core rather than reading a phase (BUG-53).</b> This used to match Contacting,
+    /// AwaitingDecision and Admitted, so an admitted joiner whose link dropped was offered
+    /// "Start session" while the DM was still holding their seat — R-1.3h violated by a network
+    /// hiccup. The phase cannot answer this: four predecessors reach Failed and only one of them
+    /// holds a seat. The seat clock is what expires, so Core is what decides.
+    /// </remarks>
+    private bool InAJoinedSession() => _coordinator.InAJoinedSession;
 
     /// <summary>
     /// Whether this client is hosting — from claiming a code until the session ends (R-1.3h).

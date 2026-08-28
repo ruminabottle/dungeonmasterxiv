@@ -36,16 +36,91 @@ internal sealed class SessionInterruption
     /// <param name="host">The hosting half of the session.</param>
     /// <param name="join">The joining half of the session.</param>
     /// <param name="synchronise">Brings the socket back into line once a failure has been applied.</param>
-    public SessionInterruption(RelayLink link, HostSession host, JoinAttempt join, Action synchronise)
+    /// <param name="seatWindow">
+    /// How long a dropped joiner's seat stays resumable. <b>Injected rather than read at the point
+    /// of use</b>, so making it settable later is a change at this construction site and not a
+    /// rebuild — A-1.23 and A-1.27 are a different ticket and injecting is not settable.
+    /// </param>
+    public SessionInterruption(
+        RelayLink link,
+        HostSession host,
+        JoinAttempt join,
+        Action synchronise,
+        TimeSpan? seatWindow = null)
     {
         _link = link;
         _host = host;
         _join = join;
         _synchronise = synchronise;
+        Seat = new GraceWindow(seatWindow);
     }
 
     /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
     public GraceWindow Grace { get; } = new();
+
+    /// <summary>
+    /// How long this client's own seat stays resumable after its link drops (R-1.5a, BUG-53).
+    /// </summary>
+    /// <remarks>
+    /// <b>A different clock from <see cref="Grace"/>, measuring a different thing.</b> Grace is what
+    /// this client allows a lost HOST; this is how long this client's own seat is worth waiting on
+    /// before it should behave as though the session is over. The same <see cref="GraceWindow"/>
+    /// type serves both because the mechanism — start, tick, expire — is identical; only the
+    /// subject differs, and the doc on each says which.
+    /// </remarks>
+    public GraceWindow Seat { get; }
+
+    /// <summary>
+    /// Whether this client is in a joined session, INCLUDING one whose link has dropped but whose
+    /// seat could still be resumed (R-1.3h, BUG-53, A-1.17a).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Exclusivity ends when the SEAT ends, never when the connection does.</b> An admitted
+    /// joiner whose link drops is still a member — the DM is still holding their place — so offering
+    /// them a host affordance the instant the link falls is R-1.3h violated in the commonest failure
+    /// there is, a network hiccup.
+    /// </para>
+    /// <para>
+    /// <b>Not keyed on <see cref="JoinPhase.Failed"/>, which cannot carry this.</b> Four different
+    /// predecessors reach that phase — never got in, asked and was never answered, keys could not be
+    /// made, and WAS IN and dropped — and only the last holds a seat. A blanket <c>Failed</c> would
+    /// also contradict <see cref="JoinAttempt.MayRequestAgain"/>, which treats it as retryable, and
+    /// would lock a user out of hosting after a join that never succeeded.
+    /// </para>
+    /// <para>
+    /// <b>Nor on the session key.</b> It answers <i>was admitted</i> and says nothing about when the
+    /// seat lapses, and keying membership on holding a derived key conflates <i>can decrypt</i> with
+    /// <i>is a member</i>. The seat clock is the thing that expires, so the seat clock is the thing
+    /// asked.
+    /// </para>
+    /// </remarks>
+    public bool InAJoinedSession =>
+        _join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted
+        || Seat.IsRunning;
+
+    /// <summary>Ends the seat, because this client is deliberately starting again.</summary>
+    /// <remarks>
+    /// R-1.5a: a deliberate quit removes the seat immediately. Asking to join again is that, so the
+    /// suppression lifts at once rather than waiting out a window nobody is using.
+    /// </remarks>
+    public void SeatReleased() => Seat.Reset();
+
+    /// <summary>
+    /// Advances both windows. Returns whether the GRACE window expired, which ends a hosted session.
+    /// </summary>
+    /// <remarks>
+    /// The seat's expiry ends nothing by itself — it only stops suppressing the host affordance, and
+    /// <see cref="InAJoinedSession"/> reads that directly. <b>Both halves are required:</b>
+    /// suppression without expiry would lock a user out of hosting forever, which is worse than the
+    /// bug it fixes.
+    /// </remarks>
+    /// <param name="sinceLastTick">Elapsed time since the previous call.</param>
+    public bool Tick(TimeSpan sinceLastTick)
+    {
+        Seat.Tick(sinceLastTick);
+        return Grace.Tick(sinceLastTick);
+    }
 
     /// <summary>
     /// The relay answered again after a drop and confirmed we still hold our code.
@@ -88,6 +163,15 @@ internal sealed class SessionInterruption
         if (_host.Phase is HostingPhase.Registering or HostingPhase.Hosting)
         {
             _host.Fail(failure);
+        }
+
+        // BUG-53. Started BEFORE the phase moves, because Admitted is the only predecessor that
+        // holds a seat and the phase is about to stop saying so. GraceWindow's method is named for
+        // its first caller; what it means here is "the thing we were waiting on went away, start
+        // counting".
+        if (_join.Phase == JoinPhase.Admitted)
+        {
+            Seat.HostLost();
         }
 
         if (_join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted)

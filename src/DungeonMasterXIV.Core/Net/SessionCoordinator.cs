@@ -188,6 +188,10 @@ public sealed class SessionCoordinator
     public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
     {
         _handshake.JoiningAs(name, claimedParticipantId);
+
+        // R-1.5a: a deliberate quit removes the seat immediately, and asking to join again is that.
+        // Without this the suppression would outlive the intent that justified it.
+        _interruption.SeatReleased();
         JoinerKeys?.Dispose();
         JoinerKeys = null;
         SessionKey = null;
@@ -331,7 +335,7 @@ public sealed class SessionCoordinator
         _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);
 
-        if (Grace.Tick(sinceLastTick))
+        if (_interruption.Tick(sinceLastTick))
         {
             StopHosting();
             return;
@@ -367,6 +371,12 @@ public sealed class SessionCoordinator
     /// window rather than an ending. Exposed here because the window this client draws reads it.
     /// </remarks>
     public GraceWindow Grace => _interruption.Grace;
+
+    /// <summary>
+    /// Whether this client is in a joined session, including one whose link dropped but whose seat
+    /// is still resumable (R-1.3h, BUG-53). The window asks this rather than reading a phase.
+    /// </summary>
+    public bool InAJoinedSession => _interruption.InAJoinedSession;
 
     /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
     /// <param name="failure">What the transport reported.</param>
