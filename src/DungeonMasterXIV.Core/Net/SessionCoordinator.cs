@@ -36,6 +36,7 @@ public sealed class SessionCoordinator
             () => HostKeys);
         _handshake = new OutboundHandshake(_link, Host, Join, () => JoinerKeys);
         _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code);
+        _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport);
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
@@ -43,6 +44,7 @@ public sealed class SessionCoordinator
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
     private readonly RosterBroadcast _roster;
+    private readonly SessionInterruption _interruption;
     private IReadOnlyList<RosterEntry> _receivedRoster = [];
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
@@ -102,8 +104,6 @@ public sealed class SessionCoordinator
     /// </summary>
     public IReadOnlyList<PendingAdmission> JustLapsed => _admissions.JustLapsed;
 
-    /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
-    public GraceWindow Grace { get; } = new();
 
 
     /// <summary>Starts hosting under a freshly generated code (R-1.1, R-1.2a).</summary>
@@ -216,30 +216,6 @@ public sealed class SessionCoordinator
 
 
 
-    /// <summary>
-    /// The relay answered again after a drop and confirmed we still hold our code.
-    /// </summary>
-    public void HostReconnected()
-    {
-        Grace.HostReturned();
-    }
-
-    /// <summary>
-    /// The relay answered again after a drop but refused the code — somebody claimed it while we
-    /// were gone.
-    /// </summary>
-    /// <remarks>
-    /// This is the gap R-1.4 opens and the relay cannot close: it frees a code the moment a host
-    /// disconnects, while the grace window keeps the session alive for <see cref="GraceWindow.Default"/>. R-1.2a's
-    /// regenerate-and-retry then hands us a different code, and without this the DM would carry on
-    /// hosting under it while every player still holds the old one — nothing erroring, nothing
-    /// looking wrong, and the session simply unjoinable.
-    /// </remarks>
-    public void HostReconnectedWithNewCode()
-    {
-        Grace.HostReturned();
-        Host.CodeSuperseded(SessionCodeGenerator.Next());
-    }
 
     /// <summary>
     /// Makes a session key pair, reporting failure rather than throwing.
@@ -296,31 +272,6 @@ public sealed class SessionCoordinator
     /// <summary>Declines the pending participant (R-1.3, D-13).</summary>
     public void Deny(string peerCode) => _admissions.Deny(peerCode);
 
-    /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
-    public void Fail(SessionFailure failure)
-    {
-        // R-1.4: losing the host is not the end of the session, it is the start of a grace window.
-        // Clients hold their last state and show plainly that it is no longer live; only expiry
-        // ends things. Treating a dropped connection as an immediate end is the "instant kick" the
-        // product decision rules out.
-        if (failure == SessionFailure.ConnectionLost && Host.Phase == HostingPhase.Hosting)
-        {
-            Grace.HostLost();
-            return;
-        }
-
-        if (Host.Phase is HostingPhase.Registering or HostingPhase.Hosting)
-        {
-            Host.Fail(failure);
-        }
-
-        if (Join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted)
-        {
-            Join.Fail(failure);
-        }
-
-        SynchroniseTransport();
-    }
 
     /// <summary>
     /// Brings the socket into line with whether a session needs one.
@@ -367,7 +318,7 @@ public sealed class SessionCoordinator
     /// </param>
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
-        ApplyReportedFailure();
+        _interruption.ApplyReportedFailure();
         SessionKey = _inbox.Drain(
             Join,
             JoinerKeys,
@@ -410,16 +361,29 @@ public sealed class SessionCoordinator
     }
 
 
+    /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
+    /// <remarks>
+    /// Owned by <see cref="SessionInterruption"/>, which is where a dropped link is turned into a
+    /// window rather than an ending. Exposed here because the window this client draws reads it.
+    /// </remarks>
+    public GraceWindow Grace => _interruption.Grace;
+
+    /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
+    /// <param name="failure">What the transport reported.</param>
+    public void Fail(SessionFailure failure) => _interruption.Fail(failure);
+
+    /// <summary>The relay answered again after a drop and confirmed we still hold our code.</summary>
+    public void HostReconnected() => _interruption.HostReconnected();
+
+    /// <summary>
+    /// The relay answered again after a drop but refused the code — somebody claimed it while we
+    /// were gone.
+    /// </summary>
+    public void HostReconnectedWithNewCode() => _interruption.HostReconnectedWithNewCode();
+
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
     public void Detach() => _link.Detach();
 
-    private void ApplyReportedFailure()
-    {
-        if (_link.TryTakeReportedFailure(out var failure))
-        {
-            Fail(failure);
-        }
-    }
 
 
     private bool JoinNeedsConnection() =>
