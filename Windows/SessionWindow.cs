@@ -56,6 +56,8 @@ public sealed class SessionWindow : Window
     private readonly AdmissionPromptView _admissionPrompts;
 
     private string _codeEntry = string.Empty;
+    private string _nameEntry = string.Empty;
+    private string _seededFrom = string.Empty;
 
     /// <param name="coordinator">The session layer this window reflects.</param>
     /// <param name="displayName">What to call ourselves when joining (R-1.3e). Asked each time.</param>
@@ -228,12 +230,24 @@ public sealed class SessionWindow : Window
         if (!InAHostedSession() && (join.MayRequestAgain || join.Phase == JoinPhase.Denied))
         {
             ImGui.InputText("Session code", ref _codeEntry, 16);
+
+            // A-1.2n: the name that will be sent is shown and editable HERE, on the screen the user
+            // is already on. A build whose only name control is in settings fails the criterion
+            // however well the settings work, because a user who never opens settings never learns
+            // what is about to be sent on their behalf. The settings value pre-fills this; it does
+            // not replace it.
+            SeedNameFromSettings();
+            ImGui.InputText("Name they will see", ref _nameEntry, DisplayName.MaxLength + 1);
+
             if (ImGui.Button("Request to join") && SessionCode.TryParse(_codeEntry, out var code))
             {
                 // R-1.3e: we name ourselves on the request, so the DM's prompt has a name without a
                 // second round trip. It is a label and never a credential — the fingerprint the DM
                 // compares is what decides, and it is unaffected by whatever this returns.
-                _coordinator.RequestJoin(code, _displayName());
+                //
+                // Sent from the FIELD, not from settings. If those two could disagree the control
+                // above would be decoration, which is the precise failure A-1.2n names.
+                _coordinator.RequestJoin(code, DisplayName.OrNone(_nameEntry));
             }
         }
 
@@ -242,6 +256,41 @@ public sealed class SessionWindow : Window
             ImGui.TextWrapped(SessionFailureMessage.For(join.Failure));
         }
 
+    }
+
+    /// <summary>
+    /// Pre-fills the name field from settings, without ever overwriting what the user typed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Pre-fill, not replace (A-1.2n).</b> A settings default that seeds this field passes; a
+    /// settings control that stands in for it does not. So this seeds and then gets out of the way.
+    /// </para>
+    /// <para>
+    /// <b>Re-seeds when the SOURCE changes and the user has not edited</b>, which is the case a
+    /// once-only seed gets wrong: a player who switches character mid-session would otherwise sit
+    /// looking at the previous character's name and send it. Comparing against what was last seeded
+    /// rather than against the current settings value is what distinguishes "untouched" from
+    /// "deliberately typed back to the default" — the second must survive, because a user who typed
+    /// it means it.
+    /// </para>
+    /// <para>
+    /// <b>It does not re-decide T-32's rules.</b> Whether the stored alias or the character name is
+    /// the right source is settled before this sees it; this consumes one value and never inspects
+    /// why it is that value.
+    /// </para>
+    /// </remarks>
+    private void SeedNameFromSettings()
+    {
+        var fromSettings = _displayName().Value;
+
+        if (fromSettings == _seededFrom || _nameEntry != _seededFrom)
+        {
+            return;
+        }
+
+        _nameEntry = fromSettings;
+        _seededFrom = fromSettings;
     }
 
     // Every phase gets a sentence. R-1.3 forbids leaving anyone looking at an ambiguous spinner,
