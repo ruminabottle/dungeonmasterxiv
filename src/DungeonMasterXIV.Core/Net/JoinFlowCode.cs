@@ -14,11 +14,18 @@ namespace DungeonMasterXIV.Net;
 /// stayed green while the field it mirrors changed underneath it.
 /// </para>
 /// <para>
-/// <b>Why this is not merely <see cref="SessionCode.TryParse"/> under another name.</b> That
-/// method is the general parser and has other callers; this is the answer to one narrower
-/// question — what the JOIN FIELD accepts from a paste. They agree today, and A-1.18 is a
-/// statement about this one, so it needs somewhere to be true. Anyone narrowing what the field
-/// takes changes this and the tests follow; anyone changing the shared parser is told by them.
+/// <b>TODAY THIS IS EXACTLY <see cref="SessionCode.TryParse"/>, AND THE DIFFERENCE IS INTENT
+/// RATHER THAN BEHAVIOUR.</b> <see cref="Accepts"/> is a one-line delegation: it accepts and
+/// refuses precisely what the general parser does, and there is no case where the two differ.
+/// Read no behavioural distinction into this type's existence.
+/// </para>
+/// <para>
+/// <b>What it buys is SEPARABILITY, and that is a real thing to buy.</b>
+/// <see cref="SessionCode.TryParse"/> is the general parser with other callers; A-1.18 is a
+/// statement about ONE of them — what the join field accepts from a paste — and until now that
+/// rule had nowhere to be true on its own. Now it does. <b>If the two ever need to diverge, they
+/// CAN, and anyone narrowing either must decide about the other</b> rather than silently changing
+/// both or neither. That is the whole of it.
 /// </para>
 /// <para>
 /// <b>Pairs with <see cref="JoinFlowName"/>, deliberately.</b> The join flow asks the user for two

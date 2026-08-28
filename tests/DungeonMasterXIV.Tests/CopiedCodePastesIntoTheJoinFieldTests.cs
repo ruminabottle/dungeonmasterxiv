@@ -183,10 +183,10 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// </para>
     /// <para>
     /// <b>Why <see cref="JoinFlowCode"/> rather than <see cref="SessionCode.TryParse"/> directly.</b>
-    /// Calling the shared parser would be the same re-implementation with a shorter name: that
-    /// parser has other callers and answers a more general question. <c>JoinFlowCode.Accepts</c>
-    /// answers exactly the one A-1.18 is about, so narrowing what the field takes changes this and
-    /// these tests follow it.
+    /// <c>JoinFlowCode.Accepts</c> DELEGATES to that parser and behaves identically today — the
+    /// gain is not behavioural. It is that this test now names the join field's OWN rule, so if
+    /// the field's rule ever diverges from the general parser's, these tests follow the field
+    /// rather than silently tracking the wrong one.
     /// </para>
     /// <para>
     /// <b>What still is not proven here, stated rather than left implied.</b> This proves the
