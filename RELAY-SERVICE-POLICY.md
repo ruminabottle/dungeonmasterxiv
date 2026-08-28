@@ -41,18 +41,23 @@ Session traffic is **end-to-end encrypted between the people in the session**. T
 sealed messages and holds no key. It forwards your DM's bytes onward unchanged and cannot open them.
 
 **One honest limit, which matters.** Encryption protects you from someone substituting a key only if
-the humans involved can check the keys. Today that check is **one-directional, and you should know
-which direction.**
+the humans involved actually check the keys. The software can put the same code in front of both of
+you. It cannot make either of you look at it, and it cannot tell whether you did.
 
-**The DM is shown a short code** when someone asks to join, and can confirm it against what that
-person reads out. That protects the DM against a substituted joiner.
+**Both of you are shown the same short code, before the DM decides.** [changed 2026-08-27] The person
+asking to join sees it, and so does the DM deciding whether to admit them — the joining client
+receives the DM's key *before* admission rather than with it, so there is a moment when you can both
+be reading the same thing aloud to each other. Earlier versions of this plugin showed it only to the
+DM, and earlier versions of this page said so.
 
-**If you are joining, you are shown nothing to compare.** Your client does not receive the DM's key
-until the moment you are admitted, so there is currently no step at which you could verify you are
-talking to the DM you think you are. **A substituted host key is not something you can presently
-detect**, and no amount of "end-to-end encrypted" changes that. We consider this a defect in the
-product rather than an acceptable design, and it is recorded as one; this page will say so until it
-is fixed rather than describing a check that does not exist.
+**Ten seconds of reading it out is the whole protection.** If nobody reads it, that check did not
+happen, and the phrase "end-to-end encrypted" does not do that work on its own.
+
+**What your client will and will not claim about it.** If the code did not arrive in time for you to
+compare it, your client tells you so rather than staying quiet. But **whether the two of you actually
+compared it is not something either client can know** — a person can click past anything. Nothing in
+this plugin reports that the comparison happened; it reports only that it was possible. That
+distinction is deliberate, and no wording on this page will blur it.
 
 ## What it can see
 
