@@ -99,9 +99,20 @@ public static class SessionFailureMessage
     /// <summary>The sentence shown for <paramref name="failure"/>.</summary>
     public static string For(SessionFailure failure) => failure switch
     {
+        // BUG-49. This said "This is not your connection — the relay itself is unreachable", which
+        // rules out a cause that produces it: a firewall REFUSING with a TCP RST lands here, and a
+        // refusal is evidence something answered — something that can sit on the user's side of the
+        // path. The same file's ConnectionNeverOpened text already says as much ("one that refuses
+        // fails immediately"), so the two sentences contradicted each other on this exact case.
+        //
+        // "Unreachable" is kept because reachability is a property of the PATH and stays true either
+        // way. What is dropped is the claim to know WHICH END, which the client cannot tell.
         SessionFailure.RelayUnreachable =>
-            "The relay is not responding. This is not your connection — the relay itself is unreachable. "
-            + "You can try again, or point the plugin at a different relay in settings.",
+            "The relay is not responding — the connection was refused or could not be made. "
+            + "Reachability is a property of the path, so this does not say which end is at "
+            + "fault: a firewall that rejects the connection outright looks exactly the same. "
+            + "Check your own network as well as the relay address in settings, or point the "
+            + "plugin at a different relay.",
         SessionFailure.ConnectionLost =>
             "The connection to the relay dropped. The relay was reachable a moment ago, so check your "
             + "own network first.",
