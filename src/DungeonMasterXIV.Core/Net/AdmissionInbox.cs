@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Net;
@@ -56,11 +57,21 @@ public sealed class AdmissionInbox
     /// arrives as <see cref="WireMessageType.Unknown"/> from the deserializer and falls through
     /// without a handler needing to remember to ignore it (D-14).
     /// </remarks>
+    /// <param name="openWith">
+    /// The shared key to open inbound content with, or null before one exists. A key derived during
+    /// this same drain takes precedence — see the call site.
+    /// </param>
+    /// <param name="onContent">
+    /// Called for each payload this client could open (D-11). Payloads sealed for somebody else are
+    /// ordinary traffic and pass in silence.
+    /// </param>
     public byte[]? Drain(
         JoinAttempt attempt,
         SessionKeyExchange? keys,
         HostSession? host = null,
-        Action<byte[], DisplayName>? onJoinRequest = null)
+        Action<byte[], DisplayName>? onJoinRequest = null,
+        byte[]? openWith = null,
+        Action<SessionContent>? onContent = null)
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
@@ -85,6 +96,26 @@ public sealed class AdmissionInbox
             // never sent, so the answer never came and no handler was missed.
             if (host is not null && ApplyRegistration(envelope, host))
             {
+                continue;
+            }
+
+            // Content from inside the session (D-11). Handled before the outcome arms for the same
+            // reason JoinRequest is: a payload is not an outcome and matches none of them, so it
+            // would fall through to nothing — the shape that cost BUG-42 an entire feature.
+            //
+            // A payload we cannot open is DISCARDED IN SILENCE, and that is correct rather than
+            // lenient. Keys are pairwise, so the host seals one copy per participant and the relay
+            // forwards every copy to every member: a client legitimately receives payloads sealed
+            // for other people, all the time. Treating an unopenable payload as an error would make
+            // ordinary traffic look like an attack.
+            if (envelope.Type == WireMessageType.SessionPayload)
+            {
+                // The key derived EARLIER IN THIS DRAIN wins over the one we came in with. A
+                // reconnecting client is admitted and sent the current roster in quick succession,
+                // so JoinAccepted and the first payload can land in the same batch — and A-1.13a is
+                // exactly the case that would silently show an empty list if the freshly derived
+                // key were not used until the next frame arrived.
+                ApplyContent(envelope, sessionKey ?? openWith, onContent);
                 continue;
             }
 
@@ -181,6 +212,31 @@ public sealed class AdmissionInbox
 
             default:
                 return false;
+        }
+    }
+
+    /// <summary>Opens a payload if it is ours to open, and hands on what it said.</summary>
+    private static void ApplyContent(WireEnvelope envelope, byte[]? key, Action<SessionContent>? onContent)
+    {
+        if (onContent is null || key is null || envelope.TryGetSealedPayload() is not { } sealedPayload)
+        {
+            return;
+        }
+
+        byte[] plaintext;
+        try
+        {
+            plaintext = SessionCipher.Open(key, sealedPayload, envelope.AssociatedData());
+        }
+        catch (CryptographicException)
+        {
+            // Sealed for somebody else, or tampered with. Both are silence: see the call site.
+            return;
+        }
+
+        if (SessionContentCodec.TryDecode(plaintext, out var content) && content is not null)
+        {
+            onContent(content);
         }
     }
 

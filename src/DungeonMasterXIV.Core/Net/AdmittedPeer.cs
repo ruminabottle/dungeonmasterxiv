@@ -21,12 +21,38 @@ namespace DungeonMasterXIV.Net;
 /// </remarks>
 public sealed class AdmittedPeer
 {
-    internal AdmittedPeer(string peerCode, SessionRole role, AdmissionVerification verification)
+    internal AdmittedPeer(
+        string peerCode,
+        SessionRole role,
+        AdmissionVerification verification,
+        byte[]? publicKey = null,
+        DisplayName displayName = default)
     {
         PeerCode = peerCode;
         Role = role;
         Verification = verification;
+        PublicKey = publicKey;
+        DisplayName = displayName;
     }
+
+    /// <summary>
+    /// The key this participant presented, kept so the host can seal content TO them (D-11).
+    /// </summary>
+    /// <remarks>
+    /// <b>Why the host must keep it.</b> Keys are pairwise: <c>DeriveSharedKey</c> gives the host a
+    /// different shared secret with every participant, so there is no one key that reaches the room.
+    /// Without the peer's public key here, an admitted participant is addressable by the relay and
+    /// unreachable by the host — the session could route to them and never say anything they could
+    /// open.
+    /// </remarks>
+    public byte[]? PublicKey { get; }
+
+    /// <summary>What this participant calls themselves (R-1.3e). A label, never an identity.</summary>
+    /// <remarks>
+    /// Carried so the roster has something to show. Two participants may hold the same value
+    /// (A-1.2d); <see cref="PeerCode"/> is what tells them apart, here exactly as in the prompt.
+    /// </remarks>
+    public DisplayName DisplayName { get; }
 
     /// <summary>
     /// The session-scoped code identifying this participant. Never a character name — R-1.3 requires

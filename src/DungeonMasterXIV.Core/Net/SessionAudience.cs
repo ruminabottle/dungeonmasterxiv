@@ -66,10 +66,18 @@ public sealed class SessionAudience
     /// Whether the DM compared the fingerprint (R-1.3a). Defaults to <b>not compared</b>, so an
     /// admission is only ever recorded as verified when a caller says so explicitly.
     /// </param>
+    /// <param name="publicKey">
+    /// The key they presented, so the host can seal content to them (D-11). Optional because a test
+    /// arranging an audience has no keys to hand; <b>the production path always supplies it</b>, and
+    /// <c>AnAdmittedPeerKeepsTheKeyAndNameTheyArrivedWith</c> is what stops that being an assumption.
+    /// </param>
+    /// <param name="displayName">What they call themselves (R-1.3e), for the roster.</param>
     public AdmittedPeer Admit(
         string peerCode,
         SessionRole role = SessionRole.Player,
-        AdmissionVerification verification = AdmissionVerification.NotCompared)
+        AdmissionVerification verification = AdmissionVerification.NotCompared,
+        byte[]? publicKey = null,
+        DisplayName displayName = default)
     {
         var existing = _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
         if (existing is not null)
@@ -77,7 +85,7 @@ public sealed class SessionAudience
             return existing;
         }
 
-        var peer = new AdmittedPeer(peerCode, role, verification);
+        var peer = new AdmittedPeer(peerCode, role, verification, publicKey, displayName);
         _admitted.Add(peer);
         return peer;
     }
