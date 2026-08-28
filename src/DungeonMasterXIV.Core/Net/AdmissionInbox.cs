@@ -315,10 +315,25 @@ public sealed class AdmissionInbox
             return;
         }
 
-        if (SessionContentCodec.TryDecode(plaintext, out var content, log) && content is not null)
+        // PR #86 FINDING 4, AND IT IS PLACED HERE RATHER THAN INSIDE TryDecode ON PURPOSE.
+        // The distinction the finding rests on is only knowable at THIS call site: Open SUCCEEDED
+        // just above, so the AEAD authenticated and this payload was sealed for us by a keyholder.
+        // A decode failure after that point can never be "traffic for somebody else" -- it is
+        // version skew or an encoding defect, and both are faults worth a line. Inside TryDecode
+        // that context is gone: its other callers decode plaintext of unproven provenance, and a
+        // log line there would fire on inputs where silence is correct.
+        //
+        // It costs nothing on the normal path because it cannot fire there.
+        if (!SessionContentCodec.TryDecode(plaintext, out var content, log) || content is null)
         {
-            onContent(content);
+            log?.Warning(
+                "A session payload authenticated and then failed to decode. It was sealed for this "
+                + "client by a keyholder, so this is version skew or an encoding defect rather than "
+                + "traffic for somebody else. The payload was discarded.");
+            return;
         }
+
+        onContent(content);
     }
 
     // Every outcome C6 defines is handled. Match takes a delegate per case, so omitting one is a
