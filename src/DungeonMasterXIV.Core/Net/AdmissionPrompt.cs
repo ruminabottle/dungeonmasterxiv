@@ -43,12 +43,32 @@ public static class AdmissionPrompt
     public static AdmissionAction Favoured(PendingAdmission request) => AdmissionAction.None;
 
     /// <summary>
-    /// The headline for a request. Names the participant only when one was actually resolved from
-    /// the campaign store — never from anything the requesting client sent.
+    /// The headline for a request: what they call themselves, and the code that tells two of them
+    /// apart.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The display name is shown and the peer code is kept, and both halves are deliberate
+    /// (R-1.3e, D-8 as amended).</b> Showing the name is the point of the requirement. Keeping the
+    /// code is what makes A-1.2d hold: names are self-declared and nothing prevents two requesters
+    /// sending the same one, so a headline carrying only a name would render two pending requests
+    /// identically and the DM could not tell which they were admitting.
+    /// </para>
+    /// <para>
+    /// <b>The relink label and the display name are different things and must not be conflated.</b>
+    /// The label is resolved by this client from its own campaign store; the display name is a
+    /// string the requesting client sent. A resolved relink still shows the name it sent, so a
+    /// returning player who has renamed themselves does not read as two people.
+    /// </para>
+    /// <para>
+    /// <b>Neither authenticates.</b> The fingerprint does, and the prompt renders it immediately
+    /// below this line. A UI that shows this headline while omitting or de-emphasising the
+    /// fingerprint is denied — D-11's substitution attack through a friendly label.
+    /// </para>
+    /// </remarks>
     /// <param name="request">The pending request.</param>
     public static string Headline(PendingAdmission request) =>
         request.Relink is { Matched: true, Label: { Length: > 0 } label }
-            ? $"{request.PeerCode} is asking to relink as {label}"
-            : $"{request.PeerCode} is asking to join";
+            ? $"{request.DisplayName} ({request.PeerCode}) is asking to relink as {label}"
+            : $"{request.DisplayName} ({request.PeerCode}) is asking to join";
 }

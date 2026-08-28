@@ -124,11 +124,37 @@ public sealed record WireEnvelope
     public static WireEnvelope ForCodeRefused(SessionCode code) =>
         new(WireMessageType.CodeRefused, code.Value);
 
+    /// <summary>
+    /// The joiner's self-declared display name, as it arrived (R-1.3e). Null when none was sent.
+    /// </summary>
+    /// <remarks>
+    /// <b>Untrusted, and kept as the raw string on purpose.</b> Validation belongs to
+    /// <see cref="DungeonMasterXIV.Net.DisplayName"/> at the point of display, not here: this type
+    /// represents what crossed the wire, and repairing it in transit would make the envelope
+    /// disagree with the bytes it was decoded from.
+    /// </remarks>
+    public string? DisplayName { get; private init; }
+
     /// <summary>Joiner asks to be admitted, presenting its ephemeral public key (D-11).</summary>
-    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey)
+    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey) =>
+        ForJoinRequest(code, publicKey, DungeonMasterXIV.Net.DisplayName.None);
+
+    /// <summary>
+    /// Joiner asks to be admitted, naming itself (R-1.3e).
+    /// </summary>
+    /// <remarks>
+    /// The name rides the request the DM is about to be shown, so the prompt has it without a
+    /// second round trip. It never authenticates: D-8 permits showing it and forbids acting on it,
+    /// and the fingerprint travelling in the same exchange is the security-bearing element.
+    /// </remarks>
+    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey, DisplayName name)
     {
         ArgumentNullException.ThrowIfNull(publicKey);
-        return new WireEnvelope(WireMessageType.JoinRequest, code.Value) { PublicKey = publicKey };
+        return new WireEnvelope(WireMessageType.JoinRequest, code.Value)
+        {
+            PublicKey = publicKey,
+            DisplayName = name.WasStated ? name.Value : null,
+        };
     }
 
     /// <summary>
@@ -193,6 +219,7 @@ public sealed record WireEnvelope
             PublicKey = wire.PublicKey,
             HostPublicKey = wire.HostPublicKey,
             DeadlineUtcTicks = wire.DeadlineUtcTicks,
+            DisplayName = wire.DisplayName,
             ClaimedParticipantId = wire.ClaimedParticipantId,
         };
 

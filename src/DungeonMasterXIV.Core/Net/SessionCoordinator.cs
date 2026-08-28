@@ -35,6 +35,9 @@ public sealed class SessionCoordinator
 
     private string? _requestedJoinCode;
 
+    /// <summary>What we call ourselves on the join request we are about to send (R-1.3e).</summary>
+    private DisplayName _joinDisplayName;
+
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();
 
@@ -105,8 +108,28 @@ public sealed class SessionCoordinator
     }
 
     /// <summary>Requests to join <paramref name="code"/>. A human action (R-1.3).</summary>
-    public void RequestJoin(SessionCode code)
+    public void RequestJoin(SessionCode code) => RequestJoin(code, DisplayName.None);
+
+    /// <summary>
+    /// Requests to join <paramref name="code"/>, naming ourselves (R-1.3).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The name is taken here rather than read from anywhere, because Core cannot see the game: the
+    /// character name is a Dalamud read and lives behind a plugin-side seam, the same shape as
+    /// <c>ICampaignStoreLog</c>. Core stays testable and the name arrives as a value.
+    /// </para>
+    /// <para>
+    /// <b>Held for the send, not for the session.</b> It travels on the JoinRequest and nothing
+    /// else consults it, so a joiner never accumulates an identity here — D-8 keeps names
+    /// campaign-scoped and out of exports.
+    /// </para>
+    /// </remarks>
+    /// <param name="code">The session to ask to join.</param>
+    /// <param name="name">What to call ourselves in the DM's prompt. Never authenticates.</param>
+    public void RequestJoin(SessionCode code, DisplayName name)
     {
+        _joinDisplayName = name;
         JoinerKeys?.Dispose();
         JoinerKeys = new SessionKeyExchange();
         SessionKey = null;
@@ -240,7 +263,8 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
-        SessionKey = _inbox.Drain(Join, JoinerKeys, Host, key => _admissions.AdmitToTheQueue(key, now)) ?? SessionKey;
+        SessionKey = _inbox.Drain(Join, JoinerKeys, Host, (key, name) => _admissions.AdmitToTheQueue(key, now, name))
+            ?? SessionKey;
         RegisterWithRelayWhenReady();
         SendJoinRequestWhenReady();
         _admissions.ExpireLapsed(now);
@@ -331,7 +355,7 @@ public sealed class SessionCoordinator
     /// <b>On readiness, not on connection</b>, for the reason
     /// <see cref="RegisterWithRelayWhenReady"/> records: <see cref="ISessionTransport.Send"/>
     /// discards a frame that arrives before the socket opens, and <c>IsConnected</c> is already true
-    /// while a connect is in flight. Sending from <see cref="RequestJoin"/> would look right and
+    /// while a connect is in flight. Sending from <see cref="RequestJoin(SessionCode)"/> would look right and
     /// reproduce BUG-40 with a fix in place.
     /// </para>
     /// <para>
@@ -356,7 +380,8 @@ public sealed class SessionCoordinator
         }
 
         _requestedJoinCode = code.Value;
-        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinRequest(code, JoinerKeys.PublicKey)));
+        _link.Send(EnvelopeCodec.Encode(
+            WireEnvelope.ForJoinRequest(code, JoinerKeys.PublicKey, _joinDisplayName)));
     }
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>

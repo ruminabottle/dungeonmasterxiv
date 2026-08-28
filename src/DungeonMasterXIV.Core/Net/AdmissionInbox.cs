@@ -44,7 +44,8 @@ public sealed class AdmissionInbox
     /// second consumer that would race this one for the same frames (BUG-36).
     /// </param>
     /// <param name="onJoinRequest">
-    /// Called with the joiner's public key for each inbound <see cref="WireMessageType.JoinRequest"/>,
+    /// Called with the joiner's public key and self-declared name for each inbound
+    /// <see cref="WireMessageType.JoinRequest"/>,
     /// when this client is a host. Null when there is nobody to tell, which is every joiner-only
     /// client (BUG-42).
     /// </param>
@@ -59,7 +60,7 @@ public sealed class AdmissionInbox
         JoinAttempt attempt,
         SessionKeyExchange? keys,
         HostSession? host = null,
-        Action<byte[]>? onJoinRequest = null)
+        Action<byte[], DisplayName>? onJoinRequest = null)
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
@@ -96,7 +97,10 @@ public sealed class AdmissionInbox
             {
                 if (onJoinRequest is not null && envelope.PublicKey is { } joinerPublicKey)
                 {
-                    onJoinRequest(joinerPublicKey);
+                    // Validated HERE rather than trusted, and a bad name does not drop the request:
+                    // the person behind it is still waiting, and the prompt they need carries the
+                    // fingerprint whatever the name turns out to be. See DisplayName.OrNone.
+                    onJoinRequest(joinerPublicKey, DisplayName.OrNone(envelope.DisplayName));
                 }
 
                 continue;

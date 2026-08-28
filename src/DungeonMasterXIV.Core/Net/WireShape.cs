@@ -46,6 +46,12 @@ internal sealed class WireShape
     public long? DeadlineUtcTicks { get; set; }
 
     /// <summary>
+    /// The joiner's self-declared display name (R-1.3e). Optional and untrusted: a peer that omits
+    /// it is simply not naming itself, and older peers that never heard of it decode unchanged.
+    /// </summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>
     /// The participant a returning client claims to be, if it claims one (R-1.5). Optional in the
     /// strongest sense: a peer that omits it is not making a claim, and older peers that have never
     /// heard of it decode unchanged.

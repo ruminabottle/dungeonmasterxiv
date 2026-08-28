@@ -209,6 +209,83 @@ public class TheHostConsumesAnInboundJoinRequestTests
         Assert.Empty(coordinator.Admissions.Pending);
     }
 
+    // R-1.3e end to end, and it crosses the seam rather than testing either side of it: the name is
+    // put on a real envelope, encoded, decoded by the production codec, and read back out of the
+    // headline the DM is shown. A test that asserted ForJoinRequest carried the name, plus one that
+    // asserted Headline rendered a PendingAdmission's name, would both pass while nothing joined
+    // the two -- which is the shape that let BUG-40 and BUG-42 through on this exact path.
+    [Fact]
+    public void ANameSentOnTheWireReachesThePromptTheDmIsShown()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinRequest(
+            coordinator.Host.Code!.Value, joiner.PublicKey, DisplayName.OrNone("Ysera Nightsong")));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        var request = Assert.Single(coordinator.Admissions.Pending);
+        Assert.Equal("Ysera Nightsong", request.DisplayName.Value);
+        Assert.Contains("Ysera Nightsong", AdmissionPrompt.Headline(request));
+    }
+
+    // A-1.2b's other half, asserted where it can be: the prompt must carry the fingerprint as well
+    // as the name. The fingerprint is rendered by the window, but it comes from here -- so if this
+    // ever arrives empty, the window has nothing to show and D-8's approve-blocking rule is broken
+    // by the model rather than by the drawing.
+    [Fact]
+    public void ARequestCarriesAFingerprintAsWellAsAName()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinRequest(
+            coordinator.Host.Code!.Value, joiner.PublicKey, DisplayName.OrNone("Bob")));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        var request = Assert.Single(coordinator.Admissions.Pending);
+        Assert.NotEmpty(request.Fingerprint);
+        Assert.True(request.DisplayName.WasStated);
+    }
+
+    // A hostile name must not be able to SUPPRESS a prompt. Refusing the name and dropping the
+    // request would hand any joiner a way to make themselves invisible to the DM -- a worse outcome
+    // than the spoofing the refusal exists to prevent. The request arrives; only the name is lost.
+    [Fact]
+    public void ANameTheHostRefusesDoesNotCostTheJoinerTheirPrompt()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinRequest(
+            coordinator.Host.Code!.Value,
+            joiner.PublicKey,
+            DisplayName.OrNone("Bob" + (char)10 + "Code to compare: forged")));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        var request = Assert.Single(coordinator.Admissions.Pending);
+        Assert.False(request.DisplayName.WasStated);
+        Assert.DoesNotContain("forged", AdmissionPrompt.Headline(request));
+        Assert.NotEmpty(request.Fingerprint);
+    }
+
+    // An older build sends no name at all (D-14: the wire only grows, and a peer that omits a field
+    // is not making a statement). It must still be admittable, with a prompt that reads as a person
+    // rather than as a fault.
+    [Fact]
+    public void AJoinerFromAnOlderBuildStillGetsAPrompt()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, joiner.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        var request = Assert.Single(coordinator.Admissions.Pending);
+        Assert.False(request.DisplayName.WasStated);
+        Assert.Contains(DisplayName.Unstated, AdmissionPrompt.Headline(request));
+    }
+
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Hosting()
     {
         var transport = new FakeTransport();

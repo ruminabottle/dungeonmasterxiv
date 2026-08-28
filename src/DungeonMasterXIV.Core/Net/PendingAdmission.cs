@@ -27,19 +27,31 @@ public sealed class PendingAdmission
     /// <param name="deadline">When the window closes. Decided by the DM's client and carried in C6's vocabulary.</param>
     /// <param name="relink">What the host resolved about a claimed participant, if anything (R-1.5).</param>
     /// <param name="joinerPublicKey">The key they presented, echoed on acceptance (D-11).</param>
+    /// <param name="displayName">What they call themselves (R-1.3e). Shown, never acted on.</param>
     public PendingAdmission(
         string peerCode,
         string fingerprint,
         AdmissionDeadline deadline,
         RelinkClaim relink = default,
-        byte[]? joinerPublicKey = null)
+        byte[]? joinerPublicKey = null,
+        DisplayName displayName = default)
     {
         PeerCode = peerCode;
         Fingerprint = fingerprint;
         Deadline = deadline;
         Relink = relink;
         JoinerPublicKey = joinerPublicKey;
+        DisplayName = displayName;
     }
+
+    /// <summary>
+    /// What this requester calls itself (R-1.3e). <b>A label, never an identifier.</b>
+    /// </summary>
+    /// <remarks>
+    /// Self-declared and unverified, so two pending requests may carry the same value (A-1.2d).
+    /// <see cref="PeerCode"/> is what distinguishes them and what every action is keyed on.
+    /// </remarks>
+    public DisplayName DisplayName { get; }
 
     /// <summary>The requester's session-scoped code.</summary>
     public string PeerCode { get; }
