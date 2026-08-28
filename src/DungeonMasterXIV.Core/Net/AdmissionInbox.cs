@@ -56,6 +56,33 @@ public readonly record struct InboundHandlers(
 
 public sealed class AdmissionInbox
 {
+    /// <summary>
+    /// How many queued frames one <c>Drain</c> may process. The rest wait for the next tick.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Eight because that is a full FFXIV party</b> — the largest number of people who could
+    /// legitimately ask to join in the same frame. Below it, an ordinary full-party join would be
+    /// deferred for no reason; far above it, the bound stops doing its job. It is sized to the
+    /// product's own unit rather than to a millisecond figure, because the millisecond figure moves
+    /// between machines and the party does not.
+    /// </para>
+    /// <para>
+    /// <b>What it costs when it bites.</b> Measured on this machine, a valid join request costs
+    /// ~0.44ms to drain, so eight is ~3.5ms — about a fifth of a 60fps frame. Two other harnesses
+    /// measured the per-request cost lower (a 16.67ms frame filled by ~54 and ~55 requests against
+    /// my ~38), which is the reason this is not tuned to any one of those numbers: they disagree by
+    /// 40% across machines while all three agree the unbounded case is unbounded.
+    /// </para>
+    /// <para>
+    /// <b>This defers; it refuses nobody.</b> Every frame is still processed, in order, on a later
+    /// tick — which is why bounding here needed no product decision, and why capping
+    /// <c>AdmissionDesk</c>'s pending list would have (BUG-58): that one decides what a legitimate
+    /// joiner is told when they arrive at the cap.
+    /// </para>
+    /// </remarks>
+    private const int FramesPerDrain = 8;
+
     private readonly object _gate = new();
     private readonly Queue<byte[]> _frames = new();
 
@@ -97,11 +124,19 @@ public sealed class AdmissionInbox
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
+        // A bounded slice, FIFO, leaving the remainder queued (BUG-58). Taking the whole queue let
+        // a stranger decide how much work this client did in one frame: the join path is open to
+        // strangers by design, and ~38 valid requests filled a 60fps frame here.
         byte[][] frames;
         lock (_gate)
         {
-            frames = _frames.ToArray();
-            _frames.Clear();
+            var taking = Math.Min(_frames.Count, FramesPerDrain);
+            frames = new byte[taking][];
+
+            for (var i = 0; i < taking; i++)
+            {
+                frames[i] = _frames.Dequeue();
+            }
         }
 
         byte[]? sessionKey = null;
