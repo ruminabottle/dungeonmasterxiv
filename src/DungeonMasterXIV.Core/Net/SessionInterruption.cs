@@ -150,7 +150,8 @@ internal sealed class SessionInterruption
     /// </summary>
     /// <remarks>
     /// This is the gap R-1.4 opens and the relay cannot close: it frees a code the moment a host
-    /// disconnects, while the grace window keeps the session alive for <see cref="GraceWindow.Default"/>. R-1.2a's
+    /// disconnects, while the grace window keeps the session alive for the configured
+    /// window. R-1.2a's
     /// regenerate-and-retry then hands us a different code, and without this the DM would carry on
     /// hosting under it while every player still holds the old one — nothing erroring, nothing
     /// looking wrong, and the session simply unjoinable.
