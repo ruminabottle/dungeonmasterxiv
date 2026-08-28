@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Text;
 
 namespace DungeonMasterXIV.Net;
 
@@ -95,16 +96,28 @@ public readonly struct DisplayName : IEquatable<DisplayName>
             return false;
         }
 
-        foreach (var character in trimmed)
+        var rendersSomething = false;
+
+        // RUNES, not chars. Iterating UTF-16 units gives a lone surrogate for every astral-plane
+        // code point, whose category is Surrogate -- which no allowlist would name, so CJK
+        // extension names would be refused wholesale. That is the expensive direction A-1.2i and
+        // A-1.2m exist to catch, and a denylist never had to think about it.
+        foreach (var rune in trimmed.EnumerateRunes())
         {
-            // BOTH, and the second is not a widening of the first. char.IsControl is C0/C1 only, so
-            // the whole UnicodeCategory.Format class walks through it -- RLO, LRO, ZWSP, ZWJ, BOM.
-            // Those are invisible by definition, which is exactly what makes them the dangerous
-            // half: a reviewer reading the name cannot see one, and neither can the DM.
-            if (char.IsControl(character) || char.GetUnicodeCategory(character) == UnicodeCategory.Format)
+            if (!IsPermitted(rune))
             {
                 return false;
             }
+
+            rendersSomething |= HasAGlyphOfItsOwn(rune);
+        }
+
+        // R-1.3j.1. Marks and spaces are permitted BESIDE something, never as the whole name: a
+        // name made only of combining marks passes every category check and renders as nothing,
+        // which leaves R-1.3e's prompt blank where a name is required.
+        if (!rendersSomething)
+        {
+            return false;
         }
 
         name = new DisplayName(trimmed);
@@ -121,6 +134,87 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     /// </remarks>
     public static DisplayName OrNone(string? candidate) =>
         TryParse(candidate, out var name) ? name : None;
+
+    /// <summary>
+    /// Whether <paramref name="rune"/> is one a display name may contain (R-1.3j).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>An ALLOWLIST, and that shape is the fix rather than a detail.</b> This was
+    /// <c>char.IsControl</c>, then <c>+ UnicodeCategory.Format</c>, and BUG-50 was a request for a
+    /// third category. <c>U+2028 LINE SEPARATOR</c> is <c>Zl</c> and <c>U+2029</c> is <c>Zp</c> —
+    /// neither Control nor Format — so the validator refused the ASCII line break and accepted the
+    /// Unicode one, which is the attack the ASCII rule exists to stop. <b>A denylist over Unicode
+    /// cannot be completed</b>; the categories nobody has thought of are refused here by default.
+    /// </para>
+    /// <para>
+    /// This is C18's argument, already made in this repository for the TLS fence:
+    /// <i>"naming what is forbidden goes stale the first time somebody adds a project … naming what
+    /// is permitted means a project added tomorrow is scanned by default."</i> It transfers exactly.
+    /// </para>
+    /// <para>
+    /// <b>Every script, deliberately (R-1.3j.5, D-8 clause of 2026-08-28).</b> The allowed letter
+    /// categories are script-blind, so Japanese, Korean, Cyrillic and Arabic pass. Restricting
+    /// script would make the DEFAULT invalid for the players it excluded — the default is the
+    /// character name — and the organising line is
+    /// <i>restrict what can attack the display; never restrict what language a person speaks.</i>
+    /// </para>
+    /// </remarks>
+    private static bool IsPermitted(Rune rune) => Rune.GetUnicodeCategory(rune) switch
+    {
+        // Letters of any script, and the marks that compose them. Decomposed forms are ordinary in
+        // real names, so refusing marks would refuse "Jose" + combining acute (A-1.2i).
+        UnicodeCategory.UppercaseLetter
+            or UnicodeCategory.LowercaseLetter
+            or UnicodeCategory.TitlecaseLetter
+            or UnicodeCategory.ModifierLetter
+            or UnicodeCategory.OtherLetter
+            or UnicodeCategory.NonSpacingMark
+            or UnicodeCategory.SpacingCombiningMark
+            or UnicodeCategory.EnclosingMark
+            or UnicodeCategory.DecimalDigitNumber => !IsInvisibleDespiteItsCategory(rune),
+
+        // Everything else by explicit code point, kept deliberately short. Whole punctuation
+        // categories would readmit the class this replaces: Po alone carries the Arabic and Hebrew
+        // marks that reorder text, which is R-1.3j.2's attack.
+        _ => rune.Value is Space or Apostrophe or TypographicApostrophe or Hyphen or FullStop,
+    };
+
+    /// <summary>
+    /// Code points that pass the category test and still render as nothing (R-1.3j.1).
+    /// </summary>
+    /// <remarks>
+    /// <b>The allowlist alone does not reach these, and that is why they are named.</b>
+    /// <c>U+3164 HANGUL FILLER</c> is categorised <c>OtherLetter</c> — a letter — so no category
+    /// rule that admits Korean can exclude it. <c>U+2800 BRAILLE PATTERN BLANK</c> needs no entry
+    /// here: it is <c>OtherSymbol</c>, and symbols are not permitted, so the allowlist already
+    /// refuses it. This list is short because it is the residue of one property that character
+    /// class cannot express, not a denylist growing back.
+    /// </remarks>
+    private static bool IsInvisibleDespiteItsCategory(Rune rune) =>
+        rune.Value is 0x115F or 0x1160 or 0x3164 or 0xFFA0;
+
+    /// <summary>
+    /// Whether this rune puts a glyph on the screen by itself, as opposed to composing with or
+    /// spacing another (R-1.3j.1).
+    /// </summary>
+    private static bool HasAGlyphOfItsOwn(Rune rune) => Rune.GetUnicodeCategory(rune) switch
+    {
+        UnicodeCategory.UppercaseLetter
+            or UnicodeCategory.LowercaseLetter
+            or UnicodeCategory.TitlecaseLetter
+            or UnicodeCategory.ModifierLetter
+            or UnicodeCategory.OtherLetter
+            or UnicodeCategory.DecimalDigitNumber => !IsInvisibleDespiteItsCategory(rune),
+        _ => rune.Value is Apostrophe or TypographicApostrophe or Hyphen or FullStop,
+    };
+
+    private const int Space = 0x0020;
+    private const int Apostrophe = 0x0027;
+    private const int Hyphen = 0x002D;
+    private const int FullStop = 0x002E;
+    private const int TypographicApostrophe = 0x2019;
+
 
     /// <inheritdoc />
     public bool Equals(DisplayName other) => string.Equals(_value, other._value, StringComparison.Ordinal);
