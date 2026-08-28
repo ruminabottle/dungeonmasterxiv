@@ -123,9 +123,30 @@ public sealed class SessionCoordinator
     /// </remarks>
     /// <param name="code">The session to ask to join.</param>
     /// <param name="name">What to call ourselves in the DM's prompt. Never authenticates.</param>
-    public void RequestJoin(SessionCode code, DisplayName name)
+    public void RequestJoin(SessionCode code, DisplayName name) => RequestJoin(code, name, null);
+
+    /// <summary>
+    /// Requests to join <paramref name="code"/>, claiming a participant we believe is ours (R-1.5).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A separate overload rather than a defaulted parameter, and that is the whole lesson of this
+    /// change.</b> The claim reached the wire types and the host's resolver and never travelled,
+    /// because <c>RelinkClaim relink = default</c> sat on three signatures: every caller omitted it,
+    /// every call got <c>None</c>, and every relink branch took the not-a-relink path while the suite
+    /// stayed green. A missing argument is a compile error; a defaulted one is silence.
+    /// </para>
+    /// <para>
+    /// <b>Nothing here remembers the id between sessions.</b> Storing it is a retention decision and
+    /// it belongs to whoever owns joiner-side persistence, not to making the path reachable.
+    /// </para>
+    /// </remarks>
+    /// <param name="code">The session to ask to join.</param>
+    /// <param name="name">What to call ourselves. Never authenticates.</param>
+    /// <param name="claimedParticipantId">The participant we claim, or null for an ordinary join.</param>
+    public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
     {
-        _handshake.JoiningAs(name);
+        _handshake.JoiningAs(name, claimedParticipantId);
         JoinerKeys?.Dispose();
         JoinerKeys = new SessionKeyExchange();
         SessionKey = null;

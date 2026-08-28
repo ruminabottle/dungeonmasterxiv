@@ -29,6 +29,7 @@ internal sealed class OutboundHandshake
     private string? _requestedCode;
     private string? _requestedJoinCode;
     private DisplayName _joinDisplayName;
+    private Guid? _claimedParticipantId;
 
     /// <summary>Wires the handshake to the state it reads and the link it sends down.</summary>
     /// <param name="link">The connection. Reports readiness; never decides.</param>
@@ -57,9 +58,24 @@ internal sealed class OutboundHandshake
     /// </remarks>
     public bool RegistrationWasSent => _requestedCode is not null;
 
-    /// <summary>What to call ourselves on the next join request (R-1.3e).</summary>
+    /// <summary>What to say on the next join request: who we are, and who we claim to have been.</summary>
+    /// <remarks>
+    /// <b>Two explicit arguments rather than one with a default, deliberately.</b> A relink was
+    /// unreachable for exactly that reason — <c>RelinkClaim relink = default</c> on three signatures,
+    /// so every caller omitted it, every call got <c>None</c>, and every relink branch took the
+    /// not-a-relink path. A missing argument is a compile error; a defaulted one is silence. Adding
+    /// a second defaulted parameter here would rebuild the defect one layer along.
+    /// </remarks>
     /// <param name="name">The display name. Shown to the DM, never acted on.</param>
-    public void JoiningAs(DisplayName name) => _joinDisplayName = name;
+    /// <param name="claimedParticipantId">
+    /// The participant this client believes is its own (R-1.5), or null for an ordinary join. Carried,
+    /// never trusted: the host resolves it against its own store and still shows a prompt either way.
+    /// </param>
+    public void JoiningAs(DisplayName name, Guid? claimedParticipantId)
+    {
+        _joinDisplayName = name;
+        _claimedParticipantId = claimedParticipantId;
+    }
 
     /// <summary>Re-arms the host's code request, so a fresh code is claimed rather than assumed.</summary>
     public void ForgetHostRegistration() => _requestedCode = null;
@@ -161,7 +177,8 @@ internal sealed class OutboundHandshake
         }
 
         _requestedJoinCode = code.Value;
-        _link.Send(EnvelopeCodec.Encode(
-            WireEnvelope.ForJoinRequest(code, keys.PublicKey, _joinDisplayName)));
+        _link.Send(EnvelopeCodec.Encode(_claimedParticipantId is { } claimed
+            ? WireEnvelope.ForRelinkRequest(code, keys.PublicKey, claimed)
+            : WireEnvelope.ForJoinRequest(code, keys.PublicKey, _joinDisplayName)));
     }
 }
