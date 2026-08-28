@@ -20,10 +20,13 @@ public sealed class SessionCoordinator
     public SessionCoordinator(ISessionTransport transport, Func<string> relayAddress)
     {
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
-        _announcer = new AdmissionAnnouncer(transport);
+        _admissions = new AdmissionControl(
+            new AdmissionAnnouncer(transport),
+            () => Host.Code,
+            () => HostKeys);
     }
 
-    private readonly AdmissionAnnouncer _announcer;
+    private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
@@ -38,11 +41,7 @@ public sealed class SessionCoordinator
     /// <summary>This client's attempt to join someone else's session.</summary>
     public JoinAttempt Join { get; } = new();
 
-    /// <summary>Who may receive session state. See <see cref="SessionAudience"/> for the D-13 levels.</summary>
-    public SessionAudience Audience { get; } = new();
 
-    /// <summary>The requests waiting on the DM (R-1.3).</summary>
-    public AdmissionDesk Admissions { get; } = new();
 
     /// <summary>
     /// This host's ephemeral key pair for the running session, or null when not hosting.
@@ -63,14 +62,21 @@ public sealed class SessionCoordinator
     /// </summary>
     public byte[]? SessionKey { get; private set; }
 
-    /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
-    public GraceWindow Grace { get; } = new();
+    /// <summary>Who may receive session state. See <see cref="SessionAudience"/> for the D-13 levels.</summary>
+    public SessionAudience Audience => _admissions.Audience;
+
+    /// <summary>The requests waiting on the DM (R-1.3).</summary>
+    public AdmissionDesk Admissions => _admissions.Desk;
 
     /// <summary>
     /// Participants whose request lapsed on the most recent tick, so the caller can tell them it
     /// lapsed rather than leaving them waiting — and, per R-1.3c, never tell them they were denied.
     /// </summary>
-    public IReadOnlyList<PendingAdmission> JustLapsed { get; private set; } = Array.Empty<PendingAdmission>();
+    public IReadOnlyList<PendingAdmission> JustLapsed => _admissions.JustLapsed;
+
+    /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
+    public GraceWindow Grace { get; } = new();
+
 
     /// <summary>Starts hosting under a freshly generated code (R-1.1, R-1.2a).</summary>
     public void StartHosting()
@@ -91,11 +97,9 @@ public sealed class SessionCoordinator
         Host.Stop();
         HostKeys?.Dispose();
         HostKeys = null;
-        Audience.Clear();
-        Admissions.Clear();
+        _admissions.Clear();
         _inbox.Clear();
         Grace.Reset();
-        JustLapsed = Array.Empty<PendingAdmission>();
         _requestedCode = null;
         SynchroniseTransport();
     }
@@ -115,150 +119,11 @@ public sealed class SessionCoordinator
         SynchroniseTransport();
     }
 
-    /// <summary>Records that a participant is asking to be let in.</summary>
-    public void ReceiveJoinRequest(PendingAdmission request) => Admissions.Receive(request);
 
-    /// <summary>
-    /// Turns a <see cref="WireMessageType.JoinRequest"/> that arrived on the wire into a prompt the
-    /// DM can answer.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>This is the arm BUG-42 was missing.</b> Everything below it existed and was tested; the
-    /// relay forwarded every request to a host that had no path to it, so
-    /// <see cref="Admissions"/> stayed empty and no prompt was ever shown. Returning null when
-    /// <see cref="HostKeys"/> is null is what keeps a joiner-only client from building prompts out
-    /// of traffic meant for a host.
-    /// </para>
-    /// <para>
-    /// <b>No relink claim is read here, deliberately.</b> The envelope can carry
-    /// <c>ClaimedParticipantId</c>, and resolving it needs both ends of a conversation that does not
-    /// exist yet (BUG-41). Passing the default is leaving that alone rather than half-building it.
-    /// </para>
-    /// </remarks>
-    private void AdmitToTheQueue(byte[] joinerPublicKey, DateTimeOffset now) =>
-        ReceiveJoinRequest(PeerCodeFor(joinerPublicKey), joinerPublicKey, now);
 
-    /// <summary>
-    /// The session-scoped code the DM's prompt names this requester by (R-1.3, D-8).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>Derived from the joiner's key rather than assigned, because their key is the only thing
-    /// that identifies them.</b> Nothing on the wire carries a peer code: a
-    /// <see cref="WireMessageType.JoinRequest"/> carries the session code and the joiner's key, and
-    /// the answer is addressed back by that same key. So a code invented here is the only one
-    /// available, and deriving it keeps two requests from one joiner naming one requester.
-    /// </para>
-    /// <para>
-    /// <b>Session-scoped because the session code is hashed in</b> — the same person joining two
-    /// sessions is named differently in each, which is what D-8 asks of anything shown about a
-    /// participant.
-    /// </para>
-    /// <para>
-    /// <b>Not a security value and deliberately not the fingerprint.</b> The fingerprint is computed
-    /// from BOTH keys and exists so two humans can compare one string; this only has to tell two
-    /// requesters apart on one screen. <b>What the DM should actually see here is a product
-    /// question</b> — PRD-1 requires a session-scoped code and does not say how it is formed, and
-    /// nothing sends this code to the joiner, so the two of them cannot yet read the same label
-    /// aloud. Raised with the Spec Owner rather than settled here.
-    /// </para>
-    /// </remarks>
-    private string PeerCodeFor(byte[] joinerPublicKey)
-    {
-        var scope = System.Text.Encoding.UTF8.GetBytes(Host.Code?.Value ?? string.Empty);
-        var digest = System.Security.Cryptography.SHA256.HashData([.. scope, .. joinerPublicKey]);
-        var value = new System.Numerics.BigInteger(digest, isUnsigned: true, isBigEndian: true);
 
-        var rendered = new char[SessionCode.Length];
-        for (var i = rendered.Length - 1; i >= 0; i--)
-        {
-            value = System.Numerics.BigInteger.DivRem(value, SpeakableAlphabet.Length, out var symbol);
-            rendered[i] = SpeakableAlphabet.Characters[(int)symbol];
-        }
 
-        return new string(rendered);
-    }
 
-    /// <summary>
-    /// Builds and records a request from what arrived on the wire.
-    /// </summary>
-    /// <remarks>
-    /// The fingerprint is computed here rather than passed in, so no caller can hand the prompt a
-    /// string that does not correspond to the keys actually exchanged — a fingerprint that does not
-    /// match the keys is worse than none, because the DM compares it and concludes it is safe.
-    /// The deadline is decided here too: R-1.3c puts that decision on the DM's client (D-3), once.
-    /// </remarks>
-    public PendingAdmission? ReceiveJoinRequest(
-        string peerCode,
-        byte[] joinerPublicKey,
-        DateTimeOffset now,
-        RelinkClaim relink = default)
-    {
-        if (HostKeys is null)
-        {
-            return null;
-        }
-
-        var deadline = AdmissionDeadline.DecidedByHost(now);
-        var request = new PendingAdmission(
-            peerCode,
-            KeyFingerprint.Of(joinerPublicKey, HostKeys.PublicKey),
-            deadline,
-            relink,
-            joinerPublicKey);
-
-        Admissions.Receive(request);
-
-        // The host's key goes back NOW, not on acceptance (R-1.3a-i, A-1.3f-1). Sending it here is
-        // the entire fix: the joiner needs it while the DM is still deciding, because a fingerprint
-        // that arrives with the answer cannot inform the answer. The same key travels again in
-        // Admit's acceptance envelope, which is where it used to travel for the first time.
-        if (Host.Code is { } hostedCode)
-        {
-            _announcer.Pending(hostedCode, joinerPublicKey, HostKeys.PublicKey, deadline);
-        }
-
-        return request;
-    }
-
-    /// <summary>
-    /// Admits the pending participant. Only after this does anything become addressable to them —
-    /// see <see cref="SessionAudience"/>, which is where D-13's None level is enforced.
-    /// </summary>
-    /// <param name="peerCode">The requester's session-scoped code.</param>
-    /// <param name="role">What they may do (E-11). Admission itself stays DM-only.</param>
-    /// <remarks>
-    /// Whether the DM compared the fingerprint is taken from the request rather than passed in, so
-    /// an admission cannot be recorded as verified unless the DM actually said so (R-1.3a).
-    /// </remarks>
-    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
-    {
-        var request = Admissions.Decide(peerCode);
-        var peer = Audience.Admit(peerCode, role, request?.Verification ?? AdmissionVerification.NotCompared);
-
-        if (Host.Code is { } code && HostKeys is not null && request?.JoinerPublicKey is { } joinerKey)
-        {
-            _announcer.Accepted(code, joinerKey, HostKeys.PublicKey);
-        }
-
-        return peer;
-    }
-
-    /// <summary>
-    /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
-    /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
-    /// </summary>
-    public void Deny(string peerCode)
-    {
-        var request = Admissions.Decide(peerCode);
-        Audience.Remove(peerCode);
-
-        if (Host.Code is { } code && request?.JoinerPublicKey is { } joinerKey)
-        {
-            _announcer.Denied(code, joinerKey);
-        }
-    }
 
     /// <summary>
     /// The relay answered again after a drop and confirmed we still hold our code.
@@ -284,6 +149,24 @@ public sealed class SessionCoordinator
         Grace.HostReturned();
         Host.CodeSuperseded(SessionCodeGenerator.Next());
     }
+
+    /// <summary>Records that a participant is asking to be let in.</summary>
+    public void ReceiveJoinRequest(PendingAdmission request) => _admissions.Receive(request);
+
+    /// <summary>Builds and records a request from what arrived on the wire.</summary>
+    public PendingAdmission? ReceiveJoinRequest(
+        string peerCode,
+        byte[] joinerPublicKey,
+        DateTimeOffset now,
+        RelinkClaim relink = default) =>
+        _admissions.Receive(peerCode, joinerPublicKey, now, relink);
+
+    /// <summary>Admits the pending participant (R-1.3, D-13).</summary>
+    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player) =>
+        _admissions.Admit(peerCode, role);
+
+    /// <summary>Declines the pending participant (R-1.3, D-13).</summary>
+    public void Deny(string peerCode) => _admissions.Deny(peerCode);
 
     /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
     public void Fail(SessionFailure failure)
@@ -357,11 +240,10 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
-        SessionKey = _inbox.Drain(Join, JoinerKeys, Host, key => AdmitToTheQueue(key, now)) ?? SessionKey;
+        SessionKey = _inbox.Drain(Join, JoinerKeys, Host, key => _admissions.AdmitToTheQueue(key, now)) ?? SessionKey;
         RegisterWithRelayWhenReady();
         SendJoinRequestWhenReady();
-        JustLapsed = Admissions.ExpireLapsed(now);
-        AnnounceLapsed();
+        _admissions.ExpireLapsed(now);
 
         if (Grace.Tick(sinceLastTick))
         {
@@ -484,13 +366,6 @@ public sealed class SessionCoordinator
         }
     }
 
-    private void AnnounceLapsed()
-    {
-        if (Host.Code is { } code)
-        {
-            _announcer.Lapsed(code, JustLapsed);
-        }
-    }
 
     private bool JoinNeedsConnection() =>
         Join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted;
