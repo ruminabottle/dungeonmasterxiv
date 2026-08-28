@@ -284,6 +284,13 @@ public sealed class SessionWindow : Window
     /// taken from. Core returns both, so this is one destructuring assignment and there is no way
     /// to update one without the other.
     /// </remarks>
+    // RECORDED, NOT REDESIGNED (BUG-64, qa-3). Returning the pair makes correct use a one-liner; it
+    // does NOT make misuse impossible. Give this a block body and assign only the field —
+    //     { _nameEntry = JoinFlowName.Resolve(...).Entry; }
+    // — and it builds, and the suite passes, while _seededFrom freezes and the pre-fill silently
+    // stops following a character switch. The expression body is what keeps both assignments in one
+    // statement, so it is load-bearing rather than terse. Left as an observation because closing it
+    // properly is a seam change and this ticket is a test fix.
     private void SeedNameFromSettings() =>
         (_nameEntry, _seededFrom) = JoinFlowName.Resolve(_displayName().Value, _seededFrom, _nameEntry);
 

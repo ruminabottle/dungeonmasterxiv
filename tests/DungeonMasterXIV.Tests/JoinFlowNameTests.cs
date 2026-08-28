@@ -79,6 +79,19 @@ public class JoinFlowNameTests
     // those are the SAME INPUTS and no state available here separates them. The window offers no
     // edit signal. What the rule guarantees is narrower and sufficient — a field holding anything
     // this rule did not write is never overwritten.
+    //
+    // READ THE FIRST ASSERTION AS DOCUMENTATION, NOT AS A CHECK. It compares two calls with
+    // literally identical arguments, so it cannot fail — and that is the finding rather than a
+    // defect in it. The two situations ARE the same inputs, which is the whole point being
+    // recorded, so NO ARGUMENT-VALUE TEST CAN EXPRESS THE DISTINCTION: any test that appeared to
+    // would have invented a difference the production code does not have. The limitation is
+    // structural.
+    //
+    // The protection here comes from the SECOND assertion, and it duplicates
+    // AnUntouchedFieldTakesTheSettingsValue on purpose — that duplication is what makes this test
+    // fail if the pre-fill rule breaks. Recorded by qa-3 against BUG-64; kept rather than deleted
+    // because the sentence above is worth pinning even when the assertion beneath it is not a
+    // check.
     [Fact]
     public void ItCannotTellAnUntouchedFieldFromOneTypedBackToTheSeed()
     {
