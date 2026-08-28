@@ -9,9 +9,26 @@
 # There is deliberately no self-hosting documentation here (E-9, and C2's do-not list). This is our
 # deployment, not a guide to running your own.
 
-ARG DOTNET_VERSION=10.0
+# TWO values, not one, because the SDK and the runtime are numbered in DIFFERENT NAMESPACES and a
+# single pinned version cannot name both. Verified against the registry rather than derived from the
+# host: mcr.microsoft.com/dotnet/sdk:10.0.400 IS published and aspnet:10.0.400 IS NOT — the aspnet
+# repository is tagged by RUNTIME version, where the published bare tags are 10.0.0 through 10.0.11.
+# SDK 10.0.400 carries ASP.NET Core runtime 10.0.11, which is why these two numbers differ and must.
+#
+# The single ARG this replaces worked only because "10.0" happens to be a valid FLOATING tag in both
+# repositories. Pinning that one value to an exact patch would have resolved the build stage and
+# broken the runtime stage.
+#
+# WHAT THIS PROTECTS, not just what it sets: the relay is the deployed artefact and was the last
+# unpinned half of the build after global.json pinned the plugin (DMXENG-36). It also closes a trap —
+# there is no .dockerignore and compose builds with context "..", so the moment anyone widens the COPY
+# list below, or adds `COPY global.json ./` thinking they are being tidy, a FLOATING sdk tag that is
+# not exactly 10.0.400 fails at SDK resolution with no obvious connection to the commit that caused
+# it. Pinned, global.json is satisfied by the image and the trap cannot spring.
+ARG DOTNET_SDK_VERSION=10.0.400
+ARG DOTNET_RUNTIME_VERSION=10.0.11
 
-FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_SDK_VERSION} AS build
 WORKDIR /build
 
 # Restore against the project files alone first, so a source-only change does not re-resolve
@@ -32,7 +49,7 @@ RUN dotnet publish src/DungeonMasterXIV.Relay/DungeonMasterXIV.Relay.csproj \
         --no-restore \
         --output /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS runtime
 
 # Stamped at build time so a running relay can be traced to the commit it was built from. This is
 # the mitigation PRD-1 asks for, and it is weaker than a proof — say so rather than implying more.
