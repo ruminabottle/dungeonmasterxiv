@@ -56,6 +56,8 @@ public sealed class SessionWindow : Window
     private readonly AdmissionPromptView _admissionPrompts;
 
     private string _codeEntry = string.Empty;
+    private string _nameEntry = string.Empty;
+    private string _seededFrom = string.Empty;
 
     /// <param name="coordinator">The session layer this window reflects.</param>
     /// <param name="displayName">What to call ourselves when joining (R-1.3e). Asked each time.</param>
@@ -228,12 +230,39 @@ public sealed class SessionWindow : Window
         if (!InAHostedSession() && (join.MayRequestAgain || join.Phase == JoinPhase.Denied))
         {
             ImGui.InputText("Session code", ref _codeEntry, 16);
+
+            // A-1.2n: the name that will be sent is shown and editable HERE, on the screen the user
+            // is already on. A build whose only name control is in settings fails the criterion
+            // however well the settings work, because a user who never opens settings never learns
+            // what is about to be sent on their behalf. The settings value pre-fills this; it does
+            // not replace it.
+            SeedNameFromSettings();
+            ImGui.InputText("Name they will see", ref _nameEntry, DisplayName.MaxLength + 1);
+
+            // RESOLVED ONCE, then shown and sent. A-1.2n says the name that WILL BE SENT is shown,
+            // so the box alone does not satisfy it: DisplayName refuses a large class of ordinary
+            // invented names — Bob_123, Bob!, Bob (DM), an emoji — and a field showing one of those
+            // beside a wire carrying "a player who gave no name" makes the criterion's own sentence
+            // false, under a label that is literally the promise being broken.
+            //
+            // One value, used twice. The two cannot disagree by construction rather than by anyone
+            // remembering to keep them in step.
+            var willSend = DisplayName.OrNone(_nameEntry);
+
+            ImGui.TextWrapped(willSend.WasStated
+                ? $"They will see: {willSend.Value}"
+                : $"That name cannot be sent, so they will see \"{DisplayName.Unstated}\". Letters, "
+                  + "digits, spaces, apostrophes and hyphens work.");
+
             if (ImGui.Button("Request to join") && SessionCode.TryParse(_codeEntry, out var code))
             {
                 // R-1.3e: we name ourselves on the request, so the DM's prompt has a name without a
                 // second round trip. It is a label and never a credential — the fingerprint the DM
                 // compares is what decides, and it is unaffected by whatever this returns.
-                _coordinator.RequestJoin(code, _displayName());
+                //
+                // Sent from the same resolved value that was SHOWN, not re-resolved here: a second
+                // call would be a second chance to disagree with the line above.
+                _coordinator.RequestJoin(code, willSend);
             }
         }
 
@@ -243,6 +272,20 @@ public sealed class SessionWindow : Window
         }
 
     }
+
+    /// <summary>
+    /// Pre-fills the name field from settings, without ever overwriting what the user typed.
+    /// </summary>
+    /// <remarks>
+    /// <b>The decision AND its invariant are <see cref="JoinFlowName"/>'s, not this method's.</b>
+    /// The rule is untestable here — no test project links the plugin — and so was the pairing it
+    /// rests on: the field and the seed it was written from must move together, and while this
+    /// method assigned them separately that precondition sat exactly where the rule had just been
+    /// taken from. Core returns both, so this is one destructuring assignment and there is no way
+    /// to update one without the other.
+    /// </remarks>
+    private void SeedNameFromSettings() =>
+        (_nameEntry, _seededFrom) = JoinFlowName.Resolve(_displayName().Value, _seededFrom, _nameEntry);
 
     // Every phase gets a sentence. R-1.3 forbids leaving anyone looking at an ambiguous spinner,
     // so there is no state here that renders as "..." and nothing else.
