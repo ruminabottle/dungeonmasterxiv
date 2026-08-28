@@ -47,13 +47,18 @@ public sealed class PeerCodeIsTheOnlyDoorTests
     private static readonly Dictionary<string, string> DoorsDeliberatelyLeftOpen = new(StringComparer.Ordinal)
     {
         ["RosterEntry.PeerCode"] =
-            "The wire DTO. System.Text.Json reads and writes this field, so it must stay the "
-            + "primitive the format declares (D-14 additive-only). Validation happens at the "
-            + "decoding boundary in SessionContentCodec. PERMANENT.",
+            "WIRE DTO, PER #86 -- not a door we missed. The Deployment Manager ruled on exactly "
+            + "this question for DisplayName: 'Put the gate at the decode boundary so it is the "
+            + "only door' and 'string stays in RosterEntry -- the wire format does not change.' A "
+            + "DTO is not a door; it is the SHAPE OF WHAT CROSSED ONE, and the door is Vetted "
+            + "inside TryDecode. DisplayName -- a validated type everywhere else in Core -- sits "
+            + "beside this field as a bare string for the same reason. D-14 reaches the same place "
+            + "independently: changing a serialised field's shape is a wire change. PERMANENT.",
         ["RosterEntry.RosterEntry"] =
-            "The same wire DTO, reached through its positional constructor. Listed separately "
-            + "because it IS a separate door -- the sweep found it when the property alone was "
-            + "listed, which is the point of deriving this rather than naming the members. PERMANENT.",
+            "The same wire DTO, per #86, reached through its positional constructor. Listed "
+            + "separately because it IS a separate door -- the sweep found it when the property "
+            + "alone was listed, which is the point of deriving this rather than naming members "
+            + "by hand. PERMANENT.",
 
         ["SessionCoordinator.ReceiveJoinRequest"] =
             "SessionCoordinator.cs is HELD by DMXENG-12 (v0.1.5 release blocker). CLOSES when it merges.",
