@@ -126,11 +126,7 @@ public sealed class PendingAdmission
     /// <b>out of band</b> — voice, Discord, whatever the group already uses. It cannot be carried in
     /// the plugin, because a channel an attacker controls cannot verify that attacker.
     /// </summary>
-    /// <returns>
-    /// <c>true</c> when recorded. Reserved for A-1.2f: T-43 makes this <c>false</c> when the joiner
-    /// could not compare, once something sets that.
-    /// </returns>
-    public bool ConfirmFingerprintMatched()
+    public void ConfirmFingerprintMatched()
     {
         // A-1.2f's refusal is NOT here yet, and that is deliberate rather than forgotten.
         //
@@ -145,8 +141,13 @@ public sealed class PendingAdmission
         // not compare", correctly, because a relay that drops JoinPending can drop a receipt too.
         // Safe defaults and a missing receiver compose into "always refuse", so the refusal lands
         // with the receiver in T-43.
+        //
+        // T-43 MUST NOT EXPRESS THAT REFUSAL AS A RETURN VALUE. This method returned bool for one
+        // revision and the only caller -- AdmissionPromptView.cs:97 -- discarded it, so a false
+        // would have been silently dropped and A-1.2f would have READ AS IMPLEMENTED WHILE BEHAVING
+        // AS ABSENT. A seam whose mechanism is a value nobody reads is not a seam. Whatever T-43
+        // uses has to be something a caller cannot ignore by doing nothing.
         FingerprintConfirmed = true;
-        return true;
     }
 
     /// <summary>How long the requester has left, for the countdown R-1.3c requires while it runs.</summary>
