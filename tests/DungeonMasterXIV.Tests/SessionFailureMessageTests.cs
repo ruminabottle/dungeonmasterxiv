@@ -57,6 +57,19 @@ public class SessionFailureMessageTests
                 "No session is running under that code. Check the code with your DM — codes belong to a "
                 + "session that is live now, so one from last week will not work until they start again.",
 
+            // BUG-61, sev1. Read against A-1.7e before it was written: it says WHAT happened and
+            // that nothing started, and deliberately does not say WHY — the client has not
+            // established why, and "your machine does not support this" is a guess wearing a fact.
+            // It neither blames nor exonerates the user's network or configuration, claims nothing
+            // is protected (there is no session, so there is nothing to protect), and does NOT
+            // offer a retry, because on the machine this was reported from another attempt fails
+            // the same way and A-1.7e requires a retry claim to be true when it is shown.
+            [SessionFailure.SessionKeysUnavailable] =
+                "The session did not start: this build could not create the session keys it needs. "
+                + "Nothing was sent and no session exists. The plugin cannot tell why they could not be "
+                + "created, so this is not a setting to change here — please report it with your "
+                + "platform and how you launch the game.",
+
             [SessionFailure.HostKeyUnusable] =
                 "The host's answer to your request could not be used: it carried a key this plugin "
                 + "cannot agree with, so no shared key was established and you have not joined. This "

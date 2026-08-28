@@ -97,6 +97,22 @@ public enum SessionFailure
     /// </para>
     /// </remarks>
     HostKeyUnusable = 9,
+
+    /// <summary>
+    /// This client could not create the key pair a session needs, so nothing started (BUG-61).
+    /// </summary>
+    /// <remarks>
+    /// <b>It says the keys could not be created and deliberately not why.</b> On the machine this
+    /// was reported from, <c>ECDiffieHellman.Create</c> throws <c>CryptographicException</c>
+    /// <c>0x80090029</c>. Why is unestablished: the leading account is inference from an error code,
+    /// nobody has the machine, and A-1.5j forbids asserting a fact the client has not established.
+    /// "Your machine does not support this" would be a guess wearing a fact.
+    /// <para>
+    /// Distinct from <see cref="HostKeyUnusable"/>, which is about a key that ARRIVED and could not
+    /// be used. This one is about a key that was never made, locally, before anything was sent.
+    /// </para>
+    /// </remarks>
+    SessionKeysUnavailable = 10,
 }
 
 /// <summary>
@@ -168,6 +184,11 @@ public static class SessionFailureMessage
         // in the other direction. It claims no protection (D-8): there is no session to protect.
         // "You can ask to join again" is true at the moment it is shown — MayRequestAgain includes
         // Failed — and TheRetryOfferIsTrueWhenItIsShown asserts that rather than trusting it.
+        SessionFailure.SessionKeysUnavailable =>
+            "The session did not start: this build could not create the session keys it needs. "
+            + "Nothing was sent and no session exists. The plugin cannot tell why they could not be "
+            + "created, so this is not a setting to change here — please report it with your "
+            + "platform and how you launch the game.",
         SessionFailure.HostKeyUnusable =>
             "The host's answer to your request could not be used: it carried a key this plugin "
             + "cannot agree with, so no shared key was established and you have not joined. This "
