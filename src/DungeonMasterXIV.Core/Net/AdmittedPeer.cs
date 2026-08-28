@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
@@ -21,6 +23,8 @@ namespace DungeonMasterXIV.Net;
 /// </remarks>
 public sealed class AdmittedPeer
 {
+    private readonly byte[]? _publicKey;
+
     internal AdmittedPeer(
         string peerCode,
         SessionRole role,
@@ -31,7 +35,7 @@ public sealed class AdmittedPeer
         PeerCode = peerCode;
         Role = role;
         Verification = verification;
-        PublicKey = publicKey;
+        _publicKey = publicKey?.ToArray();
         DisplayName = displayName;
     }
 
@@ -44,8 +48,22 @@ public sealed class AdmittedPeer
     /// Without the peer's public key here, an admitted participant is addressable by the relay and
     /// unreachable by the host — the session could route to them and never say anything they could
     /// open.
+    /// <para>
+    /// <b>Copied in and copied out, because these bytes are now load-bearing for a seal (D-11).</b>
+    /// An array handed straight through is one the caller can still mutate, and after this chunk a
+    /// mutation would change the key a roster is sealed with rather than merely corrupting a record.
+    /// <see cref="SessionAudience.Recipients"/> already returns a read-only list; the elements were
+    /// the remaining hole.
+    /// </para>
+    /// <para>
+    /// <b>Copying rather than a <c>SealTo</c> method, deliberately.</b> This type is a record of what
+    /// is known about a participant. Giving it a sealing method would hand a data type a dependency
+    /// on the cipher and the session code, and put a crypto operation in the one place that gets
+    /// passed around freely — the copy keeps the boundary where the key lives, which is the smaller
+    /// surface.
+    /// </para>
     /// </remarks>
-    public byte[]? PublicKey { get; }
+    public byte[]? PublicKey => _publicKey?.ToArray();
 
     /// <summary>What this participant calls themselves (R-1.3e). A label, never an identity.</summary>
     /// <remarks>

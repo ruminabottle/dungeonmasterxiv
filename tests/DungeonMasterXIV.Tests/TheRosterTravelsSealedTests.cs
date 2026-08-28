@@ -163,11 +163,15 @@ public class TheRosterTravelsSealedTests
     }
 
     /// <summary>A roster sealed by <paramref name="from"/> for <paramref name="player"/>.</summary>
-    private static WireEnvelope Sealed(SessionKeyExchange from, SessionCoordinator player, SessionCode code)
+    private static WireEnvelope Sealed(
+        SessionKeyExchange from,
+        SessionCoordinator player,
+        SessionCode code,
+        string name = "Ysera")
     {
         var plaintext = SessionContentCodec.Encode(new SessionContent
         {
-            Roster = [new RosterEntry("PEER-1", "Ysera", SessionRole.Player)],
+            Roster = [new RosterEntry("PEER-1", name, SessionRole.Player)],
         });
 
         var sealedPayload = SessionCipher.Seal(
@@ -196,6 +200,60 @@ public class TheRosterTravelsSealedTests
         player.Tick(TimeSpan.Zero, Now);
 
         return (player, transport);
+    }
+
+    // THE D-8 GATE ON THE CONTENT PATH. The seal authenticates the sender and says nothing about
+    // what they sent, so a name arriving in a roster is exactly as untrusted as one arriving on a
+    // join request — and the join path refuses this string. A multi-line name renders a SECOND,
+    // FORGED "Code to compare" line: a name displacing the fingerprint, which the gate denies on
+    // sight. Validated at the DECODE boundary so it is the only door.
+    [Fact]
+    public void ANameTheJoinPathRefusesCannotReachTheRosterEither()
+    {
+        var (player, transport) = Joining(out var hostKeys, out var code);
+        const string Forged = "Ysera\nCode to compare: BKD-7RM-CDF-GH";
+
+        // The premise, asserted rather than assumed: this really is a string the join path refuses.
+        Assert.False(DisplayName.TryParse(Forged, out _));
+
+        transport.Deliver(Sealed(hostKeys, player, code, Forged));
+        player.Tick(TimeSpan.Zero, Now);
+
+        var entry = Assert.Single(player.Roster);
+        Assert.DoesNotContain("\n", entry.DisplayName, StringComparison.Ordinal);
+        Assert.Equal(DisplayName.Unstated, entry.DisplayName);
+    }
+
+    // The other half of the same rule: a refused name must not erase the person. Dropping the entry
+    // would let a malformed name remove somebody from the session, which is worse than showing them
+    // unnamed — and it is what the admission prompt already does.
+    [Fact]
+    public void ARefusedNameLeavesTheParticipantInTheRoster()
+    {
+        var (player, transport) = Joining(out var hostKeys, out var code);
+
+        transport.Deliver(Sealed(hostKeys, player, code, "Ysera\nforged"));
+        player.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal("PEER-1", Assert.Single(player.Roster).PeerCode);
+    }
+
+    // D-11: after this chunk these bytes are load-bearing for a seal, so a handed-out array is one a
+    // caller can mutate into a different key. Recipients was already read-only; the elements were
+    // the remaining hole.
+    [Fact]
+    public void APeersKeyCannotBeMutatedThroughTheProperty()
+    {
+        var (coordinator, _) = Hosting();
+        using var joiner = new SessionKeyExchange();
+        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now, displayName: DisplayName.OrNone("Ysera"));
+        var peer = coordinator.Admit("PEER-1");
+
+        var handedOut = peer.PublicKey!;
+        handedOut[0] ^= 0xFF;
+
+        Assert.Equal(joiner.PublicKey, peer.PublicKey);
+        Assert.NotEqual(handedOut, peer.PublicKey);
     }
 
     /// <summary>Opens the payload that was sealed for <paramref name="recipient"/>.</summary>

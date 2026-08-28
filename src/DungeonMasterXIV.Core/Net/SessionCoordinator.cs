@@ -316,9 +316,10 @@ public sealed class SessionCoordinator
             Join,
             JoinerKeys,
             Host,
-            (key, name) => _admissions.AdmitToTheQueue(key, now, name),
-            SessionKey,
-            content => _receivedRoster = content.Roster ?? _receivedRoster)
+            new InboundHandlers(
+                OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
+                OpenWith: SessionKey,
+                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster))
             ?? SessionKey;
         _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);

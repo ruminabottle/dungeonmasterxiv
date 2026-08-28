@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -20,6 +21,14 @@ namespace DungeonMasterXIV.Net;
 /// well-formed. Malformed content is refused the way a malformed envelope is: a false return and no
 /// exception, because a participant sending nonsense must not be able to end anyone's session.
 /// </para>
+/// <para>
+/// <b>Every display name is put through <see cref="DisplayName"/> HERE, and this is the only door.</b>
+/// The seal authenticates the sender; it says nothing about what they sent. A name is untrusted data
+/// rendered beside a fingerprint, so a multi-line one could draw a forged <c>"Code to compare"</c>
+/// line — a name displacing the fingerprint, which the D-8 gate denies on sight. Validating at the
+/// boundary rather than at each consumer is the difference between a rule and a reminder: a later
+/// reader of a decoded <see cref="SessionContent"/> must not have to remember.
+/// </para>
 /// </remarks>
 public static class SessionContentCodec
 {
@@ -27,6 +36,26 @@ public static class SessionContentCodec
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
+
+    /// <summary>
+    /// The same document with every display name put through <see cref="DisplayName"/>.
+    /// </summary>
+    /// <remarks>
+    /// A name the join path would refuse degrades to <see cref="DisplayName.Unstated"/> and
+    /// <b>the participant stays in the roster</b> — exactly what the admission prompt already does.
+    /// Dropping them would let a malformed name erase somebody from the session, which is a worse
+    /// outcome than showing them unnamed.
+    /// </remarks>
+    private static SessionContent Vetted(SessionContent content) =>
+        content.Roster is null
+            ? content
+            : new SessionContent
+            {
+                Roster = [.. content.Roster.Select(entry => entry with
+                {
+                    DisplayName = DisplayName.OrNone(entry.DisplayName).Value,
+                })],
+            };
 
     /// <summary>Serialises <paramref name="content"/> for sealing.</summary>
     /// <param name="content">The document to encode.</param>
@@ -61,6 +90,12 @@ public static class SessionContentCodec
             return false;
         }
 
-        return content is not null;
+        if (content is null)
+        {
+            return false;
+        }
+
+        content = Vetted(content);
+        return true;
     }
 }

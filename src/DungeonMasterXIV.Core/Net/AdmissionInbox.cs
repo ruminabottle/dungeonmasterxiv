@@ -20,6 +20,40 @@ namespace DungeonMasterXIV.Net;
 /// tick is an assertion rather than a hope.
 /// </para>
 /// </remarks>
+/// <summary>
+/// What a client does with what arrives, and the key it can open content with.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>One parameter because it is one concern</b>, not to shorten a signature.
+/// <see cref="AdmissionInbox.Drain"/> had reached six parameters — the block row in the engineering
+/// standards — and four of them defaulted, which is the readability tell that goes with it: call
+/// sites had begun carrying meaning in argument order rather than in names.
+/// </para>
+/// <para>
+/// The three travel together because they answer one question: <i>this frame arrived, now what?</i>
+/// <see cref="OpenWith"/> belongs with them rather than beside them — it is not configuration, it is
+/// the thing that decides whether <see cref="OnContent"/> can be called at all.
+/// </para>
+/// </remarks>
+/// <param name="OnJoinRequest">
+/// Called with the joiner's public key and self-declared name for each inbound
+/// <see cref="WireMessageType.JoinRequest"/>, when this client is a host. Null when there is nobody
+/// to tell, which is every joiner-only client (BUG-42).
+/// </param>
+/// <param name="OpenWith">
+/// The shared key to open inbound content with, or null before one exists. A key derived during the
+/// same drain takes precedence — see the call site.
+/// </param>
+/// <param name="OnContent">
+/// Called for each payload this client could open (D-11). Payloads sealed for somebody else are
+/// ordinary traffic and pass in silence.
+/// </param>
+public readonly record struct InboundHandlers(
+    Action<byte[], DisplayName>? OnJoinRequest = null,
+    byte[]? OpenWith = null,
+    Action<SessionContent>? OnContent = null);
+
 public sealed class AdmissionInbox
 {
     private readonly object _gate = new();
@@ -44,11 +78,9 @@ public sealed class AdmissionInbox
     /// into one queue, so the relay's answer to a code request is drained here too rather than by a
     /// second consumer that would race this one for the same frames (BUG-36).
     /// </param>
-    /// <param name="onJoinRequest">
-    /// Called with the joiner's public key and self-declared name for each inbound
-    /// <see cref="WireMessageType.JoinRequest"/>,
-    /// when this client is a host. Null when there is nobody to tell, which is every joiner-only
-    /// client (BUG-42).
+    /// <param name="handlers">
+    /// What this client does with what arrives — see <see cref="InboundHandlers"/>. Omitting it
+    /// drains without acting, which is what a caller that only wants the derived key wants.
     /// </param>
     /// <returns>The derived session key if this drain admitted us, otherwise null.</returns>
     /// <remarks>
@@ -57,21 +89,11 @@ public sealed class AdmissionInbox
     /// arrives as <see cref="WireMessageType.Unknown"/> from the deserializer and falls through
     /// without a handler needing to remember to ignore it (D-14).
     /// </remarks>
-    /// <param name="openWith">
-    /// The shared key to open inbound content with, or null before one exists. A key derived during
-    /// this same drain takes precedence — see the call site.
-    /// </param>
-    /// <param name="onContent">
-    /// Called for each payload this client could open (D-11). Payloads sealed for somebody else are
-    /// ordinary traffic and pass in silence.
-    /// </param>
     public byte[]? Drain(
         JoinAttempt attempt,
         SessionKeyExchange? keys,
         HostSession? host = null,
-        Action<byte[], DisplayName>? onJoinRequest = null,
-        byte[]? openWith = null,
-        Action<SessionContent>? onContent = null)
+        InboundHandlers handlers = default)
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
@@ -115,7 +137,7 @@ public sealed class AdmissionInbox
                 // so JoinAccepted and the first payload can land in the same batch — and A-1.13a is
                 // exactly the case that would silently show an empty list if the freshly derived
                 // key were not used until the next frame arrived.
-                ApplyContent(envelope, sessionKey ?? openWith, onContent);
+                ApplyContent(envelope, sessionKey ?? handlers.OpenWith, handlers.OnContent);
                 continue;
             }
 
@@ -126,7 +148,7 @@ public sealed class AdmissionInbox
             // how it fell through to nothing.
             if (envelope.Type == WireMessageType.JoinRequest)
             {
-                if (onJoinRequest is not null && envelope.PublicKey is { } joinerPublicKey)
+                if (handlers.OnJoinRequest is { } onJoinRequest && envelope.PublicKey is { } joinerPublicKey)
                 {
                     // Validated HERE rather than trusted, and a bad name does not drop the request:
                     // the person behind it is still waiting, and the prompt they need carries the
