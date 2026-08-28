@@ -75,47 +75,38 @@ public class BothRosterViewsRenderThroughOnePlaceTests
         Assert.Contains("private void DrawJoining()", code, StringComparison.Ordinal);
     }
 
-    // THE HEADING IS A CLAIM ABOUT COMPLETENESS AND IT MUST STAY NARROW WHILE THE DM IS ABSENT.
-    // The roster a player receives structurally omits the host (DMXENG-33), so a region reading
-    // "everyone in this session" would not merely omit the DM -- it would TELL THE PLAYER THE DM IS
-    // NOT HERE. That is a false statement to a user, and it is the same defect as a control labelled
-    // with a promise it does not keep.
-    //
-    // This is deliberately a test and not a comment: the wording is the sort of thing a later editor
-    // broadens while tidying, and by then the reason will not be on screen. It should be RELAXED as
-    // part of DMXENG-33, when the claim becomes true -- failing then is the point, not a nuisance.
-    [Theory]
-    [InlineData("everyone")]
-    [InlineData("everybody")]
-    [InlineData("all participants")]
-    [InlineData("who is here")]
-    public void TheRosterHeadingDoesNotClaimToShowEveryone(string overclaim)
-    {
-        var heading = Regex.Match(Code(), @"PlayersInThisSession\s*=\s*""(?<text>[^""]*)""");
-
-        Assert.True(heading.Success, "The roster heading constant is gone or was renamed.");
-        Assert.DoesNotContain(
-            overclaim,
-            heading.Groups["text"].Value,
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    // The control: the heading must actually SAY something. An empty or deleted constant would
-    // satisfy every refusal above while rendering a nameless list.
+    // THE OTHER HALF OF THE HEADING GUARD, and the half whose absence defeated the last one.
+    // The value lives in Core and is tested there; what no value test can see is whether the window
+    // USES it. The previous guard read the constant's text and the Code Reviewer beat it in one
+    // line -- constant left honest, literal passed to the draw call, all 775 green. So this asserts
+    // the draw call renders RosterHeading.Text and that no literal heading sits beside it.
     [Fact]
-    public void TheRosterHeadingStillNamesWhatItShows()
+    public void TheWindowRendersTheCoreHeadingRatherThanALiteral()
     {
-        var heading = Regex.Match(Code(), @"PlayersInThisSession\s*=\s*""(?<text>[^""]*)""");
+        var code = Code();
 
-        Assert.True(heading.Success, "The roster heading constant is gone or was renamed.");
-        Assert.Contains("Players", heading.Groups["text"].Value, StringComparison.Ordinal);
+        Assert.Contains("ImGui.TextUnformatted(RosterHeading.Text)", code, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "in this session:",
+            code,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>The window's source with comment lines removed.</summary>
     /// <remarks>
+    /// <para>
     /// Stripped because this file's own commentary names <c>DrawRoster</c> and
     /// <c>SessionRoleLabel</c> while explaining them, and a count that includes prose counts the
     /// explanation as a second implementation.
+    /// </para>
+    /// <para>
+    /// <b>Which families this handles, said plainly so the next reader does not assume more.</b> It
+    /// removes lines whose TRIMMED START is <c>//</c> — line comments and XML-doc comments. It does
+    /// NOT remove block comments or a trailing comment after code. Both of those INFLATE the counts
+    /// above, so their failure direction is a false FAIL, which is the safe one. The one narrow
+    /// false-PASS is <c>BothSidesCallIt</c>'s <c>&gt;= 3</c>, part of which a commented-out call
+    /// could supply.
+    /// </para>
     /// </remarks>
     private static string Code()
     {

@@ -36,11 +36,6 @@ public sealed class SessionWindow : Window
         "Your DM's client has not sent a code to compare. You cannot check who you are talking to, "
         + "and being admitted will not tell you.";
 
-    // R-1.3f. NARROWER THAN "everyone in this session", and deliberately so: the roster a player
-    // receives structurally omits the DM (DMXENG-33), so the broader wording would assert the DM is
-    // absent rather than merely not list them. The claim is kept true of exactly what is shown.
-    private const string PlayersInThisSession = "Players in this session:";
-
     private const string AdmittedUncompared =
         "You were admitted without ever having a code to compare. Nothing here proves the DM is who "
         + "you think - it only proves someone admitted you.";
@@ -274,17 +269,14 @@ public sealed class SessionWindow : Window
         // D-13's None requires and what makes the criterion assessable over what a client RECEIVES.
         if (join.Phase == JoinPhase.Admitted && _coordinator.Roster.Count > 0)
         {
-            // THE HEADING IS A CLAIM, AND IT IS NARROWED ON PURPOSE. This roster structurally
-            // omits the DM -- the host is not on its own Recipients, so it is never in what it
-            // sends (DMXENG-33 is the other half). A region reading "everyone in this session"
-            // would therefore TELL A PLAYER THE DM IS NOT HERE, which is a false statement to a
-            // user rather than a missing feature. That is #89's defect one layer over: a control
-            // labelled with a promise it does not keep.
+            // The heading is a CLAIM about what is below it and the reasoning lives with the
+            // value, in RosterHeading -- it is a decision about meaning, not about drawing. Held
+            // in Core because a source check on a window constant was defeated by leaving the
+            // constant honest and passing a literal here instead.
             //
-            // "Players" is true of exactly what is shown, today and after DMXENG-33 changes what
-            // travels. The empty case renders nothing at all rather than a heading over no names,
-            // which would assert there are no players while the reader is one.
-            ImGui.TextUnformatted(PlayersInThisSession);
+            // The empty case renders nothing at all rather than a heading over no names, which
+            // would assert there are no players while the reader is one.
+            ImGui.TextUnformatted(RosterHeading.Text);
             DrawRoster(_coordinator.Roster.Select(entry => (entry.DisplayName, entry.Role)));
         }
 
