@@ -91,18 +91,29 @@ public static class SessionContentCodec
     /// works and would therefore accept <c>"PEE-R3"</c> that the product never generated.
     /// </para>
     /// </remarks>
-    private static SessionContent Vetted(SessionContent content) =>
-        content.Roster is null
-            ? content
-            : new SessionContent
+    private static SessionContent Vetted(SessionContent content, out int dropped)
+    {
+        dropped = 0;
+
+        if (content.Roster is null)
+        {
+            return content;
+        }
+
+        var kept = content.Roster
+            .Where(entry => PeerCode.TryParse(entry.PeerCode, out _))
+            .Select(entry => entry with
             {
-                Roster = [.. content.Roster
-                    .Where(entry => PeerCode.TryParse(entry.PeerCode, out _))
-                    .Select(entry => entry with
-                    {
-                        DisplayName = DisplayName.OrNone(entry.DisplayName).Value,
-                    })],
-            };
+                DisplayName = DisplayName.OrNone(entry.DisplayName).Value,
+            })
+            .ToList();
+
+        // Vetted still only decides; it does not announce. It reports HOW MANY it removed and the
+        // caller decides whether anyone hears about it — this stays the door rather than becoming
+        // the diagnostics layer (BUG-70).
+        dropped = content.Roster.Count - kept.Count;
+        return new SessionContent { Roster = kept };
+    }
 
     /// <summary>Serialises <paramref name="content"/> for sealing.</summary>
     /// <param name="content">The document to encode.</param>
@@ -118,8 +129,18 @@ public static class SessionContentCodec
     /// </summary>
     /// <param name="plaintext">Bytes returned by <see cref="SessionCipher.Open"/>.</param>
     /// <param name="content">The decoded document, or null.</param>
+    /// <param name="log">
+    /// Where a stripped roster entry is reported. Optional, and null is the silent case: the
+    /// entry is refused either way, so this decides whether a developer finds out, not whether
+    /// the door holds (BUG-70). The rejected value is deliberately never written — a log is the
+    /// artefact most likely to be pasted into a bug report, so echoing an attacker-chosen
+    /// string here would be a disclosure decision, not a formatting one.
+    /// </param>
     /// <returns>Whether the bytes were a document this build understands.</returns>
-    public static bool TryDecode(byte[] plaintext, out SessionContent? content)
+    public static bool TryDecode(
+        byte[] plaintext,
+        out SessionContent? content,
+        ISessionTransportLog? log = null)
     {
         content = null;
 
@@ -142,7 +163,25 @@ public static class SessionContentCodec
             return false;
         }
 
-        content = Vetted(content);
+        content = Vetted(content, out var dropped);
+
+        // BUG-70. The drop itself is right for both of its causes; the SILENCE was right for only
+        // one. A forged entry rejected is nothing to announce — but the other cause is that OUR OWN
+        // ENCODER wrote a code it cannot parse back, and then we delete a genuine participant to
+        // hide our own bug and nothing anywhere says so. This cannot tell the two apart at the point
+        // of drop, so it reports the fact and leaves the reading to whoever is looking.
+        //
+        // THE COUNT, NEVER THE VALUE. The rejected code is a string somebody else chose, and a log
+        // is the artifact most likely to end up pasted into a bug report.
+        if (dropped > 0)
+        {
+            log?.Warning(
+                $"Dropped {dropped} roster {(dropped == 1 ? "entry" : "entries")} whose peer code "
+                + "this build cannot have produced. Either this client's encoder is writing codes it "
+                + "cannot parse back, or a keyholder is sending forged ones. The rejected value is "
+                + "deliberately not recorded here.");
+        }
+
         return true;
     }
 }

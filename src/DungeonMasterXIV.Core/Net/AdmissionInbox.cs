@@ -109,6 +109,12 @@ public sealed class AdmissionInbox
     /// What this client does with what arrives — see <see cref="InboundHandlers"/>. Omitting it
     /// drains without acting, which is what a caller that only wants the derived key wants.
     /// </param>
+    /// <param name="log">
+    /// Where this drain reports content it accepted but had to strip — see
+    /// <see cref="SessionContentCodec.TryDecode"/>. Optional because a caller that only wants
+    /// the derived key has nobody to tell; a null log makes the strip silent, which is the
+    /// condition BUG-70 was about rather than an accepted default.
+    /// </param>
     /// <returns>The derived session key if this drain admitted us, otherwise null.</returns>
     /// <remarks>
     /// A frame that does not parse is dropped rather than raised — anything can arrive from a relay
@@ -120,7 +126,8 @@ public sealed class AdmissionInbox
         JoinAttempt attempt,
         SessionKeyExchange? keys,
         HostSession? host = null,
-        InboundHandlers handlers = default)
+        InboundHandlers handlers = default,
+        ISessionTransportLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
@@ -172,7 +179,7 @@ public sealed class AdmissionInbox
                 // so JoinAccepted and the first payload can land in the same batch — and A-1.13a is
                 // exactly the case that would silently show an empty list if the freshly derived
                 // key were not used until the next frame arrived.
-                ApplyContent(envelope, sessionKey ?? handlers.OpenWith, handlers.OnContent);
+                ApplyContent(envelope, sessionKey ?? handlers.OpenWith, handlers.OnContent, log);
                 continue;
             }
 
@@ -286,7 +293,11 @@ public sealed class AdmissionInbox
     }
 
     /// <summary>Opens a payload if it is ours to open, and hands on what it said.</summary>
-    private static void ApplyContent(WireEnvelope envelope, byte[]? key, Action<SessionContent>? onContent)
+    private static void ApplyContent(
+        WireEnvelope envelope,
+        byte[]? key,
+        Action<SessionContent>? onContent,
+        ISessionTransportLog? log)
     {
         if (onContent is null || key is null || envelope.TryGetSealedPayload() is not { } sealedPayload)
         {
@@ -304,7 +315,7 @@ public sealed class AdmissionInbox
             return;
         }
 
-        if (SessionContentCodec.TryDecode(plaintext, out var content) && content is not null)
+        if (SessionContentCodec.TryDecode(plaintext, out var content, log) && content is not null)
         {
             onContent(content);
         }
