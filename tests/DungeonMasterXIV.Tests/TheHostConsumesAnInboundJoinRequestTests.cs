@@ -109,6 +109,93 @@ public class TheHostConsumesAnInboundJoinRequestTests
         Assert.Equal(2, coordinator.Admissions.Pending.Select(p => p.PeerCode).Distinct().Count());
     }
 
+    // A-1.2a, added by the Spec Owner when they answered SQ-16: the SAME joiner presenting to two
+    // different sessions must get two different peer codes. "A value that is identical across two
+    // session codes fails, even though it renders correctly in both prompts" -- so the failing input
+    // is a derivation that ignores the session, and one key is reused across both hosts to make that
+    // the only thing that can vary. D-8: the same person must not present the same value twice.
+    [Fact]
+    public void TheSameJoinerGetsADifferentPeerCodeInEachSession()
+    {
+        using var joiner = new SessionKeyExchange();
+        var (first, firstTransport) = Hosting();
+        var (second, secondTransport) = Hosting();
+
+        Assert.NotEqual(first.Host.Code!.Value, second.Host.Code!.Value);
+
+        firstTransport.Deliver(WireEnvelope.ForJoinRequest(first.Host.Code!.Value, joiner.PublicKey));
+        secondTransport.Deliver(WireEnvelope.ForJoinRequest(second.Host.Code!.Value, joiner.PublicKey));
+        first.Tick(TimeSpan.Zero, Now);
+        second.Tick(TimeSpan.Zero, Now);
+
+        Assert.NotEqual(
+            Assert.Single(first.Admissions.Pending).PeerCode,
+            Assert.Single(second.Admissions.Pending).PeerCode);
+    }
+
+    // The other half of A-1.2a's first clause, so the pair cannot be satisfied by a value that is
+    // simply random: within ONE session the same joiner is the same requester, and a code that
+    // changed per frame would make the DM's prompt unanswerable.
+    [Fact]
+    public void TheSameJoinerKeepsOnePeerCodeWithinASession()
+    {
+        var (coordinator, transport) = Hosting();
+        using var joiner = new SessionKeyExchange();
+
+        transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, joiner.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+        var first = Assert.Single(coordinator.Admissions.Pending).PeerCode;
+
+        coordinator.Admissions.Clear();
+        transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, joiner.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        Assert.Equal(first, Assert.Single(coordinator.Admissions.Pending).PeerCode);
+    }
+
+    // A-1.2d, the half that is reachable today. The criterion is "two concurrent requesters sending
+    // the SAME display name remain distinguishable, and admitting one does not admit the other" --
+    // a case which WILL occur, because a name is self-declared and nothing verifies it.
+    //
+    // The display name does not exist yet: nothing in production carries one and putting it on the
+    // wire is outside this fix's boundary. What IS testable now is the half that makes the criterion
+    // satisfiable at all -- the requesters are told apart by something a duplicate name cannot
+    // collapse, and the DM's decision lands on exactly the one they chose.
+    //
+    // BOTH POSITIONS, and that is the whole point of the Theory. The first version of this test
+    // admitted whichever requester arrived FIRST, and it passed with the peer-code lookup replaced
+    // by `_pending.FirstOrDefault()` -- ignoring the code entirely. Admitting the head of the list
+    // is the right answer for the wrong reason, so the test was order-dependent where A-1.2d is
+    // entirely about the code. Running both positions makes that blindness unrepresentable rather
+    // than fixed once: a future change to _pending's ordering cannot quietly restore it.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void AdmittingOneRequesterDoesNotAdmitTheOther(int admitted)
+    {
+        var (coordinator, transport) = Hosting();
+        using var first = new SessionKeyExchange();
+        using var second = new SessionKeyExchange();
+        var keys = new[] { first.PublicKey, second.PublicKey };
+
+        transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, first.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, second.PublicKey));
+        coordinator.Tick(TimeSpan.Zero, Now);
+
+        var chosen = coordinator.Admissions.Pending
+            .Single(p => p.JoinerPublicKey!.SequenceEqual(keys[admitted]));
+        coordinator.Admit(chosen.PeerCode);
+
+        // The other is still waiting on the DM, not silently let in alongside.
+        var stillPending = Assert.Single(coordinator.Admissions.Pending);
+        Assert.Equal(keys[1 - admitted], stillPending.JoinerPublicKey);
+
+        // And exactly one acceptance went out, addressed to the one the DM chose -- not merely to
+        // someone. A lookup that ignores the peer code fails here on admitted: 1.
+        var accepted = Sent(transport).Where(e => e.Type == WireMessageType.JoinAccepted).ToList();
+        Assert.Equal(keys[admitted], Assert.Single(accepted).PublicKey);
+    }
+
     // A client that is not hosting must not build prompts out of traffic addressed to a host.
     [Fact]
     public void AClientThatIsNotHostingIgnoresAJoinRequest()
