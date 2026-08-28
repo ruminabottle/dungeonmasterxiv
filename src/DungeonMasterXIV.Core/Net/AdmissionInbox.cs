@@ -148,7 +148,20 @@ public sealed class AdmissionInbox
             // how it fell through to nothing.
             if (envelope.Type == WireMessageType.JoinRequest)
             {
-                if (handlers.OnJoinRequest is { } onJoinRequest && envelope.PublicKey is { } joinerPublicKey)
+                // THE KEY IS CHECKED HERE, AT THE ONE DOOR IT ARRIVES THROUGH (BUG-56). A joiner
+                // controls these bytes and nothing validated them, so a peer the host could never
+                // derive a key for could be admitted: addressable by the relay, unreachable by the
+                // host, and silent to everyone. Guarding each place that derives instead is a
+                // denylist of the call sites that happen to exist today, and the next one is
+                // unprotected — which is why this is at the boundary and not beside the crypto.
+                //
+                // A refused request is DROPPED, exactly as any frame that does not parse is dropped
+                // a few lines above. That is the existing rule for unusable input on this path, not
+                // a new answer to what the DM should be told about it — that remains a product
+                // question (D-8) and is deliberately left open.
+                if (handlers.OnJoinRequest is { } onJoinRequest
+                    && envelope.PublicKey is { } joinerPublicKey
+                    && SessionKeyExchange.CanAgreeWith(joinerPublicKey))
                 {
                     // Validated HERE rather than trusted, and a bad name does not drop the request:
                     // the person behind it is still waiting, and the prompt they need carries the
