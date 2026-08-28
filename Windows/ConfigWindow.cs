@@ -1,3 +1,4 @@
+using System;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using DungeonMasterXIV.Data;
@@ -12,6 +13,7 @@ namespace DungeonMasterXIV.Windows;
 public sealed class ConfigWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;
+    private readonly Func<DisplayName> _characterName;
 
     // Built once: Draw runs every frame and the schema version cannot change while we are loaded.
     private readonly string _schemaVersionLabel;
@@ -31,15 +33,37 @@ public sealed class ConfigWindow : Window
         + "sessions, and nothing to delete anywhere but here.",
     };
 
+    // Not R-1.7a copy -- R-1.7a covers the session window, the admission prompt and the settings
+    // section's "What this plugin knows" text, and supplies no wording for these. Written here under
+    // the same constraint: no phrasing from its forbidden list, and no claim that a name proves
+    // anything.
+    private static readonly string UnusableAliasWarning =
+        $"This name cannot be used, so your character name will be sent instead. Names are limited "
+        + $"to {DisplayName.MaxLength} characters and cannot contain line breaks or invisible "
+        + "formatting characters - they are shown next to the code you compare, and a name that can "
+        + "redraw that line is a way to hide it.";
+
+    // D-8: a name may be shown and may never be acted on. Said in the place a user chooses one,
+    // because that is where somebody would otherwise assume it identifies them.
+    private const string NameIsNotIdentity =
+        "This name is not checked by anything. Anyone can send any name, so it tells your DM who "
+        + "you say you are and nothing more - the code you read to each other is the part that "
+        + "proves anything.";
+
     private const string InvalidRelayWarning =
         "This is not a usable relay address. It must start with wss:// - or ws:// for a relay "
         + "running on this machine.";
 
     /// <param name="configurationStore">The settings this window reads and writes.</param>
-    public ConfigWindow(ConfigurationStore configurationStore)
+    /// <param name="characterName">
+    /// What the game says this player is called, read at draw time rather than captured — a
+    /// character name is not stable for the life of the plugin.
+    /// </param>
+    public ConfigWindow(ConfigurationStore configurationStore, Func<DisplayName> characterName)
         : base("Dungeon Master XIV settings###dmx-settings")
     {
         _configurationStore = configurationStore;
+        _characterName = characterName;
         _schemaVersionLabel = $"Settings schema version {configurationStore.Configuration.Version}";
 
         SizeConstraints = new WindowSizeConstraints
@@ -68,6 +92,9 @@ public sealed class ConfigWindow : Window
         }
 
         ImGui.Separator();
+        DrawDisplayNameSetting(settings);
+
+        ImGui.Separator();
         DrawRelaySetting(settings);
 
         ImGui.Separator();
@@ -75,6 +102,50 @@ public sealed class ConfigWindow : Window
 
         ImGui.Separator();
         ImGui.TextDisabled(_schemaVersionLabel);
+    }
+
+    // R-1.3e: the name defaults to the character name and may be changed to an alias.
+    //
+    // The effective name is SHOWN, not only editable. R-1.3e's Tier 0 is "see and change the name
+    // they will send" -- a box you type into without being told the result delivers the changing
+    // half and not the seeing half, and the default case is exactly the one where the box is empty
+    // and the answer is not obvious.
+    private void DrawDisplayNameSetting(PluginSettings settings)
+    {
+        ImGui.TextUnformatted("Display name");
+
+        var characterName = _characterName();
+
+        // PRE-FILLED with the character name, which is a citation and not a nicety: R-1.3e's Tier 0
+        // is "see and change the name they will send, before it is sent, PRE-FILLED with their
+        // character name". An empty box fails that — the user would have to already know what would
+        // be sent in order to see it.
+        //
+        // Room to type MORE than the limit, deliberately. A box capped at exactly MaxLength stops
+        // accepting keystrokes with no explanation, and the user is left looking at a name that is
+        // not the one they meant. Over-typing is allowed and then told about.
+        var typed = settings.NameToEdit(characterName);
+        if (ImGui.InputText("Name others see", ref typed, (DisplayName.MaxLength * 2) + 1))
+        {
+            if (settings.RecordChosenName(typed, characterName))
+            {
+                _configurationStore.Save();
+            }
+        }
+
+        // Deliberately the SAME call the join uses, not a re-derivation of it. Two expressions that
+        // are meant to agree drift; one that is shared cannot disagree with itself. A-1.2g asserts
+        // on what LEAVES THE CLIENT rather than on what this line says, which is the right way
+        // round — this is a preview, and a preview is not evidence.
+        var effective = settings.DisplayNameOr(characterName);
+        ImGui.TextUnformatted($"You will join as: {effective.Value}");
+
+        if (settings.DisplayNameAlias.Length > 0 && !DisplayName.TryParse(settings.DisplayNameAlias, out _))
+        {
+            ImGui.TextWrapped(UnusableAliasWarning);
+        }
+
+        ImGui.TextWrapped(NameIsNotIdentity);
     }
 
     // R-1.8: the relay is swappable and the setting is discoverable rather than buried.

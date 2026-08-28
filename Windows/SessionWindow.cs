@@ -153,11 +153,42 @@ public sealed class SessionWindow : Window
             ImGui.TextWrapped(SessionFailureMessage.For(host.Failure));
         }
 
-        if (ImGui.Button("Start session"))
+        // R-1.3h: a client that has joined a session offers NO WAY to host one. The control is
+        // ABSENT rather than disabled — the requirement is explicit that a greyed control which
+        // still occupies the UI fails, because it invites exactly the question the exclusivity
+        // exists to remove.
+        if (!InAJoinedSession())
         {
-            _coordinator.StartHosting();
+            if (ImGui.Button("Start session"))
+            {
+                _coordinator.StartHosting();
+            }
         }
     }
+
+    /// <summary>
+    /// Whether this client is in a session it joined — for the life of that session (R-1.3h).
+    /// </summary>
+    /// <remarks>
+    /// The phases mirror <c>SessionCoordinator.JoinNeedsConnection</c>, which is the existing
+    /// answer to "is this client engaged in a join". <c>Denied</c>, <c>Lapsed</c> and
+    /// <c>Failed</c> are deliberately absent: the attempt is over, the client is in no session,
+    /// and hosting becomes offerable again.
+    /// </remarks>
+    private bool InAJoinedSession() =>
+        _coordinator.Join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted;
+
+    /// <summary>
+    /// Whether this client is hosting — from claiming a code until the session ends (R-1.3h).
+    /// </summary>
+    /// <remarks>
+    /// <c>Registering</c> counts. A code has been claimed and the session is being established, so
+    /// offering a join there would let a DM start hosting and join someone else in the window
+    /// before registration completes — which is the state the criterion calls "the life of the
+    /// session". <c>Failed</c> does not: nothing was established, and the client is free again.
+    /// </remarks>
+    private bool InAHostedSession() =>
+        _coordinator.Host.Phase is HostingPhase.Registering or HostingPhase.Hosting;
 
     private void DrawJoining()
     {
@@ -192,7 +223,9 @@ public sealed class SessionWindow : Window
             ImGui.TextWrapped(AdmittedUncompared);
         }
 
-        if (join.MayRequestAgain || join.Phase == JoinPhase.Denied)
+        // R-1.3h, the other direction: while this client is hosting there is no way to join. The
+        // code box goes with the button — leaving a field to type into is still offering the way.
+        if (!InAHostedSession() && (join.MayRequestAgain || join.Phase == JoinPhase.Denied))
         {
             ImGui.InputText("Session code", ref _codeEntry, 16);
             if (ImGui.Button("Request to join") && SessionCode.TryParse(_codeEntry, out var code))
