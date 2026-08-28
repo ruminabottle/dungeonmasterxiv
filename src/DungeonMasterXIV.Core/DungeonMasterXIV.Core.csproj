@@ -36,6 +36,35 @@
   </PropertyGroup>
 
   <!--
+    BouncyCastle: the managed EC implementation BUG-61 forced us to. DMXHUM-4 measured that the
+    .NET-native paths CANNOT do EC at all through the Wine prefix's provider - rows 1, 2, 4, 5 and 6
+    all fail with 0x80090029/0x80090027 - so this is D-11 preference (b), reached only because (a)
+    was eliminated by measurement rather than disfavoured by taste.
+
+    PINNED EXACTLY, and that is a Product Owner condition rather than a style preference: this ships
+    code into other people's game client, so a floating range would let the supply-chain surface
+    move without review - which is the specific risk being accepted here, and accepting it while
+    leaving it unpinned would be accepting something else.
+
+    SCOPED TO THE KEY-EXCHANGE PATH ONLY. Approved as the fix for this defect, not as a general
+    purpose library. A second use is a second decision and goes back to the Product Owner.
+  -->
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
+  </ItemGroup>
+
+  <!--
+    So SessionKeyExchange can expose ONE seam to the tests: the probe-key generator in CanAgreeWith.
+    BUG-61 is the case where a PLATFORM failure was indistinguishable from a BAD KEY, and the ticket
+    requires a test that fails if the two are conflated again - which needs a way to make the
+    platform half fail on demand. A mutable static would have handed one test's stub to whatever
+    thread drained next.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DungeonMasterXIV.Tests" />
+  </ItemGroup>
+
+  <!--
     The rule above, as a build failure rather than a request. Batches over each reference's
     %(Identity) — item references are NOT expanded inside property-function arguments, so the
     tempting $([System.String]::Copy('@(Reference)').Contains('Dalamud')) silently evaluates
