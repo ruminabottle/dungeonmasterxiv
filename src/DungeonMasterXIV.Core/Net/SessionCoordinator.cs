@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -17,8 +18,17 @@ public sealed class SessionCoordinator
     /// Reads the configured relay at the moment of connecting rather than at construction, so
     /// changing it in settings takes effect on the next session without a reload (R-1.8).
     /// </param>
-    public SessionCoordinator(ISessionTransport transport, Func<string> relayAddress)
+    /// <param name="newKeys">
+    /// How a session key pair is made. Injected so a failure to make one can be driven from a test
+    /// (BUG-61): on the machine that reported it, this throws, and there was no seam between that
+    /// throw and the frame loop.
+    /// </param>
+    public SessionCoordinator(
+        ISessionTransport transport,
+        Func<string> relayAddress,
+        Func<SessionKeyExchange>? newKeys = null)
     {
+        _newKeys = newKeys ?? (static () => new SessionKeyExchange());
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
         _admissions = new AdmissionControl(
             new AdmissionAnnouncer(transport),
@@ -28,6 +38,7 @@ public sealed class SessionCoordinator
         _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code);
     }
 
+    private readonly Func<SessionKeyExchange> _newKeys;
     private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
@@ -99,7 +110,19 @@ public sealed class SessionCoordinator
     public void StartHosting()
     {
         HostKeys?.Dispose();
-        HostKeys = new SessionKeyExchange();
+        HostKeys = null;
+
+        // BUG-61. This throws on at least one real machine, and it used to unwind out of the button
+        // handler and out of Draw -- so the user got an exception every frame rather than an answer
+        // once. Caught HERE rather than at the button, because both of the product's two entry
+        // points construct a key pair and a guard at one of them leaves the other open.
+        if (!TryMakeKeys(out var hostKeys))
+        {
+            Host.Fail(SessionFailure.SessionKeysUnavailable);
+            return;
+        }
+
+        HostKeys = hostKeys;
         Host.Start(SessionCodeGenerator.Next());
         _handshake.ForgetHostRegistration();
         SynchroniseTransport();
@@ -166,8 +189,18 @@ public sealed class SessionCoordinator
     {
         _handshake.JoiningAs(name, claimedParticipantId);
         JoinerKeys?.Dispose();
-        JoinerKeys = new SessionKeyExchange();
+        JoinerKeys = null;
         SessionKey = null;
+
+        // The same guard, because joining fails identically to hosting: both make a key pair, which
+        // is why an affected machine has nothing left that works (BUG-61).
+        if (!TryMakeKeys(out var joinerKeys))
+        {
+            Join.Fail(SessionFailure.SessionKeysUnavailable);
+            return;
+        }
+
+        JoinerKeys = joinerKeys;
         Join.Request(code);
 
         // Cleared so asking again for the SAME code re-sends. R-1.3c makes that the ordinary case —
@@ -206,6 +239,29 @@ public sealed class SessionCoordinator
     {
         Grace.HostReturned();
         Host.CodeSuperseded(SessionCodeGenerator.Next());
+    }
+
+    /// <summary>
+    /// Makes a session key pair, reporting failure rather than throwing.
+    /// </summary>
+    /// <remarks>
+    /// <b>Only <see cref="CryptographicException"/>, deliberately.</b> That is what the reported
+    /// failure is, and a broader catch here would hide a genuine defect in this method's own
+    /// callers behind a message about keys. The exception is not logged or re-wrapped: the
+    /// user-facing answer is the failure value, and T-46 owns what gets logged.
+    /// </remarks>
+    private bool TryMakeKeys(out SessionKeyExchange? keys)
+    {
+        try
+        {
+            keys = _newKeys();
+            return true;
+        }
+        catch (CryptographicException)
+        {
+            keys = null;
+            return false;
+        }
     }
 
     /// <summary>Records that a participant is asking to be let in.</summary>
