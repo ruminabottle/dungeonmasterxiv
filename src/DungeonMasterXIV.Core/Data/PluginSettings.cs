@@ -47,6 +47,85 @@ public sealed class PluginSettings
     public string RelayAddress { get; set; } = Net.RelayEndpoint.Default;
 
     /// <summary>
+    /// How long a session survives an interruption (R-1.4, R-1.5a, A-1.23). <b>The one settable
+    /// value both windows read</b>, so changing it moves the host-loss grace and the seat window
+    /// together, without a protocol decision.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>One value for two clocks, and they are not rival settings of one thing.</b> R-1.4's grace
+    /// runs only while the host is <i>unreachable</i>; R-1.5a's seat clock runs only while the host
+    /// is <i>reachable</i>. They never tick together (A-1.25), so there is no arithmetic between
+    /// them to get wrong — which is exactly why one number can serve both without meaning two
+    /// different things.
+    /// </para>
+    /// <para>
+    /// <b>Settable, not knobbed.</b> A-1.23 requires the length be changeable without a protocol
+    /// decision; it does not require a control. Whether the two should be unified for
+    /// comprehensibility is an open Product Owner question, and a UI control here would settle it
+    /// by implementation.
+    /// </para>
+    /// <para>
+    /// <b>Five minutes is not arbitrary, and the reason belongs beside the number.</b> Two minutes
+    /// was actively wrong: relaunching FFXIV takes minutes, so a two-minute host grace
+    /// <i>guaranteed</i> that any DM crash ended the session (BUG-54). A reader who meets this
+    /// value with no rationale will eventually shorten it and be able to argue for it.
+    /// </para>
+    /// <para>
+    /// <b>No schema bump.</b> <see cref="CurrentSchemaVersion"/> moves when settings already on disk
+    /// would not survive being read as-is. A key absent from an older file leaves this at its
+    /// initializer, which is the pre-existing behaviour — the same argument as
+    /// <see cref="DisplayNameAlias"/>.
+    /// </para>
+    /// </remarks>
+    public TimeSpan InterruptionWindow { get; set; } = Net.GraceWindow.Default;
+
+    /// <summary>
+    /// The window to actually use: <see cref="InterruptionWindow"/> when it is safe, otherwise
+    /// R-1.4's default.
+    /// </summary>
+    /// <remarks>
+    /// <b>Validated before use rather than trusted from disk</b>, exactly as
+    /// <see cref="RelayAddress"/> is. The setter is public because the serialiser needs it, so a
+    /// hand-edited or corrupted file can put any value in the property — including one short enough
+    /// that an ordinary lull between rolls trips host-loss detection and ends a live session
+    /// mid-play (<see cref="Net.TransportContract.IsKeepAliveSafeFor"/>).
+    /// <para>
+    /// <b>This one falls back rather than throwing, and that is the opposite of what
+    /// <see cref="Net.GraceWindow"/>'s constructor does — deliberately.</b> A caller passing a bad
+    /// value in code has made a mistake and should hear about it loudly. A bad value arriving from
+    /// a config file is a user's typo, and throwing on it would stop the plugin loading over a
+    /// number that has a perfectly good default. Same distinction as a wire value versus a
+    /// programming error.
+    /// </para>
+    /// </remarks>
+    public TimeSpan InterruptionWindowOrDefault() =>
+        Net.TransportContract.IsKeepAliveSafeFor(InterruptionWindow)
+            ? InterruptionWindow
+            : Net.GraceWindow.Default;
+
+    /// <summary>
+    /// Records a new window, reporting whether it was accepted. <b>Refuses rather than clamps.</b>
+    /// </summary>
+    /// <remarks>
+    /// Refusing is <see cref="Net.GraceWindow"/>'s own choice and this matches it: a silently
+    /// shortened window produces sessions that end mid-play for no visible reason, so a caller must
+    /// learn its value was rejected rather than discover later that it was quietly altered.
+    /// </remarks>
+    /// <param name="window">The requested length.</param>
+    /// <returns>False if the value is unsafe or unchanged; true if it was stored.</returns>
+    public bool RecordInterruptionWindow(TimeSpan window)
+    {
+        if (!Net.TransportContract.IsKeepAliveSafeFor(window) || InterruptionWindow == window)
+        {
+            return false;
+        }
+
+        InterruptionWindow = window;
+        return true;
+    }
+
+    /// <summary>
     /// The name this player sends instead of their character name (R-1.3e). Empty means "use the
     /// character name", which is the default the requirement asks for.
     /// </summary>
