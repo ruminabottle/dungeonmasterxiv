@@ -127,7 +127,7 @@ public sealed class SessionWindow : Window
             ImGui.SameLine();
             if (ImGui.Button("Copy"))
             {
-                ImGui.SetClipboardText(code.ToDisplayString());
+                ImGui.SetClipboardText(code.ToClipboardString());
             }
 
             ImGui.TextWrapped(CodeDisclosure);
