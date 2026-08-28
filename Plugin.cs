@@ -59,12 +59,24 @@ public sealed class Plugin : IDalamudPlugin
             new CampaignStoreLog(log));
         _windowSystem = new WindowSystem("DungeonMasterXIV");
         _mainWindow = new MainWindow(_configurationStore);
-        _configWindow = new ConfigWindow(_configurationStore);
+
+        // R-1.3e. Hoisted above the windows because BOTH of them need it: the settings window shows
+        // the name that will be sent, and the join sends it. One supplier, so the two cannot
+        // disagree about what this player is called.
+        var characterName = new LocalCharacterName(objects).Current;
+
+        _configWindow = new ConfigWindow(_configurationStore, characterName);
         _relayTransport = new WebSocketSessionTransport(new SessionTransportLog(log));
         _sessionCoordinator = new SessionCoordinator(
             _relayTransport,
             () => _configurationStore.Configuration.Settings.RelayAddress);
-        _sessionWindow = new SessionWindow(_sessionCoordinator, new LocalCharacterName(objects).Current);
+        // The alias if the player set a usable one, otherwise the character name (R-1.3e). The rule
+        // lives in PluginSettings so it is testable without Dalamud, and the settings window calls
+        // the same method to show what will be sent -- one expression, so the preview cannot drift
+        // from the thing it previews.
+        _sessionWindow = new SessionWindow(
+            _sessionCoordinator,
+            () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName()));
         _mainWindow.OpenSession = _sessionWindow.Open;
         _campaignListWindow = new CampaignListWindow(_campaignStore);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
