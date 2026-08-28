@@ -22,7 +22,8 @@ namespace DungeonMasterXIV.Tests;
 /// <b>What this can and cannot hold, stated rather than left to be assumed.</b> It pins the two
 /// Core halves against each other over the whole alphabet. It still cannot <i>execute</i> the
 /// button: <c>DungeonMasterXIV.Tests</c> references Core alone and may never reference the plugin,
-/// so <see cref="WhatTheCopyActionProduces"/> mirrors the window rather than calling it.
+/// so <see cref="WhatTheCopyActionProduces"/> could not call the window. C34 removed the need to:
+/// it calls <see cref="SessionCode.ToClipboardString"/>, the member the button calls.
 /// <para>
 /// <b>That mirror is no longer unchecked (BUG-44), and the sentence here used to say it was.</b> It
 /// read "the one link a reviewer must still check by eye" — which was true of a linked test and not
@@ -34,17 +35,26 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// What remains unheld, so the next reader does not over-trust this: the source check asserts the
-/// SHAPE of the copied expression, not that <c>ToDisplayString</c> and <c>TryParse</c> agree — that
-/// is what the Core-to-Core tests below are for, and the two together are what A-1.18 needs.
+/// SHAPE of the copied expression, not that <c>ToClipboardString</c> and <c>TryParse</c> agree —
+/// that is what the Core-to-Core tests below are for, and the two together are what A-1.18 needs.
+/// Those tests now exercise the real clipboard member rather than a copy of its body, so the pair
+/// covers the actual path instead of two expressions that happen to match.
 /// </para>
 /// </remarks>
 public class CopiedCodePastesIntoTheJoinFieldTests
 {
     /// <summary>
-    /// What the Copy button puts on the clipboard — mirrors <c>Windows/SessionWindow.cs</c>,
-    /// <c>DrawHosting</c>, which calls <c>ImGui.SetClipboardText(code.ToDisplayString())</c>.
+    /// What the Copy button puts on the clipboard.
     /// </summary>
-    private static string WhatTheCopyActionProduces(SessionCode code) => code.ToDisplayString();
+    /// <remarks>
+    /// <b>No longer a mirror (C34).</b> This used to restate <c>code.ToDisplayString()</c> and say
+    /// so — a second expression that had to be kept in step with the window by hand. It now calls
+    /// <see cref="SessionCode.ToClipboardString"/>, the SAME member the button calls, and
+    /// <see cref="TheButtonCopiesTheNamedClipboardValueAndNothingElse"/> reads the window's source
+    /// to prove the button calls it. One symbol, two callers, and the link between them checked
+    /// rather than documented.
+    /// </remarks>
+    private static string WhatTheCopyActionProduces(SessionCode code) => code.ToClipboardString();
 
     /// <summary>
     /// The argument the Copy button actually passes to <c>SetClipboardText</c>, read out of
@@ -138,11 +148,15 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     // comparison would forbid the first as loudly as the second, and a guard that fails on a benign
     // edit gets relaxed rather than fixed.
     [Fact]
-    public void TheButtonCopiesTheDisplayedCodeAndNothingElse()
+    public void TheButtonCopiesTheNamedClipboardValueAndNothingElse()
     {
         var argument = WhatTheButtonPutsOnTheClipboard();
 
-        Assert.Matches(@"^[A-Za-z_][A-Za-z0-9_]*\.ToDisplayString\(\)$", argument);
+        // ToClipboardString, not ToDisplayString (C34). The button must reach for the member that
+        // means "what a recipient pastes", not the one that means "how this reads aloud". They
+        // return the same text today; the point is that a change made for one stops silently
+        // changing the other, which is the drift A-1.18 exists to catch.
+        Assert.Matches(@"^[A-Za-z_][A-Za-z0-9_]*\.ToClipboardString\(\)$", argument);
     }
 
     // The half that names what went wrong rather than only forbidding it: the reported break put a

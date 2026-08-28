@@ -74,6 +74,33 @@ public readonly struct SessionCode : IEquatable<SessionCode>
     /// <summary>Renders the code the way it is read aloud and shown in the UI: <c>BKD-7RM</c>.</summary>
     public string ToDisplayString() => SpeakableAlphabet.Group(Value);
 
+    /// <summary>
+    /// The form that goes on the clipboard, which the join field must accept verbatim (R-1.3i).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Named separately from <see cref="ToDisplayString"/> although it currently returns the same
+    /// text, because they answer different questions.</b> Display exists so the code can be read
+    /// aloud (R-1.2a); this exists so a recipient can paste it. They agree today, and nothing said
+    /// so — the copy button reached for the display form and it worked. A change made for reading
+    /// aloud would have silently changed what gets pasted, and A-1.18 is precisely the criterion
+    /// about those two drifting apart while each looks correct alone.
+    /// </para>
+    /// <para>
+    /// <b>Load-bearing and now stated: this pastes only because <see cref="TryParse"/> strips
+    /// hyphens.</b> The grouping is not neutral — it is accepted by leniency at the other end. That
+    /// dependency was invisible in both files before this member existed; tighten <c>TryParse</c>
+    /// and the copy breaks. <c>SessionCodeTests.ADisplayedCodeParsesBackToTheSameCode</c> is what
+    /// holds the two ends together.
+    /// </para>
+    /// <para>
+    /// <b>What is copied is deliberately unchanged.</b> Returning the raw six characters would make
+    /// A-1.18 true by construction rather than by leniency, but it changes what a user sees on their
+    /// clipboard — a product decision, and not this chunk's to take.
+    /// </para>
+    /// </remarks>
+    public string ToClipboardString() => ToDisplayString();
+
     /// <inheritdoc />
     public bool Equals(SessionCode other) => string.Equals(_value, other._value, StringComparison.Ordinal);
 
