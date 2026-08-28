@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
+using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
@@ -52,9 +53,17 @@ internal sealed class AdmissionPromptView
 
     private readonly SessionCoordinator _coordinator;
 
+    /// <summary>The campaign an admitted player is recorded into (R-1.5c).</summary>
+    private readonly HostingCampaign _hosting;
+
     /// <summary>Draws the prompts for <paramref name="coordinator"/>'s pending requests.</summary>
     /// <param name="coordinator">The session layer. Read for pending requests; told the answer.</param>
-    public AdmissionPromptView(SessionCoordinator coordinator) => _coordinator = coordinator;
+    /// <param name="hosting">The running campaign, so an admitted player is recorded in it.</param>
+    public AdmissionPromptView(SessionCoordinator coordinator, HostingCampaign hosting)
+    {
+        _coordinator = coordinator;
+        _hosting = hosting;
+    }
 
     /// <summary>Draws one prompt per pending request, or nothing when there are none.</summary>
     public void Draw()
@@ -111,6 +120,12 @@ internal sealed class AdmissionPromptView
             if (ImGui.Button($"Admit##{request.PeerCode}"))
             {
                 _coordinator.Admit(request.PeerCode);
+
+                // R-1.5c's first half, and the reason the resume offer is honest: a campaign IS its
+                // roster, so admitting somebody without recording them leaves a campaign that can be
+                // named and resumed and contains nobody. A resolved relink records nothing — that
+                // person already has a participant here.
+                _hosting.Record(request.DisplayName.Value, request.IsRelink);
             }
 
             if (AdmissionPrompt.Favoured(request) == AdmissionAction.Admit)
