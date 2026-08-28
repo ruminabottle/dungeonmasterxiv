@@ -75,6 +75,42 @@ public class BothRosterViewsRenderThroughOnePlaceTests
         Assert.Contains("private void DrawJoining()", code, StringComparison.Ordinal);
     }
 
+    // THE HEADING IS A CLAIM ABOUT COMPLETENESS AND IT MUST STAY NARROW WHILE THE DM IS ABSENT.
+    // The roster a player receives structurally omits the host (DMXENG-33), so a region reading
+    // "everyone in this session" would not merely omit the DM -- it would TELL THE PLAYER THE DM IS
+    // NOT HERE. That is a false statement to a user, and it is the same defect as a control labelled
+    // with a promise it does not keep.
+    //
+    // This is deliberately a test and not a comment: the wording is the sort of thing a later editor
+    // broadens while tidying, and by then the reason will not be on screen. It should be RELAXED as
+    // part of DMXENG-33, when the claim becomes true -- failing then is the point, not a nuisance.
+    [Theory]
+    [InlineData("everyone")]
+    [InlineData("everybody")]
+    [InlineData("all participants")]
+    [InlineData("who is here")]
+    public void TheRosterHeadingDoesNotClaimToShowEveryone(string overclaim)
+    {
+        var heading = Regex.Match(Code(), @"PlayersInThisSession\s*=\s*""(?<text>[^""]*)""");
+
+        Assert.True(heading.Success, "The roster heading constant is gone or was renamed.");
+        Assert.DoesNotContain(
+            overclaim,
+            heading.Groups["text"].Value,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    // The control: the heading must actually SAY something. An empty or deleted constant would
+    // satisfy every refusal above while rendering a nameless list.
+    [Fact]
+    public void TheRosterHeadingStillNamesWhatItShows()
+    {
+        var heading = Regex.Match(Code(), @"PlayersInThisSession\s*=\s*""(?<text>[^""]*)""");
+
+        Assert.True(heading.Success, "The roster heading constant is gone or was renamed.");
+        Assert.Contains("Players", heading.Groups["text"].Value, StringComparison.Ordinal);
+    }
+
     /// <summary>The window's source with comment lines removed.</summary>
     /// <remarks>
     /// Stripped because this file's own commentary names <c>DrawRoster</c> and
