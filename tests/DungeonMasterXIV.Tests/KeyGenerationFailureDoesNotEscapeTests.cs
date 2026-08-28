@@ -93,7 +93,7 @@ public class KeyGenerationFailureDoesNotEscapeTests
     public void KeysThatCanBeCreatedStillStartASession()
     {
         var transport = new SilentTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
 
         coordinator.StartHosting();
 
@@ -157,7 +157,12 @@ public class KeyGenerationFailureDoesNotEscapeTests
     /// are load-bearing for the tests above it.
     /// </remarks>
     private static SessionCoordinator WithKeysThatThrow(Func<Exception> failure) =>
-        new(new SilentTransport(), () => RelayEndpoint.Default, GraceWindow.Default, () => throw failure());
+        new(
+            new SilentTransport(),
+            () => RelayEndpoint.Default,
+            GraceWindow.Default,
+            SilentLog.Instance,
+            newKeys: () => throw failure());
 
     private static SessionCoordinator WithKeysThatCannotBeCreated() =>
         WithKeysThatCannotBeCreated(out _);
@@ -173,7 +178,8 @@ public class KeyGenerationFailureDoesNotEscapeTests
             new SilentTransport(),
             () => RelayEndpoint.Default,
             GraceWindow.Default,
-            () =>
+            SilentLog.Instance,
+            newKeys: () =>
             {
                 seen.Add(seen.Count);
                 throw new CryptographicException(unchecked((int)0x80090029));

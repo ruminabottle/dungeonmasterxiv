@@ -27,7 +27,7 @@ public class RelinkRequiresApprovalTests
 
     private static (SessionCoordinator Coordinator, RelinkClaim Claim) HostWithAReturningPlayer()
     {
-        var coordinator = new SessionCoordinator(new SilentTransport(), () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(new SilentTransport(), () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         coordinator.StartHosting();
         coordinator.Host.Registered();
 

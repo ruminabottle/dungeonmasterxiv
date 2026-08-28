@@ -182,7 +182,7 @@ public class AdmissionOnTheWireTests
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Hosting()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         coordinator.StartHosting();
         coordinator.Host.Registered();
         transport.Sent.Clear();
@@ -336,7 +336,7 @@ public class AdmissionReceivedTests
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Joining()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         coordinator.RequestJoin(Code);
         coordinator.Join.AwaitDecision(AdmissionDeadline.DecidedByHost(Now));
         return (coordinator, transport);

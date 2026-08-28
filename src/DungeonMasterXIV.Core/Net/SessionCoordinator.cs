@@ -28,18 +28,30 @@ public sealed class SessionCoordinator
     /// caller can silently fall back to the literal — see <c>SessionInterruption</c>'s remark.
     /// </param>
     /// <param name="log">
-    /// Where content this client accepted but had to strip is reported (BUG-70). Optional, and the
-    /// default is the silent case — the entry is dropped either way, so this decides whether a
-    /// developer ever finds out, not whether the door holds. Production passes the adapter the
-    /// transport already uses, so there is one log and not two.
+    /// Where content this client accepted but had to strip is reported (BUG-70).
+    /// <para>
+    /// <b>REQUIRED, and it arrived optional (DMXENG-13).</b> #123 introduced it as
+    /// <c>ISessionTransportLog? log = null</c> and argued the default was the silent case. That is
+    /// true of what the log DOES and not of who SUPPLIES it: production passes one today because
+    /// today's single call site happens to, which is a fact about that call site rather than a
+    /// property of this type. <b>An optional parameter production happens to supply is one refactor
+    /// away from production not supplying it, and nothing would fail.</b>
+    /// </para>
+    /// <para>
+    /// <b>Ahead of <paramref name="newKeys"/> because C# will not allow otherwise</b> — a required
+    /// parameter cannot follow an optional one. So this is a signature change rather than a removed
+    /// default, and every construction site moved with it.
+    /// </para>
     /// </param>
     public SessionCoordinator(
         ISessionTransport transport,
         Func<string> relayAddress,
         TimeSpan window,
-        Func<SessionKeyExchange>? newKeys = null,
-        ISessionTransportLog? log = null)
+        ISessionTransportLog log,
+        Func<SessionKeyExchange>? newKeys = null)
     {
+        ArgumentNullException.ThrowIfNull(log);
+
         _newKeys = newKeys ?? (static () => new SessionKeyExchange());
         _log = log;
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
@@ -58,7 +70,7 @@ public sealed class SessionCoordinator
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
-    private readonly ISessionTransportLog? _log;
+    private readonly ISessionTransportLog _log;
     private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;

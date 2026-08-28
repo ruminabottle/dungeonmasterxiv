@@ -145,12 +145,12 @@ public class TheJoinerCanCompareBeforeAdmissionTests
 
         public TwoClients()
         {
-            Host = new SessionCoordinator(_hostTransport, () => RelayEndpoint.Default, GraceWindow.Default);
+            Host = new SessionCoordinator(_hostTransport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
             Host.StartHosting();
             Host.Host.Registered();
             _hostTransport.Sent.Clear();
 
-            Joiner = new SessionCoordinator(_joinerTransport, () => RelayEndpoint.Default, GraceWindow.Default);
+            Joiner = new SessionCoordinator(_joinerTransport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
             Code = Host.Host.Code!.Value;
         }
 

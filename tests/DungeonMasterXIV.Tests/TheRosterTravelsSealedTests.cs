@@ -206,7 +206,7 @@ public class TheRosterTravelsSealedTests
         out SessionCode code)
     {
         var transport = new FakeTransport();
-        var player = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var player = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         code = SessionCode.FromValid("BCDFGH");
         hostKeys = new SessionKeyExchange();
 
@@ -311,7 +311,7 @@ public class TheRosterTravelsSealedTests
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Hosting()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         coordinator.StartHosting();
         coordinator.Host.Registered();
         coordinator.SynchroniseTransport();
