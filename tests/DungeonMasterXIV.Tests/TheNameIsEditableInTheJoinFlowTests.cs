@@ -88,16 +88,22 @@ public class TheNameIsEditableInTheJoinFlowTests
     // SUPPLEMENTARY. This narrows the ways the criterion can break by accident. It does not
     // establish that it holds, and nothing in this file can.
     //
-    // What the assertions below are still worth: they hold against the three defeats already found,
-    // and their teeth were measured rather than assumed — BUG-64's mutation reddens the first, and
+    // What the assertions below are still worth: they hold against TWO OF THE THREE defeats found
+    // so far, and the third is the alias above — the one they do NOT catch, which is why it is
+    // documented rather than fixed. Measured against the current assertions rather than asserted:
+    //     wrapped ternary, raw field in the displayed branch  -> CAUGHT      (1 failed)
+    //     second statement rendering the raw field directly   -> CAUGHT      (1 failed)
+    //     alias, rendering it under a renamed local           -> NOT CAUGHT  (4 passed, 0 failed)
+    // Their teeth were measured rather than assumed — BUG-64's mutation reddens the first, and
     // removing either one reddens this test. AND WHAT DELETING THEM WOULD COST, which is the half
     // that survives an argument: "it is only a proxy" reads as a case for removal right up until
     // the regression has a name. DELETE THESE AND BUG-64 AND BUG-65 COME BACK WITH NOTHING TO
     // NOTICE — a wrapped ternary putting the raw field in the branch it displays, an alias
     // rendering it under a second statement, and the box reading Bob! while the wire carries "a
     // player who gave no name". Both were live and green before someone went looking. A proxy that
-    // holds against three known defeats is worth less than a proof and considerably more than no
-    // check at all. Kept exactly as they are.
+    // holds against two of the three defeats found so far — NOT the alias, which is documented
+    // above — is worth less than a proof and considerably more than no check at all. Kept exactly
+    // as they are.
     //
     // So this asserts the STRONGER property the fix establishes: one resolved value, rendered and
     // sent. Not "both mention the field" — the SAME identifier in both places, which is what makes
