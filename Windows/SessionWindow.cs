@@ -16,20 +16,11 @@ public sealed class SessionWindow : Window
     private const string CodeDisclosure =
         "Your session code is not a secret. Anyone who has it can ask to join — you decide who gets in.";
 
-    private const string AdmissionDisclosure =
-        "This request shows a code, not a character name. Only admit people you arranged to play with.";
 
     // Not R-1.7a copy — R-1.7a covers the session window, the admission prompt and settings, and does
     // not supply wording for these. Written here under the same constraint: no phrasing from its
     // forbidden list, and no claim that a session is protected when nobody checked.
-    private const string CompareOutOfBand =
-        "Ask the joining player to read their code back to you over voice or chat, and confirm it "
-        + "matches. Do not ask them for it through the plugin - a channel someone has tampered with "
-        + "cannot prove it has not been tampered with.";
 
-    private const string UnverifiedWarning =
-        "Admitted without the code being compared. This session is not protected against someone "
-        + "sitting in the middle of it.";
 
     // The joiner's side of CompareOutOfBand. Same instruction, same constraint, addressed to the
     // person who until now was told to read out a code their client never showed them (BUG-31).
@@ -61,6 +52,9 @@ public sealed class SessionWindow : Window
     /// </summary>
     private readonly Func<DisplayName> _displayName;
 
+    /// <summary>The DM's pending-request prompts. Its own surface; see <see cref="AdmissionPromptView"/>.</summary>
+    private readonly AdmissionPromptView _admissionPrompts;
+
     private string _codeEntry = string.Empty;
 
     /// <param name="coordinator">The session layer this window reflects.</param>
@@ -70,6 +64,7 @@ public sealed class SessionWindow : Window
     {
         _coordinator = coordinator;
         _displayName = displayName;
+        _admissionPrompts = new AdmissionPromptView(coordinator);
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new System.Numerics.Vector2(420, 260),
@@ -86,6 +81,11 @@ public sealed class SessionWindow : Window
         DrawHosting();
         ImGui.Separator();
         DrawJoining();
+
+        // Drawn last and from here rather than from inside DrawJoining, where it used to live: these
+        // are the DM's prompts, and a joiner's method was never their place. Composed rather than
+        // called through, so the two surfaces can be read and changed independently.
+        _admissionPrompts.Draw();
     }
 
     private void DrawHosting()
@@ -209,71 +209,6 @@ public sealed class SessionWindow : Window
             ImGui.TextWrapped(SessionFailureMessage.For(join.Failure));
         }
 
-        // Every pending request gets its own prompt. One slot would strand all but the newest, and
-        // the stranded players would see a DM who appears to be ignoring them.
-        var pending = _coordinator.Admissions.Pending;
-        if (pending.Count == 0)
-        {
-            return;
-        }
-
-        ImGui.Separator();
-        ImGui.TextWrapped(AdmissionDisclosure);
-
-        var now = DateTimeOffset.UtcNow;
-
-        // Copied because Admit and Deny mutate the pending list, and this is a draw callback.
-        foreach (var request in pending.ToArray())
-        {
-            ImGui.Separator();
-            // The ONLY thing a resolved relink changes. Everything below this line — the
-            // fingerprint, the out-of-band warning, the deliberate confirmation, the two buttons —
-            // is identical for a relink and a first-time join, and must stay identical. R-1.5:
-            // the DM approves every relink, every session, and a match must not shorten the path.
-            ImGui.TextUnformatted(AdmissionPrompt.Headline(request));
-
-            ImGui.TextUnformatted($"Code to compare: {request.Fingerprint}");
-            ImGui.TextWrapped(CompareOutOfBand);
-
-            // R-1.3c: the wait is visibly bounded WHILE it runs, not only when it ends.
-            var remaining = request.RemainingAt(now);
-            ImGui.TextUnformatted($"This request lapses in {remaining:mm\\:ss}");
-
-            // R-1.3a: a deliberate act, never a pre-ticked box. Starts false every time.
-            var confirmed = request.FingerprintConfirmed;
-            if (ImGui.Checkbox($"The code matched what they read to me##{request.PeerCode}", ref confirmed)
-                && confirmed)
-            {
-                request.ConfirmFingerprintMatched();
-            }
-
-            if (!request.FingerprintConfirmed)
-            {
-                ImGui.TextWrapped(UnverifiedWarning);
-            }
-
-            // The prompt starts with NEITHER answer selected, for a relink exactly as for a first
-            // join. Pre-selecting Accept for a recognised returning player would be the helpful
-            // thing and it is forbidden: a DM pressing Enter on a focused button leaves the same
-            // record as a DM who compared the fingerprint, which makes the record false rather than
-            // merely weaker (R-1.5, R-1.3a). The favoured action is decided in Core so a change of
-            // mind has to happen where a test is watching.
-            if (ImGui.Button($"Admit##{request.PeerCode}"))
-            {
-                _coordinator.Admit(request.PeerCode);
-            }
-
-            if (AdmissionPrompt.Favoured(request) == AdmissionAction.Admit)
-            {
-                ImGui.SetItemDefaultFocus();
-            }
-
-            ImGui.SameLine();
-            if (ImGui.Button($"Deny##{request.PeerCode}"))
-            {
-                _coordinator.Deny(request.PeerCode);
-            }
-        }
     }
 
     // Every phase gets a sentence. R-1.3 forbids leaving anyone looking at an ambiguous spinner,
