@@ -11,6 +11,8 @@ using DungeonMasterXIV.Sizes;
 
 const int ClassFlag = 250;
 const int ClassBlock = 400;
+const int FileFlag = 300;
+const int FileBlock = 450;
 
 if (args.Length == 0)
 {
@@ -28,17 +30,25 @@ if (missing.Count > 0)
     return 2;
 }
 
-Console.WriteLine($"Class limits: flag {ClassFlag}, block {ClassBlock}.");
-Console.WriteLine("Procedure: declaration line to closing brace, inclusive, nothing excluded.");
-Console.WriteLine("Ruled 2026-08-28 by the Deployment Manager; see engineering-standards.md,");
-Console.WriteLine("\"HOW TO COUNT A CLASS — RULED, BECAUSE THE TABLE NEVER SAID\".");
+Console.WriteLine($"Class limits: flag {ClassFlag}, block {ClassBlock}.   File limits: flag {FileFlag}, block {FileBlock}.");
+Console.WriteLine("Type span: first line of the declaration to its closing brace, inclusive, nothing excluded.");
+Console.WriteLine("File: every line, first to last. Records, structs, interfaces and enums count as classes.");
+Console.WriteLine("Ruled by the Deployment Manager; see engineering-standards.md, \"HOW TO COUNT A CLASS\"");
+Console.WriteLine("and \"THE SHAPES A REAL FILE HAS\". This tool cites that ruling; it does not make one.");
 Console.WriteLine();
 
 foreach (var path in args)
 {
-    Console.WriteLine(path);
+    var lines = File.ReadAllLines(path);
 
-    var spans = ClassSpanReader.Read(File.ReadAllLines(path));
+    // RULED: a file is every line in it, first to last, including a licence header.
+    var fileStanding = lines.Length > FileBlock ? "OVER THE BLOCK"
+        : lines.Length > FileFlag ? "over the flag"
+        : "under the flag";
+
+    Console.WriteLine($"{path}  —  {lines.Length} lines, {fileStanding}, margin {FileBlock - lines.Length}");
+
+    var spans = ClassSpanReader.Read(lines);
 
     if (spans.Count == 0)
     {

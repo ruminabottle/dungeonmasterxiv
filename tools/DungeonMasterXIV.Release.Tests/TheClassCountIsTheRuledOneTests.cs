@@ -5,125 +5,146 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// The counter implements the ruled procedure, and refuses everything the ruling does not cover.
+/// The counter implements the ruled procedure and the ruled shapes, and refuses only what the
+/// ruling tells it to refuse.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The ruling, cited not restated:</b> count from the first line of the class declaration to its
-/// closing brace, INCLUSIVE; nothing excluded — not comments, not XML doc, not blank lines, not
-/// attributes on members; attributes and doc ABOVE the declaration are outside the span.
+/// <b>Cited, not restated:</b> "## HOW TO COUNT A CLASS" and "### THE SHAPES A REAL FILE HAS" in
+/// <c>engineering-standards.md</c>. First line of the type declaration to its closing brace,
+/// inclusive, nothing excluded; attributes and doc above it outside.
 /// </para>
 /// <para>
-/// <b>Fixtures are synthetic on purpose.</b> Pinning against a real file would make this fail every
-/// time somebody edited that file, which trains people to change the assertion rather than read it —
-/// and the number would be measuring the codebase rather than the counter.
+/// <b>Fixtures are synthetic on purpose.</b> Pinning a real file would fail whenever anyone edited
+/// it, which trains people to change the assertion rather than read it — and it would measure the
+/// codebase rather than the counter.
 /// </para>
 /// </remarks>
 public class TheClassCountIsTheRuledOneTests
 {
-    private static ClassSpan Single(params string[] lines)
-    {
-        var spans = ClassSpanReader.Read(lines);
-
-        return Assert.Single(spans);
-    }
+    private static ClassSpan Single(params string[] lines) => Assert.Single(ClassSpanReader.Read(lines));
 
     [Fact]
     public void TheSpanRunsFromTheDeclarationToTheClosingBraceInclusive()
     {
-        var span = Single(
-            "namespace N;",          // 1
-            "",                      // 2
-            "public class Thing",    // 3  <- declaration
-            "{",                     // 4
-            "    void A() { }",      // 5
-            "}");                    // 6  <- closing brace
+        var span = Single("namespace N;", "", "public class Thing", "{", "    void A() { }", "}");
 
         Assert.Equal(3, span.DeclarationLine);
         Assert.Equal(6, span.ClosingBraceLine);
         Assert.Equal(4, span.Lines);
     }
 
-    // "Nothing excluded" is the whole reason the ruling chose the less meaningful measure: a rule
-    // everyone applies the same way beats one that measures better and is applied three ways.
+    // "Nothing excluded" is why the ruling chose the less meaningful measure: a rule everyone
+    // applies the same way beats one that measures better and is applied three ways.
     [Fact]
-    public void CommentsDocAndBlankLinesInsideTheSpanAreCounted()
-    {
-        var span = Single(
-            "public class Thing",    // 1
-            "{",                     // 2
-            "    // a comment",      // 3
-            "",                      // 4
-            "    /// <summary>x</summary>",  // 5
-            "    [Obsolete]",        // 6
-            "    void A() { }",      // 7
-            "}");                    // 8
+    public void CommentsDocAndBlankLinesInsideTheSpanAreCounted() =>
+        Assert.Equal(8, Single(
+            "public class Thing", "{", "    // a comment", "",
+            "    /// <summary>x</summary>", "    [Obsolete]", "    void A() { }", "}").Lines);
 
-        Assert.Equal(8, span.Lines);
-    }
-
-    // The one exclusion the ruling DOES name, and it is about what sits above the declaration.
     [Fact]
     public void AttributesAndDocAboveTheDeclarationAreOutsideTheSpan()
     {
-        var span = Single(
-            "/// <summary>Docs.</summary>",  // 1
-            "[Serializable]",                // 2
-            "public class Thing",            // 3
-            "{",                             // 4
-            "}");                            // 5
+        var span = Single("/// <summary>Docs.</summary>", "[Serializable]", "public class Thing", "{", "}");
 
         Assert.Equal(3, span.DeclarationLine);
         Assert.Equal(3, span.Lines);
     }
 
-    // THE REFUSALS, and they are the design rather than a gap. The ruling names classes; putting a
-    // number on a shape it does not name would encode a judgement nobody authored -- the same move
-    // that made writing this tool unsafe before the convention existed, one level down.
+    // RULED as a consequence rather than a new judgement: the declaration begins at `class Foo<T>`
+    // and the constraint clauses are part of it, so they fall inside the span.
+    [Fact]
+    public void GenericConstraintsBetweenTheDeclarationAndTheBraceAreInside() =>
+        Assert.Equal(4, Single(
+            "public class Thing<T>", "    where T : IDisposable", "{", "}").Lines);
+
+    // RULED, and it reverses this tool's first draft: if a shape is a type declaration it is under
+    // the class limit. The table said "Class" because the codebase had classes when it was written.
     [Theory]
-    [InlineData("public record Thing(int A);", "record")]
-    [InlineData("public readonly struct Thing", "struct")]
-    [InlineData("public interface IThing", "interface")]
-    [InlineData("public enum Thing", "enum")]
-    public void AShapeTheRulingDoesNotNameIsRefusedByName(string declaration, string kind)
+    [InlineData("public record Thing")]
+    [InlineData("public readonly record struct Thing")]
+    [InlineData("public struct Thing")]
+    [InlineData("public interface IThing")]
+    [InlineData("public enum Thing")]
+    public void EveryTypeDeclarationIsMeasuredAgainstTheClassLimit(string declaration)
     {
         var span = Single(declaration, "{", "}");
 
-        Assert.False(span.IsMeasured);
-        Assert.Equal(0, span.Lines);
-        Assert.Contains(kind, span.Refusal);
+        Assert.True(span.IsMeasured, $"{declaration} was refused; the ruling counts it as a class.");
+        Assert.Equal(3, span.Lines);
     }
 
+    // The edge a brace scanner gets wrong: no body at all, so there is no closing brace to find and
+    // a scanner runs on into the NEXT type -- producing a number for a span that never existed.
     [Fact]
-    public void APartialClassIsRefusedBecauseOneFileCannotStateItsSpan()
-    {
-        var span = Single("public partial class Thing", "{", "}");
-
-        Assert.False(span.IsMeasured);
-        Assert.Contains("partial", span.Refusal);
-    }
-
-    [Fact]
-    public void ANestedClassIsRefusedBecauseTheRulingDoesNotSayWhetherItCountsWithin()
+    public void ABodylessDeclarationEndsAtItsSemicolonRatherThanTheNextTypesBrace()
     {
         var spans = ClassSpanReader.Read(new[]
         {
-            "public class Outer",
+            "public readonly record struct Entry(string A, string B);",
+            "",
+            "public class After",
             "{",
-            "    public class Inner",
-            "    {",
-            "    }",
             "}",
         });
 
-        var inner = Assert.Single(spans.Where(span => span.Name == "Inner"));
-
-        Assert.False(inner.IsMeasured);
-        Assert.Contains("nested", inner.Refusal);
+        Assert.Equal(2, spans.Count);
+        Assert.Equal(1, spans[0].Lines);
+        Assert.Equal(3, spans[1].Lines);
     }
 
-    // The control on the refusals: a refusal must not be how it handles the ordinary case, or every
-    // assertion above is satisfied by a reader that refuses everything and measures nothing.
+    // RULED: counted twice, deliberately -- inside the outer span AND as its own type.
+    [Fact]
+    public void ANestedTypeIsCountedTwice()
+    {
+        var spans = ClassSpanReader.Read(new[]
+        {
+            "public class Outer",   // 1
+            "{",                    // 2
+            "    public class Inner", // 3
+            "    {",                // 4
+            "    }",                // 5
+            "}",                    // 6
+        });
+
+        var outer = Assert.Single(spans.Where(span => span.Name == "Outer"));
+        var inner = Assert.Single(spans.Where(span => span.Name == "Inner"));
+
+        Assert.Equal(6, outer.Lines);
+        Assert.Equal(3, inner.Lines);
+        Assert.True(inner.DeclarationLine > outer.DeclarationLine && inner.ClosingBraceLine < outer.ClosingBraceLine);
+    }
+
+    // RULED: each type gets its own span against the class limit; the file gets the file limit.
+    [Fact]
+    public void SeveralTypesInOneFileEachGetTheirOwnSpan()
+    {
+        var spans = ClassSpanReader.Read(new[]
+        {
+            "public class A", "{", "}", "", "public class B", "{", "}",
+        });
+
+        Assert.Equal(2, spans.Count);
+        Assert.All(spans, span => Assert.Equal(3, span.Lines));
+    }
+
+    // THE ONE REFUSAL THE RULING DEMANDS, and the one this tool could most easily get wrong.
+    // Summing needs every part and this reads one file. Reporting the part it can see would not be
+    // an underestimate -- it would look exactly like an answer, arrive under the limit, and be wrong
+    // in the reassuring direction.
+    [Fact]
+    public void APartialTypeIsRefusedByNameAndCarriesNoNumber()
+    {
+        var span = Single("public partial class Thing", "{", "    void A() { }", "}");
+
+        Assert.False(span.IsMeasured);
+        Assert.Equal(0, span.Lines);
+        Assert.Equal("Thing", span.Name);
+        Assert.Contains("SUM of its parts", span.Refusal);
+    }
+
+    // The control on the refusal: refusing must not be how it handles ordinary types, or every
+    // assertion here is satisfied by a reader that refuses everything and measures nothing.
     [Fact]
     public void TheOrdinaryCaseIsStillMeasured()
     {
@@ -133,4 +154,9 @@ public class TheClassCountIsTheRuledOneTests
         Assert.Null(span.Refusal);
         Assert.Equal(3, span.Lines);
     }
+
+    // And a declaration quoted in prose is not a declaration.
+    [Fact]
+    public void ATypeNamedInsideACommentIsNotCounted() =>
+        Assert.Empty(ClassSpanReader.Read(new[] { "// public class NotReal", "/// public class AlsoNot" }));
 }

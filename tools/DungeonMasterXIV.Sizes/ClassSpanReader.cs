@@ -3,49 +3,42 @@ using System.Text.RegularExpressions;
 namespace DungeonMasterXIV.Sizes;
 
 /// <summary>
-/// Counts class spans under the procedure the Deployment Manager ruled on 2026-08-28.
+/// Counts type spans under the procedure ruled in <c>engineering-standards.md</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The procedure, cited rather than restated</b> —
-/// <c>.claude/skills/deployment-manager/engineering-standards.md</c>, "HOW TO COUNT A CLASS —
-/// RULED, BECAUSE THE TABLE NEVER SAID": count from the FIRST LINE OF THE CLASS DECLARATION to its
-/// CLOSING BRACE, INCLUSIVE. Nothing is excluded — not comments, not XML doc, not blank lines, not
-/// attributes on members. Attributes and doc ABOVE the declaration are outside the span.
+/// <b>The procedure, cited rather than restated</b> — see "## HOW TO COUNT A CLASS" and its
+/// subsection "### THE SHAPES A REAL FILE HAS": first line of the TYPE declaration to its closing
+/// brace, INCLUSIVE, nothing excluded. Attributes and doc above the declaration are outside it.
 /// </para>
 /// <para>
-/// <b>This tool exists BECAUSE the convention was written first, and that order is the whole
-/// point.</b> A counter written while the definition was still disputed would not have been an aid,
-/// it would have been the ruling — a measurement tool has to pick an interpretation, so shipping one
-/// settles the question silently and with nobody's name on it. Three people disagreeing out loud is
-/// how the gap surfaced at all; a number out of a script is not argued with.
+/// <b>Records, structs, interfaces and enums count as classes</b>, because the limit measures what a
+/// reader must hold at once and a 300-line record imposes what a 300-line class does. <b>A nested
+/// type counts twice</b> — inside its parent's span and again as its own type against its own limit.
+/// <b>Generic constraints between the declaration and the brace are inside</b>, which falls out of
+/// the procedure rather than being a new rule.
 /// </para>
 /// <para>
-/// <b>So it REFUSES rather than guesses, and that is the design.</b> The ruling covers one shape and
-/// real files hold more — nested types, records, structs, interfaces, partial classes, several types
-/// in one file. Putting a number on those would encode a judgement nobody authored, one level down
-/// from the one that was just settled. Each is NAMED and left unnumbered instead. A tool that says
-/// "I will not answer that" is worth more here than one that answers everything, because the second
-/// kind is indistinguishable from a ruling.
+/// <b>A partial class is the SUM of its parts, so this refuses it and names it.</b> Summing needs
+/// every part and a file-at-a-time reader sees one. Reporting the part it can see would not be an
+/// underestimate — it would be a number that looks exactly like an answer, arrives under the limit,
+/// and is wrong in the reassuring direction. That is the defect family this tool exists downstream
+/// of; shipping it here would be the joke writing itself.
 /// </para>
 /// <para>
-/// <b>It does not enforce.</b> Whether a breach fails a build is a policy question the standards do
-/// not answer; they say a blocking limit is "a denial on its own", which is about review.
+/// <b>Anything this does not cover is refused and named, never picked.</b> A refusal costs a
+/// message; a silent pick costs a convention.
 /// </para>
 /// </remarks>
 public static class ClassSpanReader
 {
-    // The declaration line of a top-level class. Deliberately narrow: anything this does not match
-    // is reported as unsupported rather than approximated.
-    private static readonly Regex ClassDeclaration = new(
-        @"^(?<indent>\s*)(?:public|internal|private|protected|sealed|abstract|static|partial|\s)*class\s+(?<name>\w+)",
+    private const string Modifiers = @"(?:public|internal|private|protected|sealed|abstract|static|partial|readonly|ref|file|new|\s)*";
+
+    private static readonly Regex TypeDeclaration = new(
+        @"^(?<indent>\s*)" + Modifiers + @"\b(?<kind>class|record\s+struct|record\s+class|record|struct|interface|enum)\s+(?<name>\w+)",
         RegexOptions.Compiled);
 
-    private static readonly Regex OtherTypeDeclaration = new(
-        @"^\s*(?:public|internal|private|protected|sealed|abstract|static|partial|readonly|\s)*(?<kind>record|struct|interface|enum)\s+\w+",
-        RegexOptions.Compiled);
-
-    /// <summary>Every type declaration in one file, measured or refused.</summary>
+    /// <summary>Every type declaration in one file, measured or refused by name.</summary>
     public static IReadOnlyList<ClassSpan> Read(IReadOnlyList<string> lines)
     {
         var spans = new List<ClassSpan>();
@@ -54,17 +47,16 @@ public static class ClassSpanReader
         {
             var line = lines[index];
 
-            if (OtherTypeDeclaration.Match(line) is { Success: true } other)
+            // A declaration quoted in prose is not a declaration. Doc and comment lines are skipped
+            // outright rather than parsed, which is also why the span never starts on one.
+            var trimmed = line.TrimStart();
+
+            if (trimmed.StartsWith("//", StringComparison.Ordinal) || trimmed.StartsWith("*", StringComparison.Ordinal))
             {
-                spans.Add(new ClassSpan(
-                    line.Trim(),
-                    index + 1,
-                    0,
-                    $"the ruling names classes; this is a {other.Groups["kind"].Value}"));
                 continue;
             }
 
-            var declaration = ClassDeclaration.Match(line);
+            var declaration = TypeDeclaration.Match(line);
 
             if (!declaration.Success)
             {
@@ -73,38 +65,39 @@ public static class ClassSpanReader
 
             var name = declaration.Groups["name"].Value;
 
-            if (line.Contains(" partial ", StringComparison.Ordinal))
+            // RULED: a partial type is the sum of its parts, and this reader sees one file. It must
+            // refuse and say which type -- never report the part it can see.
+            if (Regex.IsMatch(line, @"\bpartial\b"))
             {
-                spans.Add(new ClassSpan(name, index + 1, 0, "partial: the span is not one file's to state"));
+                spans.Add(new ClassSpan(
+                    name,
+                    index + 1,
+                    0,
+                    "partial: counted as the SUM of its parts, and this reads one file — measure every part together"));
                 continue;
             }
 
-            if (declaration.Groups["indent"].Value.Length > 0)
-            {
-                spans.Add(new ClassSpan(name, index + 1, 0, "nested: the ruling does not say whether a nested type counts within its parent"));
-                continue;
-            }
+            var end = EndOfDeclaration(lines, index);
 
-            var closing = ClosingBraceOf(lines, index);
-
-            spans.Add(closing is { } brace
-                ? new ClassSpan(name, index + 1, brace, null)
-                : new ClassSpan(name, index + 1, 0, "no closing brace found"));
+            spans.Add(end is { } last
+                ? new ClassSpan(name, index + 1, last, null)
+                : new ClassSpan(name, index + 1, 0, "no closing brace or terminator found before end of file"));
         }
 
         return spans;
     }
 
     /// <summary>
-    /// The line of the brace that closes the type opened at or after <paramref name="from"/>.
+    /// The last line of the type opened at <paramref name="from"/>: its closing brace, or the
+    /// semicolon that ends a body-less declaration.
     /// </summary>
     /// <remarks>
-    /// Braces inside string literals, char literals and comments would each move this count, so any
-    /// line carrying one is reported as unsupported rather than counted through. The codebase does
-    /// not currently put a brace in a literal at file scope; if that changes, this refuses rather
-    /// than silently drifting.
+    /// <b>The body-less case is real and would otherwise run past the end of the type.</b>
+    /// <c>public readonly record struct RosterEntry(string PeerCode, ...);</c> has no braces at all,
+    /// so a brace scanner would keep going and close on the NEXT type's brace — producing a number
+    /// that looks like an answer for a span that never existed.
     /// </remarks>
-    private static int? ClosingBraceOf(IReadOnlyList<string> lines, int from)
+    private static int? EndOfDeclaration(IReadOnlyList<string> lines, int from)
     {
         var depth = 0;
         var opened = false;
@@ -112,23 +105,31 @@ public static class ClassSpanReader
         for (var index = from; index < lines.Count; index++)
         {
             var line = lines[index];
-            var code = line.TrimStart().StartsWith("//", StringComparison.Ordinal) ? string.Empty : line;
+            var trimmed = line.TrimStart();
+            var code = trimmed.StartsWith("//", StringComparison.Ordinal) ? string.Empty : line;
 
             foreach (var character in code)
             {
-                if (character == '{')
+                switch (character)
                 {
-                    depth++;
-                    opened = true;
-                }
-                else if (character == '}')
-                {
-                    depth--;
+                    case '{':
+                        depth++;
+                        opened = true;
+                        break;
 
-                    if (opened && depth == 0)
-                    {
+                    case '}':
+                        depth--;
+
+                        if (opened && depth == 0)
+                        {
+                            return index + 1;
+                        }
+
+                        break;
+
+                    case ';' when !opened:
+                        // A declaration that ended without ever opening a body.
                         return index + 1;
-                    }
                 }
             }
         }
