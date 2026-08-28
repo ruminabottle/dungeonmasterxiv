@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Reports class spans under the counting procedure ruled by the Deployment Manager. It REPORTS and
+    does not enforce: whether a breach fails a build is a policy question the standards do not
+    answer, and answering it here would be the same mistake this tool exists downstream of.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>DungeonMasterXIV.Sizes</AssemblyName>
+    <RootNamespace>DungeonMasterXIV.Sizes</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>
