@@ -86,7 +86,7 @@ public class TheJoinerCanClaimAParticipantTests
     private static List<WireEnvelope> Join(Guid? claimedParticipantId)
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
 
         coordinator.RequestJoin(Code, DisplayName.OrNone("Bob"), claimedParticipantId);
         coordinator.SynchroniseTransport();

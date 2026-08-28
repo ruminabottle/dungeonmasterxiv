@@ -30,7 +30,7 @@ public class JoinOverASocketTests
     {
         await using var server = new TestWebSocketServer();
         using var transport = new WebSocketSessionTransport(new SilentLog());
-        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default, log: SilentLog.Instance);
         using var host = new SessionKeyExchange();
 
         // RequestJoin dials through SynchroniseTransport using the address factory above. Calling
@@ -63,7 +63,7 @@ public class JoinOverASocketTests
     {
         await using var server = new TestWebSocketServer();
         using var transport = new WebSocketSessionTransport(new SilentLog());
-        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default, log: SilentLog.Instance);
 
         // RequestJoin dials through SynchroniseTransport using the address factory above. Calling
         // Connect here as well opened a second socket and aborted the first, which is worth a note:
@@ -93,7 +93,7 @@ public class JoinOverASocketTests
     {
         await using var server = new TestWebSocketServer();
         using var transport = new WebSocketSessionTransport(new SilentLog());
-        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default, log: SilentLog.Instance);
 
         coordinator.StartHosting();
         coordinator.Host.Registered();
@@ -146,7 +146,7 @@ public class JoinOverASocketTests
     {
         await using var server = new TestWebSocketServer();
         using var transport = new WebSocketSessionTransport(new SilentLog());
-        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => server.Address.ToString(), GraceWindow.Default, log: SilentLog.Instance);
         using var host = new SessionKeyExchange();
 
         coordinator.RequestJoin(Code);
@@ -186,20 +186,5 @@ public class JoinOverASocketTests
         }
 
         Assert.Fail("Condition was never met within the timeout.");
-    }
-
-    private sealed class SilentLog : ISessionTransportLog
-    {
-        public void Information(string message)
-        {
-        }
-
-        public void Warning(string message)
-        {
-        }
-
-        public void Warning(Exception exception, string message)
-        {
-        }
     }
 }

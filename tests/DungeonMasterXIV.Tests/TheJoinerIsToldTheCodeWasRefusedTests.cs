@@ -86,7 +86,7 @@ public class TheJoinerIsToldTheCodeWasRefusedTests
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Joining()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         coordinator.RequestJoin(Code);
         return (coordinator, transport);
     }

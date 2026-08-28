@@ -157,7 +157,7 @@ public class TheHostRegistersItsCodeTests
     private sealed class HostUnderTest
     {
         public HostUnderTest() =>
-            Coordinator = new SessionCoordinator(Transport, () => RelayEndpoint.Default, GraceWindow.Default);
+            Coordinator = new SessionCoordinator(Transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
 
         public SessionCoordinator Coordinator { get; }
 

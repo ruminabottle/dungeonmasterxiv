@@ -61,7 +61,7 @@ public class AHungConnectDoesNotExonerateTheNetworkTests
     public void ASocketThatOpenedAndWasNeverAnsweredIsStillAnUnansweredRegistration()
     {
         var transport = new ControllableTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
 
         coordinator.StartHosting();
         coordinator.Tick(TimeSpan.Zero, Now);
@@ -73,7 +73,7 @@ public class AHungConnectDoesNotExonerateTheNetworkTests
     private static HostSession HostingWithASocketThatNeverOpens()
     {
         var transport = new ControllableTransport { OpensImmediately = false };
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
 
         coordinator.StartHosting();
         coordinator.Tick(TimeSpan.Zero, Now);

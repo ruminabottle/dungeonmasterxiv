@@ -153,7 +153,7 @@ public class AJoinerKeyIsValidatedAtTheWireTests
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Hosting()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         coordinator.StartHosting();
         coordinator.Host.Registered();
         transport.Sent.Clear();

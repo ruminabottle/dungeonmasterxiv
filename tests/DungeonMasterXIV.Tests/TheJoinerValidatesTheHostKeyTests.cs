@@ -147,7 +147,7 @@ public class TheJoinerValidatesTheHostKeyTests
     private static (SessionCoordinator Player, FakeTransport Transport, SessionCode Code) AwaitingDecision()
     {
         var transport = new FakeTransport();
-        var player = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
+        var player = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
         var code = SessionCode.FromValid("BCDFGH");
         using var hostKeys = new SessionKeyExchange();
 
