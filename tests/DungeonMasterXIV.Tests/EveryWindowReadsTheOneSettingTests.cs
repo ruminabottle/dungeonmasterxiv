@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using DungeonMasterXIV.Net;
 using Xunit;
 
@@ -37,6 +38,22 @@ namespace DungeonMasterXIV.Tests;
 /// <b>What a green run does NOT mean.</b> It means no window in this type reads a literal. It says
 /// nothing about a clock introduced in some other type, and nothing about whether the DURATION is
 /// correct — <c>TheInterruptionWindowIsSettableTests</c> owns the value and its refusals.
+/// </para>
+/// <para>
+/// <b>AND IT DOES NOT COVER THE WIRING IN <c>Plugin.cs</c> AT ALL. This is the residual, declared
+/// here rather than left for a reviewer to notice.</b> This file proves the windows read the value
+/// they are GIVEN. It cannot prove the composition root gives them the one from settings. Measured,
+/// not assumed: replacing <c>Plugin.cs</c>'s
+/// <c>Settings.InterruptionWindowOrDefault()</c> with <c>GraceWindow.Default</c> — severing the
+/// setting from both windows entirely — leaves <b>every test in the solution green</b>.
+/// </para>
+/// <para>
+/// <b>The reason is structural rather than an oversight, which is why no test here can close it.</b>
+/// The test project references <c>DungeonMasterXIV.Core</c> and deliberately NOT the plugin project,
+/// so <c>Plugin.cs</c> is unreachable from any test by construction. The single production
+/// construction of <c>SessionCoordinator</c> is therefore covered by review and by nothing else.
+/// <b>A reader who takes a green run here as proof that the setting reaches a running session is
+/// wrong</b>, and that sentence is the point of this paragraph.
 /// </para>
 /// </remarks>
 public sealed class EveryWindowReadsTheOneSettingTests
@@ -116,12 +133,39 @@ public sealed class EveryWindowReadsTheOneSettingTests
 
     // Derived from the type, not from a list of names: a clock added next month is swept without
     // anyone remembering to extend anything. Remaining equals the constructed length before any
-    // tick, which is what makes the length observable without exposing a field for the test.
-    private static (string Name, GraceWindow Window)[] WindowsOf(SessionInterruption interruption) =>
-        [.. typeof(SessionInterruption)
-            .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+    // tick, which is what makes the length observable without reaching into private state.
+    //
+    // FIELDS AND PROPERTIES, and the first version of this swept properties ALONE. A third clock
+    // declared `internal readonly GraceWindow X = new();` was then INVISIBLE -- the universal passed,
+    // the >=2 control was still satisfied by the other two, and A-1.27's third clause was false for a
+    // clock nobody could see. Measured before it was fixed: all 779 tests stayed green.
+    //
+    // THE SEARCH DEFINES THE POPULATION, SO WHAT IT CANNOT NAME CANNOT BE COUNTED MISSING. That is
+    // the same defect as a case-sensitive grep missing a camelCase parameter, and as
+    // `git grep "new GraceWindow("` returning nothing because target-typed `= new()` omits the type
+    // name. An instrument that enumerates by ONE declaration form is blind to the others, and its
+    // silence reads exactly like coverage.
+    private static (string Name, GraceWindow Window)[] WindowsOf(SessionInterruption interruption)
+    {
+        const BindingFlags Everything =
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+        var fromProperties = typeof(SessionInterruption)
+            .GetProperties(Everything)
             .Where(p => p.PropertyType == typeof(GraceWindow))
-            .Select(p => (p.Name, (GraceWindow)p.GetValue(interruption)!))];
+            .Select(p => (p.Name, Window: (GraceWindow)p.GetValue(interruption)!));
+
+        // Auto-properties carry a compiler-generated backing field of the same type. Excluded so a
+        // property is not counted twice -- the EXCLUSION is by attribute rather than by the "<" in
+        // the mangled name, because the name shape is a convention and the attribute is the contract.
+        var fromFields = typeof(SessionInterruption)
+            .GetFields(Everything)
+            .Where(f => f.FieldType == typeof(GraceWindow))
+            .Where(f => !f.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false))
+            .Select(f => (f.Name, Window: (GraceWindow)f.GetValue(interruption)!));
+
+        return [.. fromProperties.Concat(fromFields)];
+    }
 
     private sealed class SilentTransport : ISessionTransport
     {
