@@ -36,27 +36,41 @@ internal sealed class SessionInterruption
     /// <param name="host">The hosting half of the session.</param>
     /// <param name="join">The joining half of the session.</param>
     /// <param name="synchronise">Brings the socket back into line once a failure has been applied.</param>
-    /// <param name="seatWindow">
-    /// How long a dropped joiner's seat stays resumable. <b>Injected rather than read at the point
-    /// of use</b>, so making it settable later is a change at this construction site and not a
-    /// rebuild — A-1.23 and A-1.27 are a different ticket and injecting is not settable.
+    /// <param name="window">
+    /// How long a session survives an interruption (A-1.23, A-1.27). <b>ONE value feeds BOTH
+    /// clocks</b>, which is what A-1.27 asks for, and it is a required parameter rather than an
+    /// optional one on purpose.
+    /// <para>
+    /// <b>No default, and that is the whole point of this parameter.</b> It was
+    /// <c>TimeSpan? seatWindow = null</c>, which fell through to <see cref="GraceWindow.Default"/> —
+    /// and a defaulted parameter nobody supplies is the same silence as an omitted argument. Both
+    /// windows then read the same literal and AGREED, so any test asserting they matched would have
+    /// passed while A-1.27's third clause — <i>neither is a literal</i> — was still false.
+    /// <b>De-duplicating a literal is not single-sourcing it to a setting.</b>
+    /// </para>
+    /// <para>
+    /// Read once, here. Changing the setting takes effect for the next session rather than the
+    /// running one, because <see cref="GraceWindow"/> fixes its length at construction. A-1.23 asks
+    /// for settable, not live.
+    /// </para>
     /// </param>
     public SessionInterruption(
         RelayLink link,
         HostSession host,
         JoinAttempt join,
         Action synchronise,
-        TimeSpan? seatWindow = null)
+        TimeSpan window)
     {
         _link = link;
         _host = host;
         _join = join;
         _synchronise = synchronise;
-        Seat = new GraceWindow(seatWindow);
+        Grace = new GraceWindow(window);
+        Seat = new GraceWindow(window);
     }
 
     /// <summary>How long this client holds a session after losing the host (R-1.4).</summary>
-    public GraceWindow Grace { get; } = new();
+    public GraceWindow Grace { get; }
 
     /// <summary>
     /// How long this client's own seat stays resumable after its link drops (R-1.5a, BUG-53).
