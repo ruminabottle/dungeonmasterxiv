@@ -91,6 +91,32 @@ public sealed class PendingAdmission
     /// <summary>Whether the DM has said the fingerprint matched. Starts false, always.</summary>
     public bool FingerprintConfirmed { get; private set; }
 
+    /// <summary>
+    /// Whether the joining client told us it received the host key and rendered a fingerprint
+    /// (R-1.3a-iii). False until it says so, which is what an older build looks like.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A CAPABILITY, and never an action.</b> R-1.3a-iii permits signalling that the client
+    /// COULD compare and forbids signalling that the human DID: an acknowledgement of the human act
+    /// travels the same channel as the comparison, so an attacker who substituted the host key
+    /// controls it and can forge it — worthless precisely when it matters, while displaying as
+    /// evidence. Nothing here claims anybody looked at anything.
+    /// </para>
+    /// <para>
+    /// <b>Its failure mode is an old build, not an attacker</b> — either an old client that ignores
+    /// the additive message (D-14), or, as actually happened, an old relay that dropped it. That is
+    /// BUG-33: the DM was shown a plausible code and invited to tick "the code matched" against a
+    /// joiner who had nothing on their screen.
+    /// </para>
+    /// </remarks>
+    public bool JoinerCouldCompare { get; private set; }
+
+    /// <summary>
+    /// The joining client reported that it holds the host key and has a fingerprint to read.
+    /// </summary>
+    public void JoinerReportedItCanCompare() => JoinerCouldCompare = true;
+
     /// <summary>How this admission will be recorded if accepted now.</summary>
     public AdmissionVerification Verification =>
         FingerprintConfirmed ? AdmissionVerification.Confirmed : AdmissionVerification.NotCompared;
@@ -100,7 +126,29 @@ public sealed class PendingAdmission
     /// <b>out of band</b> — voice, Discord, whatever the group already uses. It cannot be carried in
     /// the plugin, because a channel an attacker controls cannot verify that attacker.
     /// </summary>
-    public void ConfirmFingerprintMatched() => FingerprintConfirmed = true;
+    /// <returns>
+    /// <c>false</c> when the confirmation was refused because the joiner never had a fingerprint.
+    /// </returns>
+    public bool ConfirmFingerprintMatched()
+    {
+        // A-1.2f, ENFORCED HERE rather than in the window that draws it. The criterion says a build
+        // offering the DM an unqualified confirmation against a client that received no host key
+        // FAILS -- so refusing it in the model makes that true of every build, including ones nobody
+        // has written yet. A UI-only guard is a property of one screen; this is a property of the
+        // product.
+        //
+        // The DM is not being told they compared wrongly. They are being told there was nothing on
+        // the other person's screen to compare against, so a tick would record an exchange that
+        // could not have happened -- which is the false control D-11's amendment forbids in terms,
+        // and the whole of BUG-33.
+        if (!JoinerCouldCompare)
+        {
+            return false;
+        }
+
+        FingerprintConfirmed = true;
+        return true;
+    }
 
     /// <summary>How long the requester has left, for the countdown R-1.3c requires while it runs.</summary>
     public TimeSpan RemainingAt(DateTimeOffset now) => Deadline.RemainingAt(now);
