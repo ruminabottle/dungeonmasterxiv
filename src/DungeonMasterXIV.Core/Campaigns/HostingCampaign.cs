@@ -83,52 +83,6 @@ public sealed class HostingCampaign
         return Current;
     }
 
-    /// <summary>
-    /// Records an admitted player as a participant of the running campaign (R-1.5c, R-1.6).
-    /// </summary>
-    /// <param name="label">What the DM calls them locally. May be a character name.</param>
-    /// <param name="alreadyAParticipant">
-    /// True when this admission RESOLVED a relink, so the person already has a participant here.
-    /// </param>
-    /// <returns>The new participant, or null when nothing was recorded.</returns>
-    /// <remarks>
-    /// <para>
-    /// <b>This is what makes the resume offer honest.</b> Until it existed,
-    /// <see cref="CampaignStore.AddParticipant"/> had ZERO production callers, so a campaign was
-    /// never anything but a name and a date — and the picker offered a DM continuity the build could
-    /// not deliver. A campaign IS its roster: <see cref="Campaign"/> holds no notes and no encounter
-    /// state, so an empty participant list is an empty campaign.
-    /// </para>
-    /// <para>
-    /// <b>D-8 permits the label HERE and would forbid it elsewhere.</b> A-1.11 was narrowed on
-    /// 2026-08-27 to cover what LEAVES the machine — exports and relay traffic — and D-8 explicitly
-    /// allows real character names in the DM's own file. <see cref="CampaignParticipant.ParticipantId"/>
-    /// is minted per campaign and derived from nothing, so identifiers stay uncorrelated across
-    /// campaigns; the label is not rotated and that limit is stated on the type rather than here.
-    /// </para>
-    /// <para>
-    /// <b>A resolved relink records NOTHING, and that arm is currently unreachable.</b> Nothing yet
-    /// tells a joiner its participant id, so no client can present a claim and
-    /// <c>PendingAdmission.IsRelink</c> is always false in the shipped build. The guard is here
-    /// anyway because the alternative is a returning player silently acquiring a SECOND participant
-    /// in the same campaign the moment relink starts working — a defect that would arrive with
-    /// somebody else's change and look like theirs.
-    /// </para>
-    /// <para>
-    /// <b>Not hosting means nothing to record.</b> Returns null rather than throwing: an admission
-    /// with no running session is not a state this can fix, and it must not take the session down.
-    /// </para>
-    /// </remarks>
-    public CampaignParticipant? Record(string label, bool alreadyAParticipant = false)
-    {
-        if (alreadyAParticipant || Current is null)
-        {
-            return null;
-        }
-
-        return _store.AddParticipant(Current.CampaignId, label);
-    }
-
     /// <summary>The session ended, so no campaign is current. The campaign itself is untouched.</summary>
     public void Ended() => Current = null;
 }

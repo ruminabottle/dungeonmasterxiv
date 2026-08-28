@@ -51,7 +51,7 @@ public sealed class SessionWindow : Window
         : base("Dungeon Master XIV session###dmx-session")
     {
         _coordinator = coordinator;
-        _admissionPrompts = new AdmissionPromptView(coordinator, hosting);
+        _admissionPrompts = new AdmissionPromptView(coordinator);
         _hosting = hosting;
         _campaignPicker = new HostCampaignPicker(hosting);
         _joinFlow = new JoinFlowView(coordinator, displayName);
