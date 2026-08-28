@@ -131,7 +131,7 @@ public class TheJoinerSendsItsRequestTests
     private sealed class JoinerUnderTest
     {
         public JoinerUnderTest() =>
-            Coordinator = new SessionCoordinator(Transport, () => RelayEndpoint.Default);
+            Coordinator = new SessionCoordinator(Transport, () => RelayEndpoint.Default, GraceWindow.Default);
 
         public SessionCoordinator Coordinator { get; }
 

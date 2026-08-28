@@ -39,7 +39,7 @@ public class SessionCoordinatorTests
     {
         var address = "wss://first.example.org/session";
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => address);
+        var coordinator = new SessionCoordinator(transport, () => address, GraceWindow.Default);
 
         coordinator.StartHosting();
         coordinator.StopHosting();
@@ -55,7 +55,7 @@ public class SessionCoordinatorTests
     public void AnUnusableRelayAddressFailsImmediatelyRatherThanHanging()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => "not-a-relay");
+        var coordinator = new SessionCoordinator(transport, () => "not-a-relay", GraceWindow.Default);
 
         coordinator.StartHosting();
 
@@ -79,7 +79,7 @@ public class SessionCoordinatorTests
     public void AMalformedAddressDoesNotBlameTheRelay()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => "not-a-relay");
+        var coordinator = new SessionCoordinator(transport, () => "not-a-relay", GraceWindow.Default);
 
         coordinator.StartHosting();
 
@@ -97,7 +97,7 @@ public class SessionCoordinatorTests
     public void FailingWhileSynchronisingTerminates()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => "not-a-relay");
+        var coordinator = new SessionCoordinator(transport, () => "not-a-relay", GraceWindow.Default);
 
         var exception = Record.Exception(() =>
         {
@@ -261,7 +261,7 @@ public class SessionCoordinatorTests
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Build()
     {
         var transport = new FakeTransport();
-        return (new SessionCoordinator(transport, () => RelayEndpoint.Default), transport);
+        return (new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default), transport);
     }
 
     private sealed class FakeTransport : ISessionTransport

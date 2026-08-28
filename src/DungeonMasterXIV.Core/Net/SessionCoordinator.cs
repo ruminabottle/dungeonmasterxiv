@@ -23,9 +23,14 @@ public sealed class SessionCoordinator
     /// (BUG-61): on the machine that reported it, this throws, and there was no seam between that
     /// throw and the frame loop.
     /// </param>
+    /// <param name="window">
+    /// How long a session survives an interruption, from settings (A-1.23, A-1.27). Required, so no
+    /// caller can silently fall back to the literal — see <c>SessionInterruption</c>'s remark.
+    /// </param>
     public SessionCoordinator(
         ISessionTransport transport,
         Func<string> relayAddress,
+        TimeSpan window,
         Func<SessionKeyExchange>? newKeys = null)
     {
         _newKeys = newKeys ?? (static () => new SessionKeyExchange());
@@ -36,7 +41,7 @@ public sealed class SessionCoordinator
             () => HostKeys);
         _handshake = new OutboundHandshake(_link, Host, Join, () => JoinerKeys);
         _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code);
-        _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport);
+        _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport, window);
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;

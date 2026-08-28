@@ -68,7 +68,7 @@ public class ADroppedJoinerKeepsItsSeatTests
     public void AJoinThatNeverSucceededHoldsNoSeat()
     {
         var transport = new FakeTransport();
-        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default);
+        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
         joiner.RequestJoin(Code, DisplayName.OrNone("Bob"));
         joiner.SynchroniseTransport();
         joiner.Tick(TimeSpan.Zero, Now);
@@ -143,7 +143,8 @@ public class ADroppedJoinerKeepsItsSeatTests
                 new RelayLink(transport, () => RelayEndpoint.Default, _ => { }),
                 new HostSession(),
                 join,
-                () => { });
+                () => { },
+                GraceWindow.Default);
 
             join.Request(Code);
             if (target != JoinPhase.Contacting)
@@ -165,7 +166,7 @@ public class ADroppedJoinerKeepsItsSeatTests
     private static (SessionCoordinator Joiner, SessionKeyExchange HostKeys) Admitted()
     {
         var transport = new FakeTransport();
-        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default);
+        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default);
         var hostKeys = new SessionKeyExchange();
 
         joiner.RequestJoin(Code, DisplayName.OrNone("Bob"));
