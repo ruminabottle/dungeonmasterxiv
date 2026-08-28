@@ -91,19 +91,60 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     [Fact]
     public void TheGuardReadsEveryWindowRatherThanOneNamedFile()
     {
-        var scanned = WindowSources().Select(Path.GetFileName).ToList();
-        var onDisk = Directory.EnumerateFiles(WindowsDirectory(), "*.cs").Select(Path.GetFileName).ToList();
+        var scanned = WindowSources().Select(RelativeWindowPath).ToList();
+        var onDisk = EveryCsFileBeneath(WindowsDirectory()).Select(RelativeWindowPath).ToList();
 
-        // Derived from disk on both sides, so a window added tomorrow is covered without anyone
-        // remembering to add it here.
+        // A window added tomorrow is covered wherever beneath Windows/ it lands, without anyone
+        // remembering to add it here. THAT IS WHAT THE OLD COMMENT HERE CLAIMED, and one directory
+        // down it was not true -- the claim is kept because it is now earned, not because it was
+        // written down first.
+        //
+        // The two sides now come from DIFFERENT enumerations, which is the whole repair (BUG-67).
+        // The old version compared WindowSources() against the identical EnumerateFiles call, so a
+        // file both sides missed was missed equally and this passed: it could only ever detect a
+        // disagreement between one function and itself. Nothing beneath Windows/ can be invisible to
+        // both a glob and a hand-written walk at once without the walk being wrong too.
         Assert.Equal(
-            onDisk.OrderBy(name => name, StringComparer.Ordinal),
-            scanned.OrderBy(name => name, StringComparer.Ordinal));
+            onDisk.OrderBy(path => path, StringComparer.Ordinal),
+            scanned.OrderBy(path => path, StringComparer.Ordinal));
 
         Assert.True(
             scanned.Count > 1,
             $"The guard scanned {scanned.Count} file(s). It must read every window, or its claim that "
             + "the roster has one renderer is false one file along.");
+    }
+
+    // THE SEPARATE AUTHORITY, and the reason the walk above is allowed to stand for "the windows"
+    // (BUG-67). Both sides of the control read the FILESYSTEM; neither knows what the compiler is
+    // given. The guards' claim is about code that COMPILES INTO THE PLUGIN, so the gap between "a
+    // file under Windows/" and "a file the plugin compiles" is assumed by every assertion in this
+    // class -- and the project file is the thing with authority over it.
+    //
+    // Read statically rather than by invoking MSBuild deliberately. Asking the build for its Compile
+    // items is the stronger check and it is what I used to CONFIRM this bug, but running a real build
+    // inside this fast suite has already cost this repository one flaky test through a shared obj/,
+    // and the static read answers the same question without a second process.
+    //
+    // The plugin globs by SDK default -- Windows/ is not mentioned in the csproj at all -- so the
+    // only ways a window stops compiling are these two, and both are refused here.
+    [Fact]
+    public void EveryWindowOnDiskIsAWindowThePluginCompiles()
+    {
+        var project = File.ReadAllText(Path.Combine(RepositoryRoot(), "DungeonMasterXIV.csproj"));
+
+        Assert.DoesNotContain("EnableDefaultCompileItems", project, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("EnableDefaultItems", project, StringComparison.OrdinalIgnoreCase);
+
+        var excluded = Regex.Matches(project, @"<Compile\s+Remove=""([^""]+)""")
+            .Select(match => match.Groups[1].Value)
+            .Where(pattern => pattern.StartsWith("Windows", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        Assert.True(
+            excluded.Count == 0,
+            "The project excludes " + string.Join(", ", excluded) + " from compilation, so this "
+            + "class reads files the plugin does not build. Either drop the exclusion or teach "
+            + "WindowSources to honour it -- the guards claim to cover what SHIPS.");
     }
 
     // THE OTHER HALF OF THE HEADING GUARD, and the half whose absence defeated the last one.
@@ -182,16 +223,28 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     /// <summary>The window's source with comment lines removed.</summary>
     /// <remarks>
     /// <para>
-    /// Stripped because this file's own commentary names <c>DrawRoster</c> and
-    /// <c>SessionRoleLabel</c> while explaining them, and a count that includes prose counts the
-    /// explanation as a second implementation.
+    /// Stripped because a window's own commentary naturally names the symbols these counts match,
+    /// and a count that includes prose counts the explanation as a second implementation.
+    /// </para>
+    /// <para>
+    /// <b>It is a PRECAUTION, not currently load-bearing, and that is measured rather than
+    /// assumed.</b> Today the stripping changes NO count: every pattern this class matches yields
+    /// the same number against raw and against stripped source, and disabling it reddens nothing.
+    /// Said plainly because the opposite is easy to assume and I did assume it once here.
+    /// </para>
+    /// <para>
+    /// The near miss worth knowing, since it is why the count is unchanged rather than luck:
+    /// <c>SessionRoleLabel</c> appears twice under <c>Windows/</c>, once in prose and once in code,
+    /// but the counted pattern requires the trailing dot of a CALL. It is the pattern, not the
+    /// stripping, that currently excludes the prose. A comment written with the dot would be
+    /// counted, which is the day this paragraph stops being about a precaution.
     /// </para>
     /// <para>
     /// <b>Which families this handles, said plainly so the next reader does not assume more.</b> It
     /// removes lines whose TRIMMED START is <c>//</c> — line comments and XML-doc comments. It does
     /// NOT remove block comments or a trailing comment after code. Both of those INFLATE the counts
     /// above, so their failure direction is a false FAIL, which is the safe one. The one narrow
-    /// false-PASS is <c>BothSidesCallIt</c>'s <c>&gt;= 3</c>, part of which a commented-out call
+    /// false-PASS is <c>BothSidesCallIt</c>'s <c>&gt;= 2</c>, part of which a commented-out call
     /// could supply.
     /// </para>
     /// </remarks>
@@ -208,9 +261,51 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     /// concatenation and do not depend on it.
     /// </remarks>
     private static IReadOnlyList<string> WindowSources() =>
-        Directory.EnumerateFiles(WindowsDirectory(), "*.cs")
+        Directory.EnumerateFiles(WindowsDirectory(), "*.cs", SearchOption.AllDirectories)
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
+
+    /// <summary>Every <c>.cs</c> file beneath <c>Windows/</c>, found by walking rather than by globbing.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason
+    /// (BUG-67).</b> The obvious implementation is
+    /// <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c> — which is the call
+    /// <see cref="WindowSources"/> makes. Comparing a function against itself is what left the old
+    /// control blind: both sides missed subdirectories, missed them EQUALLY, and the equality passed.
+    /// TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS NOT EVIDENCE.
+    /// </para>
+    /// <para>
+    /// So this descends explicitly and takes no <c>SearchOption</c>. Narrowing <c>WindowSources</c>
+    /// back to top-level cannot narrow this with it, which is the property the control needs and the
+    /// one that was missing.
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<string> EveryCsFileBeneath(string directory)
+    {
+        foreach (var file in Directory.GetFiles(directory, "*.cs"))
+        {
+            yield return file;
+        }
+
+        foreach (var subdirectory in Directory.GetDirectories(directory))
+        {
+            foreach (var file in EveryCsFileBeneath(subdirectory))
+            {
+                yield return file;
+            }
+        }
+    }
+
+    /// <summary>A window's path relative to <c>Windows/</c>, with separators normalised.</summary>
+    /// <remarks>
+    /// Compared as RELATIVE PATHS rather than bare file names, because once the scan recurses two
+    /// windows may share a name — <c>Windows/RosterView.cs</c> and <c>Windows/Panels/RosterView.cs</c>
+    /// are different files. Comparing names would let one stand in for the other and the control
+    /// would pass while the scan missed a file.
+    /// </remarks>
+    private static string RelativeWindowPath(string path) =>
+        Path.GetRelativePath(WindowsDirectory(), path).Replace('\\', '/');
 
     private static string WindowsDirectory()
     {
