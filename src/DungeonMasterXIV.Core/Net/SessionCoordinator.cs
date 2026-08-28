@@ -39,9 +39,14 @@ public sealed class SessionCoordinator
             new AdmissionAnnouncer(transport),
             () => Host.Code,
             () => HostKeys);
-        _handshake = new OutboundHandshake(_link, Host, Join, () => JoinerKeys);
+        // Null-conditional because _joiner is built two lines below this one: the closure is not
+        // INVOKED until after construction, but the compiler cannot know that, and "no joiner keys
+        // yet" is the honest answer for the window in which it could be. Suppressing with ! would
+        // have asserted something this constructor does not yet guarantee.
+        _handshake = new OutboundHandshake(_link, Host, Join, () => _joiner?.Keys);
         _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code);
         _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport, window);
+        _joiner = new JoinRequester(_handshake, _interruption, Join, _newKeys, SynchroniseTransport);
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
@@ -50,6 +55,7 @@ public sealed class SessionCoordinator
     private readonly OutboundHandshake _handshake;
     private readonly RosterBroadcast _roster;
     private readonly SessionInterruption _interruption;
+    private readonly JoinRequester _joiner;
     private IReadOnlyList<RosterEntry> _receivedRoster = [];
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
@@ -89,13 +95,14 @@ public sealed class SessionCoordinator
     public SessionKeyExchange? HostKeys { get; private set; }
 
     /// <summary>This client's key pair when joining somebody else's session, or null.</summary>
-    public SessionKeyExchange? JoinerKeys { get; private set; }
+    /// <remarks>Owned by <see cref="JoinRequester"/>, which is the only thing that creates it.</remarks>
+    public SessionKeyExchange? JoinerKeys => _joiner.Keys;
 
     /// <summary>
     /// The key this client derived on being admitted, or null. Present only once the host's key has
     /// arrived — which is why the acceptance has to carry it.
     /// </summary>
-    public byte[]? SessionKey { get; private set; }
+    public byte[]? SessionKey => _joiner.SessionKey;
 
     /// <summary>Who may receive session state. See <see cref="SessionAudience"/> for the D-13 levels.</summary>
     public SessionAudience Audience => _admissions.Audience;
@@ -121,7 +128,7 @@ public sealed class SessionCoordinator
         // handler and out of Draw -- so the user got an exception every frame rather than an answer
         // once. Caught HERE rather than at the button, because both of the product's two entry
         // points construct a key pair and a guard at one of them leaves the other open.
-        if (!TryMakeKeys(out var hostKeys))
+        if (!SessionKeyPair.TryMake(_newKeys, out var hostKeys))
         {
             Host.Fail(SessionFailure.SessionKeysUnavailable);
             return;
@@ -175,79 +182,16 @@ public sealed class SessionCoordinator
     /// Requests to join <paramref name="code"/>, claiming a participant we believe is ours (R-1.5).
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// <b>A separate overload rather than a defaulted parameter, and that is the whole lesson of this
-    /// change.</b> The claim reached the wire types and the host's resolver and never travelled,
-    /// because <c>RelinkClaim relink = default</c> sat on three signatures: every caller omitted it,
-    /// every call got <c>None</c>, and every relink branch took the not-a-relink path while the suite
-    /// stayed green. A missing argument is a compile error; a defaulted one is silence.
-    /// </para>
-    /// <para>
-    /// <b>Nothing here remembers the id between sessions.</b> Storing it is a retention decision and
-    /// it belongs to whoever owns joiner-side persistence, not to making the path reachable.
-    /// </para>
+    /// <b>A forwarder since DMXENG-31, and deliberately still HERE.</b> The sequence lives on
+    /// <see cref="JoinRequester"/>; this signature stays because PR #75's A-1.12a table drives
+    /// production through it and carries an approve-blocking gate. A split is not a licence to move
+    /// somebody else's entry point.
     /// </remarks>
     /// <param name="code">The session to ask to join.</param>
     /// <param name="name">What to call ourselves. Never authenticates.</param>
     /// <param name="claimedParticipantId">The participant we claim, or null for an ordinary join.</param>
-    public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
-    {
-        _handshake.JoiningAs(name, claimedParticipantId);
-
-        // R-1.5a: a deliberate quit removes the seat immediately, and asking to join again is that.
-        // Without this the suppression would outlive the intent that justified it.
-        _interruption.SeatReleased();
-        JoinerKeys?.Dispose();
-        JoinerKeys = null;
-        SessionKey = null;
-
-        // The same guard, because joining fails identically to hosting: both make a key pair, which
-        // is why an affected machine has nothing left that works (BUG-61).
-        if (!TryMakeKeys(out var joinerKeys))
-        {
-            Join.Fail(SessionFailure.SessionKeysUnavailable);
-            return;
-        }
-
-        JoinerKeys = joinerKeys;
-        Join.Request(code);
-
-        // Cleared so asking again for the SAME code re-sends. R-1.3c makes that the ordinary case —
-        // a lapse means the DM was mid-encounter, not that they refused — and the host's equivalent
-        // never needs it because R-1.2a regenerates a fresh code on every refusal.
-        _handshake.ForgetJoinRequest();
-        SynchroniseTransport();
-    }
-
-
-
-
-
-
-
-
-    /// <summary>
-    /// Makes a session key pair, reporting failure rather than throwing.
-    /// </summary>
-    /// <remarks>
-    /// <b>Only <see cref="CryptographicException"/>, deliberately.</b> That is what the reported
-    /// failure is, and a broader catch here would hide a genuine defect in this method's own
-    /// callers behind a message about keys. The exception is not logged or re-wrapped: the
-    /// user-facing answer is the failure value, and T-46 owns what gets logged.
-    /// </remarks>
-    private bool TryMakeKeys(out SessionKeyExchange? keys)
-    {
-        try
-        {
-            keys = _newKeys();
-            return true;
-        }
-        catch (CryptographicException)
-        {
-            keys = null;
-            return false;
-        }
-    }
+    public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId) =>
+        _joiner.Request(code, name, claimedParticipantId);
 
     /// <summary>Records that a participant is asking to be let in.</summary>
     public void ReceiveJoinRequest(PendingAdmission request) => _admissions.Receive(request);
@@ -328,9 +272,9 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         _interruption.ApplyReportedFailure();
-        SessionKey = _inbox.Drain(
+        _joiner.SessionKey = _inbox.Drain(
             Join,
-            JoinerKeys,
+            _joiner.Keys,
             Host,
             new InboundHandlers(
                 OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
