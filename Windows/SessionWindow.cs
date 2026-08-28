@@ -103,6 +103,23 @@ public sealed class SessionWindow : Window
             }
 
             ImGui.TextUnformatted($"Session code: {code.ToDisplayString()}");
+
+            // R-1.3i. The clipboard is an OS facility, not game input (D-1) and not a network
+            // destination (D-2) — R-1.3i records that explicitly so a reviewer meeting this call
+            // does not have to reason it out.
+            //
+            // It copies ToDisplayString(), the SAME expression the line above renders, so what the
+            // DM copies is what the DM is looking at. That is also what makes it safe to paste:
+            // A-1.18 requires the copied value to be accepted verbatim by the join field, and the
+            // grouped form is accepted because SessionCode.TryParse strips hyphens.
+            // ADisplayedCodeParsesBackToTheSameCode is what holds that, and it fails if either half
+            // moves — if Group switched to spaces, the paste would break and that test would go red.
+            ImGui.SameLine();
+            if (ImGui.Button("Copy"))
+            {
+                ImGui.SetClipboardText(code.ToDisplayString());
+            }
+
             ImGui.TextWrapped(CodeDisclosure);
 
             var audience = _coordinator.Audience;
