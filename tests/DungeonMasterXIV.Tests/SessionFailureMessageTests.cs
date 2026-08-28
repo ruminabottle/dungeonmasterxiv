@@ -57,6 +57,13 @@ public class SessionFailureMessageTests
                 "No session is running under that code. Check the code with your DM — codes belong to a "
                 + "session that is live now, so one from last week will not work until they start again.",
 
+            [SessionFailure.HostKeyUnusable] =
+                "The host's answer to your request could not be used: it carried a key this plugin "
+                + "cannot agree with, so no shared key was established and you have not joined. This "
+                + "does not say why — a host running a different build, and something altering the "
+                + "answer on the way, look the same from here and this client cannot tell them apart. "
+                + "You can ask to join again.",
+
             [SessionFailure.PluginBehindRelay] =
                 "This plugin is too old for that relay. Update the plugin and try again — the relay "
                 + "speaks a newer version of the session protocol than this build does.",
@@ -183,6 +190,64 @@ public class SessionFailureMessageTests
             forbidden,
             SessionFailureMessage.For(SessionFailure.RelayAddressUnreadable),
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    // BUG-59, following the precedent the line above set for BUG-37's value: a new
+    // engineering-authored sentence gets its own guards rather than relying on arrays that name
+    // three of nine. A-1.7e is what this discharges — the forbidden list, applied to copy R-1.7a
+    // does not supply.
+    [Theory]
+    [InlineData("connection failed")]
+    [InlineData("something went wrong")]
+    [InlineData("please wait")]
+    [InlineData("anonymous")]
+    [InlineData("private")]
+    [InlineData("we can't see anything")]
+    [InlineData("no one can see your session")]
+    public void TheHostKeyUnusableSentenceAvoidsTheForbiddenPhrasings(string forbidden)
+    {
+        Assert.DoesNotContain(
+            forbidden,
+            SessionFailureMessage.For(SessionFailure.HostKeyUnusable),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    // A-1.5j, and it is the constraint this sentence is most likely to break. The client establishes
+    // ONE fact — the key on the acceptance cannot be agreed with. It cannot tell a broken host from
+    // a tampering relay from a version skew, so naming any of them would be asserting what it has
+    // not established. It also names no network in either direction: blaming one would be false
+    // because the relay is plainly reachable, and exonerating one is BUG-49's mistake, which is the
+    // failure mode this whole file exists to prevent.
+    [Theory]
+    [InlineData("firewall")]
+    [InlineData("your network")]
+    [InlineData("not your")]
+    [InlineData("unreachable")]
+    [InlineData("not responding")]
+    [InlineData("hostile")]
+    [InlineData("tamper")]
+    [InlineData("attack")]
+    public void TheHostKeyUnusableSentenceAssertsNoCauseAndNoNetwork(string unestablished)
+    {
+        Assert.DoesNotContain(
+            unestablished,
+            SessionFailureMessage.For(SessionFailure.HostKeyUnusable),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    // The sentence tells the user they can ask again, so that has to be TRUE of the state that
+    // produces it rather than merely encouraging (A-1.5j). Asserted against a real JoinAttempt in
+    // the phase this failure puts it in, not against MayRequestAgain's source.
+    [Fact]
+    public void TheRetryOfferIsTrueWhenItIsShown()
+    {
+        var attempt = new JoinAttempt();
+        attempt.Request(SessionCode.FromValid("BCDFGH"));
+        attempt.AwaitDecision();
+        attempt.Fail(SessionFailure.HostKeyUnusable);
+
+        Assert.Contains("ask to join again", SessionFailureMessage.For(attempt.Failure), StringComparison.OrdinalIgnoreCase);
+        Assert.True(attempt.MayRequestAgain);
     }
 
     // Fails if: the no-failure case starts producing text, which would put an error in front of a
