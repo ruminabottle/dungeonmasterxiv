@@ -38,22 +38,32 @@ internal sealed class RosterBroadcast
     private readonly SessionAudience _audience;
     private readonly Func<SessionKeyExchange?> _hostKeys;
     private readonly Func<SessionCode?> _hostCode;
+    private readonly ISessionTransportLog _log;
 
     /// <summary>Wires the broadcast to the host state it reads and the link it sends down.</summary>
     /// <param name="link">The connection. Sends; decides nothing.</param>
     /// <param name="audience">Who is admitted, and the keys to reach them.</param>
     /// <param name="hostKeys">The host's ephemeral keys, read at send time rather than captured.</param>
     /// <param name="hostCode">The session being hosted, or null when not hosting.</param>
+    /// <param name="log">
+    /// Where a participant dropped from the broadcast is reported (PR #86 finding 5).
+    /// <b>Required, not optional, and that is the point.</b> An optional log is one the single
+    /// production caller can omit and nothing fails — the defect DMXENG-13 was re-scoped to remove
+    /// from <see cref="SessionCoordinator"/> one level up. Threading it onward as optional would
+    /// rebuild that defect here: a guaranteed log that nobody is guaranteed to be given.
+    /// </param>
     public RosterBroadcast(
         RelayLink link,
         SessionAudience audience,
         Func<SessionKeyExchange?> hostKeys,
-        Func<SessionCode?> hostCode)
+        Func<SessionCode?> hostCode,
+        ISessionTransportLog log)
     {
         _link = link;
         _audience = audience;
         _hostKeys = hostKeys;
         _hostCode = hostCode;
+        _log = log;
     }
 
     /// <summary>
@@ -93,6 +103,10 @@ internal sealed class RosterBroadcast
             // is addressable and unreachable without anyone noticing.
             if (peer.PublicKey is not { } peerKey)
             {
+                _log.Warning(
+                    $"Roster broadcast skipped participant {peer.PeerCode.Value}: no public key, so the "
+                    + "host cannot address them. They remain admitted and will hear nothing from this "
+                    + "or any later broadcast.");
                 continue;
             }
 
@@ -101,7 +115,7 @@ internal sealed class RosterBroadcast
             {
                 shared = keys.DeriveSharedKey(peerKey, code);
             }
-            catch (CryptographicException)
+            catch (CryptographicException exception)
             {
                 // A key that will not import. NOTHING VALIDATES THAT A JOINER'S PUBLIC KEY IS A
                 // WELL-FORMED SPKI BLOB — it arrives on the wire and is carried to admission — so a
@@ -113,6 +127,18 @@ internal sealed class RosterBroadcast
                 // The peer stays admitted and simply hears nothing, which is the honest outcome for
                 // a participant the host cannot address. Refusing such an admission outright is a
                 // product decision about what the DM is told, not one to take here.
+                //
+                // PR #86 FINDING 5. Surviving the loop was always right; the SILENCE was the defect.
+                // "A participant silently omitted from this and every future broadcast is a person
+                // sitting in a session hearing nothing" -- and until this line, nothing anywhere
+                // said so. The peer CODE is in the message because it is the only thing that
+                // identifies which person it is (A-1.2d); the display name would not, and D-8 keeps
+                // a character name out of a log entirely.
+                _log.Warning(
+                    exception,
+                    $"Roster broadcast skipped participant {peer.PeerCode.Value}: their public key "
+                    + "will not import, so no shared key can be derived. They remain admitted and "
+                    + "will hear nothing from this or any later broadcast.");
                 continue;
             }
 

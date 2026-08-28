@@ -64,7 +64,11 @@ public sealed class SessionCoordinator
         // yet" is the honest answer for the window in which it could be. Suppressing with ! would
         // have asserted something this constructor does not yet guarantee.
         _handshake = new OutboundHandshake(_link, Host, Join, () => _joiner?.Keys);
-        _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code);
+        // The PARAMETER, not the field. Reading _log here would work only because :56 happens
+        // to precede this line, and nothing detects a reordering -- which is DMXENG-45's defect
+        // exactly. Taking it from the argument removes the ordering dependency instead of
+        // relying on it.
+        _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code, log);
         _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport, window);
         _joiner = new JoinRequester(_handshake, _interruption, Join, _newKeys, SynchroniseTransport);
     }
