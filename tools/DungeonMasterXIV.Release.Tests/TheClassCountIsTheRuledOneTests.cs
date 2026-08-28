@@ -107,8 +107,8 @@ public class TheClassCountIsTheRuledOneTests
             "}",                    // 6
         });
 
-        var outer = Assert.Single(spans.Where(span => span.Name == "Outer"));
-        var inner = Assert.Single(spans.Where(span => span.Name == "Inner"));
+        var outer = Assert.Single(spans, span => span.Name == "Outer");
+        var inner = Assert.Single(spans, span => span.Name == "Inner");
 
         Assert.Equal(6, outer.Lines);
         Assert.Equal(3, inner.Lines);
