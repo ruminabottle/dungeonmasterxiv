@@ -51,6 +51,14 @@ namespace DungeonMasterXIV.Tests;
 /// member came to be, which is a different kind of thing from the rules about what it looks like.
 /// </para>
 /// <para>
+/// <b>AND THE SWEEP SEES CORE ONLY.</b> It scopes to <c>typeof(PeerCode).Assembly</c>, so a
+/// peer-code door added in the Relay assembly would not be found here. Declared rather than closed,
+/// on the same reasoning as the <c>Windows/</c> boundary: widening the sweep MOVES the edge instead
+/// of removing it, and some assembly has to be the last one looked in. The Relay mentions
+/// <c>PeerCode</c> in no file today, so nothing is escaping — but that is a fact about today, which
+/// is exactly the kind of fact a guard should not leave a reader to infer from silence.
+/// </para>
+/// <para>
 /// <b>What a green run does NOT mean.</b> It means no member takes or exposes a peer code as a bare
 /// string outside the listed exceptions. It says nothing about whether the value in a
 /// <see cref="PeerCode"/> is the RIGHT one — that is the neighbouring tests' job.
@@ -201,7 +209,10 @@ public sealed class PeerCodeIsTheOnlyDoorTests
 
         internal sealed class NotRawStrings
         {
-            internal int peerCode;
+            // Assigned explicitly. Never read by design -- what matters is its TYPE, not its value --
+            // and an unassigned field is CS0649, which would be a new warning for a deliberate
+            // construct.
+            internal int peerCode = 0;
 
             internal static bool TryGet(out PeerCode peerCode)
             {
