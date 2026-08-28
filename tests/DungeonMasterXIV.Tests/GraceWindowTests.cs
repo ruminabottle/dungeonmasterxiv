@@ -204,7 +204,7 @@ public class FingerprintExpiryCouplingTests
     {
         var now = new DateTimeOffset(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
         var desk = new AdmissionDesk();
-        desk.Receive(new PendingAdmission("PEER-1", "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(now)));
+        desk.Receive(new PendingAdmission(PeerCodes.Of("PRBCD2"), "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(now)));
 
         Assert.Single(desk.ExpireLapsed(now.Add(AdmissionDeadline.Window)));
         Assert.Empty(desk.Pending);

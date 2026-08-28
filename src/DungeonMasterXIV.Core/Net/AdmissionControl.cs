@@ -109,7 +109,7 @@ public sealed class AdmissionControl
     /// aloud. Raised with the Spec Owner rather than settled here.
     /// </para>
     /// </remarks>
-    public string PeerCodeFor(byte[] joinerPublicKey)
+    public PeerCode PeerCodeFor(byte[] joinerPublicKey)
     {
         var scope = System.Text.Encoding.UTF8.GetBytes(_hostCode()?.Value ?? string.Empty);
         var digest = System.Security.Cryptography.SHA256.HashData([.. scope, .. joinerPublicKey]);
@@ -122,7 +122,11 @@ public sealed class AdmissionControl
             rendered[i] = SpeakableAlphabet.Characters[(int)symbol];
         }
 
-        return new string(rendered);
+        // Through the same gate a code off the wire goes through. The rendering above draws from
+        // SpeakableAlphabet at SessionCode.Length, so this cannot fail today -- which is exactly why
+        // it is checked here rather than trusted: if the two ever diverge, this throws at the source
+        // instead of putting an ungeneratable code into a prompt and a roster.
+        return PeerCode.FromGenerated(new string(rendered));
     }
 
     /// <summary>
@@ -135,7 +139,7 @@ public sealed class AdmissionControl
     /// The deadline is decided here too: R-1.3c puts that decision on the DM's client (D-3), once.
     /// </remarks>
     public PendingAdmission? Receive(
-        string peerCode,
+        PeerCode peerCode,
         byte[] joinerPublicKey,
         DateTimeOffset now,
         RelinkClaim relink = default,
@@ -179,7 +183,7 @@ public sealed class AdmissionControl
     /// Whether the DM compared the fingerprint is taken from the request rather than passed in, so
     /// an admission cannot be recorded as verified unless the DM actually said so (R-1.3a).
     /// </remarks>
-    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
+    public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player)
     {
         var request = Desk.Decide(peerCode);
         // The key and the name come from the request that is being answered, which is the only
@@ -204,7 +208,11 @@ public sealed class AdmissionControl
     /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
     /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
     /// </summary>
-    public void Deny(string peerCode)
+    /// <summary>
+    /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
+    /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
+    /// </summary>
+    public void Deny(PeerCode peerCode)
     {
         var request = Desk.Decide(peerCode);
         Audience.Remove(peerCode);

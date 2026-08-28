@@ -34,7 +34,7 @@ public sealed class AnUnadmittedClientReceivesNoRosterTests
     /// A peer code of the shape the product actually produces.
     /// </summary>
     /// <remarks>
-    /// <b>Derived, not typed.</b> These fixtures used <c>"PEER-1"</c>, which
+    /// <b>Derived, not typed.</b> These fixtures used <c>"PRBCD2"</c>, which
     /// <c>AdmissionControl.PeerCodeFor</c> can never emit — <c>E</c>, <c>-</c> and <c>1</c> are not
     /// in <see cref="SpeakableAlphabet.Characters"/>. That was invisible while nothing checked, and
     /// BUG-57 added the check. Built from the same two constants the codec validates against, so it

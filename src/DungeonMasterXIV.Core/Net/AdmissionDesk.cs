@@ -35,14 +35,14 @@ public sealed class AdmissionDesk
     }
 
     /// <summary>The request from this participant, or null.</summary>
-    public PendingAdmission? Find(string peerCode) =>
+    public PendingAdmission? Find(PeerCode peerCode) =>
         _pending.FirstOrDefault(request => request.PeerCode == peerCode);
 
     /// <summary>
     /// Removes a decided request and hands it back, so the caller can record how it was verified
     /// (R-1.3a) without re-deriving it.
     /// </summary>
-    public PendingAdmission? Decide(string peerCode)
+    public PendingAdmission? Decide(PeerCode peerCode)
     {
         var request = Find(peerCode);
         if (request is not null)

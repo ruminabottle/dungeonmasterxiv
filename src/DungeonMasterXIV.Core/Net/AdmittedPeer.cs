@@ -26,7 +26,7 @@ public sealed class AdmittedPeer
     private readonly byte[]? _publicKey;
 
     internal AdmittedPeer(
-        string peerCode,
+        PeerCode peerCode,
         SessionRole role,
         AdmissionVerification verification,
         byte[]? publicKey = null,
@@ -77,7 +77,12 @@ public sealed class AdmittedPeer
     /// the DM's prompt to identify a requester by code, and D-8 forbids the name reaching a log, a
     /// file or an export.
     /// </summary>
-    public string PeerCode { get; }
+    /// <remarks>
+    /// A <see cref="Net.PeerCode"/> rather than a <c>string</c>: this is the identity two
+    /// participants with the same <see cref="DisplayName"/> are told apart by (A-1.2d), so a value
+    /// this product could not have generated must not be able to reach it.
+    /// </remarks>
+    public PeerCode PeerCode { get; }
 
     /// <summary>
     /// What this participant may do (E-11). An Assistant runs the table; only the DM controls who is

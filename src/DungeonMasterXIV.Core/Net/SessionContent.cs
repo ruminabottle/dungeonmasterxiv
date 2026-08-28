@@ -51,6 +51,23 @@ public sealed class SessionContent
 /// names are self-declared and two participants may hold the same one (A-1.2d), so nothing may key
 /// on <see cref="DisplayName"/>. <see cref="PeerCode"/> is session-scoped and derived, so it
 /// identifies within this session and links nothing across two (A-1.2a).
+/// <para>
+/// <b>Both are raw strings here on purpose, and that is not a door left open.</b> This was ruled on
+/// for <see cref="DisplayName"/> in #86 and the ruling governs <see cref="PeerCode"/> identically:
+/// <i>put the gate at the DECODE BOUNDARY so it is the only door, and <c>string</c> stays in
+/// <c>RosterEntry</c> — the wire format does not change.</i>
+/// </para>
+/// <para>
+/// <b>A DTO is not a door; it is the shape of what crossed one.</b> The door is <c>Vetted</c>,
+/// called inside <c>TryDecode</c> before it returns true, so no path yields a decoded
+/// <see cref="SessionContent"/> without passing it and a later reader cannot forget. The validated
+/// types live on the domain side, in <see cref="AdmittedPeer"/> and <see cref="PendingAdmission"/>.
+/// </para>
+/// <para>
+/// D-14 reaches the same conclusion independently: System.Text.Json reads and writes these fields,
+/// so changing one to a struct changes the serialised shape — a wire change wearing a refactor's
+/// clothes.
+/// </para>
 /// </remarks>
 /// <param name="PeerCode">The participant's session-scoped code.</param>
 /// <param name="DisplayName">What they call themselves. Shown, never acted on.</param>

@@ -259,7 +259,7 @@ public sealed class SessionCoordinator
     /// <param name="relink">What this client resolved about a claimed participant, if anything.</param>
     /// <param name="displayName">What they call themselves (R-1.3e). Shown, never acted on.</param>
     public PendingAdmission? ReceiveJoinRequest(
-        string peerCode,
+        PeerCode peerCode,
         byte[] joinerPublicKey,
         DateTimeOffset now,
         RelinkClaim relink = default,
@@ -267,7 +267,7 @@ public sealed class SessionCoordinator
         _admissions.Receive(peerCode, joinerPublicKey, now, relink, displayName);
 
     /// <summary>Admits the pending participant (R-1.3, D-13).</summary>
-    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
+    public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player)
     {
         var peer = _admissions.Admit(peerCode, role);
 
@@ -279,7 +279,7 @@ public sealed class SessionCoordinator
     }
 
     /// <summary>Declines the pending participant (R-1.3, D-13).</summary>
-    public void Deny(string peerCode) => _admissions.Deny(peerCode);
+    public void Deny(PeerCode peerCode) => _admissions.Deny(peerCode);
 
 
     /// <summary>

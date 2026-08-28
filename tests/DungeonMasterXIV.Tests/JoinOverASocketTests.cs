@@ -106,8 +106,8 @@ public class JoinOverASocketTests
         await WaitForAsync(() => transport.IsReadyToSend);
 
         using var joiner = new SessionKeyExchange();
-        coordinator.ReceiveJoinRequest("PEER-1", joiner.PublicKey, Now);
-        coordinator.Admit("PEER-1");
+        coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), joiner.PublicKey, Now);
+        coordinator.Admit(PeerCodes.Of("PRBCD2"));
 
         // The acceptance is no longer the FIRST thing the host sends: R-1.3a-i puts a JoinPending
         // carrying the host's key on the wire when the request is recorded, before the DM decides.

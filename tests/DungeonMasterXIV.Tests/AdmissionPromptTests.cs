@@ -12,12 +12,12 @@ public class AdmissionPromptTests
         Request(relink, DisplayName.OrNone("Bob"));
 
     private static PendingAdmission Request(RelinkClaim relink, DisplayName name) =>
-        new("PEER-3", "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), relink, null, name);
+        new(PeerCodes.Of("PRBCD4"), "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), relink, null, name);
 
     [Fact]
     public void AnOrdinaryRequestAsksToJoin()
     {
-        Assert.Equal("Bob (PEER-3) is asking to join", AdmissionPrompt.Headline(Request(RelinkClaim.None)));
+        Assert.Equal("Bob (PRBCD4) is asking to join", AdmissionPrompt.Headline(Request(RelinkClaim.None)));
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public class AdmissionPromptTests
     {
         var headline = AdmissionPrompt.Headline(Request(new RelinkClaim(true, "Ysera")));
 
-        Assert.Equal("Bob (PEER-3) is asking to relink as Ysera", headline);
+        Assert.Equal("Bob (PRBCD4) is asking to relink as Ysera", headline);
     }
 
     // The prompt still identifies the REQUESTER by their session-scoped code. R-1.3e reversed the
@@ -36,7 +36,7 @@ public class AdmissionPromptTests
     {
         var headline = AdmissionPrompt.Headline(Request(new RelinkClaim(true, "Ysera")));
 
-        Assert.Contains("PEER-3", headline);
+        Assert.Contains("PRBCD4", headline);
     }
 
     // A claim that did not resolve reads exactly like an ordinary join, so a failed guess cannot be
@@ -56,7 +56,7 @@ public class AdmissionPromptTests
     {
         var headline = AdmissionPrompt.Headline(Request(new RelinkClaim(true, string.Empty)));
 
-        Assert.Equal("Bob (PEER-3) is asking to join", headline);
+        Assert.Equal("Bob (PRBCD4) is asking to join", headline);
         Assert.DoesNotContain("relink as", headline);
     }
 
@@ -67,12 +67,12 @@ public class AdmissionPromptTests
     public void TwoRequestersWithTheSameNameAreStillToldApart()
     {
         var name = DisplayName.OrNone("Bob");
-        var first = new PendingAdmission("PEER-3", "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), default, null, name);
-        var second = new PendingAdmission("PEER-9", "CDF-GHJ-KMN-PR", AdmissionDeadline.DecidedByHost(Now), default, null, name);
+        var first = new PendingAdmission(PeerCodes.Of("PRBCD4"), "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now), default, null, name);
+        var second = new PendingAdmission(PeerCodes.Of("PRBCD7"), "CDF-GHJ-KMN-PR", AdmissionDeadline.DecidedByHost(Now), default, null, name);
 
         Assert.NotEqual(AdmissionPrompt.Headline(first), AdmissionPrompt.Headline(second));
-        Assert.Contains("PEER-3", AdmissionPrompt.Headline(first));
-        Assert.Contains("PEER-9", AdmissionPrompt.Headline(second));
+        Assert.Contains("PRBCD4", AdmissionPrompt.Headline(first));
+        Assert.Contains("PRBCD7", AdmissionPrompt.Headline(second));
     }
 
     // A requester that sent no name - an older build, or one whose name was refused - still gets a
@@ -84,7 +84,7 @@ public class AdmissionPromptTests
         var headline = AdmissionPrompt.Headline(Request(RelinkClaim.None, DisplayName.None));
 
         Assert.Contains(DisplayName.Unstated, headline);
-        Assert.Contains("PEER-3", headline);
+        Assert.Contains("PRBCD4", headline);
         Assert.DoesNotContain("()", headline);
     }
 }

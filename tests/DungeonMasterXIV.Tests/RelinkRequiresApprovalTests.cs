@@ -47,7 +47,7 @@ public class RelinkRequiresApprovalTests
     {
         var (coordinator, claim) = HostWithAReturningPlayer();
 
-        var request = coordinator.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
+        var request = coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD4"), new byte[] { 1, 2, 3 }, Now, claim);
 
         Assert.NotNull(request);
         Assert.True(request!.IsRelink);
@@ -62,7 +62,7 @@ public class RelinkRequiresApprovalTests
     {
         var (coordinator, claim) = HostWithAReturningPlayer();
 
-        var request = coordinator.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
+        var request = coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD4"), new byte[] { 1, 2, 3 }, Now, claim);
 
         Assert.False(request!.FingerprintConfirmed);
         Assert.Equal(AdmissionVerification.NotCompared, request.Verification);
@@ -76,8 +76,8 @@ public class RelinkRequiresApprovalTests
         var (relinking, claim) = HostWithAReturningPlayer();
         var (joining, _) = HostWithAReturningPlayer();
 
-        var relink = relinking.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
-        var join = joining.ReceiveJoinRequest("PEER-4", new byte[] { 1, 2, 3 }, Now, RelinkClaim.None);
+        var relink = relinking.ReceiveJoinRequest(PeerCodes.Of("PRBCD4"), new byte[] { 1, 2, 3 }, Now, claim);
+        var join = joining.ReceiveJoinRequest(PeerCodes.Of("PRBCD6"), new byte[] { 1, 2, 3 }, Now, RelinkClaim.None);
 
         // Same starting state on every field that governs whether admission may proceed.
         Assert.Equal(join!.FingerprintConfirmed, relink!.FingerprintConfirmed);
@@ -97,7 +97,7 @@ public class RelinkRequiresApprovalTests
     {
         var (coordinator, claim) = HostWithAReturningPlayer();
 
-        var request = coordinator.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
+        var request = coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD4"), new byte[] { 1, 2, 3 }, Now, claim);
 
         Assert.Equal(AdmissionAction.None, AdmissionPrompt.Favoured(request!));
     }
@@ -110,8 +110,8 @@ public class RelinkRequiresApprovalTests
         var (relinking, claim) = HostWithAReturningPlayer();
         var (joining, _) = HostWithAReturningPlayer();
 
-        var relink = relinking.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
-        var join = joining.ReceiveJoinRequest("PEER-4", new byte[] { 1, 2, 3 }, Now, RelinkClaim.None);
+        var relink = relinking.ReceiveJoinRequest(PeerCodes.Of("PRBCD4"), new byte[] { 1, 2, 3 }, Now, claim);
+        var join = joining.ReceiveJoinRequest(PeerCodes.Of("PRBCD6"), new byte[] { 1, 2, 3 }, Now, RelinkClaim.None);
 
         Assert.Equal(AdmissionPrompt.Favoured(join!), AdmissionPrompt.Favoured(relink!));
         Assert.Equal(AdmissionAction.None, AdmissionPrompt.Favoured(relink!));
@@ -122,9 +122,9 @@ public class RelinkRequiresApprovalTests
     public void AResolvedRelinkCanStillBeDenied()
     {
         var (coordinator, claim) = HostWithAReturningPlayer();
-        coordinator.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
+        coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD4"), new byte[] { 1, 2, 3 }, Now, claim);
 
-        coordinator.Deny("PEER-3");
+        coordinator.Deny(PeerCodes.Of("PRBCD4"));
 
         Assert.Empty(coordinator.Audience.Recipients);
         Assert.Empty(coordinator.Admissions.Pending);
@@ -135,10 +135,10 @@ public class RelinkRequiresApprovalTests
     public void OnlyTheDmsApprovalAdmitsARelinkingParticipant()
     {
         var (coordinator, claim) = HostWithAReturningPlayer();
-        coordinator.ReceiveJoinRequest("PEER-3", new byte[] { 1, 2, 3 }, Now, claim);
+        coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD4"), new byte[] { 1, 2, 3 }, Now, claim);
         Assert.Empty(coordinator.Audience.Recipients);
 
-        coordinator.Admit("PEER-3");
+        coordinator.Admit(PeerCodes.Of("PRBCD4"));
 
         Assert.Single(coordinator.Audience.Recipients);
     }

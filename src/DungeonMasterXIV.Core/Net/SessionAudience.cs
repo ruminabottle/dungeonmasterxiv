@@ -73,7 +73,7 @@ public sealed class SessionAudience
     /// </param>
     /// <param name="displayName">What they call themselves (R-1.3e), for the roster.</param>
     public AdmittedPeer Admit(
-        string peerCode,
+        PeerCode peerCode,
         SessionRole role = SessionRole.Player,
         AdmissionVerification verification = AdmissionVerification.NotCompared,
         byte[]? publicKey = null,
@@ -94,17 +94,17 @@ public sealed class SessionAudience
     /// Removes a participant. R-1.3: that client immediately stops receiving state, which here means
     /// it stops being addressable rather than starting to be filtered.
     /// </summary>
-    public bool Remove(string peerCode)
+    public bool Remove(PeerCode peerCode)
     {
         var peer = _admitted.FirstOrDefault(candidate => candidate.PeerCode == peerCode);
         return peer is not null && _admitted.Remove(peer);
     }
 
     /// <summary>Whether this participant may receive session state.</summary>
-    public bool IsAdmitted(string peerCode) => _admitted.Any(peer => peer.PeerCode == peerCode);
+    public bool IsAdmitted(PeerCode peerCode) => _admitted.Any(peer => peer.PeerCode == peerCode);
 
     /// <summary>The admitted participant with this code, or null.</summary>
-    public AdmittedPeer? Find(string peerCode) =>
+    public AdmittedPeer? Find(PeerCode peerCode) =>
         _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
 
     /// <summary>

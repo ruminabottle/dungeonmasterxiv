@@ -68,7 +68,7 @@ public class TheAdmissionPromptCopyIsTheRuledCopyTests
     }
 
     // The defect this replaces, named so a revert is loud rather than merely different. The old
-    // sentence denied the prompt showed a name while the prompt rendered "Bob (PEER-3) is asking to
+    // sentence denied the prompt showed a name while the prompt rendered "Bob (PRBCD4) is asking to
     // join" — it contradicted R-1.3e from the moment R-1.3e was decided.
     [Fact]
     public void TheDisclosureNoLongerDeniesThatANameIsShown()

@@ -63,13 +63,33 @@ public static class SessionContentCodec
     };
 
     /// <summary>
-    /// The same document with every display name put through <see cref="DisplayName"/>.
+    /// The same document with every entry put through the types that own its two fields.
     /// </summary>
     /// <remarks>
-    /// A name the join path would refuse degrades to <see cref="DisplayName.Unstated"/> and
-    /// <b>the participant stays in the roster</b> — exactly what the admission prompt already does.
-    /// Dropping them would let a malformed name erase somebody from the session, which is a worse
-    /// outcome than showing them unnamed.
+    /// <para>
+    /// <b>The two fields deliberately fail in OPPOSITE directions, and this is the one place both
+    /// answers are visible at once.</b> A name the join path would refuse degrades to
+    /// <see cref="DisplayName.Unstated"/> and <b>the participant stays in the roster</b> — exactly
+    /// what the admission prompt already does, because dropping them would let a malformed name
+    /// erase somebody from the session, a worse outcome than showing them unnamed.
+    /// </para>
+    /// <para>
+    /// <b>A bad peer code DROPS the entry instead.</b> A display name is a label; a peer code is the
+    /// IDENTITY — it is what tells two participants with the same name apart (A-1.2d) — so an entry
+    /// whose code is unusable identifies nobody, and degrading it would manufacture a participant
+    /// rather than remove a forgery. The roster is host-authored and sealed, so a malformed code
+    /// means our own encoder is broken or a keyholder is forging, and dropping is the safe answer to
+    /// both. That is why <see cref="PeerCode"/> has no <c>OrNone</c> and
+    /// <see cref="DisplayName.OrNone"/> exists.
+    /// </para>
+    /// <para>
+    /// <b>The shape rule moved to <see cref="PeerCode.TryParse"/> and is no longer restated here.</b>
+    /// BUG-57's hotfix vetted the code at this one door, which was right for a hotfix and wrong as
+    /// the end state — a point-vet leaves every other door open. The rule it applied is unchanged:
+    /// the shape <c>AdmissionControl.PeerCodeFor</c> emits, deliberately not
+    /// <see cref="SessionCode.TryParse"/>, which strips hyphens and upper-cases so a pasted code
+    /// works and would therefore accept <c>"PEE-R3"</c> that the product never generated.
+    /// </para>
     /// </remarks>
     private static SessionContent Vetted(SessionContent content) =>
         content.Roster is null
@@ -77,54 +97,12 @@ public static class SessionContentCodec
             : new SessionContent
             {
                 Roster = [.. content.Roster
-                    .Where(entry => IsAPeerCodeThisProductGenerates(entry.PeerCode))
+                    .Where(entry => PeerCode.TryParse(entry.PeerCode, out _))
                     .Select(entry => entry with
                     {
                         DisplayName = DisplayName.OrNone(entry.DisplayName).Value,
                     })],
             };
-
-    /// <summary>
-    /// Whether <paramref name="peerCode"/> is the shape <c>AdmissionControl.PeerCodeFor</c> actually
-    /// produces: exactly <see cref="SessionCode.Length"/> characters, every one of them from
-    /// <see cref="SpeakableAlphabet.Characters"/>.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>The shape, not <see cref="SessionCode.TryParse"/>.</b> That method strips hyphens, trims
-    /// and upper-cases so a pasted code works, which is right for something a human types and wrong
-    /// here: it would accept <c>"PEE-R3"</c>, which <c>PeerCodeFor</c> never emits, and accepting a
-    /// code the product cannot have generated is the thing this exists to stop. The length and the
-    /// alphabet are taken from <see cref="SessionCode"/> rather than restated, so there is no second
-    /// copy to drift.
-    /// </para>
-    /// <para>
-    /// <b>A failure DROPS the entry, and that is deliberately the opposite of the name rule.</b> A
-    /// display name is a label, so a refused one degrades to "a player who gave no name" and the
-    /// participant stays. A peer code is the IDENTITY — it is what tells two participants with the
-    /// same name apart (A-1.2d) — so an entry whose code is unusable identifies nobody, and
-    /// degrading it would manufacture a participant rather than remove a forgery. The roster is
-    /// host-authored and sealed, so a malformed code means our own encoder is broken or a keyholder
-    /// is forging, and dropping is the safe answer to both.
-    /// </para>
-    /// </remarks>
-    private static bool IsAPeerCodeThisProductGenerates(string? peerCode)
-    {
-        if (peerCode is null || peerCode.Length != SessionCode.Length)
-        {
-            return false;
-        }
-
-        foreach (var character in peerCode)
-        {
-            if (!SpeakableAlphabet.Characters.Contains(character))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
 
     /// <summary>Serialises <paramref name="content"/> for sealing.</summary>
     /// <param name="content">The document to encode.</param>

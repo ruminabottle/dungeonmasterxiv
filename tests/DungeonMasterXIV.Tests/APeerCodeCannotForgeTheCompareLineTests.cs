@@ -82,7 +82,8 @@ public class APeerCodeCannotForgeTheCompareLineTests
                 new AdmissionAnnouncer(new SilentTransport()),
                 () => SessionCode.FromValid("BKD7RM"),
                 () => null)
-            .PeerCodeFor(Encoding.UTF8.GetBytes("a joiner's public key"));
+            .PeerCodeFor(Encoding.UTF8.GetBytes("a joiner's public key"))
+            .Value;
 
     // PeerCodeFor touches neither the transport nor the keys; this exists only to satisfy the
     // constructor, so it does nothing rather than pretending to be a socket.

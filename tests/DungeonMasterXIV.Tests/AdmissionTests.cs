@@ -8,8 +8,8 @@ public class AdmissionTests
 {
     private static readonly DateTimeOffset Now = new(2026, 8, 27, 3, 0, 0, TimeSpan.Zero);
 
-    private static PendingAdmission Request(string peerCode = "PEER-1", bool relink = false) =>
-        new(peerCode,
+    private static PendingAdmission Request(string peerCode = "PRBCD2", bool relink = false) =>
+        new(PeerCodes.Of(peerCode),
             "BKD-7RM-CDF-GH",
             AdmissionDeadline.DecidedByHost(Now),
             relink ? new RelinkClaim(true, "Ysera") : RelinkClaim.None);
@@ -48,8 +48,8 @@ public class AdmissionTests
         var audience = new SessionAudience();
         desk.Receive(Request());
 
-        var decided = desk.Decide("PEER-1");
-        var peer = audience.Admit("PEER-1", SessionRole.Player, decided!.Verification);
+        var decided = desk.Decide(PeerCodes.Of("PRBCD2"));
+        var peer = audience.Admit(PeerCodes.Of("PRBCD2"), SessionRole.Player, decided!.Verification);
 
         Assert.Equal(AdmissionVerification.NotCompared, peer.Verification);
         Assert.Equal(0, audience.ConfirmedCount);
@@ -66,7 +66,7 @@ public class AdmissionTests
         desk.Receive(request);
         request.ConfirmFingerprintMatched();
 
-        var peer = audience.Admit("PEER-1", SessionRole.Player, desk.Decide("PEER-1")!.Verification);
+        var peer = audience.Admit(PeerCodes.Of("PRBCD2"), SessionRole.Player, desk.Decide(PeerCodes.Of("PRBCD2"))!.Verification);
 
         Assert.Equal(AdmissionVerification.Confirmed, peer.Verification);
         Assert.Equal(1, audience.ConfirmedCount);
@@ -143,8 +143,8 @@ public class AdmissionTests
     public void RequestsPastTheirDeadlineAreExpiredAndReturned()
     {
         var desk = new AdmissionDesk();
-        desk.Receive(Request("PEER-1"));
-        desk.Receive(Request("PEER-2"));
+        desk.Receive(Request("PRBCD2"));
+        desk.Receive(Request("PRBCD3"));
 
         var lapsed = desk.ExpireLapsed(Now.Add(AdmissionDeadline.Window));
 
@@ -157,7 +157,7 @@ public class AdmissionTests
     public void RequestsInsideTheirDeadlineAreLeftAlone()
     {
         var desk = new AdmissionDesk();
-        desk.Receive(Request("PEER-1"));
+        desk.Receive(Request("PRBCD2"));
 
         Assert.Empty(desk.ExpireLapsed(Now.AddMinutes(14)));
         Assert.Single(desk.Pending);
@@ -180,10 +180,10 @@ public class AdmissionTests
     {
         var audience = new SessionAudience();
 
-        var assistant = audience.Admit("PEER-1", SessionRole.Assistant, AdmissionVerification.Confirmed);
+        var assistant = audience.Admit(PeerCodes.Of("PRBCD2"), SessionRole.Assistant, AdmissionVerification.Confirmed);
 
         Assert.Equal(SessionRole.Assistant, assistant.Role);
-        Assert.Equal(SessionRole.Player, audience.Admit("PEER-2").Role);
+        Assert.Equal(SessionRole.Player, audience.Admit(PeerCodes.Of("PRBCD3")).Role);
     }
 
     // R-1.3a-iii's forbidden half, asserted rather than trusted to a comment: what is carried is a

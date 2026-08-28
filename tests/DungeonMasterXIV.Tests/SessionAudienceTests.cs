@@ -19,10 +19,10 @@ public class SessionAudienceTests
     public void AClientThatWasNeverAdmittedIsNotAddressable()
     {
         var audience = new SessionAudience();
-        audience.Admit("PEER-1");
+        audience.Admit(PeerCodes.Of("PRBCD2"));
 
-        Assert.False(audience.IsAdmitted("PEER-2"));
-        Assert.DoesNotContain(audience.Recipients, peer => peer.PeerCode == "PEER-2");
+        Assert.False(audience.IsAdmitted(PeerCodes.Of("PRBCD3")));
+        Assert.DoesNotContain(audience.Recipients, peer => peer.PeerCode == PeerCodes.Of("PRBCD3"));
     }
 
     // Fails if: removal only hides a peer rather than dropping them. R-1.3 requires a removed
@@ -31,11 +31,11 @@ public class SessionAudienceTests
     public void ARemovedClientStopsBeingAddressableImmediately()
     {
         var audience = new SessionAudience();
-        audience.Admit("PEER-1");
+        audience.Admit(PeerCodes.Of("PRBCD2"));
 
-        Assert.True(audience.Remove("PEER-1"));
+        Assert.True(audience.Remove(PeerCodes.Of("PRBCD2")));
 
-        Assert.False(audience.IsAdmitted("PEER-1"));
+        Assert.False(audience.IsAdmitted(PeerCodes.Of("PRBCD2")));
         Assert.Empty(audience.Recipients);
     }
 
@@ -46,9 +46,9 @@ public class SessionAudienceTests
     public void TheCountIsExactlyTheAddressableSetAndNothingElse()
     {
         var audience = new SessionAudience();
-        audience.Admit("PEER-1");
-        audience.Admit("PEER-2");
-        audience.Remove("PEER-1");
+        audience.Admit(PeerCodes.Of("PRBCD2"));
+        audience.Admit(PeerCodes.Of("PRBCD3"));
+        audience.Remove(PeerCodes.Of("PRBCD2"));
 
         Assert.Equal(1, audience.Count);
         Assert.Equal(audience.Recipients.Count, audience.Count);
@@ -61,8 +61,8 @@ public class SessionAudienceTests
     {
         var audience = new SessionAudience();
 
-        var first = audience.Admit("PEER-1");
-        var second = audience.Admit("PEER-1");
+        var first = audience.Admit(PeerCodes.Of("PRBCD2"));
+        var second = audience.Admit(PeerCodes.Of("PRBCD2"));
 
         Assert.Same(first, second);
         Assert.Equal(1, audience.Count);
@@ -73,8 +73,8 @@ public class SessionAudienceTests
     public void ClearingLeavesNobodyAddressable()
     {
         var audience = new SessionAudience();
-        audience.Admit("PEER-1");
-        audience.Admit("PEER-2");
+        audience.Admit(PeerCodes.Of("PRBCD2"));
+        audience.Admit(PeerCodes.Of("PRBCD3"));
 
         audience.Clear();
 
@@ -88,7 +88,7 @@ public class SessionAudienceTests
     public void RecipientsCannotBeMutatedByItsCaller()
     {
         var audience = new SessionAudience();
-        audience.Admit("PEER-1");
+        audience.Admit(PeerCodes.Of("PRBCD2"));
 
         Assert.Throws<InvalidCastException>(() => (List<AdmittedPeer>)audience.Recipients);
     }
