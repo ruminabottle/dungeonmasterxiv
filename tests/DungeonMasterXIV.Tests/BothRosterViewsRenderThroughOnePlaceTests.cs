@@ -80,6 +80,62 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     // USES it. The previous guard read the constant's text and the Code Reviewer beat it in one
     // line -- constant left honest, literal passed to the draw call, all 775 green. So this asserts
     // the draw call renders RosterHeading.Text and that no literal heading sits beside it.
+    //
+    // WHAT THIS IS AND IS NOT (BUG-66). The two halves of this guard are different KINDS of thing
+    // and only one of them is a proof.
+    //
+    //   VALUE -- a proof. RosterHeading.Text is a Core constant and
+    //   TheRosterHeadingClaimsOnlyWhatItShowsTests asserts over the VALUE ITSELF, so there is
+    //   nothing to bypass. Widening the constant to an overclaim fails it, naming the ticket, the
+    //   action and the reason. qa-1 measured that; this bug does not reach it.
+    //
+    //   USE -- a TEXTUAL PROXY. Everything below reads SOURCE TEXT. Contains proves the sanctioned
+    //   call is PRESENT. It does not prove it is the ONLY heading drawn, and no scan of this shape
+    //   can say that.
+    //
+    // TWO LINES DEFEAT IT, recorded so nobody has to rediscover them (qa-1, BUG-66):
+    //
+    //     ImGui.TextUnformatted(RosterHeading.Text);        // Contains passes
+    //     ImGui.TextUnformatted("Everyone in this game:");  // DoesNotContain passes
+    //
+    // 22 passed, 0 failed -- and a user reads "Everyone in this game:" over a roster that
+    // structurally omits the host, which is false rather than merely incomplete. Reproduced before
+    // this was written.
+    //
+    // MEASURED AGAINST THE ASSERTIONS BELOW, every row executed rather than reasoned about:
+    //     sanctioned call REPLACED by the banned literal      -> CAUGHT      (1 failed)
+    //     sanctioned call REPLACED via a local, none in call  -> CAUGHT      (1 failed)
+    //     SECOND heading using the BANNED literal             -> CAUGHT      (1 failed)
+    //     second heading, banned substring held in a local    -> CAUGHT      (1 failed)
+    //     SECOND heading, a DIFFERENT overclaiming literal    -> NOT CAUGHT  (22 passed, 0 failed)
+    //     the same, held in a local rather than inline        -> NOT CAUGHT  (22 passed, 0 failed)
+    //
+    // So the boundary is exact, and narrower than "it bans one literal": Contains catches every
+    // REPLACEMENT of the sanctioned call, and DoesNotContain catches the banned substring ANYWHERE
+    // in the file, inline or by way of a local. NEITHER CATCHES AN ADDED HEADING THAT AVOIDS THE
+    // BANNED SUBSTRING -- addition is the whole gap, and indirection has nothing to do with it.
+    // What this establishes is "the sanctioned call is present and the banned substring is absent",
+    // NOT "the heading a user reads is the Core value."
+    //
+    // NO FIFTH SCAN, DELIBERATELY. This family has had four guards -- constant value, line match,
+    // statement match, name match -- and every replacement narrowed the gap while keeping the same
+    // verb: matching TEXT where the property is about what a USER SEES. Each bought exactly one
+    // hop. Banning every literal passed to TextUnformatted is already considered and rejected: it
+    // is false on this window's other legitimate text, so it would need an exception list, and an
+    // exception list is a denylist wearing an allowlist's name. Saying "the sanctioned call is the
+    // ONLY heading" requires scoping the roster region, and scoping is a parse.
+    //
+    // A REAL FIX ASSERTS OVER BEHAVIOUR OR OVER A PARSE -- observe what the window actually draws,
+    // or read the syntax tree and follow the call. Both are larger than this file, so THE
+    // END-TO-END COVERAGE IS THE IN-GAME CHECK, and it is load-bearing rather than supplementary.
+    //
+    // AND WHAT DELETING THIS WOULD COST, which is the half that survives someone tidying up:
+    // "it is only a proxy" reads as a case for removal right up until the regression has a name.
+    // DELETE THIS AND THE ORIGINAL DEFEAT COMES BACK WITH NOTHING TO NOTICE -- the Core constant
+    // left honest while the window passes its own literal to the draw call, which is precisely what
+    // happened and was green across the whole suite. Four of the six shapes above stop being
+    // caught. A proxy that holds against four of six known defeats is worth less than a proof and
+    // considerably more than no check at all. Kept exactly as it is.
     [Fact]
     public void TheWindowRendersTheCoreHeadingRatherThanALiteral()
     {
