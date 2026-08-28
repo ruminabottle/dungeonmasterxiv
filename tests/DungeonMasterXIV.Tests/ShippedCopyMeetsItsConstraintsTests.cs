@@ -129,7 +129,7 @@ public class ShippedCopyMeetsItsConstraintsTests
     [Fact]
     public void NoShippedStringStillDescribesReversedBehaviour()
     {
-        AssertNothingViolates(ShippedCopy(), RetiredPhrasings);
+        AssertNothingViolates(ShippedCopyCorpus.ShippedCopy(), RetiredPhrasings);
     }
 
     // A-1.7e's other half: the D-8 overclaim. An UNDENIED protection claim fails.
@@ -138,7 +138,7 @@ public class ShippedCopyMeetsItsConstraintsTests
     {
         var offenders = EngineeringAuthoredCopy()
             .Where(copy => UndeniedProtectionClaimsIn(copy.Text).Any())
-            .Select(copy => $"{copy.File}: \"{Excerpt(copy.Text)}\"")
+            .Select(copy => $"{copy.File}: \"{ShippedCopyCorpus.Excerpt(copy.Text)}\"")
             .ToList();
 
         Assert.True(offenders.Count == 0, "Shipped copy claims protection nobody checked:\n" + string.Join("\n", offenders));
@@ -172,12 +172,40 @@ public class ShippedCopyMeetsItsConstraintsTests
         Assert.NotEmpty(UndeniedProtectionClaimsIn("This keeps your group safe."));
         Assert.Empty(UndeniedProtectionClaimsIn("This session is not protected against someone in the middle."));
 
+        // THE SCANNING HOLE, and the second instance of one shape. The first version read only the
+        // FIRST occurrence, so a denied first use dropped the claim word and every later use went
+        // unexamined -- deny once, then reassure freely. Not contrived: AdmittedUncompared already
+        // ships "not protected against someone sitting in the middle of it", and appending
+        // reassurance is the natural next edit. The matching half had the same shape ("fully
+        // protected" slipping an "is protected" pattern); this is the scanning half.
+        Assert.NotEmpty(UndeniedProtectionClaimsIn(
+            "This session is not protected against a stranger, but your messages are protected."));
+
+        // The mirror, so the fix cannot overshoot into flagging every denial that repeats itself.
+        Assert.Empty(UndeniedProtectionClaimsIn(
+            "This session is not protected against a stranger and never protected against the relay."));
+
         // The limit, asserted rather than described so it cannot quietly widen: denial is only seen
         // within a short window before the claim. "Nothing here is ever secure" IS a denial and this
         // refuses it -- a false positive, in the direction R-1.7a chose knowingly. Recorded as a
         // failing-shaped fact so that anyone who widens the window has to change this line and say
         // why, rather than discovering the behaviour by accident.
         Assert.NotEmpty(UndeniedProtectionClaimsIn("Nothing here is ever secure without the code check."));
+
+        // THE COUPLING, and it is the reason the line above must not be "fixed" on its own.
+        // "not" is matched as a SUBSTRING, so any word containing it reads as a denial. "another"
+        // is the live example: this claim is real and goes UNFLAGGED.
+        Assert.Empty(UndeniedProtectionClaimsIn("Use another protected channel."));
+
+        // The two defects partially cancel BY LUCK. "Note that", "Nothing" and "cannot" all contain
+        // "not" too, and all three still flag correctly -- but only because the 12-character window
+        // usually puts them out of reach, not because anything distinguishes them.
+        Assert.NotEmpty(UndeniedProtectionClaimsIn("Note that this session is protected by the code."));
+
+        // So WIDENING THE WINDOW to cure the false positive two assertions up would pull those
+        // substring matches INTO range and open false negatives here. Anyone fixing either one must
+        // change these lines together and say what happened to the other. Matching whole words would
+        // decouple them; that is a change to the check's semantics and was not made under a denial.
     }
 
     // BUG-48's lesson: a guard that claims a property of the CODEBASE must read the codebase rather
@@ -186,11 +214,52 @@ public class ShippedCopyMeetsItsConstraintsTests
     [Fact]
     public void TheSweepReadsEveryWindowOnDisk()
     {
-        var scanned = SourcesSwept().Select(Path.GetFileName).ToList();
-        var windows = Directory.EnumerateFiles(WindowsDirectory(), "*.cs").Select(Path.GetFileName);
+        var scanned = ShippedCopyCorpus.SourcesSwept().Select(Path.GetFileName).ToList();
+        var windows = Directory.EnumerateFiles(ShippedCopyCorpus.WindowsDirectory(), "*.cs").Select(Path.GetFileName);
 
         Assert.All(windows, window => Assert.Contains(window, scanned));
         Assert.True(scanned.Count > 1, "The sweep narrowed to one file; it claims to cover the shipped copy.");
+    }
+
+    // The enumerated half's guard, and the derived half already had one.
+    // TheSweepReadsEveryWindowOnDisk proves a window cannot go unswept; nothing proved anything
+    // about the named Core files, which is where DisplayName.Unstated hid.
+    //
+    // Asserting the named files appear in ShippedCopyCorpus.SourcesSwept would be VACUOUS -- ShippedCopyCorpus.SourcesSwept concatenates
+    // that same list, so it is true by construction and could never fail. What is not vacuous is
+    // that each named file actually YIELDS COPY: it exists, the extractor parses it, and it
+    // contributes at least one literal. That fails if a file is listed but empty, if it is renamed
+    // so the throw fires, or if the extractor stops understanding its declaration form.
+    [Fact]
+    public void EveryNamedCoreFileContributesCopyToTheCorpus()
+    {
+        var corpus = ShippedCopyCorpus.ShippedCopy();
+
+        Assert.NotEmpty(ShippedCopyCorpus.NamedCoreCopyFiles);
+        Assert.All(ShippedCopyCorpus.NamedCoreCopyFiles, relative =>
+        {
+            var file = Path.GetFileName(relative);
+            Assert.True(
+                corpus.Any(copy => string.Equals(copy.File, file, StringComparison.Ordinal)),
+                $"{file} is named as carrying user-facing copy but contributed no literal to the "
+                + "corpus, so the sweep covers less than the list claims.");
+        });
+    }
+
+    // And the missing-file path is the one that used to be silent. Probed rather than assumed: a
+    // name that is not on disk must throw and must NAME the file, because the failure it replaces
+    // was a corpus that quietly shrank while every sweep kept passing.
+    [Fact]
+    public void ANamedCoreFileThatIsNotOnDiskIsRefusedByName()
+    {
+        var root = ShippedCopyCorpus.RepositoryRoot();
+        var absent = Path.Combine(root, "src", "DungeonMasterXIV.Core", "Net", "NoSuchCopyFile.cs");
+
+        var thrown = Assert.Throws<FileNotFoundException>(
+            () => ShippedCopyCorpus.SweptSources(root, new[] { Path.Combine("src", "DungeonMasterXIV.Core", "Net", "NoSuchCopyFile.cs") }));
+
+        Assert.Contains("NoSuchCopyFile.cs", thrown.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(absent), "The probe file must not exist, or this asserts nothing.");
     }
 
     // And the extractor must actually find copy, or every sweep above passes over an empty corpus —
@@ -201,9 +270,10 @@ public class ShippedCopyMeetsItsConstraintsTests
     [InlineData("The name shown is chosen by the requester")]  // AdmissionPromptView, const
     [InlineData("This name is not checked by anything")]       // ConfigWindow, const
     [InlineData("The relay is not responding")]                // SessionFailure, switch arm
+    [InlineData("a player who gave no name")]                  // DisplayName, const -- the missed one
     public void TheCorpusContainsCopyFromEveryShapeItMustCover(string fragment)
     {
-        Assert.Contains(ShippedCopy(), copy => copy.Text.Contains(fragment, StringComparison.Ordinal));
+        Assert.Contains(ShippedCopyCorpus.ShippedCopy(), copy => copy.Text.Contains(fragment, StringComparison.Ordinal));
     }
 
     // The classification is load-bearing and silently does nothing if it is wrong: a typo in
@@ -213,7 +283,7 @@ public class ShippedCopyMeetsItsConstraintsTests
     [Fact]
     public void TheRuledCopyIsClassifiedAsRuledAndTheRestIsNot()
     {
-        var ruledFound = ShippedCopy()
+        var ruledFound = ShippedCopyCorpus.ShippedCopy()
             .Where(copy => RuledConstants.Contains(copy.Name, StringComparer.Ordinal))
             .Select(copy => copy.Name)
             .Distinct()
@@ -242,12 +312,23 @@ public class ShippedCopyMeetsItsConstraintsTests
         }
     }
 
+    /// <summary>The shipped copy R-1.7a does not quote — what A-1.7e governs.</summary>
+    /// <remarks>
+    /// Stays with the constraints rather than the corpus: which names are RULED is a decision about
+    /// what copy must say, and moving it next to the extractor would let a change to reading quietly
+    /// change classification.
+    /// </remarks>
+    private static IReadOnlyList<(string File, string Name, string Text)> EngineeringAuthoredCopy() =>
+        ShippedCopyCorpus.ShippedCopy()
+            .Where(copy => !RuledConstants.Contains(copy.Name, StringComparer.Ordinal))
+            .ToList();
+
     private static void AssertNothingViolates(
         IReadOnlyList<(string File, string Name, string Text)> corpus, string[] phrasings)
     {
         var offenders = corpus
             .SelectMany(copy => ForbiddenPhrasingsIn(copy.Text, phrasings)
-                .Select(hit => $"{copy.File} {copy.Name}: \"{hit}\" in \"{Excerpt(copy.Text)}\""))
+                .Select(hit => $"{copy.File} {copy.Name}: \"{hit}\" in \"{ShippedCopyCorpus.Excerpt(copy.Text)}\""))
             .ToList();
 
         Assert.True(offenders.Count == 0, "Shipped copy uses refused phrasing:\n" + string.Join("\n", offenders));
@@ -256,16 +337,29 @@ public class ShippedCopyMeetsItsConstraintsTests
     private static IEnumerable<string> ForbiddenPhrasingsIn(string text, string[] phrasings) =>
         phrasings.Where(phrasing => text.Contains(phrasing, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Protection claims in <paramref name="text"/> that nothing nearby denies.</summary>
+    /// <remarks>
+    /// <b>EVERY occurrence, and reading only the first was a bug.</b> The claim word is matched as
+    /// the bare word rather than "is protected" — a probe caught a string reading "fully protected"
+    /// slipping an "is protected" pattern, so the check missed the overclaim it exists for while
+    /// looking like it covered it. That was the MATCHING hole. This is the SCANNING one, and it is
+    /// the same shape a layer out: <c>IndexOf</c> returns a single index, so a DENIED first
+    /// occurrence dropped the claim word and every later use went unexamined. "…is not protected
+    /// against a stranger, but your messages are protected" passed. A claim is undenied if ANY of
+    /// its occurrences is undenied, so denying it once no longer licenses asserting it afterwards.
+    /// </remarks>
     private static IEnumerable<string> UndeniedProtectionClaimsIn(string text) =>
-        ProtectionClaims.Where(claim =>
-        {
-            var at = text.IndexOf(claim, StringComparison.OrdinalIgnoreCase);
+        ProtectionClaims.Where(claim => OccurrencesOf(claim, text).Any(at => !IsDenied(text, at)));
 
-            // The bare word, not "is protected". A probe caught this: a string reading "fully
-            // protected" slipped an "is protected" pattern entirely, so the check would have missed
-            // the overclaim it exists for while looking like it covered it.
-            return at >= 0 && !IsDenied(text, at);
-        });
+    private static IEnumerable<int> OccurrencesOf(string claim, string text)
+    {
+        for (var at = text.IndexOf(claim, StringComparison.OrdinalIgnoreCase);
+             at >= 0;
+             at = text.IndexOf(claim, at + 1, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return at;
+        }
+    }
 
     /// <summary>Whether the words before a protection claim deny it.</summary>
     /// <remarks>
@@ -285,85 +379,4 @@ public class ShippedCopyMeetsItsConstraintsTests
             || before.Contains("never", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Every string literal this product ships, with the file and declaration it came from.</summary>
-    /// <remarks>
-    /// <b>No length or shape filter, deliberately.</b> Filtering to "sentences" would be a second
-    /// place for a violating string to hide — "anonymous" alone is nine characters and would pass a
-    /// plausible one. The cost is that identifiers and format fragments are swept too; they contain
-    /// no refused phrasing, so the cost is nothing.
-    /// </remarks>
-    private static IReadOnlyList<(string File, string Name, string Text)> ShippedCopy() =>
-        SourcesSwept()
-            .SelectMany(source => LiteralsIn(source)
-                .Select(literal => (File: Path.GetFileName(source), literal.Name, literal.Text)))
-            .ToList();
-
-    /// <summary>The shipped copy R-1.7a does not quote — what A-1.7e governs.</summary>
-    private static IReadOnlyList<(string File, string Name, string Text)> EngineeringAuthoredCopy() =>
-        ShippedCopy().Where(copy => !RuledConstants.Contains(copy.Name, StringComparer.Ordinal)).ToList();
-
-    private static IEnumerable<(string Name, string Text)> LiteralsIn(string source)
-    {
-        // Comment lines are stripped first: this file's own commentary quotes refused phrasings, and
-        // so does the source it reads — SessionFailure.cs explains BUG-49 by quoting the sentence it
-        // removed. Sweeping commentary would refuse the explanation of the fix.
-        var body = string.Join(
-            "\n",
-            File.ReadAllLines(source).Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
-
-        // Which declaration each literal sits in, so the ruled constants can be told from the rest.
-        // A literal outside any of them — a switch arm in SessionFailure.cs, for instance — is
-        // engineering-authored, which is the safe default: it gets the stricter constraint.
-        var declarations = Regex
-            .Matches(body, @"(?:const\s+string|string\[\])\s+(?<name>\w+)\s*=(?<body>.*?);", RegexOptions.Singleline)
-            .Select(match => (Name: match.Groups["name"].Value, match.Groups["body"].Index, match.Groups["body"].Length))
-            .ToList();
-
-        foreach (Match literal in Regex.Matches(body, @"""(?<literal>(?:[^""\\]|\\.)*)"""))
-        {
-            var owner = declarations.FirstOrDefault(
-                declaration => literal.Index >= declaration.Index
-                    && literal.Index < declaration.Index + declaration.Length);
-
-            yield return (owner.Name ?? "(inline)", literal.Groups["literal"].Value);
-        }
-    }
-
-    /// <summary>
-    /// The files that carry user-facing copy: every window, plus the failure sentences in Core.
-    /// </summary>
-    /// <remarks>
-    /// <b>The windows are derived; the Core file is named, and that is the residual gap.</b> Nothing
-    /// marks a string as user-facing, so the boundary is drawn by hand. Copy added to a NEW Core file
-    /// would not be swept — <see cref="TheSweepReadsEveryWindowOnDisk"/> cannot catch that, and no
-    /// test here can. Said plainly so the next reader does not over-trust it.
-    /// </remarks>
-    private static IReadOnlyList<string> SourcesSwept()
-    {
-        var root = RepositoryRoot();
-
-        return Directory.EnumerateFiles(Path.Combine(root, "Windows"), "*.cs")
-            .Append(Path.Combine(root, "src", "DungeonMasterXIV.Core", "Net", "SessionFailure.cs"))
-            .Where(File.Exists)
-            .OrderBy(path => path, StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private static string WindowsDirectory() => Path.Combine(RepositoryRoot(), "Windows");
-
-    private static string RepositoryRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Windows", "SessionWindow.cs")))
-            {
-                return directory.FullName;
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"No repository root above {AppContext.BaseDirectory}; the copy this sweeps is missing.");
-    }
-
-    private static string Excerpt(string text) => text.Length <= 70 ? text : text[..70] + "...";
 }
