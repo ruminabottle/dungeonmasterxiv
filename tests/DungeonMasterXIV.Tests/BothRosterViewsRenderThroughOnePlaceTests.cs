@@ -25,6 +25,41 @@ namespace DungeonMasterXIV.Tests;
 /// precedent — and its limit is stated rather than implied: this asserts the SHAPE of the code, not
 /// that the pixels are right. A-1.13 proper is in-game and this chunk cannot discharge it.
 /// </para>
+/// <para>
+/// <b>AND THE SCAN SEES ONLY WHAT LIVES BENEATH <c>Windows/</c>.</b> A window class placed anywhere
+/// else in the project is compiled by the SDK's default glob and is invisible to everything here:
+/// neither side of the completeness control looks outside <c>Windows/</c>, and neither project-file
+/// refusal engages, because putting a window there needs NO csproj change for them to refuse.
+/// Measured by qa-1 (BUG-68) rather than reasoned: csproj touched 0, build errors 0, all 8 guard
+/// tests green — with the compile step controlled separately, since "it built" does not prove the
+/// file was compiled. An invalid-C# file in the same place draws 4 compiler references, so files
+/// there genuinely enter the compilation and the green is a real blind spot rather than an unbuilt
+/// file.
+/// </para>
+/// <para>
+/// <b>The boundary is deliberate, and widening the scan would MOVE the edge rather than remove
+/// it.</b> Some directory has to be the last one looked in; the question a reader needs answered is
+/// which, and that is what this paragraph is for. It is declared instead of closed for the same
+/// reason the heading proxy below is: a limit a reader can see is worth more than a limit pushed one
+/// directory further out.
+/// </para>
+/// <para>
+/// <b>The control's two sides are independent in TRAVERSAL, not in FILTER.</b> The glob and the
+/// hand-written walk disagree about how to DESCEND, which is what catches a scan narrowed back to
+/// one level — but both call <c>Directory.*Files(dir, "*.cs")</c>, so they share a PATTERN, and a
+/// blind spot in the pattern would be invisible to both at once. Independence here is a property on
+/// an axis, not a property.
+/// </para>
+/// <para>
+/// <b>An unexploited residual, and the qualifier is load-bearing.</b> qa-1 went looking for a
+/// pattern-level blind spot and did not find one: an uppercase <c>.CS</c> is compiled AND matched by
+/// both enumerations, so it is caught. But their stated reason is that MATCHING ON THIS FILESYSTEM
+/// IS CASE-INSENSITIVE, which I confirmed — <c>EnumerateFiles(dir, "*.cs")</c> returns
+/// <c>Upper.CS</c> here. That is a property of the machine, not of these guards. On a CASE-SENSITIVE
+/// filesystem the same call would not match it, and whether MSBuild's glob still would is NOT
+/// MEASURED by anyone yet. So this is unexploited HERE, for a reason that does not travel; it is not
+/// known safe elsewhere, and the difference matters to whoever reads a green run on a Linux runner.
+/// </para>
 /// </remarks>
 public class BothRosterViewsRenderThroughOnePlaceTests
 {
