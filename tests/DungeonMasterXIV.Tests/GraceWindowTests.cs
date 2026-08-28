@@ -83,10 +83,28 @@ public class GraceWindowTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new GraceWindow(TimeSpan.FromSeconds(seconds)));
     }
 
+    // R-1.4's number, and changing it is a PRODUCT decision rather than an engineering one. If this
+    // assertion fails, the question is not "what should the constant be" but "what does R-1.4 say
+    // now" — go and read it.
+    //
+    // BUG-54: this test already existed, already named R-1.4, and still did not catch the drift.
+    // R-1.4 changed from two minutes to five on 2026-08-27 and nothing swept the copies. A test
+    // that names a requirement does not track that requirement — it pins a number that was correct
+    // when it was written, and goes green forever afterwards. What this fixed was the DUPLICATION:
+    // the literal appeared in four places and now appears in one, so the single pin below cannot be
+    // bypassed by a copy that nobody updated.
+    //
+    // THIS DOES NOT DISCHARGE A-1.27, AND A GREEN RUN HERE MUST NOT BE READ AS THOUGH IT DOES.
+    // A-1.27 requires that "both windows read from one settable value and neither is a literal in
+    // the code path", and at the time of writing it fails on all three clauses: there is only ONE
+    // window — no seat window exists in the code — there is NO settable value, because
+    // PluginSettings carries no duration of any kind, and GraceWindow.Default is still a LITERAL.
+    // De-duplicating a literal is not single-sourcing it to a setting. BUG-55 is where that lives,
+    // and it needs a seat window that does not exist yet.
     [Fact]
-    public void TheDefaultWindowIsAcceptedAndIsRule14sTwoMinutes()
+    public void TheDefaultWindowIsAcceptedAndIsRule14sFiveMinutes()
     {
-        Assert.Equal(TimeSpan.FromMinutes(2), GraceWindow.Default);
+        Assert.Equal(TimeSpan.FromMinutes(5), GraceWindow.Default);
         Assert.True(TransportContract.IsKeepAliveSafeFor(GraceWindow.Default));
     }
 }

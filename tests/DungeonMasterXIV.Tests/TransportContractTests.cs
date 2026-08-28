@@ -10,7 +10,11 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 public class TransportContractTests
 {
-    private static readonly TimeSpan DefaultGraceWindow = TimeSpan.FromMinutes(2);
+    // DERIVED, not restated. This was a second copy of R-1.4's number, so when R-1.4 moved from two
+    // minutes to five it went on asserting the keepalive was safe against a window we no longer
+    // ship — a green test about a value that did not exist (BUG-54). One value cannot disagree with
+    // itself.
+    private static readonly TimeSpan DefaultGraceWindow = GraceWindow.Default;
 
     // Fails if: the interval is raised above the grace window, at which point an ordinary lull
     // between rolls trips host-loss detection and ends a live session mid-play. This is the hard

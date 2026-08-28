@@ -14,7 +14,7 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// Elapsed time is a parameter, never read from a clock, so expiry is drivable from a test with an
-/// explicit <see cref="TimeSpan"/> rather than by waiting two minutes.
+/// explicit <see cref="TimeSpan"/> rather than by waiting out <see cref="Default"/>.
 /// </para>
 /// </remarks>
 public sealed class GraceWindow
@@ -28,7 +28,17 @@ public sealed class GraceWindow
     /// refuses a window too short for the keepalive: below three keepalive intervals an ordinary lull
     /// between rolls trips host-loss detection and ends a live session mid-play.
     /// </remarks>
-    public static readonly TimeSpan Default = TimeSpan.FromMinutes(2);
+    /// <remarks>
+    /// R-1.4's number. Changing it is a product decision, not an engineering one, and
+    /// <c>GraceWindowTests.TheDefaultWindowIsAcceptedAndIsRule14sFiveMinutes</c> is what says so.
+    /// <para>
+    /// <b>Still a literal, and A-1.27 wants it not to be.</b> Note for whoever builds that: the
+    /// constructor above already takes a <see cref="TimeSpan"/>, so the window is injectable
+    /// today — it is only this DEFAULT that is hard-coded, and only a settable value to feed it
+    /// that is missing. A-1.27 also needs a seat window, which does not exist at all. See BUG-55.
+    /// </para>
+    /// </remarks>
+    public static readonly TimeSpan Default = TimeSpan.FromMinutes(5);
 
     private readonly TimeSpan _length;
     private TimeSpan _elapsed;
