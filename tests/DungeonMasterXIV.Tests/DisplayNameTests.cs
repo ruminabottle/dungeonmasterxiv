@@ -35,6 +35,41 @@ public class DisplayNameTests
         Assert.False(DisplayName.TryParse(candidate, out _));
     }
 
+    // THE FAILING INPUT FOR THE FORMAT-CATEGORY FIX, and it is deliberately not a C0 character.
+    // char.IsControl covers C0/C1 only, so a test using U+0001 or a newline passes BEFORE this fix
+    // and after it -- it cannot come out negative on the defect being repaired. Every case here is
+    // UnicodeCategory.Format, which char.IsControl lets through.
+    //
+    // Not hygiene, and it is A-1.2d's class rather than a separate concern. U+202E reverses
+    // rendering, so two requesters can be VISUALLY identical without being literally identical.
+    // The peer code keyed into the ImGui control ids protects the MECHANISM -- two prompts cannot
+    // collapse into one widget -- but it does not protect the DM's READING, and D-8 as amended is
+    // about what the DM is shown. A name that reorders what follows it achieves the de-emphasis
+    // gate through data instead of layout, without touching a line of UI code.
+    [Theory]
+    [InlineData("Bob\u202Ekcart")]   // RLO - right-to-left override
+    [InlineData("Bob\u202Dkcart")]   // LRO - left-to-right override
+    [InlineData("Bob\u200Bsmith")]   // ZWSP - zero-width space
+    [InlineData("Bob\u200Dsmith")]   // ZWJ - zero-width joiner
+    [InlineData("\uFEFFBob")]        // BOM - zero-width no-break space
+    public void ANameCarryingAFormatCharacterIsRefused(string candidate)
+    {
+        Assert.False(DisplayName.TryParse(candidate, out _));
+    }
+
+    // The control on the control. Rejecting the Format category must not take legitimate names with
+    // it: combining marks are NonSpacingMark, not Format, and a decomposed name is how a real client
+    // may well send one. Without this, "reject anything unusual" would satisfy the theory above.
+    [Theory]
+    [InlineData("Jose\u0301")]        // decomposed acute - Jose + combining accent
+    [InlineData("Y'shtola Rhul")]
+    [InlineData("Alphinaud Leveilleur")]
+    public void ANameWithLegitimateNonAsciiIsStillAccepted(string candidate)
+    {
+        Assert.True(DisplayName.TryParse(candidate, out var name));
+        Assert.Equal(candidate, name.Value);
+    }
+
     // Fails if: the bound goes away. A very long name pushes the fingerprint off the visible prompt,
     // which is the de-emphasis D-8 forbids — achieved with no UI change at all.
     [Fact]

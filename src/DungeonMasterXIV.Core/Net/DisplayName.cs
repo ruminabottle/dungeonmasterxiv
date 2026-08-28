@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace DungeonMasterXIV.Net;
 
@@ -16,11 +17,22 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>Why it is validated at all, given that it is untrusted anyway.</b> Not to make it
 /// trustworthy — it cannot be. To stop a name from forging the UI around it. The admission prompt
-/// renders the name on one line and <c>"Code to compare: …"</c> on the next, so a name containing a
-/// newline could draw a second line that looks like the plugin speaking. A name is data rendered
-/// next to a security control, which makes control characters a spoofing surface rather than a
-/// tidiness problem. Length is bounded for the same reason: a very long name pushes the fingerprint
-/// off the visible prompt, which is the de-emphasis D-8 forbids, achieved without any UI change.
+/// renders the name on one line and <c>"Code to compare: …"</c> two lines below, so a name
+/// containing a newline could draw a line that looks like the plugin speaking. A name is data
+/// rendered next to a security control, which makes control characters a spoofing surface rather
+/// than a tidiness problem. Length is bounded for the same reason: a very long name pushes the
+/// fingerprint off the visible prompt, which is the de-emphasis D-8 forbids, achieved without any
+/// UI change.
+/// </para>
+/// <para>
+/// <b>The <see cref="UnicodeCategory.Format"/> class is refused for the same reason and it is not a
+/// second rule.</b> <c>char.IsControl</c> is C0/C1 only, so RLO, LRO, ZWSP, ZWJ and the BOM pass it
+/// — and a directional override reverses rendering, which reaches the same D-8 gate through data
+/// instead of layout. <b>It also refines A-1.2d rather than sitting beside it:</b> the peer code
+/// keyed into the prompt's control ids stops two identical names collapsing into one widget, but
+/// that protects the MECHANISM. Two names that are literally different and <i>render</i> identically
+/// defeat the DM's READING while every id stays distinct, and what the DM is shown is what D-8 is
+/// about.
 /// </para>
 /// <para>
 /// <b>Barred from exports (A-1.2a, D-8 unchanged).</b> Names are campaign-scoped. Nothing here
@@ -85,7 +97,11 @@ public readonly struct DisplayName : IEquatable<DisplayName>
 
         foreach (var character in trimmed)
         {
-            if (char.IsControl(character))
+            // BOTH, and the second is not a widening of the first. char.IsControl is C0/C1 only, so
+            // the whole UnicodeCategory.Format class walks through it -- RLO, LRO, ZWSP, ZWJ, BOM.
+            // Those are invisible by definition, which is exactly what makes them the dangerous
+            // half: a reviewer reading the name cannot see one, and neither can the DM.
+            if (char.IsControl(character) || char.GetUnicodeCategory(character) == UnicodeCategory.Format)
             {
                 return false;
             }
