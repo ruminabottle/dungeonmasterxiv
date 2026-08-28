@@ -110,6 +110,57 @@ public class ADroppedJoinerKeepsItsSeatTests
         Assert.False(joiner.Grace.IsRunning, "Grace is the host's window; a joiner dropping is not that.");
     }
 
+    // THE SUPERSET PROPERTY, which is what the release ruling rests on and nothing pinned.
+    //
+    // BUG-53 ships without A-1.24 only because the new predicate is a strict SUPERSET of the old
+    // one: the host affordance can never appear SOONER than it does today, so the missing host-side
+    // clock cannot make anything worse than it already is. That holds because the first disjunct is
+    // textually identical to the predicate it replaced — and "textually identical" is not a property
+    // a test was watching.
+    //
+    // So: each live phase must satisfy InAJoinedSession ON ITS OWN, with the seat NOT running. A
+    // future narrowing of the first disjunct that kept "|| Seat.IsRunning" would still pass every
+    // other test in this file — the seat covers the dropped case — while silently breaking the
+    // reasoning the release was approved on.
+    [Fact]
+    public void EachLivePhaseHoldsTheAffordanceWithoutTheSeat()
+    {
+        foreach (var (phase, interruption) in LivePhases())
+        {
+            Assert.False(interruption.Seat.IsRunning, $"{phase}: the seat must not be what carries this.");
+            Assert.True(interruption.InAJoinedSession, $"{phase}: must suppress hosting on the phase alone.");
+        }
+    }
+
+    /// <summary>Each phase a live join passes through, with a seat that has never started.</summary>
+    private static IEnumerable<(JoinPhase Phase, SessionInterruption Interruption)> LivePhases()
+    {
+        foreach (var target in new[] { JoinPhase.Contacting, JoinPhase.AwaitingDecision, JoinPhase.Admitted })
+        {
+            var join = new JoinAttempt();
+            var transport = new FakeTransport();
+            var interruption = new SessionInterruption(
+                new RelayLink(transport, () => RelayEndpoint.Default, _ => { }),
+                new HostSession(),
+                join,
+                () => { });
+
+            join.Request(Code);
+            if (target != JoinPhase.Contacting)
+            {
+                join.AwaitDecision();
+            }
+
+            if (target == JoinPhase.Admitted)
+            {
+                join.Admitted();
+            }
+
+            Assert.Equal(target, join.Phase);
+            yield return (target, interruption);
+        }
+    }
+
     /// <summary>A coordinator driven to Admitted the way a real joiner reaches it.</summary>
     private static (SessionCoordinator Joiner, SessionKeyExchange HostKeys) Admitted()
     {
