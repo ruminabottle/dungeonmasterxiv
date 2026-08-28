@@ -262,29 +262,15 @@ public sealed class SessionWindow : Window
     /// Pre-fills the name field from settings, without ever overwriting what the user typed.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// <b>Pre-fill, not replace (A-1.2n).</b> A settings default that seeds this field passes; a
-    /// settings control that stands in for it does not. So this seeds and then gets out of the way.
-    /// </para>
-    /// <para>
-    /// <b>Re-seeds when the SOURCE changes and the user has not edited</b>, which is the case a
-    /// once-only seed gets wrong: a player who switches character mid-session would otherwise sit
-    /// looking at the previous character's name and send it. Comparing against what was last seeded
-    /// rather than against the current settings value is what distinguishes "untouched" from
-    /// "deliberately typed back to the default" — the second must survive, because a user who typed
-    /// it means it.
-    /// </para>
-    /// <para>
-    /// <b>It does not re-decide T-32's rules.</b> Whether the stored alias or the character name is
-    /// the right source is settled before this sees it; this consumes one value and never inspects
-    /// why it is that value.
-    /// </para>
+    /// <b>The decision is <see cref="JoinFlowName.ShouldReplace"/>'s, not this method's.</b> It is a
+    /// three-state rule and nothing here could test it — no test project links the plugin — so it
+    /// lives in Core where it has a defect surface. What is left here is the assignment.
     /// </remarks>
     private void SeedNameFromSettings()
     {
         var fromSettings = _displayName().Value;
 
-        if (fromSettings == _seededFrom || _nameEntry != _seededFrom)
+        if (!JoinFlowName.ShouldReplace(fromSettings, _seededFrom, _nameEntry))
         {
             return;
         }
