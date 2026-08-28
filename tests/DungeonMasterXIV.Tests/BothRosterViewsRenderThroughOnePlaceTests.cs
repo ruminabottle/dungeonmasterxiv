@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -30,17 +31,22 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     [Fact]
     public void ThereIsExactlyOneRosterRenderer()
     {
-        Assert.Single(Regex.Matches(Code(), @"void\s+DrawRoster\s*\("));
+        var code = Code();
+
+        Assert.Single(Regex.Matches(code, @"class\s+RosterView\b"));
+        Assert.Single(Regex.Matches(code, @"static\s+void\s+Draw\s*\("));
     }
 
     [Fact]
     public void BothSidesCallIt()
     {
-        // Definition plus at least two call sites. Fewer means one of the two views renders its own
-        // way, or does not render at all.
+        // Two call sites, in two different files since DMXENG-15. Fewer means one of the two views
+        // renders its own way, or does not render at all. The definition is no longer counted here
+        // — it is a different string now (RosterView.Draw at the call, static void Draw at the
+        // definition), which is why the threshold moved from 3 to 2 rather than the guard weakening.
         Assert.True(
-            Regex.Matches(Code(), @"DrawRoster\s*\(").Count >= 3,
-            "One or both roster views stopped going through DrawRoster.");
+            Regex.Matches(Code(), @"RosterView\.Draw\s*\(").Count >= 2,
+            "One or both roster views stopped going through RosterView.");
     }
 
     // The rule this centralisation exists to protect. If role labelling appears anywhere but the one
@@ -64,15 +70,40 @@ public class BothRosterViewsRenderThroughOnePlaceTests
 
     // THE VACUITY CONTROL. Every assertion above is a match count against a string; if the reader
     // returned an empty string, the "exactly one" tests would fail loudly but nothing proves the
-    // file being read is the right one. This names something only SessionWindow contains.
+    // files being read are the right ones. This names something only the host surface contains and
+    // something only the joiner surface contains, so it fails if EITHER stops being read — which is
+    // the failure the move to a directory scan newly makes possible.
     [Fact]
-    public void TheReaderIsReadingSessionWindow()
+    public void TheReaderIsReadingBothHalvesOfTheSessionWindow()
     {
         var code = Code();
 
         Assert.NotEmpty(code);
         Assert.Contains("private void DrawHosting()", code, StringComparison.Ordinal);
-        Assert.Contains("private void DrawJoining()", code, StringComparison.Ordinal);
+        Assert.Contains("class JoinFlowView", code, StringComparison.Ordinal);
+    }
+
+    // BUG-48's lesson, applied to THIS guard (DMXENG-15). Until the split this read one named file,
+    // so every "exactly one" above was only ever true OF SessionWindow.cs while claiming to be true
+    // of the codebase — a second role label or a second renderer one file along would have passed.
+    // Nothing was actually wrong on main; the guard was true by accident rather than by coverage.
+    // Its sibling CopiedCodePastesIntoTheJoinFieldTests already made exactly this correction.
+    [Fact]
+    public void TheGuardReadsEveryWindowRatherThanOneNamedFile()
+    {
+        var scanned = WindowSources().Select(Path.GetFileName).ToList();
+        var onDisk = Directory.EnumerateFiles(WindowsDirectory(), "*.cs").Select(Path.GetFileName).ToList();
+
+        // Derived from disk on both sides, so a window added tomorrow is covered without anyone
+        // remembering to add it here.
+        Assert.Equal(
+            onDisk.OrderBy(name => name, StringComparer.Ordinal),
+            scanned.OrderBy(name => name, StringComparer.Ordinal));
+
+        Assert.True(
+            scanned.Count > 1,
+            $"The guard scanned {scanned.Count} file(s). It must read every window, or its claim that "
+            + "the roster has one renderer is false one file along.");
     }
 
     // THE OTHER HALF OF THE HEADING GUARD, and the half whose absence defeated the last one.
@@ -164,15 +195,30 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     /// could supply.
     /// </para>
     /// </remarks>
-    private static string Code()
-    {
-        var source = Path.Combine(RepositoryRoot(), "Windows", "SessionWindow.cs");
-
-        Assert.True(File.Exists(source), $"No SessionWindow.cs at '{source}'.");
-
-        return string.Join(
+    private static string Code() =>
+        string.Join(
             "\n",
-            File.ReadAllLines(source).Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+            WindowSources()
+                .SelectMany(File.ReadAllLines)
+                .Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+
+    /// <summary>Every window's source, in a stable order.</summary>
+    /// <remarks>
+    /// Ordered so a failure message is the same on two machines; the assertions are counts over the
+    /// concatenation and do not depend on it.
+    /// </remarks>
+    private static IReadOnlyList<string> WindowSources() =>
+        Directory.EnumerateFiles(WindowsDirectory(), "*.cs")
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+    private static string WindowsDirectory()
+    {
+        var directory = Path.Combine(RepositoryRoot(), "Windows");
+
+        Assert.True(Directory.Exists(directory), $"No Windows/ at '{directory}'.");
+
+        return directory;
     }
 
     private static string RepositoryRoot()
