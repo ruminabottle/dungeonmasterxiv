@@ -48,6 +48,50 @@ public class TheNameIsEditableInTheJoinFlowTests
     // DisplayName refuses a large class of ordinary invented names, so the field would show Bob_123
     // while the wire carried "a player who gave no name", under a label that is the very promise.
     //
+    // ===================================================================================
+    // THIS IS A TEXTUAL PROXY FOR A DATA-FLOW PROPERTY. IT IS NOT A PROOF OF ONE, AND A
+    // GREEN RUN HERE IS NOT EVIDENCE THAT A-1.2n HOLDS.
+    // ===================================================================================
+    //
+    // A-1.2n is about where a VALUE goes. Everything below reads SOURCE TEXT, and the most a
+    // textual scan can ever say is "this identifier does not appear here". That is one assignment
+    // away from wrong, always.
+    //
+    // AN ALIAS DEFEATS IT. These four lines pass both assertions below — measured, not reasoned:
+    //
+    //     var willSend = DisplayName.OrNone(_nameEntry);
+    //     var typed = _nameEntry;                            // the whole defeat
+    //     ImGui.TextWrapped($"Resolved: {willSend.Value}");  // satisfies the value-position check
+    //     ImGui.TextWrapped($"They will see: {typed}");      // renders the RAW value
+    //
+    // 4 passed, 0 failed. The first assertion is satisfied by the OTHER, correct statement; the
+    // second looks for `_nameEntry` in a statement that says `typed`. The alias line is not an
+    // ImGui.Text* call, so it is never scanned at all. Found by qa-1 (BUG-65); reproduced here
+    // before this comment was written.
+    //
+    // THREE GUARDS SO FAR, AND EACH KEPT THE SAME VERB:
+    //     line match      -> defeated by a wrapped ternary whose CONDITION named the local (BUG-64)
+    //     statement match -> defeated by rendering a second, correct statement (BUG-65)
+    //     name match      -> defeated by renaming the value first (BUG-65)
+    // Every replacement narrowed the gap and none changed what is being matched: TEXT, where the
+    // property is about a VALUE. A fourth narrowing buys one more hop.
+    //
+    // A REAL FIX ASSERTS OVER BEHAVIOUR OR OVER A PARSE, not over source text — observe what the
+    // window renders and what it sends and compare them, or read the syntax tree and follow the
+    // assignment. Both are larger than this file. The tempting middle option, asserting that EVERY
+    // interpolation hole resolves to the sent value, is already considered and rejected: it is
+    // false the moment the join flow renders anything else — a code, a countdown, a remaining time
+    // — so it would fail on correct code or need an exception list, and an exception list is a
+    // denylist wearing an allowlist's name.
+    //
+    // SO THE END-TO-END COVERAGE IS THE IN-GAME CHECK, DMXHUM-6, AND IT IS LOAD-BEARING RATHER THAN
+    // SUPPLEMENTARY. This narrows the ways the criterion can break by accident. It does not
+    // establish that it holds, and nothing in this file can.
+    //
+    // What the assertions below are still worth: they hold against the three defeats already found,
+    // and their teeth were measured rather than assumed — BUG-64's mutation reddens the first, and
+    // removing either one reddens this test. Kept exactly as they are.
+    //
     // So this asserts the STRONGER property the fix establishes: one resolved value, rendered and
     // sent. Not "both mention the field" — the SAME identifier in both places, which is what makes
     // the criterion true by construction rather than by anyone keeping two expressions in step.
