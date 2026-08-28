@@ -65,9 +65,37 @@ public class TheNameIsEditableInTheJoinFlowTests
 
         Assert.True(resolved is not null, $"The join flow never resolves '{field}' through DisplayName.");
 
-        var shown = code.FirstOrDefault(l => l.Contains("ImGui.Text", StringComparison.Ordinal) && l.Contains(resolved!, StringComparison.Ordinal))
-            ?? code.FirstOrDefault(l => l.Contains(resolved!, StringComparison.Ordinal) && l.Contains("They will see", StringComparison.Ordinal));
-        Assert.True(shown is not null, $"'{resolved}' is sent but never shown; A-1.2n requires the sent name be the shown one.");
+        // STATEMENTS, not lines, and that is the fix rather than a detail. The render is a ternary
+        // that wraps, so its CONDITION and its BRANCHES are on different source lines. The previous
+        // check asked for a line holding both "ImGui.Text" and the resolved local, and
+        // `ImGui.TextWrapped(willSend.WasStated` satisfies that on its own — the condition matched
+        // before either branch was looked at, so the raw field could be put back in the displayed
+        // branch with the suite green. That is PR #89's denial reproduced (BUG-64).
+        var rendered = RenderedStatements(code);
+        Assert.NotEmpty(rendered);
+
+        // A VALUE POSITION: inside an interpolation hole, {resolved} or {resolved.Something}. A
+        // mention anywhere in the statement is what the old check accepted.
+        var shownAsAValue = rendered.Any(statement =>
+            Regex.IsMatch(statement, @"\{" + Regex.Escape(resolved!) + @"[.}]"));
+
+        Assert.True(
+            shownAsAValue,
+            $"No rendered statement in the join flow interpolates '{resolved}'. A-1.2n requires the "
+            + "name that will be SENT to be the name SHOWN, so the resolved value has to be what is "
+            + "rendered — naming it in a condition is not showing it.");
+
+        // AND THE HALF THAT ACTUALLY CLOSES IT. The defect is displaying the raw field, so forbid
+        // displaying the raw field. Without this, any future render that mentions the resolved local
+        // somewhere and shows the field elsewhere passes the assertion above.
+        var showsTheRawField = rendered.FirstOrDefault(statement =>
+            Regex.IsMatch(statement, @"\b" + Regex.Escape(field!) + @"\b"));
+
+        Assert.True(
+            showsTheRawField is null,
+            $"A rendered statement in the join flow shows the raw field '{field}' rather than the "
+            + $"resolved value: {showsTheRawField}. The box would read what the user typed while the "
+            + "wire carried something else, which is the criterion inverted.");
 
         var sent = code.FirstOrDefault(l => l.Contains("RequestJoin(", StringComparison.Ordinal));
         Assert.NotNull(sent);
@@ -123,6 +151,79 @@ public class TheNameIsEditableInTheJoinFlowTests
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Every <c>ImGui.Text*</c> call in the join flow, each as one whole statement.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Balanced parentheses, not a line and not a split on <c>;</c>.</b> A line-based scan cannot
+    /// see a wrapped ternary, and splitting on <c>;</c> would cut a statement in half the first time
+    /// somebody writes a semicolon inside an interpolated string. This walks from the call to its
+    /// closing parenthesis, skipping over string literals so that brackets and quotes inside a
+    /// message cannot move the boundary.
+    /// </para>
+    /// <para>
+    /// <b>It is a bracket matcher, not a parser, and the difference is worth stating.</b> It does not
+    /// understand C#; it understands nesting and string literals, which is what this property needs.
+    /// If a future check needs to know that an expression is a condition rather than a branch, that
+    /// is a real parse and this helper should be replaced rather than extended.
+    /// </para>
+    /// </remarks>
+    private static IReadOnlyList<string> RenderedStatements(IReadOnlyList<string> code)
+    {
+        var text = string.Join("\n", code);
+        var statements = new List<string>();
+
+        foreach (Match call in Regex.Matches(text, @"ImGui\.Text\w*\s*\("))
+        {
+            var open = text.IndexOf('(', call.Index);
+            var depth = 0;
+            var inString = false;
+            var verbatim = false;
+
+            for (var i = open; i < text.Length; i++)
+            {
+                var c = text[i];
+
+                if (inString)
+                {
+                    if (c == '\\' && !verbatim)
+                    {
+                        i++;
+                    }
+                    else if (c == '"')
+                    {
+                        inString = false;
+                    }
+
+                    continue;
+                }
+
+                switch (c)
+                {
+                    case '"':
+                        inString = true;
+                        verbatim = i > 0 && text[i - 1] == '@';
+                        break;
+                    case '(':
+                        depth++;
+                        break;
+                    case ')':
+                        depth--;
+                        if (depth == 0)
+                        {
+                            statements.Add(text[call.Index..(i + 1)]);
+                            i = text.Length;
+                        }
+
+                        break;
+                }
+            }
+        }
+
+        return statements;
     }
 
     /// <summary>The join flow's code, comments removed.</summary>
