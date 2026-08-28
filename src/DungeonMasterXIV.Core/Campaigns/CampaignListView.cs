@@ -75,8 +75,11 @@ public static class CampaignListView
         _ => LeftBehindDetail,
     };
 
-    private static string Label(Campaign campaign) =>
-        SessionCode.TryParse(campaign.PreferredCode, out var code) ? code.ToDisplayString() : NoCodeLabel;
+    // A-1.9k-3. This USED to render the session code, or NoCodeLabel when there was none, and that
+    // was faithful to R-1.6 as it then read — the Spec Owner has since corrected the requirement
+    // rather than the code: "the implementation is faithful and my requirement was wrong". The code
+    // is a campaign's MOST RECENT CODE, never its display name.
+    private static string Label(Campaign campaign) => CampaignName.For(campaign);
 
     private static string Detail(Campaign campaign)
     {
