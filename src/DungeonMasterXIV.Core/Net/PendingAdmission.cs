@@ -127,25 +127,24 @@ public sealed class PendingAdmission
     /// the plugin, because a channel an attacker controls cannot verify that attacker.
     /// </summary>
     /// <returns>
-    /// <c>false</c> when the confirmation was refused because the joiner never had a fingerprint.
+    /// <c>true</c> when recorded. Reserved for A-1.2f: T-43 makes this <c>false</c> when the joiner
+    /// could not compare, once something sets that.
     /// </returns>
     public bool ConfirmFingerprintMatched()
     {
-        // A-1.2f, ENFORCED HERE rather than in the window that draws it. The criterion says a build
-        // offering the DM an unqualified confirmation against a client that received no host key
-        // FAILS -- so refusing it in the model makes that true of every build, including ones nobody
-        // has written yet. A UI-only guard is a property of one screen; this is a property of the
-        // product.
+        // A-1.2f's refusal is NOT here yet, and that is deliberate rather than forgotten.
         //
-        // The DM is not being told they compared wrongly. They are being told there was nothing on
-        // the other person's screen to compare against, so a tick would record an exchange that
-        // could not have happened -- which is the false control D-11's amendment forbids in terms,
-        // and the whole of BUG-33.
-        if (!JoinerCouldCompare)
-        {
-            return false;
-        }
-
+        // T-29 ships the capability signal in the files it owns; APPLYING it to a pending request
+        // needs AdmissionControl and SessionCoordinator, which are T-43, held behind T-39. Until
+        // that lands nothing calls JoinerReportedItCanCompare, so JoinerCouldCompare is false for
+        // every request -- and refusing on it here would refuse EVERY confirmation, removing a
+        // working control instead of qualifying a misleading one. That is a worse product than
+        // BUG-33, arrived at while fixing it.
+        //
+        // The fail-safe default is what makes the order matter: absence of a receipt means "could
+        // not compare", correctly, because a relay that drops JoinPending can drop a receipt too.
+        // Safe defaults and a missing receiver compose into "always refuse", so the refusal lands
+        // with the receiver in T-43.
         FingerprintConfirmed = true;
         return true;
     }

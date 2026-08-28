@@ -33,10 +33,6 @@ public class AdmissionTests
     {
         var request = Request();
 
-        // R-1.3a-iii/A-1.2f: a confirmation is only offered against a joiner that could compare, so
-        // the precondition is now stated rather than implied. Without it the DM would be ticking a
-        // box about an exchange the other person could not take part in (BUG-33).
-        request.JoinerReportedItCanCompare();
         request.ConfirmFingerprintMatched();
 
         Assert.Equal(AdmissionVerification.Confirmed, request.Verification);
@@ -68,7 +64,6 @@ public class AdmissionTests
         var audience = new SessionAudience();
         var request = Request();
         desk.Receive(request);
-        request.JoinerReportedItCanCompare();   // A-1.2f precondition, as above
         request.ConfirmFingerprintMatched();
 
         var peer = audience.Admit("PEER-1", SessionRole.Player, desk.Decide("PEER-1")!.Verification);
@@ -189,39 +184,6 @@ public class AdmissionTests
 
         Assert.Equal(SessionRole.Assistant, assistant.Role);
         Assert.Equal(SessionRole.Player, audience.Admit("PEER-2").Role);
-    }
-
-    // A-1.2f: "the confirmation control is suppressed or qualified when the joining client could not
-    // compare. A build offering the DM an unqualified confirmation against a client that received no
-    // host key FAILS -- this is BUG-33."
-    //
-    // Enforced in the MODEL rather than the window, so it holds for every build including ones
-    // nobody has written. A UI-only guard is a property of one screen.
-    [Fact]
-    public void AConfirmationIsRefusedWhenTheJoinerCouldNotCompare()
-    {
-        var request = Request();
-
-        var accepted = request.ConfirmFingerprintMatched();
-
-        Assert.False(accepted);
-        Assert.False(request.FingerprintConfirmed);
-        Assert.Equal(AdmissionVerification.NotCompared, request.Verification);
-    }
-
-    // The control for the test above: the refusal must be caused by the missing capability and not
-    // by ConfirmFingerprintMatched being broken outright. Without this, a method that always refused
-    // would pass the A-1.2f test and fail the product.
-    [Fact]
-    public void TheSameConfirmationIsAcceptedOnceTheJoinerCanCompare()
-    {
-        var request = Request();
-        request.JoinerReportedItCanCompare();
-
-        var accepted = request.ConfirmFingerprintMatched();
-
-        Assert.True(accepted);
-        Assert.Equal(AdmissionVerification.Confirmed, request.Verification);
     }
 
     // R-1.3a-iii's forbidden half, asserted rather than trusted to a comment: what is carried is a

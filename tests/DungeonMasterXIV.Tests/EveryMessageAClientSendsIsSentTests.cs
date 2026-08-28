@@ -117,6 +117,22 @@ public class EveryMessageAClientSendsIsSentTests
                 s.Coordinator.Tick(TimeSpan.Zero, Now + TimeSpan.FromHours(1));
             }),
 
+        [WireMessageType.JoinerCanCompare] = new(
+            Origin.Client,
+            "the joiner reports it holds the host key and can render a fingerprint (R-1.3a-iii)",
+            s =>
+            {
+                s.Coordinator.RequestJoin(SessionCode.FromValid("BCDFGH"));
+                s.Ready();
+                s.Coordinator.Tick(TimeSpan.Zero, Now);
+
+                // The receipt is gated on a fingerprint EXISTING, so the host key has to arrive
+                // first -- which is the whole point of it being a receipt rather than a declaration.
+                s.Coordinator.Tick(TimeSpan.Zero, Now);
+                s.HostKeyArrives();
+                s.Coordinator.Tick(TimeSpan.Zero, Now);
+            }),
+
         [WireMessageType.SessionPayload] = new(
             Origin.NotYetReachable,
             "NOTHING SEALS A PAYLOAD. SessionCipher.Seal has no production caller, so no client can "
@@ -245,6 +261,14 @@ public class EveryMessageAClientSendsIsSentTests
 
         /// <summary>The socket finished opening. Sending before this is discarded (BUG-36).</summary>
         public void Ready() => _transport.OpenTheSocket = true;
+
+        /// <summary>The host answers with its key, so this client can render a fingerprint.</summary>
+        public void HostKeyArrives() =>
+            _transport.Deliver(WireEnvelope.ForJoinPending(
+                SessionCode.FromValid("BCDFGH"),
+                Coordinator.JoinerKeys!.PublicKey,
+                new SessionKeyExchange().PublicKey,
+                AdmissionDeadline.DecidedByHost(Now)));
 
         /// <summary>A host with a code the relay has confirmed.</summary>
         public void Hosting()

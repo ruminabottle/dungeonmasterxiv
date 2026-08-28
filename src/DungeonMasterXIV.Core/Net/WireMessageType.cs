@@ -68,4 +68,27 @@ public enum WireMessageType
     /// </para>
     /// </remarks>
     JoinPending = 9,
+
+    /// <summary>
+    /// Joiner to host: this client holds the host's key and has a fingerprint on screen
+    /// (R-1.3a-iii). A CAPABILITY, never a claim that a human compared anything.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A receipt, not a declaration, and the difference is load-bearing.</b> It would be simpler
+    /// for the joiner to say "I understand JoinPending" in its original
+    /// <see cref="JoinRequest"/> — one field, no round trip. That would have been WRONG, and this
+    /// project proved it: the deployed relay was v0.1.0 and DROPPED JoinPending, which is what made
+    /// BUG-33 every session rather than a rare version skew. A declaring client would have told the
+    /// host "they can compare" while the relay silently ate the notice. This is sent only once the
+    /// key has actually arrived, so it reports a fact rather than a promise.
+    /// </para>
+    /// <para>
+    /// <b>What it may never carry.</b> R-1.3a-iii forbids signalling that the joining human DID
+    /// compare: that acknowledgement travels the same out-of-band channel as the comparison, so an
+    /// attacker who substituted the host key controls it and can forge it — worthless exactly when
+    /// it matters, while displaying as evidence.
+    /// </para>
+    /// </remarks>
+    JoinerCanCompare = 10,
 }
