@@ -173,6 +173,7 @@ public class TheNameIsEditableInTheJoinFlowTests
 
         Assert.NotEmpty(sources);
         Assert.Contains(sources, path => path.EndsWith("SessionWindow.cs", StringComparison.Ordinal));
+        Assert.Contains(sources, path => path.EndsWith("JoinFlowView.cs", StringComparison.Ordinal));
         Assert.NotEmpty(JoinFlowCode());
     }
 
@@ -181,7 +182,7 @@ public class TheNameIsEditableInTheJoinFlowTests
     [Fact]
     public void CommentsAreNotMistakenForCode()
     {
-        var raw = File.ReadAllLines(SessionWindowPath());
+        var raw = File.ReadAllLines(JoinFlowPath());
 
         Assert.Contains(raw, line => line.TrimStart().StartsWith("//", StringComparison.Ordinal));
         Assert.DoesNotContain(JoinFlowCode(), line => line.TrimStart().StartsWith("//", StringComparison.Ordinal));
@@ -285,13 +286,22 @@ public class TheNameIsEditableInTheJoinFlowTests
 
     /// <summary>The join flow's code, comments removed.</summary>
     private static IReadOnlyList<string> JoinFlowCode() =>
-        File.ReadAllLines(SessionWindowPath())
+        File.ReadAllLines(JoinFlowPath())
             .Select(line => line.TrimEnd())
             .Where(line => line.Length > 0 && !line.TrimStart().StartsWith("//", StringComparison.Ordinal))
             .ToList();
 
-    private static string SessionWindowPath() =>
-        WindowSources().Single(path => path.EndsWith("SessionWindow.cs", StringComparison.Ordinal));
+    /// <summary>The window file that holds the join flow.</summary>
+    /// <remarks>
+    /// <b>JoinFlowView.cs since DMXENG-15, and it was SessionWindow.cs before.</b> The join flow was
+    /// extracted to its own surface; the criterion this file asserts did not move with it, so what
+    /// changed here is WHERE the join flow is read from and nothing about what must be true of it.
+    /// Still resolved through <see cref="WindowSources"/> rather than composed as a path, so a scan
+    /// that resolves nothing stays detectable by
+    /// <see cref="TheScanActuallyFoundTheWindowsItClaimsToRead"/> instead of silently reading air.
+    /// </remarks>
+    private static string JoinFlowPath() =>
+        WindowSources().Single(path => path.EndsWith("JoinFlowView.cs", StringComparison.Ordinal));
 
     /// <summary>
     /// Every window's source, enumerated from disk rather than named — a window added tomorrow is

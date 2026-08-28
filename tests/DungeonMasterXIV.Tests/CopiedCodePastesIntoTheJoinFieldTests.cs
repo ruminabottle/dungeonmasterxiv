@@ -171,11 +171,104 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     }
 
     /// <summary>
-    /// What the join field accepts — mirrors <c>Windows/SessionWindow.cs</c>, <c>DrawJoining</c>,
-    /// which passes the input box's contents to <see cref="SessionCode.TryParse"/> unaltered.
+    /// What the join field accepts — <b>the production decision itself, called (DMXENG-15).</b>
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This used to RE-IMPLEMENT it, and the difference is the point.</b> It read
+    /// <c>SessionCode.TryParse(pasted, out code)</c> under a doc comment saying it "mirrors
+    /// <c>DrawJoining</c>" — and a comment is not an assertion. The mirror and the join field could
+    /// have diverged at any time with every test in this file still green, because nothing but prose
+    /// connected them.
+    /// </para>
+    /// <para>
+    /// <b>Why <see cref="JoinFlowCode"/> rather than <see cref="SessionCode.TryParse"/> directly.</b>
+    /// <c>JoinFlowCode.Accepts</c> DELEGATES to that parser and behaves identically today — the
+    /// gain is not behavioural. It is that this test now names the join field's OWN rule, so if
+    /// the field's rule ever diverges from the general parser's, these tests follow the field
+    /// rather than silently tracking the wrong one.
+    /// </para>
+    /// <para>
+    /// <b>What still is not proven here, stated rather than left implied.</b> This proves the
+    /// tests and the join field agree on the DECISION. That the BUTTON reaches for it is a separate
+    /// claim and a textual one — <see cref="TheJoinButtonReachesForTheSharedDecision"/> — because
+    /// no test project references the plugin and this call cannot be observed from a running window.
+    /// </para>
+    /// </remarks>
     private static bool WhatTheJoinFieldAccepts(string pasted, out SessionCode code) =>
-        SessionCode.TryParse(pasted, out code);
+        JoinFlowCode.Accepts(pasted, out code);
+
+    // The other half, in the same shape as TheButtonCopiesTheNamedClipboardValueAndNothingElse:
+    // above proves the shared decision behaves; this proves the join button is what asks it.
+    // Without it the extraction produces a testable seam and the window quietly keeps its own copy.
+    //
+    // ===================================================================================
+    // THIS IS A TEXTUAL PROXY FOR A "SOLE DECISION" PROPERTY. IT IS NOT A PROOF OF ONE,
+    // AND A GREEN RUN HERE IS NOT EVIDENCE THAT THE JOIN FIELD HAS ONE WAY IN.
+    // ===================================================================================
+    //
+    // DECLARED AT THE DEPLOYMENT MANAGER'S DIRECTION BEFORE MERGE (DMXENG-15), because this is the
+    // FIFTH member of a family this board has ruled on three times, and it would otherwise have
+    // arrived undeclared and become tomorrow's bug against finished work.
+    //
+    // THE TWO PROPERTIES ARE DIFFERENT KINDS OF THING AND ONLY ONE IS A PROOF:
+    //
+    //   VALUE -- a proof, and not bypassable. JoinFlowCode lives in Core, is callable, and
+    //   WhatTheJoinFieldAccepts CALLS it. Whatever the shared decision does, these tests see.
+    //
+    //   USE -- a TEXTUAL PROXY, and this test. Contains proves the sanctioned call is PRESENT.
+    //   DoesNotContain bans ONE identifier. NEITHER SAYS THE SHARED DECISION IS THE ONLY ONE
+    //   CONSULTED.
+    //
+    // THE DEFEAT, shown rather than described. Both assertions pass with this added and the
+    // sanctioned call left untouched:
+    //
+    //     if (ImGui.Button("Join anyway") && _codeEntry.Replace("-", "").Length == 6)
+    //     {
+    //         _coordinator.RequestJoin(SessionCode.FromValid(...), DisplayName.OrNone(_nameEntry));
+    //     }
+    //
+    // It never names SessionCode.TryParse, so DoesNotContain is satisfied; the real call is still
+    // there, so Contains is satisfied. The join field now accepts codes JoinFlowCode would refuse.
+    // This is structurally BUG-66 -- sanctioned call present, second path added, all green.
+    //
+    // MEASURED AGAINST THE ASSERTIONS BELOW, every row executed rather than reasoned about:
+    //     sanctioned call REPLACED by SessionCode.TryParse     -> CAUGHT      (1 failed)
+    //     sanctioned call REPLACED by a hand-rolled check      -> CAUGHT      (1 failed)
+    //     SECOND path that NAMES the banned identifier         -> CAUGHT      (1 failed)
+    //     SECOND path, hand-rolled, banned identifier absent   -> NOT CAUGHT  (9 passed, 0 failed)
+    //     SECOND path in ANOTHER window file entirely          -> NOT CAUGHT  (9 passed, 0 failed)
+    //
+    // THE LAST ROW IS A SECOND GAP AND IS MINE, not the one I was asked to declare: this reads
+    // JoinFlowView.cs ALONE, so an acceptance path in any other window is invisible to it. Widening
+    // to the directory does not fix it either -- it would only move the boundary out one file.
+    //
+    // NO FOURTH ASSERTION, DELIBERATELY. Banning every other parser call needs an exception list,
+    // and an exception list is a denylist wearing an allowlist's name -- already considered and
+    // rejected twice on this board. A REAL FIX ASSERTS OVER BEHAVIOUR OR OVER A PARSE: drive the
+    // window and compare what it accepts against JoinFlowCode, or read the syntax tree and find
+    // every call reaching RequestJoin. Both are larger than this file, so THE END-TO-END COVERAGE
+    // IS THE IN-GAME CHECK and it is load-bearing rather than supplementary.
+    //
+    // AND WHAT DELETING THIS WOULD COST, which is the half that survives someone tidying up:
+    // "it is only a proxy" reads as a case for removal right up until the regression has a name.
+    // Delete it and the extraction silently reverts to a seam nobody uses -- the window keeping its
+    // own parse while WhatTheJoinFieldAccepts calls Core and the two are never compared, which is
+    // the exact state this chunk existed to end. Three of the five shapes above stop being caught.
+    [Fact]
+    public void TheJoinButtonReachesForTheSharedDecision()
+    {
+        var joinFlow = string.Join(
+            "\n",
+            File.ReadAllLines(WindowSources().Single(path => path.EndsWith("JoinFlowView.cs", StringComparison.Ordinal)))
+                .Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+
+        Assert.Contains("JoinFlowCode.Accepts(", joinFlow, StringComparison.Ordinal);
+
+        // And it must not have kept a second way in beside it, which is the shape the extraction
+        // exists to prevent — a shared decision that one caller bypasses is not a shared decision.
+        Assert.DoesNotContain("SessionCode.TryParse", joinFlow, StringComparison.Ordinal);
+    }
 
     // Fails if: the copy carries display grouping the join field rejects. Over many codes rather
     // than one, because a single sample cannot distinguish "the grouping is accepted" from "this
