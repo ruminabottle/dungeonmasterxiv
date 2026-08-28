@@ -102,6 +102,63 @@ public class KeyGenerationFailureDoesNotEscapeTests
         Assert.Equal(SessionFailure.None, coordinator.Host.Failure);
     }
 
+    // BUG-62, AND IT NEEDS BOTH HALVES. TryMakeKeys catches CryptographicException only, and its doc
+    // comment calls that narrowness deliberate: "a broader catch here would hide a genuine defect in
+    // this method's own callers behind a message about keys". Nothing asserted it. Widening the catch
+    // to Exception — the single most likely edit anyone makes to a try/catch — left all 979 tests
+    // green, because a catch-all does not break the success path and nothing here ever threw a
+    // non-cryptographic exception from the seam.
+    //
+    // The property is "CRYPTOGRAPHIC FAILURES ARE CAUGHT AND NOTHING ELSE IS". Asserting only the
+    // first half invites the opposite break — narrowing to CryptographicException EXACTLY and
+    // refusing a real cryptographic failure — which is the same one-directional shape as the gap
+    // this closes.
+    [Fact]
+    public void ADefectInTheCallerIsNotSwallowedAsAKeyFailure()
+    {
+        var coordinator = WithKeysThatThrow(() => new InvalidOperationException("a defect in the caller"));
+
+        var thrown = Record.Exception(() => coordinator.StartHosting());
+
+        Assert.IsType<InvalidOperationException>(thrown);
+    }
+
+    // The other entry point, because both of the product's two functions construct a key pair and a
+    // guard widened on one path is widened on both.
+    [Fact]
+    public void ADefectInTheCallerIsNotSwallowedWhenJoiningEither()
+    {
+        var coordinator = WithKeysThatThrow(() => new InvalidOperationException("a defect in the caller"));
+
+        var thrown = Record.Exception(
+            () => coordinator.RequestJoin(Code, DisplayName.OrNone("Ysera"), claimedParticipantId: null));
+
+        Assert.IsType<InvalidOperationException>(thrown);
+    }
+
+    // THE OTHER HALF, and the one a narrowing edit breaks. AuthenticationTagMismatchException is a
+    // CryptographicException SUBCLASS and a genuine cryptographic failure, so it must still be
+    // caught. A catch written as `when (ex.GetType() == typeof(CryptographicException))` would pass
+    // both tests above and fail here, having turned a real crypto failure into a crash.
+    [Fact]
+    public void AGenuineCryptographicFailureIsCaughtEvenWhenItIsASubclass()
+    {
+        var coordinator = WithKeysThatThrow(() => new AuthenticationTagMismatchException());
+
+        Assert.Null(Record.Exception(() => coordinator.StartHosting()));
+        Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
+        Assert.Equal(SessionFailure.SessionKeysUnavailable, coordinator.Host.Failure);
+    }
+
+    /// <summary>A coordinator whose key seam throws whatever the caller names, once per attempt.</summary>
+    /// <remarks>
+    /// Separate from <see cref="WithKeysThatCannotBeCreated()"/> rather than a generalisation of it:
+    /// that helper carries the reported specimen <c>0x80090029</c> and its attempt counter, and both
+    /// are load-bearing for the tests above it.
+    /// </remarks>
+    private static SessionCoordinator WithKeysThatThrow(Func<Exception> failure) =>
+        new(new SilentTransport(), () => RelayEndpoint.Default, () => throw failure());
+
     private static SessionCoordinator WithKeysThatCannotBeCreated() =>
         WithKeysThatCannotBeCreated(out _);
 
