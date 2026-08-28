@@ -154,19 +154,41 @@ public class EveryMessageAClientSendsIsSentTests
         Assert.Contains(type, session.Sent);
     }
 
-    // The control, and it is not decoration. If the harness sent NOTHING -- an unready transport, a
-    // coordinator that never connected -- every row above would fail for one reason and none of the
-    // failures would be about the message. This asserts the harness can carry a message at all.
+    // THE CONTROL, and it must not depend on any row above. The first version of it drove
+    // StartHosting and asserted "something was sent" -- so suppressing the CodeRequest send failed
+    // the control too, and it could not tell "the harness is broken" from "CodeRequest is missing".
+    // A control that fails alongside its subject is not a control. Measured rather than reasoned:
+    // injecting BUG-36 reddened both, which is how this was found.
+    //
+    // This one asks only whether the fixture can carry and decode a frame, using no production send
+    // path at all.
     [Fact]
-    public void TheHarnessDoesSendSomething()
+    public void TheHarnessRecordsAFrameAndDecodesIt()
     {
-        var session = new Session();
+        var transport = new RecordingTransport { OpenTheSocket = true };
+        transport.Connect(new Uri(RelayEndpoint.Default));
 
-        session.Coordinator.StartHosting();
-        session.Ready();
-        session.Coordinator.Tick(TimeSpan.Zero, Now);
+        transport.Send(EnvelopeCodec.Encode(
+            WireEnvelope.ForCodeRequest(SessionCode.FromValid("BCDFGH"))));
 
-        Assert.NotEmpty(session.Sent);
+        var single = Assert.Single(transport.Sent);
+        Assert.True(EnvelopeCodec.TryDecode(single, out var decoded));
+        Assert.Equal(WireMessageType.CodeRequest, decoded!.Type);
+    }
+
+    // The other half of the fixture, and the reason a naive double would have hidden BUG-36: a frame
+    // sent before the socket opens must be discarded here exactly as the real transport discards it.
+    // A fake that accepted everything would pass a build that sends too early.
+    [Fact]
+    public void TheHarnessDiscardsAFrameSentBeforeTheSocketOpens()
+    {
+        var transport = new RecordingTransport();
+        transport.Connect(new Uri(RelayEndpoint.Default));
+
+        transport.Send(EnvelopeCodec.Encode(
+            WireEnvelope.ForCodeRequest(SessionCode.FromValid("BCDFGH"))));
+
+        Assert.Empty(transport.Sent);
     }
 
     // Fails if a message is parked as unreachable without saying what must exist first. The category
