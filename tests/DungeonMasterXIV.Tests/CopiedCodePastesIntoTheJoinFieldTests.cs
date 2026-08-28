@@ -201,6 +201,60 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     // The other half, in the same shape as TheButtonCopiesTheNamedClipboardValueAndNothingElse:
     // above proves the shared decision behaves; this proves the join button is what asks it.
     // Without it the extraction produces a testable seam and the window quietly keeps its own copy.
+    //
+    // ===================================================================================
+    // THIS IS A TEXTUAL PROXY FOR A "SOLE DECISION" PROPERTY. IT IS NOT A PROOF OF ONE,
+    // AND A GREEN RUN HERE IS NOT EVIDENCE THAT THE JOIN FIELD HAS ONE WAY IN.
+    // ===================================================================================
+    //
+    // DECLARED AT THE DEPLOYMENT MANAGER'S DIRECTION BEFORE MERGE (DMXENG-15), because this is the
+    // FIFTH member of a family this board has ruled on three times, and it would otherwise have
+    // arrived undeclared and become tomorrow's bug against finished work.
+    //
+    // THE TWO PROPERTIES ARE DIFFERENT KINDS OF THING AND ONLY ONE IS A PROOF:
+    //
+    //   VALUE -- a proof, and not bypassable. JoinFlowCode lives in Core, is callable, and
+    //   WhatTheJoinFieldAccepts CALLS it. Whatever the shared decision does, these tests see.
+    //
+    //   USE -- a TEXTUAL PROXY, and this test. Contains proves the sanctioned call is PRESENT.
+    //   DoesNotContain bans ONE identifier. NEITHER SAYS THE SHARED DECISION IS THE ONLY ONE
+    //   CONSULTED.
+    //
+    // THE DEFEAT, shown rather than described. Both assertions pass with this added and the
+    // sanctioned call left untouched:
+    //
+    //     if (ImGui.Button("Join anyway") && _codeEntry.Replace("-", "").Length == 6)
+    //     {
+    //         _coordinator.RequestJoin(SessionCode.FromValid(...), DisplayName.OrNone(_nameEntry));
+    //     }
+    //
+    // It never names SessionCode.TryParse, so DoesNotContain is satisfied; the real call is still
+    // there, so Contains is satisfied. The join field now accepts codes JoinFlowCode would refuse.
+    // This is structurally BUG-66 -- sanctioned call present, second path added, all green.
+    //
+    // MEASURED AGAINST THE ASSERTIONS BELOW, every row executed rather than reasoned about:
+    //     sanctioned call REPLACED by SessionCode.TryParse     -> CAUGHT      (1 failed)
+    //     sanctioned call REPLACED by a hand-rolled check      -> CAUGHT      (1 failed)
+    //     SECOND path that NAMES the banned identifier         -> CAUGHT      (1 failed)
+    //     SECOND path, hand-rolled, banned identifier absent   -> NOT CAUGHT  (9 passed, 0 failed)
+    //     SECOND path in ANOTHER window file entirely          -> NOT CAUGHT  (9 passed, 0 failed)
+    //
+    // THE LAST ROW IS A SECOND GAP AND IS MINE, not the one I was asked to declare: this reads
+    // JoinFlowView.cs ALONE, so an acceptance path in any other window is invisible to it. Widening
+    // to the directory does not fix it either -- it would only move the boundary out one file.
+    //
+    // NO FOURTH ASSERTION, DELIBERATELY. Banning every other parser call needs an exception list,
+    // and an exception list is a denylist wearing an allowlist's name -- already considered and
+    // rejected twice on this board. A REAL FIX ASSERTS OVER BEHAVIOUR OR OVER A PARSE: drive the
+    // window and compare what it accepts against JoinFlowCode, or read the syntax tree and find
+    // every call reaching RequestJoin. Both are larger than this file, so THE END-TO-END COVERAGE
+    // IS THE IN-GAME CHECK and it is load-bearing rather than supplementary.
+    //
+    // AND WHAT DELETING THIS WOULD COST, which is the half that survives someone tidying up:
+    // "it is only a proxy" reads as a case for removal right up until the regression has a name.
+    // Delete it and the extraction silently reverts to a seam nobody uses -- the window keeping its
+    // own parse while WhatTheJoinFieldAccepts calls Core and the two are never compared, which is
+    // the exact state this chunk existed to end. Three of the five shapes above stop being caught.
     [Fact]
     public void TheJoinButtonReachesForTheSharedDecision()
     {
