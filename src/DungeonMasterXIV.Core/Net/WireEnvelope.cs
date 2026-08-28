@@ -322,14 +322,14 @@ public sealed record WireEnvelope
     }
 
     /// <summary>
-    /// The joiner's key from a capability report, or null if this is not one.
+    /// The joiner's key from a fingerprint receipt, or null if this is not one.
     /// </summary>
     /// <remarks>
     /// Deliberately not folded into <see cref="TryGetAdmissionOutcome"/>: this decides nothing about
     /// the admission, and a consumer that could read it as an outcome would be reading a capability
     /// as an answer.
     /// </remarks>
-    public byte[]? TryGetCanCompareKey() =>
+    public byte[]? TryGetFingerprintReceiptKey() =>
         Type == WireMessageType.JoinerHoldsFingerprint ? PublicKey : null;
 
     /// <summary>

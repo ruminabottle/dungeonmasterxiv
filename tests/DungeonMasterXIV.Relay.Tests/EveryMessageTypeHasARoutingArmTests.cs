@@ -32,6 +32,20 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// the factories would have made this a test of which factories exist, which is the enumeration it
 /// is trying not to be.
 /// </para>
+/// <para>
+/// <b>What a green run here does NOT mean.</b> It means every type has an arm — not that any arm is
+/// RIGHT. A type routed by the wrong arm passes, and that is deliberate: asserting the expected
+/// outcome per type would make this file a mirror of the switch it checks, which proves only that
+/// the two copies agree. Whether each arm does the right thing is the neighbouring tests' job.
+/// </para>
+/// <para>
+/// <b>And it covers one hop of three.</b> A client send is covered by
+/// <c>EveryMessageAClientSendsIsSentTests</c>, the relay route by this file, and the client's own
+/// dispatch of what arrives — <c>AdmissionInbox</c> — by <b>no completeness sweep at all</b>. That
+/// third hop is the one with both incidents: BUG-42 was a consumer nothing routed to, BUG-43 a
+/// refusal swallowed in that same table. So this licenses "every type has a relay arm", never
+/// "every type is routed".
+/// </para>
 /// </remarks>
 public sealed class EveryMessageTypeHasARoutingArmTests
 {
@@ -61,17 +75,34 @@ public sealed class EveryMessageTypeHasARoutingArmTests
         Assert.NotEqual(RelayOutcome.UnrecognisedMessageType, decision.Outcome);
     }
 
-    // THE CONTROL, and without it the test above is worth nothing. If Route never returned
-    // UnrecognisedMessageType -- because the outcome was renamed, or the catch-all was removed --
-    // every row above would pass while asserting nothing. This proves the condition is reachable.
+    // THE CONTROL, and without it the universal above is worth nothing: if Route never returned
+    // UnrecognisedMessageType -- outcome renamed, catch-all deleted -- every row would pass while
+    // asserting nothing. This proves the outcome is PRODUCIBLE.
+    //
+    // IT DOES NOT REACH THE CATCH-ALL VIA AN UNDEFINED TYPE, and an earlier version of this test was
+    // named as though it did. Measured: EnvelopeCodec normalises through Enum.IsDefined, so
+    // {"Type":99} arrives as Unknown (0) and this exercises the SAME branch as
+    // UnknownBelongsInTheCatchAllRatherThanNeedingAnArm below. Two tests, one path -- kept apart
+    // because they assert different things about it, not because they take different routes.
+    //
+    // AND IT CANNOT BE MADE TO. WireEnvelope's constructor is private, there is no InternalsVisibleTo
+    // for this assembly, and the codec normalises before the router ever sees a value -- so no path
+    // can deliver an undefined type, and the `_` in `Unknown or _` is DEAD CODE reachable only if
+    // that normalisation changes. That fact is worth more than the test: anyone deleting the `_`
+    // should know it is unreachable today, and anyone loosening the codec should know it stops being
+    // unreachable the moment they do.
     [Fact]
-    public void ATypeThisBuildDoesNotKnowStillReachesTheCatchAll()
+    public void TheCatchAllOutcomeIsProducibleSoTheUniversalMeansSomething()
     {
         AJoinerIsWaiting();
 
-        // 99 is not a defined WireMessageType, so EnvelopeCodec maps it to Unknown -- a message from
-        // a newer client, which D-14 requires be tolerated rather than refused.
-        var decision = _router.Route(FrameOfType((WireMessageType)99), "joiner-1");
+        var frame = FrameOfType((WireMessageType)99);
+
+        // The normalisation, asserted rather than described -- this is the line that makes the name
+        // of this test honest.
+        Assert.Equal(WireMessageType.Unknown, frame.Type);
+
+        var decision = _router.Route(frame, "joiner-1");
 
         Assert.Equal(RelayOutcome.UnrecognisedMessageType, decision.Outcome);
         Assert.Equal(RelayAction.Drop, decision.Action);
