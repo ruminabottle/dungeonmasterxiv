@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
@@ -136,6 +137,13 @@ public sealed class SessionWindow : Window
 
             var audience = _coordinator.Audience;
             ImGui.TextUnformatted($"Players admitted: {audience.Count}");
+
+            // R-1.3f / A-1.13: the DM sees the display NAMES of everyone currently admitted. The
+            // count above is not that -- it says how many without saying who, which is the half the
+            // criterion is about. Read from the audience rather than from the broadcast roster,
+            // because the host AUTHORS the roster (D-3) and never receives one.
+            DrawRoster(audience.Recipients.Select(peer => (peer.DisplayName.Value, peer.Role)));
+
             if (audience.Count > audience.ConfirmedCount)
             {
                 ImGui.TextWrapped(
@@ -198,6 +206,31 @@ public sealed class SessionWindow : Window
     private bool InAHostedSession() =>
         _coordinator.Host.Phase is HostingPhase.Registering or HostingPhase.Hosting;
 
+    /// <summary>Renders who is in the session, for whichever side is asking.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>One renderer for both views on purpose.</b> The DM reads its own audience and a player
+    /// reads the roster the host sent, so the two arrive as different types from different places —
+    /// but what a participant LOOKS like must not depend on which side is drawing them. Two
+    /// renderers would be two places for the unknown-role rule to drift.
+    /// </para>
+    /// <para>
+    /// <b>An unrecognised role renders no label and the participant still appears</b>, per
+    /// <see cref="SessionRoleLabel"/>. The reasoning lives there because it is a decision about
+    /// meaning rather than about drawing.
+    /// </para>
+    /// </remarks>
+    private static void DrawRoster(IEnumerable<(string Name, SessionRole Role)> participants)
+    {
+        foreach (var (name, role) in participants)
+        {
+            // The name is a label and never an identity: names are self-declared and two people may
+            // hold the same one (A-1.2d), so nothing here keys on it or de-duplicates by it.
+            ImGui.TextUnformatted(
+                SessionRoleLabel.For(role) is { } label ? $"  {name} ({label})" : $"  {name}");
+        }
+    }
+
     private void DrawJoining()
     {
         var join = _coordinator.Join;
@@ -229,6 +262,28 @@ public sealed class SessionWindow : Window
         if (join.Phase == JoinPhase.Admitted && !join.FingerprintWasComparableAtDecision)
         {
             ImGui.TextWrapped(AdmittedUncompared);
+        }
+
+        // R-1.3f / A-1.13a: a joined player renders the roster the HOST authored and never
+        // originates one. Rebuilding on reconnect needs nothing here: the host republishes on
+        // admission rather than on change, so a client that comes back is re-admitted and sent the
+        // current roster instead of starting empty and waiting for changes it missed.
+        //
+        // A-1.14 is satisfied UPSTREAM, not by a check on this line. RelayRouter.ForwardPayload
+        // never forwards to a non-member, so an unadmitted client receives no roster and this
+        // renders nothing -- absent from the payload rather than filtered in the UI, which is what
+        // D-13's None requires and what makes the criterion assessable over what a client RECEIVES.
+        if (join.Phase == JoinPhase.Admitted && _coordinator.Roster.Count > 0)
+        {
+            // The heading is a CLAIM about what is below it and the reasoning lives with the
+            // value, in RosterHeading -- it is a decision about meaning, not about drawing. Held
+            // in Core because a source check on a window constant was defeated by leaving the
+            // constant honest and passing a literal here instead.
+            //
+            // The empty case renders nothing at all rather than a heading over no names, which
+            // would assert there are no players while the reader is one.
+            ImGui.TextUnformatted(RosterHeading.Text);
+            DrawRoster(_coordinator.Roster.Select(entry => (entry.DisplayName, entry.Role)));
         }
 
         // R-1.3h, the other direction: while this client is hosting there is no way to join. The
