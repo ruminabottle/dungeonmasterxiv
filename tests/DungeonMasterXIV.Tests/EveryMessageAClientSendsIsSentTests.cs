@@ -283,6 +283,12 @@ public class EveryMessageAClientSendsIsSentTests
     // The predicates must tell the two JoinRequest actions apart, or the relink row is satisfiable
     // by a plain join and this whole correction achieves nothing. Asserted against constructed
     // envelopes because it is a property of the PREDICATES, not of the production path.
+    //
+    // THIS IS LOAD-BEARING FOR DoingTheThingSendsTheMessage AND READS LIKE HYGIENE. That Theory's
+    // red ForRelinkRequest row means "the send does not happen" ONLY because this test rules out
+    // "the relink predicate matches nothing" -- which would redden the same row on a build where
+    // relink was sent correctly. Weakening, merging or deleting this does not tidy a neighbour; it
+    // makes that row's failure uninterpretable, and A-1.12a's demonstration goes with it.
     [Fact]
     public void APlainJoinAndARelinkClaimAreNotInterchangeable()
     {
