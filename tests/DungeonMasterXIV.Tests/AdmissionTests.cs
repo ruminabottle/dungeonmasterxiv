@@ -185,4 +185,30 @@ public class AdmissionTests
         Assert.Equal(SessionRole.Assistant, assistant.Role);
         Assert.Equal(SessionRole.Player, audience.Admit("PEER-2").Role);
     }
+
+    // R-1.3a-iii's forbidden half, asserted rather than trusted to a comment: what is carried is a
+    // CAPABILITY. Reporting it must not by itself record that anybody compared anything -- an
+    // acknowledgement of the human act is forgeable by the attacker it would defend against.
+    [Fact]
+    public void ReportingCapabilityIsNotItselfAConfirmation()
+    {
+        var request = Request();
+
+        request.JoinerReportedItCanCompare();
+
+        Assert.True(request.JoinerCouldCompare);
+        Assert.False(request.FingerprintConfirmed);
+        Assert.Equal(AdmissionVerification.NotCompared, request.Verification);
+    }
+
+    // A joiner that never reports stays exactly as it was -- an old build is not a refused one.
+    // Fails if: absence of the signal is treated as a denial rather than as "unknown".
+    [Fact]
+    public void AJoinerThatNeverReportsIsSimplyNotConfirmable()
+    {
+        var request = Request();
+
+        Assert.False(request.JoinerCouldCompare);
+        Assert.Equal(AdmissionVerification.NotCompared, request.Verification);
+    }
 }

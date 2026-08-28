@@ -91,6 +91,32 @@ public sealed class PendingAdmission
     /// <summary>Whether the DM has said the fingerprint matched. Starts false, always.</summary>
     public bool FingerprintConfirmed { get; private set; }
 
+    /// <summary>
+    /// Whether the joining client told us it received the host key and rendered a fingerprint
+    /// (R-1.3a-iii). False until it says so, which is what an older build looks like.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A CAPABILITY, and never an action.</b> R-1.3a-iii permits signalling that the client
+    /// COULD compare and forbids signalling that the human DID: an acknowledgement of the human act
+    /// travels the same channel as the comparison, so an attacker who substituted the host key
+    /// controls it and can forge it — worthless precisely when it matters, while displaying as
+    /// evidence. Nothing here claims anybody looked at anything.
+    /// </para>
+    /// <para>
+    /// <b>Its failure mode is an old build, not an attacker</b> — either an old client that ignores
+    /// the additive message (D-14), or, as actually happened, an old relay that dropped it. That is
+    /// BUG-33: the DM was shown a plausible code and invited to tick "the code matched" against a
+    /// joiner who had nothing on their screen.
+    /// </para>
+    /// </remarks>
+    public bool JoinerCouldCompare { get; private set; }
+
+    /// <summary>
+    /// The joining client reported that it holds the host key and has a fingerprint to read.
+    /// </summary>
+    public void JoinerReportedItCanCompare() => JoinerCouldCompare = true;
+
     /// <summary>How this admission will be recorded if accepted now.</summary>
     public AdmissionVerification Verification =>
         FingerprintConfirmed ? AdmissionVerification.Confirmed : AdmissionVerification.NotCompared;
@@ -100,7 +126,29 @@ public sealed class PendingAdmission
     /// <b>out of band</b> — voice, Discord, whatever the group already uses. It cannot be carried in
     /// the plugin, because a channel an attacker controls cannot verify that attacker.
     /// </summary>
-    public void ConfirmFingerprintMatched() => FingerprintConfirmed = true;
+    public void ConfirmFingerprintMatched()
+    {
+        // A-1.2f's refusal is NOT here yet, and that is deliberate rather than forgotten.
+        //
+        // T-29 ships the capability signal in the files it owns; APPLYING it to a pending request
+        // needs AdmissionControl and SessionCoordinator, which are T-43, held behind T-39. Until
+        // that lands nothing calls JoinerReportedItCanCompare, so JoinerCouldCompare is false for
+        // every request -- and refusing on it here would refuse EVERY confirmation, removing a
+        // working control instead of qualifying a misleading one. That is a worse product than
+        // BUG-33, arrived at while fixing it.
+        //
+        // The fail-safe default is what makes the order matter: absence of a receipt means "could
+        // not compare", correctly, because a relay that drops JoinPending can drop a receipt too.
+        // Safe defaults and a missing receiver compose into "always refuse", so the refusal lands
+        // with the receiver in T-43.
+        //
+        // T-43 MUST NOT EXPRESS THAT REFUSAL AS A RETURN VALUE. This method returned bool for one
+        // revision and the only caller -- AdmissionPromptView.cs:97 -- discarded it, so a false
+        // would have been silently dropped and A-1.2f would have READ AS IMPLEMENTED WHILE BEHAVING
+        // AS ABSENT. A seam whose mechanism is a value nobody reads is not a seam. Whatever T-43
+        // uses has to be something a caller cannot ignore by doing nothing.
+        FingerprintConfirmed = true;
+    }
 
     /// <summary>How long the requester has left, for the countdown R-1.3c requires while it runs.</summary>
     public TimeSpan RemainingAt(DateTimeOffset now) => Deadline.RemainingAt(now);

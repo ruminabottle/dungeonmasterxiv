@@ -303,6 +303,36 @@ public sealed record WireEnvelope
         Type == WireMessageType.JoinPending ? HostPublicKey : null;
 
     /// <summary>
+    /// Joiner to host: this client holds the host's key and can render a fingerprint (R-1.3a-iii).
+    /// </summary>
+    /// <remarks>
+    /// Carries the joiner's own key so the host can tell WHICH pending request it belongs to — the
+    /// same identifier every other message in this exchange is addressed by, and the only thing that
+    /// names a requester (D-8 forbids a durable one).
+    /// </remarks>
+    /// <param name="code">The session being joined.</param>
+    /// <param name="joinerPublicKey">The requester's key, as it appeared on its join request.</param>
+    public static WireEnvelope ForJoinerCanCompare(SessionCode code, byte[] joinerPublicKey)
+    {
+        ArgumentNullException.ThrowIfNull(joinerPublicKey);
+        return new WireEnvelope(WireMessageType.JoinerCanCompare, code.Value)
+        {
+            PublicKey = joinerPublicKey,
+        };
+    }
+
+    /// <summary>
+    /// The joiner's key from a capability report, or null if this is not one.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not folded into <see cref="TryGetAdmissionOutcome"/>: this decides nothing about
+    /// the admission, and a consumer that could read it as an outcome would be reading a capability
+    /// as an answer.
+    /// </remarks>
+    public byte[]? TryGetCanCompareKey() =>
+        Type == WireMessageType.JoinerCanCompare ? PublicKey : null;
+
+    /// <summary>
     /// The admission outcome this envelope expresses, or null if it is not an admission answer.
     /// Consumers go through <see cref="AdmissionOutcome.Match{T}"/>, so none can drop a case.
     /// </summary>

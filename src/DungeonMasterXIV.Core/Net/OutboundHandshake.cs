@@ -30,6 +30,7 @@ internal sealed class OutboundHandshake
     private string? _requestedJoinCode;
     private DisplayName _joinDisplayName;
     private Guid? _claimedParticipantId;
+    private string? _reportedCanCompareFor;
 
     /// <summary>Wires the handshake to the state it reads and the link it sends down.</summary>
     /// <param name="link">The connection. Reports readiness; never decides.</param>
@@ -87,13 +88,56 @@ internal sealed class OutboundHandshake
     /// R-1.3c makes that the ordinary case — a lapse means the DM was mid-encounter, not that they
     /// refused. The host's equivalent never needs it because R-1.2a regenerates on every refusal.
     /// </remarks>
-    public void ForgetJoinRequest() => _requestedJoinCode = null;
+    public void ForgetJoinRequest()
+    {
+        _requestedJoinCode = null;
+        _reportedCanCompareFor = null;
+    }
 
     /// <summary>Sends whichever requests are due. Called once per frame.</summary>
     public void SendWhatIsDue()
     {
         RegisterWithRelayWhenReady();
         SendJoinRequestWhenReady();
+        ReportWeCanCompareWhenWeCan();
+    }
+
+    /// <summary>
+    /// Tells the host this client holds its key and has a fingerprint to read (R-1.3a-iii).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Gated on the fingerprint EXISTING, which is what makes it a receipt.</b> The simpler
+    /// design declares the capability in the original join request — but the deployed relay was
+    /// v0.1.0 and dropped <see cref="WireMessageType.JoinPending"/>, so a declaring client would
+    /// have told the host "they can compare" while the notice was silently eaten. That is BUG-33,
+    /// and it is why this reads <see cref="JoinAttempt.Fingerprint"/> rather than a flag set when
+    /// the request went out.
+    /// </para>
+    /// <para>
+    /// <b>Capability only.</b> Nothing here says a human compared anything — R-1.3a-iii forbids
+    /// that, because an acknowledgement of the human act travels the same channel as the comparison
+    /// and an attacker who substituted the key can forge it.
+    /// </para>
+    /// <para>
+    /// Sent once per code, and re-armed when a new join begins, for the same reason the join request
+    /// is: asking again for the same code is the ordinary case under R-1.3c.
+    /// </para>
+    /// </remarks>
+    private void ReportWeCanCompareWhenWeCan()
+    {
+        if (_join.Phase is not (JoinPhase.Contacting or JoinPhase.AwaitingDecision)
+            || _join.Fingerprint is null
+            || _join.Code is not { } code
+            || _joinerKeys() is not { } keys
+            || string.Equals(_reportedCanCompareFor, code.Value, StringComparison.Ordinal)
+            || !_link.IsReadyToSend)
+        {
+            return;
+        }
+
+        _reportedCanCompareFor = code.Value;
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinerCanCompare(code, keys.PublicKey)));
     }
 
     /// <summary>
