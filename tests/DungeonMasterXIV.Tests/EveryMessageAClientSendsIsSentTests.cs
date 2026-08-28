@@ -213,6 +213,25 @@ public class EveryMessageAClientSendsIsSentTests
     }
 
     // A-1.12a itself, per FACTORY rather than per message type.
+    //
+    // A RED ROW HERE IS AMBIGUOUS ON ITS OWN, AND APlainJoinAndARelinkClaimAreNotInterchangeable IS
+    // WHAT RESOLVES IT. "The ForRelinkRequest row is red" has two readings: the send does not happen,
+    // or the relink PREDICATE matches nothing -- and the second would hold even if relink were being
+    // sent correctly. That test excludes the second reading by proving the two predicates are not
+    // interchangeable, so only the first survives. It does not sit beside this test; IT LICENSES
+    // THIS TEST'S RESULT.
+    //
+    // Which is why A-1.12a's demonstration -- "for any two distinct actions, show a run where one is
+    // absent and the check reddens WHILE THE OTHER IS PRESENT" -- is discharged by the pair and not
+    // by either alone. This Theory supplies the run: ForRelinkRequest red and ForJoinRequest green
+    // in one execution, each row driving the production entry point. The other supplies the reason
+    // that contrast means what it appears to mean.
+    //
+    // THE DEPENDENCY IS WRITTEN DOWN BECAUSE IT IS INVISIBLE FROM EITHER SIDE. Read this Theory and
+    // you see a red row; read the other and you see predicate hygiene. Neither says the first
+    // depends on the second, and that is exactly the kind of relationship that lives in nobody's
+    // head six weeks from now. Anyone weakening, merging or deleting that test is not tidying a
+    // neighbour -- they are removing the thing that makes this row's failure interpretable.
     [Theory]
     [MemberData(nameof(ClientSent))]
     public void DoingTheThingSendsTheMessage(string factory)
