@@ -62,6 +62,12 @@ public sealed class RelayRouter(SessionRegistry registry)
             // joiner in the same call. A message that answers nothing must move no gate.
             WireMessageType.JoinPending => RouteJoinPending(envelope, code, senderConnectionId),
 
+            // The joiner telling the host it holds the host's key and has a fingerprint to read
+            // (R-1.3a-iii). Travels joiner -> host like a join request, and moves no gate: the
+            // joiner is already pending and this answers nothing.
+            WireMessageType.JoinerHoldsFingerprint =>
+                RouteFingerprintReceipt(envelope, code, senderConnectionId),
+
             // CodeAccepted and CodeRefused are the relay's own answers. A client sending one is not
             // a case the plugin can produce, so it is something hand-rolled talking to us, and the
             // relay must not launder it onward as though it had arbitrated.
@@ -217,6 +223,55 @@ public sealed class RelayRouter(SessionRegistry registry)
         return _registry.TryGetPending(code.Value, envelope.PublicKey, out var waiting)
             ? RelayDecision.Forward(RelayOutcome.PendingNoticeForwarded, [waiting])
             : RelayDecision.Drop(RelayOutcome.UnknownJoiner);
+    }
+
+    /// <summary>
+    /// Carries a joiner's report that it can render a fingerprint to the host of that session
+    /// (R-1.3a-iii), and to nobody else.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This arm exists because its absence is invisible.</b> Every part of this receipt was built
+    /// and tested on the client — the joiner sends it, the host has somewhere to put it — and the
+    /// relay in between would have dropped it to
+    /// <see cref="RelayOutcome.UnrecognisedMessageType"/> under D-14's catch-all, which is correct
+    /// behaviour for a message from the future and silent ruin for one from the present. That is
+    /// exactly what happened to <see cref="WireMessageType.JoinPending"/> and became BUG-33.
+    /// </para>
+    /// <para>
+    /// <b>Narrowed to the host, like a join request.</b> Who is trying to join and what their client
+    /// can do stays off every other member's wire (D-3, D-8); only the DM decides who is at the
+    /// table, so only the DM needs it.
+    /// </para>
+    /// <para>
+    /// <b>It moves no gate.</b> The joiner is already pending and this reports a capability rather
+    /// than answering anything — the same reason <see cref="RouteJoinPending"/> is its own arm
+    /// rather than <see cref="RouteAdmission"/> with a flag.
+    /// </para>
+    /// </remarks>
+    private RelayDecision RouteFingerprintReceipt(
+        WireEnvelope envelope,
+        SessionCode code,
+        string senderConnectionId)
+    {
+        if (!_registry.TryGetHost(code.Value, out var hostConnectionId))
+        {
+            return RelayDecision.Drop(RelayOutcome.SessionNotFound);
+        }
+
+        // A host cannot report holding its own key. Anything sending this from the host's connection
+        // is not the plugin, and the relay does not launder it onward.
+        if (string.Equals(hostConnectionId, senderConnectionId, StringComparison.Ordinal))
+        {
+            return RelayDecision.Drop(RelayOutcome.RelayOnlyMessageFromClient);
+        }
+
+        if (envelope.PublicKey is null)
+        {
+            return RelayDecision.Drop(RelayOutcome.MalformedEnvelope);
+        }
+
+        return RelayDecision.Forward(RelayOutcome.JoinForwardedToHost, [hostConnectionId]);
     }
 
     /// <summary>

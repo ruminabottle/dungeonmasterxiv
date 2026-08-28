@@ -117,7 +117,7 @@ public class EveryMessageAClientSendsIsSentTests
                 s.Coordinator.Tick(TimeSpan.Zero, Now + TimeSpan.FromHours(1));
             }),
 
-        [WireMessageType.JoinerCanCompare] = new(
+        [WireMessageType.JoinerHoldsFingerprint] = new(
             Origin.Client,
             "the joiner reports it holds the host key and can render a fingerprint (R-1.3a-iii)",
             s =>
