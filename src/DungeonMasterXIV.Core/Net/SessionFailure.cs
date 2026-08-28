@@ -78,6 +78,25 @@ public enum SessionFailure
     /// </para>
     /// </remarks>
     ConnectionNeverOpened = 8,
+
+    /// <summary>
+    /// The host's acceptance carried a public key this client cannot agree with (BUG-59).
+    /// </summary>
+    /// <remarks>
+    /// The mirror of BUG-56, at the other end of the exchange: that one stopped a host admitting a
+    /// joiner whose key it could never use, this one stops a joiner deriving from a host key it
+    /// cannot use. Distinct from every value above because <b>nothing about the connection is
+    /// wrong</b> — the relay is reachable, the socket is open, the frame decoded, and the DM said
+    /// yes. Reporting it as any kind of connection failure would send the user to their router over
+    /// a session that was never cryptographically possible.
+    /// <para>
+    /// <b>What this client has established, and no more (A-1.5j).</b> It knows the key on the
+    /// acceptance cannot be agreed with. It does <b>not</b> know whether the host is broken, the
+    /// relay tampered, or the two ends are on different builds — those are indistinguishable from
+    /// here, and the sentence says so rather than picking one.
+    /// </para>
+    /// </remarks>
+    HostKeyUnusable = 9,
 }
 
 /// <summary>
@@ -140,6 +159,21 @@ public static class SessionFailureMessage
             "The relay accepted the connection but never confirmed the session code. The relay is "
             + "reachable, so this is not your network — try starting the session again, and if it "
             + "keeps happening the relay is not answering registrations.",
+        // BUG-59. Constrained rather than transcribed: R-1.7a governs only the strings it QUOTES, so
+        // this is engineering-authored under A-1.7e, and A-1.5j bounds what it may assert.
+        //
+        // It says the answer could not be used, and REFUSES TO SAY WHY, because this client cannot
+        // tell a broken host from a tampering relay from a version skew. It names no network — the
+        // relay is reachable, so blaming it would be false and exonerating it is the BUG-49 mistake
+        // in the other direction. It claims no protection (D-8): there is no session to protect.
+        // "You can ask to join again" is true at the moment it is shown — MayRequestAgain includes
+        // Failed — and TheRetryOfferIsTrueWhenItIsShown asserts that rather than trusting it.
+        SessionFailure.HostKeyUnusable =>
+            "The host's answer to your request could not be used: it carried a key this plugin "
+            + "cannot agree with, so no shared key was established and you have not joined. This "
+            + "does not say why — a host running a different build, and something altering the "
+            + "answer on the way, look the same from here and this client cannot tell them apart. "
+            + "You can ask to join again.",
         _ => string.Empty,
     };
 }

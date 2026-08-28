@@ -316,6 +316,25 @@ public sealed class AdmissionInbox
         outcome.Match(
             onAccepted: hostPublicKey =>
             {
+                // BUG-59, AND THE GUARD IS BEFORE Admitted() ON PURPOSE. The host's key is as
+                // untrusted as the joiner's was in BUG-56, and it reaches here by controlling the
+                // RELAY — the position D-11 assumes an attacker may occupy. Guarding the derive
+                // alone was measured and is wrong: Admitted() would still run, leaving
+                // Phase=Admitted with a null SessionKey and MayReceiveSessionState true, which is
+                // the silently-unreachable participant BUG-56 exists to remove, rebuilt here.
+                //
+                // Failing rather than dropping is a ruling, not a default. Dropping cannot be
+                // neutral because NOTHING LAPSES A JOINER LOCALLY: the only Lapsed() call is the
+                // arm below, driven by the host, and a host that sent an acceptance believes this
+                // client is in and never sends one. A dropped acceptance leaves the joiner in
+                // AwaitingDecision showing a dead countdown indefinitely — A-1.5j applied to UI
+                // state, which is why this reports instead.
+                if (!SessionKeyExchange.CanAgreeWith(hostPublicKey))
+                {
+                    attempt.Fail(SessionFailure.HostKeyUnusable);
+                    return null;
+                }
+
                 attempt.Admitted();
                 return keys is not null && attempt.Code is { } code
                     ? keys.DeriveSharedKey(hostPublicKey, code)
