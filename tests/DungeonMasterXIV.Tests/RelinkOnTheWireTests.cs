@@ -16,6 +16,8 @@ public class RelinkOnTheWireTests
 
     private static readonly byte[] AKey = { 4, 5, 6 };
 
+    private static readonly byte[] HostKey = { 7, 8, 9 };
+
     // The raw frames below hardcode Type:4 because a compatibility fixture has to pin the number an
     // older peer actually sent -- deriving it from the enum would make the fixture follow a renumber
     // instead of catching one. This asserts the two still agree, so a renumber fails loudly here
@@ -80,14 +82,35 @@ public class RelinkOnTheWireTests
 
     // Nothing was renamed, removed or repurposed -- the other half of D-14-additive. Fails if the
     // new field displaced any field an existing peer relies on.
+    //
+    // SPLIT IN TWO BY DMXENG-41, and the split is the honest version rather than a mechanical
+    // repair. This used to assert all three fields on ONE JoinRequest frame, stamped with a
+    // deadline through a ForJoinRequest overload that had NO PRODUCTION CALLER -- so the deadline
+    // half was asserting that a field survived on a message no peer has ever received. Each field
+    // is now checked on the message that actually carries it, which is what "a field an existing
+    // peer relies on" has to mean.
     [Fact]
     public void TheFieldsAnExistingPeerRelesOnAreUntouched()
     {
-        var deadline = AdmissionDeadline.DecidedByHost(new DateTimeOffset(2026, 8, 27, 3, 0, 0, TimeSpan.Zero));
-        var frame = EnvelopeCodec.Encode(WireEnvelope.ForJoinRequest(Code, AKey, deadline));
+        var frame = EnvelopeCodec.Encode(WireEnvelope.ForJoinRequest(Code, AKey));
 
         Assert.True(EnvelopeCodec.TryDecode(frame, out var decoded));
         Assert.Equal(AKey, decoded!.PublicKey);
+        Assert.Equal("BKD7RM", decoded.SessionCode);
+    }
+
+    // The deadline half, on the message that carries it. Keeping this is the point: deleting the
+    // dead overload must not delete the coverage that the deadline field itself still survives a
+    // round trip beside the newly added claim field.
+    [Fact]
+    public void TheDeadlineFieldIsUntouchedOnTheMessageThatCarriesIt()
+    {
+        var deadline = AdmissionDeadline.DecidedByHost(new DateTimeOffset(2026, 8, 27, 3, 0, 0, TimeSpan.Zero));
+        var frame = EnvelopeCodec.Encode(WireEnvelope.ForJoinPending(Code, AKey, HostKey, deadline));
+
+        Assert.True(EnvelopeCodec.TryDecode(frame, out var decoded));
+        Assert.Equal(AKey, decoded!.PublicKey);
+        Assert.Equal(HostKey, decoded.HostPublicKey);
         Assert.Equal(deadline.UtcTicks, decoded.DeadlineUtcTicks);
         Assert.Equal("BKD7RM", decoded.SessionCode);
     }

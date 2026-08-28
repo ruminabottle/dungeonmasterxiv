@@ -77,8 +77,14 @@ public class AdmissionDeadlineTests
     public void TheDeadlineSurvivesTheWire()
     {
         using var joiner = new SessionKeyExchange();
+        using var host = new SessionKeyExchange();
         var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
-        var stamped = WireEnvelope.ForJoinRequest(Code, joiner.PublicKey, deadline);
+
+        // Built through ForJoinPending, the ONLY message that carries a deadline (DMXENG-41). It
+        // used to be built through a ForJoinRequest overload that had no production caller -- so
+        // this asserted the round trip over a shape nothing ever sent. Now it asserts it over the
+        // shape that actually travels, which is what "survives the wire" was always meant to mean.
+        var stamped = WireEnvelope.ForJoinPending(Code, joiner.PublicKey, host.PublicKey, deadline);
 
         Assert.True(EnvelopeCodec.TryDecode(EnvelopeCodec.Encode(stamped), out var received));
 
@@ -116,8 +122,10 @@ public class AdmissionDeadlineTests
     public void ADeadlineInsideTheRepresentableRangeStillArrives()
     {
         using var joiner = new SessionKeyExchange();
+        using var host = new SessionKeyExchange();
         var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
-        var wire = EnvelopeCodec.Encode(WireEnvelope.ForJoinRequest(Code, joiner.PublicKey, deadline));
+        var wire = EnvelopeCodec.Encode(
+            WireEnvelope.ForJoinPending(Code, joiner.PublicKey, host.PublicKey, deadline));
 
         Assert.True(EnvelopeCodec.TryDecode(wire, out var received));
 

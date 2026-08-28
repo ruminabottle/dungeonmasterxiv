@@ -158,20 +158,6 @@ public sealed record WireEnvelope
     }
 
     /// <summary>
-    /// The same join request, stamped by the DM's client with the instant its window closes. Only
-    /// the host decides this; a joining client is told (R-1.3c).
-    /// </summary>
-    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey, AdmissionDeadline deadline)
-    {
-        ArgumentNullException.ThrowIfNull(publicKey);
-        return new WireEnvelope(WireMessageType.JoinRequest, code.Value)
-        {
-            PublicKey = publicKey,
-            DeadlineUtcTicks = deadline.UtcTicks,
-        };
-    }
-
-    /// <summary>
     /// A join request from a returning client, claiming a participant it believes is its own (R-1.5).
     /// </summary>
     /// <remarks>
@@ -268,6 +254,26 @@ public sealed record WireEnvelope
     /// The joiner's key is echoed for the same reason <see cref="ForJoinAccepted"/> echoes it: a
     /// client may have more than one attempt outstanding and has to know which one this answers.
     /// </para>
+    /// <para>
+    /// <b>THIS IS THE ONLY MESSAGE THAT CARRIES THE DEADLINE, and two things about it survive the
+    /// deletion of the second route (DMXENG-41).</b> A <c>ForJoinRequest</c> overload used to stamp
+    /// one too; it had no production caller and the Spec Owner ruled that R-1.3c names an observable
+    /// state of the joining player rather than a carrier, so it went.
+    /// </para>
+    /// <list type="number">
+    /// <item>
+    /// <b>The deadline is the HOST's instant, not a duration the joiner counts.</b> R-1.3c and
+    /// R-1.3a's prompt expiry are the same window seen from two sides and must not drift apart. A
+    /// joiner counting its own fifteen minutes locally would satisfy "bounded" and violate that —
+    /// two clocks pretending to be one, as <see cref="AdmissionDeadline"/> puts it. D-3 requires it
+    /// anyway: the host authors shared state.
+    /// </item>
+    /// <item>
+    /// <b>The bound must be visible DURING the wait, not merely enforced at its end.</b> R-1.3c asks
+    /// for the joining player to SEE that the wait is bounded while it is happening. Carrying the
+    /// instant here is what makes that possible; rendering it is the window's job.
+    /// </item>
+    /// </list>
     /// </remarks>
     /// <param name="code">The session being joined.</param>
     /// <param name="joinerPublicKey">The requester's key, echoed so they can match it to their attempt.</param>
