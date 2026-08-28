@@ -66,7 +66,11 @@ public sealed class Plugin : IDalamudPlugin
         var characterName = new LocalCharacterName(objects).Current;
 
         _configWindow = new ConfigWindow(_configurationStore, characterName);
-        _relayTransport = new WebSocketSessionTransport(new SessionTransportLog(log));
+        // ONE adapter, TWO consumers. The coordinator needs it so that a roster entry dropped on
+        // the way in is observable to a developer rather than silent (BUG-70) -- the codec has said
+        // so since #120, but nothing production-side was listening until this line existed.
+        var sessionLog = new SessionTransportLog(log);
+        _relayTransport = new WebSocketSessionTransport(sessionLog);
         // A-1.23/A-1.27: the ONE settable value, read from settings and validated on the way out
         // rather than trusted from disk. This is the only production construction of the
         // coordinator, so this is the only place the windows can get their length -- which is what
@@ -74,7 +78,8 @@ public sealed class Plugin : IDalamudPlugin
         _sessionCoordinator = new SessionCoordinator(
             _relayTransport,
             () => _configurationStore.Configuration.Settings.RelayAddress,
-            _configurationStore.Configuration.Settings.InterruptionWindowOrDefault());
+            _configurationStore.Configuration.Settings.InterruptionWindowOrDefault(),
+            log: sessionLog);
         // The alias if the player set a usable one, otherwise the character name (R-1.3e). The rule
         // lives in PluginSettings so it is testable without Dalamud, and the settings window calls
         // the same method to show what will be sent -- one expression, so the preview cannot drift
