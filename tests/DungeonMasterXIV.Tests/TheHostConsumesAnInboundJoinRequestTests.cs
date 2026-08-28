@@ -155,36 +155,45 @@ public class TheHostConsumesAnInboundJoinRequestTests
 
     // A-1.2d, the half that is reachable today. The criterion is "two concurrent requesters sending
     // the SAME display name remain distinguishable, and admitting one does not admit the other" --
-    // and it says that is a case which WILL occur, because a name is self-declared and nothing
-    // verifies it.
+    // a case which WILL occur, because a name is self-declared and nothing verifies it.
     //
     // The display name does not exist yet: nothing in production carries one and putting it on the
     // wire is outside this fix's boundary. What IS testable now is the half that makes the criterion
-    // satisfiable at all -- the requesters are told apart by something the name cannot collide with,
-    // and the DM's decision lands on exactly one of them. If admission were keyed on anything a
-    // duplicate name could collapse, this fails.
-    [Fact]
-    public void AdmittingOneRequesterDoesNotAdmitTheOther()
+    // satisfiable at all -- the requesters are told apart by something a duplicate name cannot
+    // collapse, and the DM's decision lands on exactly the one they chose.
+    //
+    // BOTH POSITIONS, and that is the whole point of the Theory. The first version of this test
+    // admitted whichever requester arrived FIRST, and it passed with the peer-code lookup replaced
+    // by `_pending.FirstOrDefault()` -- ignoring the code entirely. Admitting the head of the list
+    // is the right answer for the wrong reason, so the test was order-dependent where A-1.2d is
+    // entirely about the code. Running both positions makes that blindness unrepresentable rather
+    // than fixed once: a future change to _pending's ordering cannot quietly restore it.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void AdmittingOneRequesterDoesNotAdmitTheOther(int admitted)
     {
         var (coordinator, transport) = Hosting();
         using var first = new SessionKeyExchange();
         using var second = new SessionKeyExchange();
+        var keys = new[] { first.PublicKey, second.PublicKey };
 
         transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, first.PublicKey));
         transport.Deliver(WireEnvelope.ForJoinRequest(coordinator.Host.Code!.Value, second.PublicKey));
         coordinator.Tick(TimeSpan.Zero, Now);
 
-        var admitted = coordinator.Admissions.Pending
-            .Single(p => p.JoinerPublicKey!.SequenceEqual(first.PublicKey));
-        coordinator.Admit(admitted.PeerCode);
+        var chosen = coordinator.Admissions.Pending
+            .Single(p => p.JoinerPublicKey!.SequenceEqual(keys[admitted]));
+        coordinator.Admit(chosen.PeerCode);
 
         // The other is still waiting on the DM, not silently let in alongside.
         var stillPending = Assert.Single(coordinator.Admissions.Pending);
-        Assert.Equal(second.PublicKey, stillPending.JoinerPublicKey);
+        Assert.Equal(keys[1 - admitted], stillPending.JoinerPublicKey);
 
-        // And exactly one acceptance went out, addressed to the one the DM chose.
+        // And exactly one acceptance went out, addressed to the one the DM chose -- not merely to
+        // someone. A lookup that ignores the peer code fails here on admitted: 1.
         var accepted = Sent(transport).Where(e => e.Type == WireMessageType.JoinAccepted).ToList();
-        Assert.Equal(first.PublicKey, Assert.Single(accepted).PublicKey);
+        Assert.Equal(keys[admitted], Assert.Single(accepted).PublicKey);
     }
 
     // A client that is not hosting must not build prompts out of traffic addressed to a host.
