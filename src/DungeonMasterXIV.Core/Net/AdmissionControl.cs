@@ -182,7 +182,15 @@ public sealed class AdmissionControl
     public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
     {
         var request = Desk.Decide(peerCode);
-        var peer = Audience.Admit(peerCode, role, request?.Verification ?? AdmissionVerification.NotCompared);
+        // The key and the name come from the request that is being answered, which is the only
+        // place they exist. Taken here rather than defaulted, because a peer admitted without a key
+        // is one the host can route to and never speak to — see AdmittedPeer.PublicKey.
+        var peer = Audience.Admit(
+            peerCode,
+            role,
+            request?.Verification ?? AdmissionVerification.NotCompared,
+            request?.JoinerPublicKey,
+            request?.DisplayName ?? DisplayName.None);
 
         if (_hostCode() is { } code && _hostKeys() is { } hostKeys && request?.JoinerPublicKey is { } joinerKey)
         {

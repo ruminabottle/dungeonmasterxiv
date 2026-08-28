@@ -25,14 +25,32 @@ public sealed class SessionCoordinator
             () => Host.Code,
             () => HostKeys);
         _handshake = new OutboundHandshake(_link, Host, Join, () => JoinerKeys);
+        _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code);
     }
 
     private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
+    private readonly RosterBroadcast _roster;
+    private IReadOnlyList<RosterEntry> _receivedRoster = [];
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
     private JoinPhase _tickedJoinPhase = JoinPhase.Idle;
+
+    /// <summary>
+    /// Who this client believes is in the session (R-1.3f).
+    /// </summary>
+    /// <remarks>
+    /// <b>On the HOST this stays empty, and that is not an oversight.</b> The host authors the
+    /// roster from <see cref="Audience"/> and never receives one — D-3 makes it the author, so a
+    /// host reading its own broadcast back would be believing a copy of what it already knows. This
+    /// is what a PLAYER was told, which is the only place the distinction matters.
+    /// <para>
+    /// <b>Replaced, never merged.</b> A participant who left is gone because the next roster does
+    /// not list them, rather than lingering until a removal message that may never arrive.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<RosterEntry> Roster => _receivedRoster;
 
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();
@@ -194,16 +212,30 @@ public sealed class SessionCoordinator
     public void ReceiveJoinRequest(PendingAdmission request) => _admissions.Receive(request);
 
     /// <summary>Builds and records a request from what arrived on the wire.</summary>
+    /// <param name="peerCode">The requester's session-scoped code.</param>
+    /// <param name="joinerPublicKey">The key they presented (D-11).</param>
+    /// <param name="now">The current instant, for the admission deadline.</param>
+    /// <param name="relink">What this client resolved about a claimed participant, if anything.</param>
+    /// <param name="displayName">What they call themselves (R-1.3e). Shown, never acted on.</param>
     public PendingAdmission? ReceiveJoinRequest(
         string peerCode,
         byte[] joinerPublicKey,
         DateTimeOffset now,
-        RelinkClaim relink = default) =>
-        _admissions.Receive(peerCode, joinerPublicKey, now, relink);
+        RelinkClaim relink = default,
+        DisplayName displayName = default) =>
+        _admissions.Receive(peerCode, joinerPublicKey, now, relink, displayName);
 
     /// <summary>Admits the pending participant (R-1.3, D-13).</summary>
-    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player) =>
-        _admissions.Admit(peerCode, role);
+    public AdmittedPeer Admit(string peerCode, SessionRole role = SessionRole.Player)
+    {
+        var peer = _admissions.Admit(peerCode, role);
+
+        // Published on the ADMISSION rather than on the roster changing, which is what A-1.13a
+        // needs: a client reconnecting mid-session is re-admitted and must receive the CURRENT
+        // roster even though nothing about the membership is new to the host.
+        _roster.Publish();
+        return peer;
+    }
 
     /// <summary>Declines the pending participant (R-1.3, D-13).</summary>
     public void Deny(string peerCode) => _admissions.Deny(peerCode);
@@ -280,7 +312,14 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         ApplyReportedFailure();
-        SessionKey = _inbox.Drain(Join, JoinerKeys, Host, (key, name) => _admissions.AdmitToTheQueue(key, now, name))
+        SessionKey = _inbox.Drain(
+            Join,
+            JoinerKeys,
+            Host,
+            new InboundHandlers(
+                OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
+                OpenWith: SessionKey,
+                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster))
             ?? SessionKey;
         _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);
