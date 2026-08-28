@@ -223,16 +223,28 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     /// <summary>The window's source with comment lines removed.</summary>
     /// <remarks>
     /// <para>
-    /// Stripped because this file's own commentary names <c>DrawRoster</c> and
-    /// <c>SessionRoleLabel</c> while explaining them, and a count that includes prose counts the
-    /// explanation as a second implementation.
+    /// Stripped because a window's own commentary naturally names the symbols these counts match,
+    /// and a count that includes prose counts the explanation as a second implementation.
+    /// </para>
+    /// <para>
+    /// <b>It is a PRECAUTION, not currently load-bearing, and that is measured rather than
+    /// assumed.</b> Today the stripping changes NO count: every pattern this class matches yields
+    /// the same number against raw and against stripped source, and disabling it reddens nothing.
+    /// Said plainly because the opposite is easy to assume and I did assume it once here.
+    /// </para>
+    /// <para>
+    /// The near miss worth knowing, since it is why the count is unchanged rather than luck:
+    /// <c>SessionRoleLabel</c> appears twice under <c>Windows/</c>, once in prose and once in code,
+    /// but the counted pattern requires the trailing dot of a CALL. It is the pattern, not the
+    /// stripping, that currently excludes the prose. A comment written with the dot would be
+    /// counted, which is the day this paragraph stops being about a precaution.
     /// </para>
     /// <para>
     /// <b>Which families this handles, said plainly so the next reader does not assume more.</b> It
     /// removes lines whose TRIMMED START is <c>//</c> — line comments and XML-doc comments. It does
     /// NOT remove block comments or a trailing comment after code. Both of those INFLATE the counts
     /// above, so their failure direction is a false FAIL, which is the safe one. The one narrow
-    /// false-PASS is <c>BothSidesCallIt</c>'s <c>&gt;= 3</c>, part of which a commented-out call
+    /// false-PASS is <c>BothSidesCallIt</c>'s <c>&gt;= 2</c>, part of which a commented-out call
     /// could supply.
     /// </para>
     /// </remarks>
