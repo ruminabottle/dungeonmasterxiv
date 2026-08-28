@@ -62,8 +62,20 @@ distinction is deliberate, and no wording on this page will blur it.
 ## What it can see
 
 A relay that forwards your messages inherently sees **that you are connected**: your network address,
-when you connected, how much traffic and how often, and which session code you are on. It cannot see
-what any of it says.
+when you connected, how much traffic and how often, and which session code you are on.
+
+**And it sees your character name when you ask to join a session.** [corrected 2026-08-28]
+
+Your client reads your character name from the game and sends it with the join request, **in the
+clear**. The DM has to see who is knocking in order to decide, and at that moment the two of you have
+not yet exchanged keys — there is nothing to encrypt it to. Everything you say *inside* a session is
+sealed and the relay cannot open it. **The joining name is the exception, it is the only one, and this
+page claimed otherwise until now.**
+
+**You cannot currently change it.** The ability to send a different name instead is specified and is
+not yet built. Until it ships, **asking to join a session tells the relay operator your character
+name, and you have no way to prevent that except not joining.** We would rather say that plainly than
+describe a control you do not have.
 
 **"Not stored" is not "not observed."** Those are different claims and we are making the first one.
 An operator who wanted to watch traffic in real time could see the shape of your session — when you
