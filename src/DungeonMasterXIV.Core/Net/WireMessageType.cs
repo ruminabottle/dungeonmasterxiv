@@ -90,5 +90,5 @@ public enum WireMessageType
     /// it matters, while displaying as evidence.
     /// </para>
     /// </remarks>
-    JoinerCanCompare = 10,
+    JoinerHoldsFingerprint = 10,
 }

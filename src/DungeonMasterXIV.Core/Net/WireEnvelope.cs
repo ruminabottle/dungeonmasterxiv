@@ -312,10 +312,10 @@ public sealed record WireEnvelope
     /// </remarks>
     /// <param name="code">The session being joined.</param>
     /// <param name="joinerPublicKey">The requester's key, as it appeared on its join request.</param>
-    public static WireEnvelope ForJoinerCanCompare(SessionCode code, byte[] joinerPublicKey)
+    public static WireEnvelope ForJoinerHoldsFingerprint(SessionCode code, byte[] joinerPublicKey)
     {
         ArgumentNullException.ThrowIfNull(joinerPublicKey);
-        return new WireEnvelope(WireMessageType.JoinerCanCompare, code.Value)
+        return new WireEnvelope(WireMessageType.JoinerHoldsFingerprint, code.Value)
         {
             PublicKey = joinerPublicKey,
         };
@@ -330,7 +330,7 @@ public sealed record WireEnvelope
     /// as an answer.
     /// </remarks>
     public byte[]? TryGetCanCompareKey() =>
-        Type == WireMessageType.JoinerCanCompare ? PublicKey : null;
+        Type == WireMessageType.JoinerHoldsFingerprint ? PublicKey : null;
 
     /// <summary>
     /// The admission outcome this envelope expresses, or null if it is not an admission answer.

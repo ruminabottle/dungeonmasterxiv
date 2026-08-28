@@ -137,7 +137,7 @@ internal sealed class OutboundHandshake
         }
 
         _reportedCanCompareFor = code.Value;
-        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinerCanCompare(code, keys.PublicKey)));
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinerHoldsFingerprint(code, keys.PublicKey)));
     }
 
     /// <summary>
