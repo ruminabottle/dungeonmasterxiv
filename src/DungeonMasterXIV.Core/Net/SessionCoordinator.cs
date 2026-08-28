@@ -27,13 +27,21 @@ public sealed class SessionCoordinator
     /// How long a session survives an interruption, from settings (A-1.23, A-1.27). Required, so no
     /// caller can silently fall back to the literal — see <c>SessionInterruption</c>'s remark.
     /// </param>
+    /// <param name="log">
+    /// Where content this client accepted but had to strip is reported (BUG-70). Optional, and the
+    /// default is the silent case — the entry is dropped either way, so this decides whether a
+    /// developer ever finds out, not whether the door holds. Production passes the adapter the
+    /// transport already uses, so there is one log and not two.
+    /// </param>
     public SessionCoordinator(
         ISessionTransport transport,
         Func<string> relayAddress,
         TimeSpan window,
-        Func<SessionKeyExchange>? newKeys = null)
+        Func<SessionKeyExchange>? newKeys = null,
+        ISessionTransportLog? log = null)
     {
         _newKeys = newKeys ?? (static () => new SessionKeyExchange());
+        _log = log;
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
         _admissions = new AdmissionControl(
             new AdmissionAnnouncer(transport),
@@ -50,6 +58,7 @@ public sealed class SessionCoordinator
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
+    private readonly ISessionTransportLog? _log;
     private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
@@ -279,7 +288,8 @@ public sealed class SessionCoordinator
             new InboundHandlers(
                 OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
                 OpenWith: SessionKey,
-                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster))
+                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster),
+            _log)
             ?? SessionKey;
         _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);
