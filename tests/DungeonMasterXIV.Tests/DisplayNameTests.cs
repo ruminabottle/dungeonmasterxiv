@@ -72,6 +72,78 @@ public class DisplayNameTests
 
     // Fails if: the bound goes away. A very long name pushes the fingerprint off the visible prompt,
     // which is the de-emphasis D-8 forbids — achieved with no UI change at all.
+    // A-1.2j (R-1.3j.1). Fails if: a name that renders as nothing is accepted. BUG-50 — these are
+    // the two the denylist could never have reached: U+3164 HANGUL FILLER is categorised as a
+    // LETTER and U+2800 BRAILLE PATTERN BLANK as a SYMBOL, so no list of forbidden categories
+    // would name them without also refusing Korean or ordinary symbols.
+    [Theory]
+    [InlineData("\u3164")]                 // HANGUL FILLER, category OtherLetter
+    [InlineData("Ada\u3164")]              // and beside a real name, where it is worse
+    [InlineData("\u2800")]                 // BRAILLE PATTERN BLANK, category OtherSymbol
+    [InlineData("\u115F")]                 // HANGUL CHOSEONG FILLER
+    [InlineData("\u1160")]                 // HANGUL JUNGSEONG FILLER
+    [InlineData("\uFFA0")]                 // HALFWIDTH HANGUL FILLER
+    public void ANameThatRendersAsNothingIsRefused(string candidate)
+    {
+        Assert.False(DisplayName.TryParse(candidate, out _));
+    }
+
+    // A-1.2k (R-1.3j.2). Fails if: a name can break the prompt's layout or reorder the text around
+    // it. This is the sharp one and it is a SECURITY property: D-8's amendment denies any UI that
+    // de-emphasises the fingerprint, and a line separator inside the name does exactly that from
+    // inside the data — the D-11 substitution attack arriving through the one field an attacker
+    // controls.
+    //
+    // U+2028 is the case that made BUG-50: the validator refused the ASCII line break (U+000A, a
+    // Control) and ACCEPTED the Unicode one (Zl), which is the same break one encoding along.
+    [Theory]
+    [InlineData("Ada\u2028Lovelace")]       // LINE SEPARATOR, category Zl -- neither Cc nor Cf
+    [InlineData("Ada\u2029Lovelace")]       // PARAGRAPH SEPARATOR, category Zp
+    [InlineData("Ada\u202ELovelace")]       // RIGHT-TO-LEFT OVERRIDE
+    [InlineData("Ada\u202DLovelace")]       // LEFT-TO-RIGHT OVERRIDE
+    [InlineData("Ada\u2066Lovelace")]       // LEFT-TO-RIGHT ISOLATE
+    [InlineData("Ada\u2069Lovelace")]       // POP DIRECTIONAL ISOLATE
+    public void ANameThatCanDisplaceTheTextAroundItIsRefused(string candidate)
+    {
+        Assert.False(DisplayName.TryParse(candidate, out _));
+    }
+
+    // A-1.2m (R-1.3j.5). THE ACCEPT-SIDE CONTROL, and each row is a separate failure. An allowlist
+    // that admits nothing refuses every hostile input above and looks perfect; without this the
+    // suite goes green while the guard is useless in the expensive direction.
+    //
+    // The spec is explicit that this is not a nice-to-have: the default display name IS the
+    // player's character name, so refusing a script would make the default invalid for exactly the
+    // players it excluded — they would open the prompt to find their own name rejected.
+    [Theory]
+    [InlineData("\u30E4\u30B7\u30ED")]                   // Japanese katakana
+    [InlineData("\uD55C\uAE00\uC774\uB984")]             // Korean hangul
+    [InlineData("\u0410\u043D\u043D\u0430")]             // Cyrillic
+    [InlineData("\u0645\u062D\u0645\u062F")]             // Arabic
+    [InlineData("\u4E2D\u6587\u540D\u5B57")]             // Han
+    public void ANameInANonLatinScriptIsAccepted(string candidate)
+    {
+        Assert.True(
+            DisplayName.TryParse(candidate, out var name),
+            $"Refused '{candidate}'. An allowlist that refuses a legitimate script is wrong in the "
+            + "expensive direction, and passes every hostile-input row above while being so.");
+
+        Assert.Equal(candidate, name.Value);
+    }
+
+    // The astral-plane control, which the rune-versus-char decision is what makes pass. Iterating
+    // UTF-16 units yields a lone surrogate per code point, whose category is Surrogate — a category
+    // no allowlist would name, so a char-based version of this fix would refuse every CJK extension
+    // name while passing every other test in this file.
+    [Fact]
+    public void ANameOutsideTheBasicMultilingualPlaneIsAccepted()
+    {
+        var beyondTheBmp = "\U00020BB7\U00020BB7";
+
+        Assert.True(DisplayName.TryParse(beyondTheBmp, out var name), "Refused an astral-plane name.");
+        Assert.Equal(beyondTheBmp, name.Value);
+    }
+
     [Fact]
     public void ANameLongerThanTheBoundIsRefusedAndOneAtTheBoundIsNot()
     {
