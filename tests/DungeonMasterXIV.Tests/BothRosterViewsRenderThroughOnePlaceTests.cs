@@ -53,12 +53,28 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>An unexploited residual, and the qualifier is load-bearing.</b> qa-1 went looking for a
 /// pattern-level blind spot and did not find one: an uppercase <c>.CS</c> is compiled AND matched by
-/// both enumerations, so it is caught. But their stated reason is that MATCHING ON THIS FILESYSTEM
-/// IS CASE-INSENSITIVE, which I confirmed — <c>EnumerateFiles(dir, "*.cs")</c> returns
-/// <c>Upper.CS</c> here. That is a property of the machine, not of these guards. On a CASE-SENSITIVE
-/// filesystem the same call would not match it, and whether MSBuild's glob still would is NOT
-/// MEASURED by anyone yet. So this is unexploited HERE, for a reason that does not travel; it is not
-/// known safe elsewhere, and the difference matters to whoever reads a green run on a Linux runner.
+/// both enumerations, so it is caught. The reason is that MATCHING ON THIS PLATFORM is
+/// case-insensitive — .NET's <c>MatchCasing.PlatformDefault</c> keys off the OPERATING SYSTEM, not
+/// the volume, so even a case-sensitive APFS volume on macOS still matches <c>Upper.CS</c>
+/// (qa-2 built one and measured it, BUG-69). The matcher is applied in-process from that option
+/// rather than delegated to the filesystem, which is why the volume cannot change the answer: under
+/// <c>MatchCasing.CaseSensitive</c> the same directory yields only <c>lower.cs</c> (measured here).
+/// PlatformDefault is DOCUMENTED as resolving case-sensitive on Linux; nobody on this team has run
+/// it there, so treat that as read rather than measured. Whether MSBuild's glob would still compile
+/// <c>Upper.CS</c> on Linux is measured by nobody — if it would not, the file never builds there and
+/// the residual is inert rather than dangerous. So this is unexploited HERE, for a reason that does
+/// not travel; it is not known safe elsewhere, and the difference matters to whoever reads a green
+/// run on a Linux runner.
+/// </para>
+/// <para>
+/// <b>The level in that sentence was wrong before BUG-69, and how it went wrong is worth more than
+/// the correction.</b> It said FILESYSTEM where the cause is the OS, and predicted that a
+/// case-sensitive filesystem would not match. qa-2 made one; it matched. The source said "macOS
+/// matching", which is OS-level and vague; restating it as "a case-sensitive filesystem" was
+/// SHARPER, and sharper is a new claim rather than a clearer old one. A vague true sentence survives
+/// being tested. A sharp false one takes ninety seconds to falsify and discredits the paragraph
+/// around it. Three people read the wrong version and it looked right to all three, because it named
+/// a plausible mechanism at a plausible level; only building the contrary world could tell.
 /// </para>
 /// </remarks>
 public class BothRosterViewsRenderThroughOnePlaceTests
