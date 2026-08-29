@@ -126,6 +126,7 @@ public static class SessionContentCodec
         {
             Roster = kept,
             ClosingAtUtcTicks = content.ClosingAtUtcTicks,
+            Leaving = content.Leaving,
         };
     }
 

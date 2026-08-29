@@ -93,6 +93,34 @@ public sealed class SessionContent
     /// </para>
     /// </remarks>
     public long? ClosingAtUtcTicks { get; init; }
+
+    /// <summary>
+    /// Set by a MEMBER to say it is leaving deliberately (R-1.3g, A-1.16a). Null on every other
+    /// document, which is all of them today.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE ONLY MEMBER-AUTHORED FIELD IN THIS TYPE, AND THE DIRECTION IS THE WHOLE POINT.</b>
+    /// <see cref="Roster"/> and <see cref="ClosingAtUtcTicks"/> travel host to member; this travels
+    /// member to host. D-3 forbids a player client originating shared state, and this does not: it
+    /// asserts nothing about the session, only about the sender's own intent. <b>The host decides
+    /// what follows</b> — it removes the sender and republishes, and a member cannot remove anybody
+    /// else because the peer code comes from the KEY the payload opened under, never from the
+    /// payload.
+    /// </para>
+    /// <para>
+    /// <b>A QUIT IS NOT A VANISH, and that distinction is A-1.30.</b> This field is a deliberate
+    /// departure and the host removes the seat AT ONCE (R-1.5a). A member that merely stops
+    /// answering produces no document at all — the relay reports it and the host RECORDS the drop
+    /// while HOLDING the seat (A-1.28, <see cref="MemberDrops"/>). <b>Two different inbound paths,
+    /// two different outcomes</b>, and nothing here may be reached by a silence.
+    /// </para>
+    /// <para>
+    /// <b>Nullable so absence is the ordinary case and older peers decode unchanged (D-14).</b> A
+    /// <c>bool</c> would serialise <c>false</c> onto every roster broadcast the host ever sends.
+    /// </para>
+    /// </remarks>
+    public bool? Leaving { get; init; }
 }
 
 /// <summary>
