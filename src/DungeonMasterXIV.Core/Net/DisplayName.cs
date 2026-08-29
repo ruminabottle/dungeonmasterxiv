@@ -18,8 +18,13 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>Why it is validated at all, given that it is untrusted anyway.</b> Not to make it
 /// trustworthy — it cannot be. To stop a name from forging the UI around it. The admission prompt
-/// renders the name on one line and <c>"Code to compare: …"</c> two lines below, so a name
-/// containing a newline could draw a line that looks like the plugin speaking. A name is data
+/// renders the name <b>immediately above</b> <c>"Code to compare: …"</c>, so a name containing a
+/// newline could draw a line that looks like the plugin speaking. <b>The refusal does not depend on
+/// that adjacency</b> — a forged line reads as the plugin from anywhere in the prompt — but adjacency
+/// is what puts it in the reader's eye beside the value it is imitating. Stated as a RELATION rather
+/// than a distance on purpose: the earlier wording said "two lines below", which was a line number
+/// wearing a disguise. It carried no digits, so no sweep for stale line numbers could find it, and it
+/// had gone stale (BUG-81). A name is data
 /// rendered next to a security control, which makes control characters a spoofing surface rather
 /// than a tidiness problem. Length is bounded for the same reason: a very long name pushes the
 /// fingerprint off the visible prompt, which is the de-emphasis D-8 forbids, achieved without any

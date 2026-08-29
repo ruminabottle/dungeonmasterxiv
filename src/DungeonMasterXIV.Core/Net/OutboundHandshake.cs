@@ -204,6 +204,7 @@ internal sealed class OutboundHandshake
     /// <see cref="WireEnvelope.ForJoinRequest(SessionCode, byte[], DisplayName)"/> when none was.</b>
     /// Until T-30 it sent the plain join unconditionally, and the comment here said so — correctly at
     /// the time, because nothing could supply a claim.
+    /// </para>
     /// <para>
     /// <b>The branch exists; it is not yet taken in the product.</b> Nothing on this side remembers a
     /// participant id between sessions, so no production caller passes one — that is joiner-side
@@ -216,7 +217,6 @@ internal sealed class OutboundHandshake
     /// plain join request so the path looks complete. R-1.5's claim would be dropped while every test
     /// passed, which is why the tests assert <c>ClaimedParticipantId</c> and never the message type —
     /// both factories return <see cref="WireMessageType.JoinRequest"/>.
-    /// </para>
     /// </para>
     /// </remarks>
     private void SendJoinRequestWhenReady()
