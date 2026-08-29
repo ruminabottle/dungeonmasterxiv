@@ -196,19 +196,50 @@ public class AdmissionTests
 
         request.JoinerReportedItCanCompare();
 
-        Assert.True(request.JoinerCouldCompare);
+        Assert.Equal(ComparabilityEvidence.EstablishedCapable, request.Comparability);
         Assert.False(request.FingerprintConfirmed);
         Assert.Equal(AdmissionVerification.NotCompared, request.Verification);
     }
 
     // A joiner that never reports stays exactly as it was -- an old build is not a refused one.
     // Fails if: absence of the signal is treated as a denial rather than as "unknown".
+    //
+    // THIS COMMENT WAS ALWAYS RIGHT AND THE ASSERTION COULD NOT SAY IT. Under the old bool the only
+    // available assertion was Assert.False, and false meant BOTH "unknown" and "established
+    // incapable" -- so the test could not distinguish the thing its own comment named. The second
+    // assertion below is the one the bool made impossible to write (R-1.3a-iv, A-1.2q).
     [Fact]
     public void AJoinerThatNeverReportsIsSimplyNotConfirmable()
     {
         var request = Request();
 
-        Assert.False(request.JoinerCouldCompare);
+        Assert.Equal(ComparabilityEvidence.NotEstablished, request.Comparability);
+        Assert.NotEqual(ComparabilityEvidence.EstablishedIncapable, request.Comparability);
         Assert.Equal(AdmissionVerification.NotCompared, request.Verification);
+    }
+
+    // THE DEFAULT IS LOAD-BEARING AND ASSERTED SEPARATELY (A-1.2q). A zero value meaning "incapable"
+    // fails BY CONSTRUCTION, so this pins the zero rather than the behaviour -- a future reordering
+    // of the enum that made EstablishedIncapable the default would pass every other test here.
+    [Fact]
+    public void TheZeroValueMeansNotEstablishedRatherThanIncapable()
+    {
+        Assert.Equal(ComparabilityEvidence.NotEstablished, default(ComparabilityEvidence));
+        Assert.Equal(0, (int)ComparabilityEvidence.NotEstablished);
+    }
+
+    // Fails if: a confirmation is refused on SILENCE. A-1.2o fails a build that suppresses the
+    // control "on the grounds the joiner could not compare, on the strength of silence alone", and
+    // NotEstablished is silence -- the ordinary case, since a fast admission decides before any
+    // receipt could arrive. The old bool would have refused here, on every request.
+    [Fact]
+    public void ANotEstablishedRequestIsStillConfirmable()
+    {
+        var request = Request();
+
+        request.ConfirmFingerprintMatched();
+
+        Assert.True(request.FingerprintConfirmed);
+        Assert.Equal(AdmissionVerification.Confirmed, request.Verification);
     }
 }

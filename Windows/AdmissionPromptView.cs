@@ -89,12 +89,32 @@ internal sealed class AdmissionPromptView
             var remaining = request.RemainingAt(now);
             ImGui.TextUnformatted($"This request lapses in {remaining:mm\\:ss}");
 
-            // R-1.3a: a deliberate act, never a pre-ticked box. Starts false every time.
-            var confirmed = request.FingerprintConfirmed;
-            if (ImGui.Checkbox($"The code matched what they read to me##{request.PeerCode}", ref confirmed)
-                && confirmed)
+            // A-1.2o: where the host has NOT established whether this joiner can compare, the
+            // prompt says so and asserts neither direction. Drawn ABOVE the control it qualifies,
+            // because a caveat under a tickbox is read after the tick.
+            //
+            // The wording lives in Core so a change of mind has to happen where a test is watching
+            // -- the same reason Favoured does, and the reason this is a call rather than a literal.
+            if (AdmissionPrompt.ComparabilityNote(request) is { Length: > 0 } note)
             {
-                request.ConfirmFingerprintMatched();
+                ImGui.TextWrapped(note);
+            }
+
+            // R-1.3a: a deliberate act, never a pre-ticked box. Starts false every time.
+            //
+            // A-1.2f: NOT DRAWN AT ALL where the joiner is known to be unable to compare. Drawing it
+            // disabled would still put "the code matched" in front of a DM as something that could
+            // be true, and the note above has already said it cannot. Nothing produces that state
+            // today (see AdmissionPrompt.OffersConfirmation), so this reads as always-true right now
+            // and is the branch that acts the moment a producer exists.
+            if (AdmissionPrompt.OffersConfirmation(request))
+            {
+                var confirmed = request.FingerprintConfirmed;
+                if (ImGui.Checkbox($"The code matched what they read to me##{request.PeerCode}", ref confirmed)
+                    && confirmed)
+                {
+                    request.ConfirmFingerprintMatched();
+                }
             }
 
             if (!request.FingerprintConfirmed)

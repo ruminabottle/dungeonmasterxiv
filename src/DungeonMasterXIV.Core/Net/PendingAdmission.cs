@@ -98,10 +98,17 @@ public sealed class PendingAdmission
     public bool FingerprintConfirmed { get; private set; }
 
     /// <summary>
-    /// Whether the joining client told us it received the host key and rendered a fingerprint
-    /// (R-1.3a-iii). False until it says so, which is what an older build looks like.
+    /// What this host has ESTABLISHED about the joining client's ability to compare the fingerprint
+    /// (R-1.3a-iv).
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// <b>Three states, because two cannot say this.</b> It was <c>bool JoinerCouldCompare</c>, and
+    /// a false meant both <i>we know they could not</i> and <i>we have not heard</i> — so every
+    /// guard reading it asserted the first while meaning the second. Silence is the ORDINARY case
+    /// here: a fast admission (A-1.2p) decides before a receipt could arrive. See
+    /// <see cref="ComparabilityEvidence"/>, whose zero value carries that distinction.
+    /// </para>
     /// <para>
     /// <b>A CAPABILITY, and never an action.</b> R-1.3a-iii permits signalling that the client
     /// COULD compare and forbids signalling that the human DID: an acknowledgement of the human act
@@ -116,12 +123,13 @@ public sealed class PendingAdmission
     /// joiner who had nothing on their screen.
     /// </para>
     /// </remarks>
-    public bool JoinerCouldCompare { get; private set; }
+    public ComparabilityEvidence Comparability { get; private set; }
 
     /// <summary>
     /// The joining client reported that it holds the host key and has a fingerprint to read.
     /// </summary>
-    public void JoinerReportedItCanCompare() => JoinerCouldCompare = true;
+    public void JoinerReportedItCanCompare() =>
+        Comparability = ComparabilityEvidence.EstablishedCapable;
 
     /// <summary>How this admission will be recorded if accepted now.</summary>
     public AdmissionVerification Verification =>
@@ -134,25 +142,41 @@ public sealed class PendingAdmission
     /// </summary>
     public void ConfirmFingerprintMatched()
     {
-        // A-1.2f's refusal is NOT here yet, and that is deliberate rather than forgotten.
+        // A-1.2f'S REFUSAL, AND IT REFUSES ALMOST NOTHING -- WHICH IS CORRECT (R-1.3a-iv, SQ-59).
         //
-        // T-29 ships the capability signal in the files it owns; APPLYING it to a pending request
-        // needs AdmissionControl and SessionCoordinator, which are T-43, held behind T-39. Until
-        // that lands nothing calls JoinerReportedItCanCompare, so JoinerCouldCompare is false for
-        // every request -- and refusing on it here would refuse EVERY confirmation, removing a
-        // working control instead of qualifying a misleading one. That is a worse product than
-        // BUG-33, arrived at while fixing it.
+        // It fires ONLY on EstablishedIncapable: positive evidence the joiner could NOT compare.
+        // NOT on NotEstablished, which is silence. A-1.2o fails a build that suppresses "on the
+        // grounds the joiner could not compare, on the strength of silence alone", and silence is
+        // the ORDINARY case -- qa-2 measured a 171ms admission producing zero receipts from a joiner
+        // that could compare perfectly well.
         //
-        // The fail-safe default is what makes the order matter: absence of a receipt means "could
-        // not compare", correctly, because a relay that drops JoinPending can drop a receipt too.
-        // Safe defaults and a missing receiver compose into "always refuse", so the refusal lands
-        // with the receiver in T-43.
+        // WITHDRAWING WHAT I WROTE HERE IN T-29. I said "absence of a receipt means could not
+        // compare, correctly, because a relay that drops JoinPending can drop a receipt too". THAT
+        // IS WRONG AND SQ-43 RULED IT SO: "could not compare" is a fact about the JOINER; "no
+        // receipt arrived" is an observation about the WIRE, and they are measurably different. My
+        // fail-safe reasoning was sound about relays and wrong about what the absence means.
         //
-        // T-43 MUST NOT EXPRESS THAT REFUSAL AS A RETURN VALUE. This method returned bool for one
-        // revision and the only caller -- AdmissionPromptView.cs:97 -- discarded it, so a false
-        // would have been silently dropped and A-1.2f would have READ AS IMPLEMENTED WHILE BEHAVING
-        // AS ABSENT. A seam whose mechanism is a value nobody reads is not a seam. Whatever T-43
-        // uses has to be something a caller cannot ignore by doing nothing.
+        // NOTHING PRODUCES EstablishedIncapable TODAY, so this branch is unreachable and that is
+        // deliberate rather than a gap. The Spec Owner checked the one remaining candidate -- the
+        // protocol version -- and D-14 makes JoinPending ADDITIVE, so a client ignoring it carries
+        // the same version and is refused by nothing. A-1.2f's SUPPRESSION is unreachable; its
+        // QUALIFIED branch is the live one.
+        //
+        // A GUARD THAT FIRES ON NOTHING IS THE OPPOSITE FAILURE FROM THE ONE T-29 AVOIDED, and it is
+        // the safe one. The bool version would have fired on EVERY confirmation; this fires on none
+        // until a producer exists. Removing it because it never fires would delete the only thing
+        // ready to act the moment one does.
+        //
+        // AND THE REFUSAL IS STILL NOT A RETURN VALUE, per my own constraint from T-29: this method
+        // returned bool for one revision and AdmissionPromptView discarded it, so A-1.2f would have
+        // READ AS IMPLEMENTED WHILE BEHAVING AS ABSENT. The mechanism is the ABSENCE OF THE STATE
+        // CHANGE -- a caller that ignores everything and does nothing still gets NotCompared, which
+        // is the safe record. Doing nothing cannot produce the unsafe outcome.
+        if (Comparability == ComparabilityEvidence.EstablishedIncapable)
+        {
+            return;
+        }
+
         FingerprintConfirmed = true;
     }
 
