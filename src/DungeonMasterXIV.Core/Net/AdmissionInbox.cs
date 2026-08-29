@@ -211,6 +211,13 @@ public sealed class AdmissionInbox
             // could render a fingerprint -- a CAPABILITY, never a claim that a human compared
             // anything. R-1.3a-iii forbids the second: an acknowledgement of the human act rides the
             // channel an attacker controls, so it is forgeable exactly when it matters.
+            // A-1.28. The door delivers through itself; the reasoning is on TransportNotices.
+            if (envelope.Type == WireMessageType.ConnectionDropped)
+            {
+                handlers.Transport.Deliver(envelope);
+                continue;
+            }
+
             if (envelope.Type == WireMessageType.JoinerHoldsFingerprint)
             {
                 if (handlers.Admission.OnComparabilityReceipt is { } onReceipt

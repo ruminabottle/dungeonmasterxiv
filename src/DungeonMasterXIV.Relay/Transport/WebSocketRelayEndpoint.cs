@@ -74,7 +74,12 @@ public sealed class WebSocketRelayEndpoint(
         {
             // Still in a finally: an ungracefully dropped peer must unwind exactly like a polite one,
             // and a connection that fell behind says so rather than being logged as a transport fault.
-            _hub.Disconnect(connection, connection.FellBehind ? "dropped: outbound queue full" : reason);
+            await _hub
+                .DisconnectAsync(
+                    connection,
+                    connection.FellBehind ? "dropped: outbound queue full" : reason,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 
