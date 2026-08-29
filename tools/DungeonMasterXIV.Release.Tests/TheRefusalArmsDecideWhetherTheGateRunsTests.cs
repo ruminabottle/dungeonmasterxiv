@@ -23,9 +23,27 @@ namespace DungeonMasterXIV.Release.Tests;
 /// return value.
 /// </para>
 /// <para>
-/// <b>The control is load-bearing, not decoration.</b> <c>AllGoodAndCurrentIsContained</c> exists so
-/// the three refusals mean something: without a case that reaches <c>true</c>, a
-/// <c>Decide</c> that returned <c>false</c> unconditionally would satisfy every other test here.
+/// <b>The control pins the TRUE path, which nothing else here does.</b> It does NOT rescue the three
+/// refusals from vacuity — that claim was made in an earlier revision of this comment and is false:
+/// a <c>Decide</c> returning <c>(false, string.Empty)</c> unconditionally reddens all four, because
+/// each refusal test asserts a distinguishing substring of the detail and the empty string contains
+/// none of them. Measured, not reasoned: Failed 4, Total 290.
+/// </para>
+/// <para>
+/// What the control actually holds is the case the refusals cannot see. A <c>Decide</c> that returned
+/// a <i>plausible</i> refusal for every input — including a healthy tree — satisfies all three
+/// refusal tests, and <b>the gate would then never run while the suite stayed green</b>. That is
+/// measured too: making the contained arm return <c>false</c> with its own unchanged detail reddens
+/// this test and only this test.
+/// </para>
+/// <para>
+/// <b>THE MASKING IS POSITIONAL, and it is a property of the chain rather than of any one arm.</b>
+/// Arms 1 and 2 fall through into the stale comparison, which returns <c>false</c> for both — so
+/// disabling either leaves the return value unchanged and only the detail assertion reddens. The
+/// general form: <b>in an ordered chain of refusal arms, every arm above the last false-returning arm
+/// can be masked by it.</b> Any arm added above the stale comparison is in that region by
+/// construction and needs a which-arm assertion from the day it is written, not after a mutation
+/// finds it.
 /// </para>
 /// <para>
 /// <b>What this does NOT pin, stated rather than implied.</b> It proves the arm SELECTED for a given
@@ -39,9 +57,9 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
     private const string OriginHead = "1111111111111111111111111111111111111111";
     private const string StaleHead = "2222222222222222222222222222222222222222";
 
-    // THE CONTROL. Three tests below assert `false`, and `false` is what a broken Decide returns most
-    // easily. This is the case that a Decide returning false unconditionally cannot satisfy, so it is
-    // what gives the other three their meaning.
+    // THE CONTROL, AND THE ONLY TEST HERE THAT PINS THE TRUE PATH. The three refusals all survive a
+    // Decide that refuses everything, provided it refuses plausibly -- and a gate that never runs
+    // reports a green suite. This is the test that fails in that world.
     [Fact]
     public void AllGoodAndCurrentIsContained()
     {
