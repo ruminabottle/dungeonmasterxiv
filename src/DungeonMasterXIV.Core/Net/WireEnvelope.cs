@@ -342,7 +342,7 @@ public sealed record WireEnvelope
     /// <summary>
     /// The admission outcome this envelope expresses <b>for the client whose key is
     /// <paramref name="ownPublicKey"/></b>, or null if it is not an admission answer or is not
-    /// addressed to that client. Consumers go through <see cref="AdmissionOutcome.Match{T}"/>.
+    /// addressed to that client. Consumers go through <see cref="AdmissionOutcome.Match{T}"/>, so none can drop a case.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -356,7 +356,8 @@ public sealed record WireEnvelope
     /// <para>
     /// <b>All three arms, and the reported one is the least exposed:</b> <c>Admitted()</c> has a
     /// phase guard that narrows it to a joiner already awaiting a decision, while <c>Denied()</c> and
-    /// <c>Lapsed()</c> have none. Guarding only what was reported is the shape BUG-56 rejects.
+    /// <c>Lapsed()</c> have none. Guarding only what was reported is the shape BUG-56 rejects, and
+    /// here it would have left the two EASIER arms open.
     /// </para>
     /// <para>
     /// <b>Dropped, not failed — the opposite of the ruling one arm inward, deliberately.</b>
@@ -364,7 +365,8 @@ public sealed record WireEnvelope
     /// locally, so dropping would leave it awaiting an answer that already came. That turns on the
     /// answer being THIS CLIENT'S. Somebody else's says nothing about this attempt — the host may
     /// still be deciding, so remaining in <c>AwaitingDecision</c> is the true state. Failing would
-    /// also let anyone who can post a frame end any joiner's attempt by naming a stranger.
+    /// also let anyone who can post a frame end any joiner's attempt by naming a stranger, which
+    /// makes dropping a correctness question rather than a preference between two safe answers.
     /// </para>
     /// <para>
     /// <b>Fixed-time, and required rather than defaulted.</b> The comparison matches
