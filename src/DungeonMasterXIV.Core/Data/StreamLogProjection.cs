@@ -37,8 +37,17 @@ namespace DungeonMasterXIV.Data;
 /// compiles perfectly against this switch and falls to the default <i>at run time</i> — which for an
 /// exporter means at export time, on a DM's real log. <c>EveryKindTheStreamHasTodayIsMapped</c>
 /// iterates <c>Enum.GetValues</c> and fails the moment a kind exists that this file has not been
-/// taught, so the surprise lands in CI on the PR that adds it rather than on a user. <b>Whoever
-/// merges the PR adding a kind teaches this file in the same change.</b>
+/// taught, so the surprise lands in CI rather than on a user.
+/// </para>
+/// <para>
+/// <b>AND THE REMEDY IS A MERGE ORDER, NOT A CROSS-BOUNDARY EDIT.</b> This file and its tripwire
+/// exist only here; neither is on <c>main</c>. So if the PR adding a kind lands <i>first</i>, the
+/// kind is simply present when this switch is written and nothing ever goes red. If <i>this</i>
+/// lands first, the tripwire is green on the kinds of the day, the next PR turns CI red, and fixing
+/// it would require <b>that</b> PR to edit <b>this</b> file — a cross-boundary edit that both
+/// boundaries were drawn to prevent, manufactured by the ordering rather than by anyone's mistake.
+/// <b>The ordering is the Deployment Manager's to hold; two engineers agreeing it between their own
+/// PRs is a decision neither of them owns.</b>
 /// </para>
 /// </remarks>
 public static class StreamLogProjection
