@@ -91,4 +91,48 @@ public enum WireMessageType
     /// </para>
     /// </remarks>
     JoinerHoldsFingerprint = 10,
+
+    /// <summary>
+    /// The relay telling a host that one of its members' connections went away (A-1.28, R-1.5a).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The only message the relay AUTHORS about a session's people, and the line it must not
+    /// cross is in its name.</b> It reports THAT A CONNECTION DROPPED — never <i>remove this
+    /// participant</i>. D-2 denies the relay authority over the SESSION; a dropped connection is a
+    /// TRANSPORT FACT, which is the distinction that makes this permissible at all. R-1.7b already
+    /// has the relay authoring a transport message and R-1.9 already discloses that it observes
+    /// that a connection exists.
+    /// </para>
+    /// <para>
+    /// <b>A positive notice rather than an inference from silence, and that is required rather than
+    /// tidy.</b> Deciding a member has gone because nothing has arrived starts a clock from an
+    /// absence — SQ-43's defect, and what A-1.28 forbids in terms.
+    /// </para>
+    /// <para>
+    /// <b>A CLIENT SENDING ONE IS REFUSED AT THE RELAY, and that guard is load-bearing.</b>
+    /// Forwarding a client-authored drop notice would let any keyholder tell a host that somebody
+    /// else vanished — a forged transport fact, which the host would then record against a real
+    /// member. <c>RelayRouter</c> drops it as <c>RelayOnlyMessageFromClient</c>, alongside the
+    /// relay's other own-answers. <b>The host refuses a key it has not admitted as well</b>, so
+    /// there are two independent guards rather than one — <b>but they are not co-equal, and the
+    /// difference matters to anyone thinking of relaxing either.</b> A forged notice naming a
+    /// member the host HAS admitted passes <c>RecordDrop</c>'s check, because that check asks only
+    /// whether the named member is real. <b>So the router guard carries the entire client threat;
+    /// the host guard covers relay error or a compromised relay.</b> Relaxing the first on the
+    /// strength of the second would remove the only thing standing between a keyholder and a
+    /// forged drop against a genuine member.
+    /// </para>
+    /// <para>
+    /// <b>WHAT THE RELAY CARRIES, AND THE CONDITION THE PRIVACY PROPERTY RESTS ON.</b> Naming a
+    /// member by public key means the relay now RETAINS that key for the life of the session. That
+    /// is not cross-session linkage <b>because joiner keys are ephemeral BY CONSTRUCTION</b> —
+    /// <c>JoinRequester</c> mints a fresh pair per join, so the key identifies a connection and
+    /// never a person. <b>If joiner keys ever became durable, this retention becomes linkage with
+    /// nothing in the relay changing</b>, and relink is the feature that would tempt exactly that.
+    /// Stated as a condition rather than a property so the next person changing key lifetime meets
+    /// it.
+    /// </para>
+    /// </remarks>
+    ConnectionDropped = 11,
 }
