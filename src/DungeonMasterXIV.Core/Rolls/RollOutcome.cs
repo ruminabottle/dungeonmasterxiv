@@ -50,9 +50,33 @@ public sealed record RollOutcome
     /// <summary>A human-readable statement of what was wrong, or null on success.</summary>
     public string? Message { get; private init; }
 
+    /// <summary>
+    /// Words about a SUCCESSFUL evaluation that the numbers alone do not carry, or null when there
+    /// is nothing to say. Today that is A-2.3b: every die was dropped.
+    /// </summary>
+    /// <remarks>
+    /// <b>Separate from <see cref="Message"/> because they answer different questions.</b> A
+    /// <see cref="Message"/> explains why there is no result; a <see cref="Notice"/> explains a
+    /// result that exists and would otherwise be read wrongly. Folding them into one field would
+    /// make "did this evaluate?" un-answerable from the text.
+    /// </remarks>
+    public string? Notice { get; private init; }
+
     /// <summary>A successful evaluation and the dice that produced it.</summary>
+    /// <remarks>
+    /// <b>The A-2.3b notice is computed HERE rather than by the caller</b>, so no future call site
+    /// can produce an outcome that drops every die and forgets to say so. A rule enforced at the one
+    /// place outcomes are built cannot be omitted by someone who did not know it existed.
+    /// </remarks>
     public static RollOutcome Rolled(int total, IReadOnlyList<RolledDie> dice, string? label = null) =>
-        new() { Evaluated = true, Total = total, Dice = dice, Label = label };
+        new()
+        {
+            Evaluated = true,
+            Total = total,
+            Dice = dice,
+            Label = label,
+            Notice = RollSurvival.NoticeFor(dice),
+        };
 
     /// <summary>A refusal naming its fault (R-2.1, R-2.1a).</summary>
     public static RollOutcome Refused(RollFault fault, string message) =>
