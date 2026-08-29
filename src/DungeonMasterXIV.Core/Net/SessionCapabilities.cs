@@ -38,6 +38,24 @@ namespace DungeonMasterXIV.Net;
 /// this ticket is a move rather than a redesign and two parameter objects at once is a redesign.
 /// </para>
 /// <para>
+/// <b>FOUR MEMBERS IS AT THE PARAMETER FLAG, AND THE REASON IS REQUIRED RATHER THAN OPTIONAL.</b>
+/// The standing ruling is that a façade between flag (4) and block (6) is compliant <i>with the
+/// reason stated</i>, so here it is: <b>these are not four accumulated favours, they are one
+/// concept enumerated.</b> Each is a thing Core is asked to have done because it cannot do it —
+/// make a key pair, name the host, mint a participant, resolve a claimed one. Nothing here is a
+/// value Core reads; every member is something Core CALLS. A fifth that fits that sentence belongs
+/// here; a fifth that has to be argued into it does not, and is the signal that this record has
+/// stopped being a concept and started being a parameter list with a name.
+/// </para>
+/// <para>
+/// <b>They arrived separately and that is not an argument for merging any of them.</b>
+/// <c>HostDisplayName</c> (DMXENG-33) and <c>ResolveRelink</c> (DMXENG-8) landed within an hour of
+/// each other and collided textually on this parameter list. <b>Adjacency is not kinship</b> —
+/// folding two members together because they arrived next to each other is a grouping chosen for
+/// its arithmetic, which is what DMXENG-57 refused when it declined to move the log in here to
+/// reach four.
+/// </para>
+/// <para>
 /// <b>NOT named for the plugin, though the plugin is what supplies it today.</b> A test supplies
 /// these too, and naming a Core type after one of its callers is how a layer starts depending on the
 /// thing above it in comments before it does in code.

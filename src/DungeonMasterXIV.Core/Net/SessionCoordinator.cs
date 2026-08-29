@@ -81,7 +81,11 @@ public sealed class SessionCoordinator
         // to precede this line, and nothing detects a reordering -- which is DMXENG-45's defect
         // exactly. Taking it from the argument removes the ordering dependency instead of
         // relying on it.
-        _roster = new RosterBroadcast(_link, Audience, ThisHostsIdentity(capabilities), log);
+        _roster = new RosterBroadcast(
+            _link,
+            Audience,
+            HostIdentity.ForHost(() => HostKeys, () => Host.Code, capabilities.HostNameSource, _admissions.PeerCodeFor),
+            log);
         // What RosterBroadcast reads to SEAL, read here to OPEN (R-1.3k).
         _resources = new SessionResources(
             _admissions,
@@ -201,26 +205,6 @@ public sealed class SessionCoordinator
         _roster.PublishClosing(SessionClosing.DecidedByHost(endedAt));
         _hosting.Stop();
     }
-
-    /// <summary>
-    /// What this client is as the host, for its own roster entry — see <see cref="HostIdentity"/>,
-    /// which holds the reasoning for every member including why <c>OwnPeerCode</c> calls the one
-    /// derivation rather than repeating it.
-    /// </summary>
-    /// <remarks>
-    /// <b>A method rather than four lines in the constructor, because inline it reached 61 lines
-    /// against a method BLOCK of 60.</b> Moving code is the answer to that, not deleting
-    /// explanation. Safe to call from the constructor because every member is deferred — nothing
-    /// reads <c>_admissions</c> or <c>HostKeys</c> until after construction, so DMXENG-45's
-    /// ordering hazard does not reach it. That is a property of the <c>Func</c>s, not of where this
-    /// call sits.
-    /// </remarks>
-    private HostIdentity ThisHostsIdentity(SessionCapabilities capabilities) =>
-        new(
-            () => HostKeys,
-            () => Host.Code,
-            capabilities.HostNameSource,
-            () => HostKeys is { } hostKeys ? _admissions.PeerCodeFor(hostKeys.PublicKey) : null);
 
     /// <summary>Requests to join <paramref name="code"/>. A human action (R-1.3).</summary>
     public void RequestJoin(SessionCode code) => RequestJoin(code, DisplayName.None);

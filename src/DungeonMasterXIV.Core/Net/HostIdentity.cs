@@ -57,4 +57,40 @@ internal sealed record HostIdentity(
     Func<SessionKeyExchange?> Keys,
     Func<SessionCode?> Code,
     Func<DisplayName> Name,
-    Func<PeerCode?> OwnPeerCode);
+    Func<PeerCode?> OwnPeerCode)
+{
+    /// <summary>
+    /// Composes what a hosting <see cref="SessionCoordinator"/> is, from the pieces it holds.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Here rather than on the coordinator, and the reason is a measurement.</b> As a private
+    /// method there it cost that class twenty lines against a block it then breached by four once
+    /// another chunk landed. Composing a <see cref="HostIdentity"/> is this type's own business, so
+    /// this is a move to where the knowledge already lives rather than room bought by deleting
+    /// explanation.
+    /// </para>
+    /// <para>
+    /// <b>Every member stays deferred, which is what makes this safe to call from a constructor.</b>
+    /// Nothing here reads a key, a code, a name or the admission desk — it captures four functions
+    /// and returns. DMXENG-45's ordering hazard does not reach it, and that is a property of the
+    /// <c>Func</c>s rather than of where the call happens to sit.
+    /// </para>
+    /// <para>
+    /// <b><paramref name="peerCodeFor"/> is THE one derivation, passed rather than repeated.</b> It
+    /// is <c>AdmissionControl.PeerCodeFor</c>, still the only site that turns a public key into a
+    /// peer code; this hands it the host's OWN key. Null when not hosting, which is what keeps a DM
+    /// entry out of a roster that has no host.
+    /// </para>
+    /// </remarks>
+    /// <param name="keys">The host's ephemeral session keys, read at use time.</param>
+    /// <param name="code">The session being hosted, read at use time.</param>
+    /// <param name="name">What the host calls itself.</param>
+    /// <param name="peerCodeFor">The one derivation from a public key to a peer code.</param>
+    public static HostIdentity ForHost(
+        Func<SessionKeyExchange?> keys,
+        Func<SessionCode?> code,
+        Func<DisplayName> name,
+        Func<byte[], PeerCode> peerCodeFor) =>
+        new(keys, code, name, () => keys() is { } hostKeys ? peerCodeFor(hostKeys.PublicKey) : null);
+}
