@@ -59,10 +59,16 @@ public sealed class SessionCoordinator
             new AdmissionAnnouncer(transport),
             () => Host.Code,
             () => HostKeys);
-        // Null-conditional because _joiner is built two lines below this one: the closure is not
-        // INVOKED until after construction, but the compiler cannot know that, and "no joiner keys
-        // yet" is the honest answer for the window in which it could be. Suppressing with ! would
-        // have asserted something this constructor does not yet guarantee.
+        // Null-conditional because _joiner is built FURTHER DOWN this constructor: the closure is
+        // not INVOKED until after construction, but the compiler cannot know that. Suppressing with
+        // ! would assert something this constructor does not yet guarantee. That reasoning stands.
+        //
+        // A DIRECTION RATHER THAN A COUNT: this said "two lines below" and #125 made it seven. A
+        // distance in prose carries no line number for any grep to find, so it went stale silently.
+        //
+        // The order itself is now DETECTED (DMXENG-45): JoinRequester guards its collaborators, so
+        // building it before these throws rather than passing a null nothing refuses. Measured --
+        // with the order swapped and no guard, the suite passed clean.
         _handshake = new OutboundHandshake(_link, Host, Join, () => _joiner?.Keys);
         // The PARAMETER, not the field. Reading _log here would work only because :56 happens
         // to precede this line, and nothing detects a reordering -- which is DMXENG-45's defect
