@@ -81,19 +81,21 @@ public class AMisaddressedAdmissionAnswerIsObservableTests
         Assert.Empty(log.Warnings);
     }
 
-    // THE SECOND VACUITY CONTROL, aimed at the other null. An envelope that is not an admission
-    // answer AT ALL must not produce the line either -- that null is the ordinary case, and a fix
-    // that could not tell the two nulls apart would fire here.
+    // THE SECOND VACUITY CONTROL, aimed at the OTHER null -- and it has to reach the same line to
+    // mean anything. A fix that warned on every null from TryGetAdmissionOutcome satisfies the
+    // criterion above and makes the signal worthless, because that null is the ordinary case.
+    //
+    // CodeAccepted RATHER THAN JoinPending, AND THE DIFFERENCE IS THE WHOLE TEST. ApplyOutcome is a
+    // FALLTHROUGH -- six Try* arms get first refusal, and TryPendingNotice consumes JoinPending, so
+    // a JoinPending envelope never reaches the line under test. That was this test's first version:
+    // it passed, it looked like a control, and it could not have failed. Measured, not reasoned --
+    // the always-warn mutation produced no reds until this row pointed at a type that gets there.
     [Fact]
     public void AnEnvelopeThatIsNotAnAdmissionAnswerSaysNothing()
     {
         var (coordinator, transport, log) = JoinerAwaitingADecision();
 
-        transport.Deliver(WireEnvelope.ForJoinPending(
-            Code,
-            coordinator.Membership.Keys!.PublicKey,
-            new SessionKeyExchange().PublicKey,
-            AdmissionDeadline.DecidedByHost(Now)));
+        transport.Deliver(WireEnvelope.ForCodeAccepted(Code));
         coordinator.Tick(TimeSpan.Zero, Now);
 
         Assert.Empty(log.Warnings);
