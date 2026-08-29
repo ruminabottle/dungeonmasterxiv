@@ -52,6 +52,10 @@ public class TheSizeGateMeasuresTheRealTreeTests(ITestOutputHelper output)
             output.WriteLine($"    {breach}");
         }
 
-        Assert.NotEmpty(breaches);
+        // DELIBERATELY NOT Assert.NotEmpty(breaches), which is what this said first. That is a test
+        // that reddens the day somebody fixes the last of the seven -- an assertion that the codebase
+        // stays broken. What is worth pinning here is that the measurement covered the whole intake;
+        // whether it found anything is the gate's business, not this diagnostic's.
+        Assert.Equal(files.Count, files.Distinct().Count());
     }
 }
