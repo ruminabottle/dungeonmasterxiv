@@ -121,11 +121,16 @@ public sealed class ConfigWindow : Window
         // character name". An empty box fails that — the user would have to already know what would
         // be sent in order to see it.
         //
-        // Room to type MORE than the limit, deliberately. A box capped at exactly MaxLength stops
+        // Room to type MORE than the limit, deliberately. A box capped at exactly the limit stops
         // accepting keystrokes with no explanation, and the user is left looking at a name that is
         // not the one they meant. Over-typing is allowed and then told about.
+        //
+        // The size is MaxUtf8Bytes because IMGUI COUNTS BYTES AND THE LIMIT COUNTS CHARACTERS. This
+        // used to be (MaxLength * 2) + 1 = 65, which was room to over-type only in ASCII: a
+        // 32-character Devanagari name is 192 bytes and would have been truncated at the boundary
+        // this box exists to let the user cross deliberately.
         var typed = settings.NameToEdit(characterName);
-        if (ImGui.InputText("Name others see", ref typed, (DisplayName.MaxLength * 2) + 1))
+        if (ImGui.InputText("Name others see", ref typed, DisplayName.MaxUtf8Bytes))
         {
             if (settings.RecordChosenName(typed, characterName))
             {

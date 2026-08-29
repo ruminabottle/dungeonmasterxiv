@@ -1,5 +1,7 @@
 using DungeonMasterXIV.Net;
 using Xunit;
+using System.Globalization;
+using System.Linq;
 
 namespace DungeonMasterXIV.Tests;
 
@@ -144,11 +146,77 @@ public class DisplayNameTests
         Assert.Equal(beyondTheBmp, name.Value);
     }
 
+    /// <summary>One character to a reader; THREE UTF-16 code units to <c>string.Length</c>.</summary>
+    /// <remarks>
+    /// Vietnamese-shaped: a base letter carrying two combining marks. Chosen because it
+    /// DISCRIMINATES — see the remark on the boundary test below.
+    /// </remarks>
+    private const string OneCharacterThreeCodeUnits = "e\u0302\u0300";
+
+    // A-1.2u. THIS TEST USED TO BE BUILT FROM REPEATED 'B' AND COULD NOT FAIL ON THE DEFECT IT
+    // GUARDED. A boundary of 32 checked with 32 ASCII letters passes identically whether the code
+    // counts grapheme clusters or UTF-16 code units, because for ASCII they are the same number. It
+    // was green on the correct build and green on the broken one — occupying the space where the
+    // real check belonged.
+    //
+    // REPAIRED RATHER THAN SUPPLEMENTED, deliberately: adding a third test beside it would have left
+    // the blind one still standing and still read as coverage.
+    //
+    // AND THE SCRIPT IS THE WHOLE POINT. "Use a non-Latin name" would have been satisfied by
+    // Japanese — which is BMP and costs ONE code unit per character, so it passes a code-unit limit
+    // exactly as ASCII does. Picking "non-Latin" as the axis selects the one family that does not
+    // expose the defect. What discriminates is characters whose STORAGE exceeds their APPEARANCE:
+    // combining marks, or anything outside the BMP.
     [Fact]
     public void ANameLongerThanTheBoundIsRefusedAndOneAtTheBoundIsNot()
     {
+        var atTheBound = string.Concat(Enumerable.Repeat(OneCharacterThreeCodeUnits, DisplayName.MaxLength));
+        var overIt = atTheBound + OneCharacterThreeCodeUnits;
+
+        // The fixture is what it claims: 32 characters to a reader, 96 to string.Length. Asserted
+        // rather than assumed — a fixture that quietly stopped discriminating would make everything
+        // below pass for the ASCII reason again.
+        Assert.Equal(DisplayName.MaxLength, new StringInfo(atTheBound).LengthInTextElements);
+        Assert.Equal(DisplayName.MaxLength * 3, atTheBound.Length);
+
+        Assert.True(DisplayName.TryParse(atTheBound, out _), "Refused a name of exactly the permitted length.");
+        Assert.False(DisplayName.TryParse(overIt, out _), "Accepted a name one character over.");
+
+        // ASCII still behaves, so the repair did not trade one blindness for another.
         Assert.True(DisplayName.TryParse(new string('B', DisplayName.MaxLength), out _));
         Assert.False(DisplayName.TryParse(new string('B', DisplayName.MaxLength + 1), out _));
+    }
+
+    // A-1.2s: two names of the SAME PERCEIVED LENGTH in different scripts are treated the same. This
+    // is the property the bound is supposed to have, stated directly rather than inferred from the
+    // boundary test — under the old rule the Devanagari name was refused and the Latin one accepted
+    // while a reader would call them the same length.
+    [Fact]
+    public void TwoNamesOfTheSamePerceivedLengthAreTreatedTheSame()
+    {
+        // "ni" in Devanagari: consonant + vowel sign, ONE character to a reader, two code units.
+        var devanagari = string.Concat(Enumerable.Repeat("\u0928\u093F", DisplayName.MaxLength));
+        var latin = new string('B', DisplayName.MaxLength);
+
+        Assert.Equal(
+            new StringInfo(latin).LengthInTextElements,
+            new StringInfo(devanagari).LengthInTextElements);
+
+        Assert.True(DisplayName.TryParse(latin, out _));
+        Assert.True(DisplayName.TryParse(devanagari, out _), "A Devanagari name the same length as an accepted Latin one was refused.");
+    }
+
+    // The family the naive "non-Latin" test would have chosen, kept as a CONTROL rather than as
+    // coverage: Japanese is BMP and costs one code unit, so it passes under both rules. Its presence
+    // says "this one proves nothing about the bound" out loud, so nobody later cites it as though it
+    // did.
+    [Fact]
+    public void AJapaneseNameIsAcceptedAndProvesNothingAboutTheBound()
+    {
+        var japanese = string.Concat(Enumerable.Repeat("\u3042", DisplayName.MaxLength));
+
+        Assert.Equal(japanese.Length, new StringInfo(japanese).LengthInTextElements);
+        Assert.True(DisplayName.TryParse(japanese, out _));
     }
 
     // Surrounding whitespace is repaired because " Bob " means Bob and the difference is invisible
