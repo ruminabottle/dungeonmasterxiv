@@ -57,8 +57,23 @@ public static class Coverage
           Nesting depth   {nesting.Flag,4}   {nesting.Block,5}   yes — control flow only; a lambda resets the baseline
 
         NOT MEASURED, AND SAYING SO IS THE POINT: property, indexer and event accessors are outside
-        the method and nesting rows, because whether an accessor body is a "method" is unruled. A
-        local function is refused BY NAME for the same reason rather than folded into its container.
+        the method and nesting rows, because whether an accessor body is a "method" is unruled.
+
+        A LOCAL FUNCTION IS NOW MEASURED, AND IT USED TO BE REFUSED (BUG-94). It is its own member
+        for both rows, and the two rows behave DIFFERENTLY on purpose:
+
+          LENGTH  counts TWICE. A member's span runs from its declaration to its closing brace with
+                  nothing excluded, so the container's span includes the local function's lines and
+                  the local function has its own span as well. Nested types already count twice.
+          NESTING counts ONCE, on the local function's own row. Its control flow does not reach its
+                  container, so a container whose own body is flat reads flat.
+
+        CHECK BOTH IN ONE RUN: put a local function in a method whose own body is a declaration and
+        a return, and vary only the nesting inside the local function. The LOCAL FUNCTION's number
+        moves and the CONTAINER is not reported at all; make the local function long instead and
+        both rows report a length. Before this was ruled, the container's nesting tracked the local
+        function's, and the paragraph here claimed the opposite -- in the tool whose subject is
+        instruments claiming more than they deliver.
 
         Class and file spans come from ClassSpanReader; the other three are parsed. The two original
         rows were deliberately not moved onto the parser — they are ruled, tested and already quoted,

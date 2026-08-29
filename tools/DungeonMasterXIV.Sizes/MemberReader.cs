@@ -59,15 +59,13 @@ public static class MemberReader
 
     private static MemberSpan? Describe(SyntaxNode node) => node switch
     {
-        // Refused before anything is measured, so an unruled shape cannot be silently folded into
-        // the numbers for the member that contains it.
-        LocalFunctionStatementSyntax local => new MemberSpan(
-            Name(local.Identifier.Text, local.ParameterList),
-            LineOf(local),
-            0,
-            0,
-            0,
-            "local function: whether it is its own member or part of its container is NOT RULED"),
+        // MEASURED, not refused (BUG-94). This was refused while the question was open; the
+        // Deployment Manager has now ruled that a local function IS ITS OWN MEMBER for both rows,
+        // "otherwise arbitrary depth and length hide behind a name and are measured nowhere".
+        // Continuing to print NOT RULED would be a false refusal, which is the defect this file was
+        // corrected for.
+        LocalFunctionStatementSyntax local => Measured(
+            local, Name(local.Identifier.Text, local.ParameterList), local.ParameterList),
 
         // A primary constructor has no body, so the method and nesting rows do not apply to it --
         // but the PARAMETER row does, and that is the whole reason it is here.
@@ -192,8 +190,16 @@ public static class MemberReader
     /// had to be handled rather than a hypothetical.
     /// </para>
     /// </remarks>
-    private static int DepthOf(SyntaxNode member) =>
-        member is BaseMethodDeclarationSyntax { Body: { } body } ? Depth(body, 0) : 0;
+    private static int DepthOf(SyntaxNode member) => member switch
+    {
+        BaseMethodDeclarationSyntax { Body: { } body } => Depth(body, 0),
+
+        // From its OWN baseline, which is what makes ruling 4 coherent: the control flow is counted
+        // once, on the row of the member it belongs to.
+        LocalFunctionStatementSyntax { Body: { } body } => Depth(body, 0),
+
+        _ => 0,
+    };
 
     private static int Depth(SyntaxNode node, int here)
     {
@@ -201,6 +207,20 @@ public static class MemberReader
 
         foreach (var child in node.ChildNodes())
         {
+            // A LOCAL FUNCTION IS SKIPPED ENTIRELY, and that is ruling 4 rather than an optimisation
+            // (BUG-94): its control flow is measured on its OWN row, so adding it here would count
+            // it twice and report a container as a pyramid it does not contain. That differs from
+            // the lambda below deliberately -- a lambda is not a member, so its contents have no
+            // other row to be counted on and must be counted here, from a reset baseline.
+            //
+            // NOTE THE ASYMMETRY WITH LENGTH, which is ruled and not an oversight: a local
+            // function's LINES do count toward its container as well as its own (ruling 3, matching
+            // the nested-type precedent), while its DEPTH does not (ruling 4).
+            if (child is LocalFunctionStatementSyntax)
+            {
+                continue;
+            }
+
             // The ruling: whatever a lambda contains starts again from this level.
             var baseline = child is AnonymousFunctionExpressionSyntax ? 0 : here;
             var inside = Nests(child) ? baseline + 1 : baseline;
