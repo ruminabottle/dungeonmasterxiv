@@ -48,37 +48,94 @@ internal static class FactoryOverloads
         RegexOptions.Compiled | RegexOptions.Multiline);
 
     /// <summary>
-    /// Every factory in <paramref name="source"/>, and whether each builds its own envelope.
+    /// Every factory in <paramref name="source"/>, and how each one produces its envelope.
     /// </summary>
-    internal static IReadOnlyList<(string Name, bool Constructs)> Factories(string source)
+    internal static IReadOnlyList<(string Name, bool Constructs, bool DelegatesToSibling)> Factories(
+        string source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         var body = WithoutComments(source);
 
         return Declaration.Matches(body)
-            .Select(match => (
-                Name: match.Groups["name"].Value,
-                Constructs: BodyOf(body, match.Index + match.Length)
-                    .Contains("new WireEnvelope(", StringComparison.Ordinal)))
+            .Select(match =>
+            {
+                var name = match.Groups["name"].Value;
+                var declaration = BodyOf(body, match.Index + match.Length);
+
+                return (
+                    Name: name,
+                    Constructs: Constructs(declaration),
+                    DelegatesToSibling: declaration.Contains(name + "(", StringComparison.Ordinal));
+            })
             .ToList();
     }
 
     /// <summary>
-    /// Factory names under which more than one overload constructs independently.
+    /// Factory names whose overloads are not all accounted for by one construction.
     /// </summary>
     /// <remarks>
-    /// <b>Two constructing overloads is the failure, not two overloads.</b> A name with three
-    /// overloads of which one constructs and two delegate is one protocol action with two
-    /// conveniences, and one row covers it honestly.
+    /// <para>
+    /// <b>An overload is ACCOUNTED FOR if it either constructs, or delegates to a sibling of its own
+    /// name.</b> A name is an offence when more than one of its overloads constructs, OR when any of
+    /// them does neither — because "neither" means it reaches a construction by some other route,
+    /// and that route is not visible to the row that vouches for it.
+    /// </para>
+    /// <para>
+    /// <b>THE SECOND CLAUSE EXISTS BECAUSE THE FIRST ONE ALONE COULD BE SATISFIED FALSELY, AND THAT
+    /// WAS A REAL HOLE IN THIS FILE.</b> The original rule asked only <i>does the body contain a
+    /// construction</i>. Two overloads that both delegate to a private <c>Build</c> helper contain
+    /// none, so both read as non-constructing and the guard passed — <b>on precisely the defect it
+    /// exists to catch, wearing one indirection.</b>
+    /// </para>
+    /// <para>
+    /// feature-engineer-2 named the shape on a different guard: <i>deleting an entry reddens it;
+    /// replacing it with a false one leaves it green.</i> A completeness check that asks whether an
+    /// author wrote something, rather than whether what they wrote is true, has this hole by
+    /// construction. Asking <b>accounted for</b> rather than <b>constructs</b> closes it.
+    /// </para>
     /// </remarks>
-    internal static IReadOnlyList<string> NamesCoveringTwoConstructions(string source) =>
-        Factories(source)
+    internal static IReadOnlyList<string> NamesCoveringTwoConstructions(string source)
+    {
+        var factories = Factories(source);
+
+        var twoConstructions = factories
             .Where(factory => factory.Constructs)
             .GroupBy(factory => factory.Name, StringComparer.Ordinal)
             .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToList();
+            .Select(group => group.Key);
+
+        var unaccounted = factories
+            .Where(factory => !factory.Constructs && !factory.DelegatesToSibling)
+            .Select(factory => factory.Name);
+
+        return twoConstructions.Concat(unaccounted).Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// Whether a factory body builds an envelope of its own.
+    /// </summary>
+    /// <remarks>
+    /// <b>BOTH SPELLINGS, AND MISSING THE SECOND ONE MADE THE FIRST VERSION OF THIS GUARD NEARLY
+    /// WORTHLESS.</b> Four of <c>WireEnvelope</c>'s factories construct with a TARGET-TYPED
+    /// <c>new(...)</c> — the idiomatic form in a method whose return type already names the type —
+    /// and a detector looking only for <c>new WireEnvelope(</c> sees none of them.
+    /// <para>
+    /// <b>The near-miss is worth recording.</b> The real-file mutation that demonstrated this guard
+    /// used <c>new WireEnvelope(</c> because that is what the deleted overload had used. Written in
+    /// the file's ordinary style it would have been INVISIBLE, and the demonstration would have
+    /// passed for a reason that did not generalise — a positive control that fires on the one
+    /// spelling you happened to choose is not a control.
+    /// </para>
+    /// <para>
+    /// A bare <c>new(</c> inside a body that returns <see cref="WireEnvelope"/> is taken to be that
+    /// envelope. It could in principle be an unrelated target-typed construction; none of these
+    /// factories has one, and the direction of the error is safe — it flags rather than excuses.
+    /// </para>
+    /// </remarks>
+    private static bool Constructs(string body) =>
+        body.Contains("new WireEnvelope(", StringComparison.Ordinal)
+        || body.Contains("new(", StringComparison.Ordinal);
 
     /// <summary>
     /// Comment lines removed, because this file's own prose and the source it reads both quote the

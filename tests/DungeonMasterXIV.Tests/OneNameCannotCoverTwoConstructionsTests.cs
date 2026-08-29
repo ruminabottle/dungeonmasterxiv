@@ -93,6 +93,31 @@ public sealed class OneNameCannotCoverTwoConstructionsTests
         Assert.Equal(["ForJoinRequest"], FactoryOverloads.NamesCoveringTwoConstructions(Mutated));
     }
 
+    // THE HOLE feature-engineer-2 NAMED ON A DIFFERENT GUARD, CLOSED HERE BEFORE REVIEW.
+    // Fails if two overloads reaching construction THROUGH A HELPER slip past.
+    //
+    // "Deleting an entry reddens it; replacing it with a false one leaves it green." My first rule
+    // asked only whether a body contains 'new WireEnvelope(' -- so two overloads that each delegate
+    // to a private Build helper contain none, both read as non-constructing, AND THE GUARD PASSED ON
+    // EXACTLY THE DEFECT IT EXISTS TO CATCH, wearing one indirection.
+    //
+    // The rule now asks whether each overload is ACCOUNTED FOR: it constructs, or it delegates to a
+    // sibling of its own name. Neither means it reaches a construction by a route the row that
+    // vouches for it cannot see.
+    [Fact]
+    public void OverloadsThatReachConstructionThroughAHelperAreNotAccountedFor()
+    {
+        const string ViaHelper = """
+            public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey) =>
+                Build(code, publicKey, DisplayName.None);
+
+            public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey, DisplayName name) =>
+                Build(code, publicKey, name);
+            """;
+
+        Assert.Equal(["ForJoinRequest"], FactoryOverloads.NamesCoveringTwoConstructions(ViaHelper));
+    }
+
     // THE NEGATIVE HALF, and without it the guard would pass on a codebase where every overload
     // constructs. Two overloads under one name are FINE when one delegates -- that is exactly
     // ForJoinRequest today, and the guard must not ask anyone to split it.
