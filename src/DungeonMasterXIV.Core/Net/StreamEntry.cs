@@ -12,8 +12,20 @@ namespace DungeonMasterXIV.Net;
 /// first draft was a record struct and a probe confirmed it. The doc then claimed no such constructor
 /// existed, which was false in the file asserting it.
 ///
-/// A reference type has no implicit parameterless constructor, so the unstamped entry is now
-/// genuinely unconstructable rather than merely undocumented.
+/// A reference type has no implicit parameterless constructor, so <c>new StreamEntry()</c> no longer
+/// compiles.
+///
+/// <b>THAT IS NOT THE SAME AS UNCONSTRUCTABLE, AND THE SENTENCE THAT SAID SO WAS THE THIRD OVER-CLAIM
+/// IN THIS FILE (BUG-161).</b> <see cref="StreamStamp"/> is a readonly record struct, so
+/// <c>default(StreamStamp)</c> exists and <c>new StreamEntry(default, kind, peer, text)</c> COMPILES,
+/// carrying <c>Sequence 0</c>. Verified by compiling it, not by reasoning. The class fix moved the
+/// hazard down one level rather than removing it.
+///
+/// <b>So the guarantee is enforced where it lands, not by the type system:</b>
+/// <see cref="SessionStream.Record"/> REFUSES a stamp that was never minted. A host sequence starts
+/// at 1, so <c>Sequence &lt; 1</c> is definitionally not host-issued — which is the invariant rather
+/// than an arbitrary bound. The violating expression above is written down here so the next reader
+/// can run it instead of trusting this paragraph.
 /// </remarks>
 /// <param name="Stamp">The host's order and time. See <see cref="StreamStamp"/>.</param>
 /// <param name="Kind">What happened.</param>
