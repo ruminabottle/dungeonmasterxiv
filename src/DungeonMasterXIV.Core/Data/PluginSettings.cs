@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace DungeonMasterXIV.Data;
 
@@ -226,11 +227,64 @@ public sealed class PluginSettings
     {
         var trimmed = string.IsNullOrWhiteSpace(typed) ? string.Empty : typed.Trim();
 
+        if (WouldShortenANameTheFieldCouldNotShow(trimmed))
+        {
+            return false;
+        }
+
         return RecordDisplayNameAlias(
             string.Equals(trimmed, characterName.Value, StringComparison.Ordinal)
                 ? string.Empty
                 : trimmed);
     }
+
+    /// <summary>
+    /// Whether persisting <paramref name="incoming"/> would silently shorten a stored alias that the
+    /// settings field is not large enough to have displayed whole (A-1.2v-2, BUG-92).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The settings box RE-SAVES what it shows.</b> It loads the stored alias, and if the widget
+    /// reports a change it writes the box's contents back. A valid name can be larger than that box —
+    /// <see cref="Net.DisplayName.TryParse"/> counts characters and the field counts bytes, and a
+    /// grapheme cluster carries unboundedly many combining marks — so a stored name can arrive back
+    /// shortened having never been edited. That is stored-data mutation with no user action, and it
+    /// outlives the session that caused it.
+    /// </para>
+    /// <para>
+    /// <b>THIS DELIBERATELY MAKES NO CLAIM ABOUT THE WIDGET.</b> Whether it truncates or refuses at
+    /// the boundary, and whether it reports a change when IT shortened rather than when the user
+    /// typed, are both unmeasured — and reasoning about them is what produced the wrong description of
+    /// this defect the first time. The only property used here is one that needs no observation:
+    /// <b>shortening cannot lengthen</b>. Make the loss unpersistable and what the widget does stops
+    /// mattering.
+    /// </para>
+    /// <para>
+    /// <b>Scoped by <see cref="Net.NameInputCapacity.IsFull"/> rather than a second threshold of its
+    /// own.</b> That is the same expression the window uses to decide the field is full, already
+    /// reviewed and already deliberately conservative — two expressions meant to agree drift, one
+    /// that is shared cannot disagree with itself. When the stored alias is not near the field's
+    /// capacity the field could show it whole, nothing could have shortened it, and this returns false
+    /// for every ordinary edit.
+    /// </para>
+    /// <para>
+    /// <b>Clearing is always honoured, and that is required rather than a nicety.</b> Without it a
+    /// user whose stored alias is too large to display could never change it from this box again —
+    /// the guard would have replaced silent corruption with a silent dead end. An empty box is
+    /// unambiguously the user's act.
+    /// </para>
+    /// <para>
+    /// <b>What this does NOT do:</b> it refuses only a SHORTENING. A replacement of equal or greater
+    /// length is recorded normally, so the name remains editable. The residual cost is narrow and
+    /// worth stating: a user whose alias exceeds the field cannot shorten it in place, and must clear
+    /// it or replace it outright.
+    /// </para>
+    /// </remarks>
+    /// <param name="incoming">The trimmed contents of the box.</param>
+    private bool WouldShortenANameTheFieldCouldNotShow(string incoming) =>
+        incoming.Length > 0
+        && Net.NameInputCapacity.IsFull(DisplayNameAlias)
+        && Encoding.UTF8.GetByteCount(incoming) < Encoding.UTF8.GetByteCount(DisplayNameAlias);
 
     /// <summary>
     /// Whether a window that was open on unload should be reopened on load.
