@@ -145,7 +145,7 @@ public sealed class AdmissionInbox
                 // so JoinAccepted and the first payload can land in the same batch — and A-1.13a is
                 // exactly the case that would silently show an empty list if the freshly derived
                 // key were not used until the next frame arrived.
-                ApplyContent(envelope, sessionKey ?? handlers.OpenWith, handlers.OnContent, log);
+                ApplyContent(envelope, sessionKey ?? handlers.HostAuthored.OpenWith, handlers.HostAuthored.OnContent, log);
 
                 // THE HOST'S SIDE OF THE SAME FRAME (R-1.3k, DMXENG-50). Both arms run, and only
                 // one of them can ever fire: the line above opens HOST-authored content with the
@@ -179,7 +179,7 @@ public sealed class AdmissionInbox
                 // a few lines above. That is the existing rule for unusable input on this path, not
                 // a new answer to what the DM should be told about it — that remains a product
                 // question (D-8) and is deliberately left open.
-                if (handlers.OnJoinRequest is { } onJoinRequest
+                if (handlers.Admission.OnJoinRequest is { } onJoinRequest
                     && envelope.PublicKey is { } joinerPublicKey
                     && SessionKeyExchange.CanAgreeWith(joinerPublicKey))
                 {
@@ -189,7 +189,7 @@ public sealed class AdmissionInbox
                     // The claim travels as the RAW STRING it arrived as and is resolved by the
                     // host (T-37) -- unvalidated here on purpose, because nothing is granted on it
                     // and CampaignRelink.Resolve is where it meets a parse and a roster. See
-                    // InboundHandlers.OnJoinRequest.
+                    // JoinerAdmission.OnJoinRequest.
                     onJoinRequest(
                         joinerPublicKey,
                         DisplayName.OrNone(envelope.DisplayName),
@@ -213,7 +213,7 @@ public sealed class AdmissionInbox
             // channel an attacker controls, so it is forgeable exactly when it matters.
             if (envelope.Type == WireMessageType.JoinerHoldsFingerprint)
             {
-                if (handlers.OnComparabilityReceipt is { } onReceipt
+                if (handlers.Admission.OnComparabilityReceipt is { } onReceipt
                     && envelope.TryGetFingerprintReceiptKey() is { } receiptKey)
                 {
                     onReceipt(receiptKey);

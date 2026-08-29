@@ -19,7 +19,7 @@ namespace DungeonMasterXIV.Net;
 /// That one opens HOST-authored content with the single key a joiner derived on admission; this
 /// opens MEMBER-authored content with the keys a host shares with its peers. They stay apart
 /// because their results go to different places — see
-/// <see cref="InboundHandlers.OnMemberContent"/> for why merging them inverts D-3.
+/// <see cref="MemberAuthoredContent.OnContent"/> for why merging them inverts D-3.
 /// </para>
 /// </remarks>
 internal static class MemberContentReader
@@ -45,8 +45,8 @@ internal static class MemberContentReader
         InboundHandlers handlers,
         ISessionTransportLog? log)
     {
-        if (handlers.OnMemberContent is not { } onMemberContent
-            || handlers.OpenMemberContentWith is not { } candidates
+        if (handlers.MemberAuthored.OnContent is not { } onMemberContent
+            || handlers.MemberAuthored.OpenWith is not { } candidates
             || envelope.TryGetSealedPayload() is not { } sealedPayload)
         {
             return;
