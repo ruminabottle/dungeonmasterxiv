@@ -83,13 +83,19 @@ public sealed class SessionCoordinator
         // exactly. Taking it from the argument removes the ordering dependency instead of
         // relying on it.
         _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code, log);
+        // What RosterBroadcast reads to SEAL, read here to OPEN (R-1.3k).
+        _resources = new SessionResources(
+            _admissions,
+            _inbox,
+            () => Grace,
+            new MemberContentKeys(Audience, () => HostKeys, () => Host.Code, log),
+            new MemberContentReceipts());
         _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport, window);
         _joiner = new JoinRequester(_handshake, _interruption, Join, _newKeys, SynchroniseTransport);
         // AFTER _interruption, which owns the Grace window this reads. The Func defers that read to
         // use time, so the ordering hazard DMXENG-45 detected does not extend to it -- but HostRunner
         // guards every argument anyway, which is the point of those guards.
-        _hosting = new HostRunner(
-            Host, _admissions, _inbox, _handshake, () => Grace, _newKeys, SynchroniseTransport);
+        _hosting = new HostRunner(Host, _resources, _handshake, _newKeys, SynchroniseTransport);
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
@@ -98,6 +104,7 @@ public sealed class SessionCoordinator
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
     private readonly RosterBroadcast _roster;
+    private readonly SessionResources _resources;
     private readonly SessionInterruption _interruption;
     private readonly JoinRequester _joiner;
     private readonly HostRunner _hosting;
@@ -120,6 +127,14 @@ public sealed class SessionCoordinator
     /// </para>
     /// </remarks>
     public IReadOnlyList<RosterEntry> Roster => _receivedRoster;
+
+    /// <summary>What this host has heard from its members (R-1.3k, A-1.13c).</summary>
+    /// <remarks>
+    /// The inverse of <see cref="Roster"/>: that is what a host TOLD this client, this is what
+    /// members told the HOST. See <see cref="MemberContentReceipts"/> for the rest, including that
+    /// nothing shipped sends these yet (DMXENG-11 / A-1.15).
+    /// </remarks>
+    public MemberContentReceipts MemberContent => _resources.MemberContent;
 
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();
@@ -296,7 +311,11 @@ public sealed class SessionCoordinator
                 OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
                 OpenWith: SessionKey,
                 OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster,
-                OnComparabilityReceipt: _admissions.RecordComparabilityReceipt),
+                OnComparabilityReceipt: _admissions.RecordComparabilityReceipt,
+                // R-1.3k. DELIBERATELY NOT THE LAMBDA ABOVE: that is what a JOINER was told, and
+                // letting a member reach it would invert D-3 — see InboundHandlers.OnMemberContent.
+                OpenMemberContentWith: _resources.MemberKeys.Candidates,
+                OnMemberContent: _resources.MemberContent.Record),
             _log)
             ?? SessionKey;
         _handshake.SendWhatIsDue();
