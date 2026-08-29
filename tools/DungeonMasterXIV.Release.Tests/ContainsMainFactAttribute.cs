@@ -35,9 +35,17 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         var (contains, detail) = Containment.Value;
         if (!contains)
         {
-            Skip = "This branch does not contain origin/main, so the working tree is NOT the merged "
-                 + "tree and a pass here would describe a tree nobody is going to merge. "
-                 + $"Rebase or merge main and the gate runs. ({detail})";
+            // CAUSE-NEUTRAL WRAPPER, AND THE DETAIL CARRIES THE CAUSE (BUG-124). This used to open
+            // "This branch does not contain origin/main" and then append the real detail in
+            // brackets. On any arm except the ancestry one that is a FALSE ASSERTION FOLLOWED BY
+            // THE TRUE ONE CONTRADICTING IT -- git failing to answer does not mean the branch is
+            // behind, and neither does an unreachable origin. It was already wrong on the
+            // git-could-not-answer arm; adding two more arms would have made it wrong three times.
+            //
+            // So the consequence is stated (which is true on every arm) and the cause is left to
+            // the detail, each of which now ends in the action a reader should take.
+            Skip = "SIZE GATE NOT RUN, so this tree is not known to be the merged tree and a pass "
+                 + $"here would describe a tree nobody is going to merge: {detail}";
         }
     }
 
@@ -88,7 +96,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         return code switch
         {
             0 => (true, $"origin/main ({Short(remoteHead)}) is current and an ancestor of HEAD"),
-            1 => (false, "origin/main is not an ancestor of HEAD"),
+            1 => (false, "origin/main is not an ancestor of HEAD -- merge or rebase main and the gate runs"),
             _ => (false, $"git could not answer (exit {code}): {errors.Trim()}{output.Trim()}"),
         };
     });
