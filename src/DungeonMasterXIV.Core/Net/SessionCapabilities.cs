@@ -48,6 +48,14 @@ namespace DungeonMasterXIV.Net;
 /// (BUG-61): on the machine that reported it, this throws, and there was no seam between that throw
 /// and the frame loop. <b>Null takes the platform default</b> rather than disabling anything.
 /// </param>
+/// <param name="HostDisplayName">
+/// What the host calls itself, for its own roster entry (R-1.3e, A-1.13b). <b>Core cannot see the
+/// game</b>, so the name arrives from outside exactly as the joining name does — and it is a
+/// function rather than a value because it changes when the player switches character, which is the
+/// reason <c>SessionCoordinator.RequestJoin</c> gives for taking the joining name the same way.
+/// <b>Null is the honest default</b>: a client with no name supplied publishes the same unstated
+/// label a joiner would, rather than a blank beside a code somebody is comparing.
+/// </param>
 /// <param name="MintParticipant">
 /// Creates a participant for a joiner about to be admitted (R-1.5c). Null when not hosting into a
 /// campaign. <b>Optional deliberately; the reasoning lives on <see cref="AdmissionControl"/>'s
@@ -60,6 +68,7 @@ namespace DungeonMasterXIV.Net;
 /// </param>
 public sealed record SessionCapabilities(
     Func<SessionKeyExchange>? NewKeys = null,
+    Func<DisplayName>? HostDisplayName = null,
     Func<DisplayName, Guid?>? MintParticipant = null,
     Func<string?, RelinkClaim>? ResolveRelink = null)
 {
@@ -113,4 +122,12 @@ public sealed record SessionCapabilities(
     /// </remarks>
     public Func<string?, RelinkClaim> RelinkSource =>
         ResolveRelink ?? (static _ => RelinkClaim.None);
+
+    /// <summary>The host's own name, with the unstated case filled in.</summary>
+    /// <remarks>
+    /// <c>DisplayName.None</c> renders as <c>DisplayName.Unstated</c> — never blank. An empty label
+    /// beside a fingerprint reads as a rendering fault and invites the reader to look past it, which
+    /// is the argument that type already makes for itself.
+    /// </remarks>
+    public Func<DisplayName> HostNameSource => HostDisplayName ?? (static () => DisplayName.None);
 }

@@ -99,6 +99,12 @@ public sealed class Plugin : IDalamudPlugin
             // not a failure. A HOST that reaches here with no campaign is a different matter and
             // AdmissionControl warns on it by peer code, so the quiet version of this cannot ship.
             capabilities: new SessionCapabilities(
+                // A-1.13b: the DM's own roster entry needs a name, and Core cannot see the game.
+                // THE SAME EXPRESSION THE JOIN SIDE USES, not a second one that means to agree with
+                // it -- DisplayNameOr is the one rule for "alias if usable, otherwise character
+                // name", so the DM cannot appear under one name to a joiner and another to itself.
+                HostDisplayName: () =>
+                    _configurationStore.Configuration.Settings.DisplayNameOr(characterName()),
                 MintParticipant: label => _hostingCampaign.Current is { } campaign
                     ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
                     : null,

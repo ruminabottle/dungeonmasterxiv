@@ -57,9 +57,19 @@ public class TheRosterTravelsSealedTests
         coordinator.Admit(PeerCodes.Of(PeerCode));
 
         var content = OpenAs(joiner, coordinator, transport);
-        var entry = Assert.Single(content.Roster!);
-        Assert.Equal(PeerCode, entry.PeerCode);
+
+        // Was Assert.Single. THE ROSTER NOW CARRIES TWO ENTRIES BECAUSE THE HOST AUTHORS ITS OWN
+        // (DMXENG-33, A-1.13b), and the single-ness this asserted was incidental to what the test
+        // is named for — that the roster is sealed to the participant it is for, and carries that
+        // participant. Selecting the entry by peer code keeps the real claim and stops asserting a
+        // count that is now wrong for a correct reason.
+        //
+        // Deliberately NOT relaxed to First(): the entry is looked up by the code it must carry, so
+        // a build that published the host's entry and dropped the player's fails here rather than
+        // passing on whatever happens to be at index zero.
+        var entry = Assert.Single(content.Roster!, candidate => candidate.PeerCode == PeerCode);
         Assert.Equal("Ysera", entry.DisplayName);
+        Assert.Equal(SessionRole.Player, entry.Role);
     }
 
     // Fails if: the roster goes out in the clear. The published service policy says "everything you
