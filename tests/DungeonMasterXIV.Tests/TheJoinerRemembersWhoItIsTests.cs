@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using DungeonMasterXIV.Data;
@@ -130,61 +131,87 @@ public sealed class TheJoinerRemembersWhoItIsTests
         Assert.Single(memory.All);
     }
 
-    // A-1.9d, AND IT IS ASSERTED STRUCTURALLY BECAUSE BEHAVIOUR CANNOT SHOW IT. "No participant UUID
-    // has an expiry. A build that discards or ages out a stored UUID ON ANY TIMER fails." No test
-    // can wait long enough to prove a clock is absent, and one that advanced a fake clock would only
-    // prove THAT clock is not consulted.
-    //
-    // So this asserts the type has NOWHERE TO PUT ONE: no member of either persisted type is a date
-    // or a duration. Derived by reflection rather than listed, so a field added next month fails BY
-    // NAME rather than passing because nobody updated a list.
-    [Theory]
-    [InlineData(typeof(RelinkMemory))]
-    [InlineData(typeof(RememberedParticipant))]
-    public void NothingStoredHereCanBeAgedOut(Type stored)
+    // WHAT EVERY PERSISTED TYPE IS ALLOWED TO CONTAIN. Adding a member without adding it here
+    // fails, whatever the member is called and whatever its type.
+    private static readonly Dictionary<Type, string[]> PersistedShape = new()
     {
-        var clocks = stored
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.PropertyType == typeof(DateTime)
-                || p.PropertyType == typeof(DateTime?)
-                || p.PropertyType == typeof(DateTimeOffset)
-                || p.PropertyType == typeof(DateTimeOffset?)
-                || p.PropertyType == typeof(TimeSpan)
-                || p.PropertyType == typeof(TimeSpan?))
-            .Select(p => p.Name)
-            .ToList();
+        [typeof(RelinkMemory)] = ["Remembered", "All"],
+        [typeof(RememberedParticipant)] = ["SessionCode", "ParticipantId"],
+    };
 
-        Assert.True(
-            clocks.Count == 0,
-            $"{stored.Name} gained a time-shaped member: {string.Join(", ", clocks)}. A-1.9d fails a "
-            + "build that ages a stored UUID out on ANY timer, and the field that does not exist is "
-            + "the one that cannot be expired. If this is genuinely needed, it is a spec question.");
+    public static TheoryData<Type> PersistedTypes()
+    {
+        var data = new TheoryData<Type>();
+        foreach (var stored in PersistedShape.Keys)
+        {
+            data.Add(stored);
+        }
+
+        return data;
     }
 
-    // A-1.9e, "assessed over what leaves the machine". Asserted structurally for the same reason:
-    // this type has no transport, no coordinator and no way to reach one, so deleting is local BY
-    // CONSTRUCTION rather than by a caller remembering not to announce it.
+    // A-1.9d, ASSERTED STRUCTURALLY BECAUSE BEHAVIOUR CANNOT SHOW IT. "A build that discards or ages
+    // out a stored UUID ON ANY TIMER fails." No test can wait long enough to prove a clock is absent,
+    // and one that advanced a fake clock would prove only that THAT clock is not consulted.
     //
-    // Fails if anything network-shaped is given to the memory -- at which point a future deletion
-    // path could notify the DM, which is the signal R-1.5b refuses to manufacture.
-    [Fact]
-    public void TheMemoryCannotSendAnythingBecauseItHasNothingToSendWith()
+    // INVERTED, AND THE FIRST VERSION OF THIS TEST IS WHY. It swept for FORBIDDEN types -- DateTime,
+    // DateTimeOffset, TimeSpan -- over GetProperties. Against planted violations it passed FOUR of
+    // six: the same DateTimeOffset as a FIELD, a `long ExpiresAtTicks` (what an expiry looks like
+    // when somebody avoids DateTime for serialisation reasons), and two more. A forbidden-list sweep
+    // can only ever catch what its author thought of, and its comment claimed otherwise.
+    //
+    // This asserts the shape is EXACTLY the expected set, so an addition fails whatever it is called
+    // and whatever its type. There is no list to keep current.
+    [Theory]
+    [MemberData(nameof(PersistedTypes))]
+    public void NothingCanBeAddedToAStoredTypeWithoutThisTestSayingSo(Type stored)
     {
-        var reachable = typeof(RelinkMemory)
-            .GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-            .OfType<FieldInfo>()
-            .Select(f => f.FieldType.Name)
-            .Where(name => name.Contains("Transport", StringComparison.Ordinal)
-                || name.Contains("Coordinator", StringComparison.Ordinal)
-                || name.Contains("Announcer", StringComparison.Ordinal)
-                || name.Contains("Link", StringComparison.Ordinal))
-            .ToList();
+        var actual = stored
+            .GetMembers(BindingFlags.Public | BindingFlags.Instance)
+            .Where(member => member is PropertyInfo or FieldInfo)
+            .Select(member => member.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        var expected = PersistedShape[stored].OrderBy(n => n, StringComparer.Ordinal).ToArray();
 
         Assert.True(
-            reachable.Count == 0,
-            $"RelinkMemory can now reach {string.Join(", ", reachable)}. A-1.9e requires deleting to "
-            + "send nothing to the DM or the relay, and the strongest form of that is having nothing "
-            + "to send with.");
+            actual.SequenceEqual(expected, StringComparer.Ordinal),
+            $"WHAT THIS CHECK DECIDES: that {stored.Name} has exactly the members listed in "
+            + $"PersistedShape, and nothing else.\n"
+            + $"  expected: {string.Join(", ", expected)}\n"
+            + $"  actual:   {string.Join(", ", actual)}\n"
+            + "It does NOT decide that those members are harmless, that a NEW persisted type is "
+            + "covered (the list above is hand-written), or that nothing outside these two types "
+            + "ages a UUID out. If the new member is genuinely needed, A-1.9d forbids anything a "
+            + "timer could read, and adding it here is a spec question rather than a test edit.");
+    }
+
+    // A-1.9e, "assessed over what leaves the machine", and inverted for the same reason. The first
+    // version matched forbidden type-NAME SUBSTRINGS -- Transport, Coordinator, Announcer, Link --
+    // and so passed HttpClient, Socket, and `Action<Guid> _notify`. THAT LAST ONE IS THE WHOLE
+    // CRITERION: A-1.9e's stated failure mode is a NOTIFICATION, and a callback field is how a
+    // notification arrives.
+    //
+    // So: the instance fields of RelinkMemory must be EXACTLY the one that holds the list. Anything
+    // else fails, whatever it is -- a socket, a delegate, or something nobody has invented yet.
+    [Fact]
+    public void RelinkMemoryHoldsNothingItCouldSendWith()
+    {
+        var actual = typeof(RelinkMemory)
+            .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            .Select(field => field.FieldType.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.True(
+            actual.SequenceEqual(["List`1"], StringComparer.Ordinal),
+            "WHAT THIS CHECK DECIDES: that RelinkMemory's only instance field is the list backing "
+            + $"Remembered.\n  actual: {string.Join(", ", actual)}\n"
+            + "It does NOT decide that the whole delete PATH sends nothing -- A-1.9e's real scope. "
+            + "RelinkMemoryView is what makes that true, by taking exactly a memory and a save, and "
+            + "it lives in the plugin project which this test assembly does not reference. That gap "
+            + "is named rather than covered.");
     }
 
     // A-1.9c's CONTENT. The criterion names two facts and this asserts both are present before the
