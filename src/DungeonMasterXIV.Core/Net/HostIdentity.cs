@@ -27,9 +27,7 @@ namespace DungeonMasterXIV.Net;
 /// constructor was at FIVE against a flag of four and a block of six. The host's name and its own
 /// peer code are two more things, which would have been SEVEN — a breach — and even one would have
 /// left it AT the block, which is the wall DMXENG-57 had just finished removing one level up. Four
-/// members in one argument takes it to FOUR, which is AT the flag and clear of the block — and
-/// under the ruling at <c>engineering-standards.md:13185</c>, four FLAGS rather than passing
-/// silently, so this paragraph is the reason a flagged unit is required to carry. <b>It rides with this chunk rather
+/// members in one argument takes it to FOUR, under the flag. <b>It rides with this chunk rather
 /// than being its own ticket because it is a precondition of exactly one chunk</b>, which is the
 /// distinction DMXENG-57 established: a precondition of two or more independent chunks is shared
 /// infrastructure and gets filed; a precondition of one ride with it.
