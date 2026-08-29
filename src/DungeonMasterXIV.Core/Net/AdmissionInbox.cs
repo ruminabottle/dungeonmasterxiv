@@ -114,176 +114,47 @@ public sealed class AdmissionInbox
     {
         ArgumentNullException.ThrowIfNull(attempt);
 
-        // A bounded slice, FIFO, leaving the remainder queued (BUG-58). Taking the whole queue let
-        // a stranger decide how much work this client did in one frame: the join path is open to
-        // strangers by design. Draining one costs key agreement; FramesPerDrain says why no count.
-        byte[][] frames;
-        lock (_gate)
-        {
-            var taking = Math.Min(_frames.Count, FramesPerDrain);
-            frames = new byte[taking][];
-
-            for (var i = 0; i < taking; i++)
-            {
-                frames[i] = _frames.Dequeue();
-            }
-        }
-
+        var arriving = new InboundFrame(attempt, keys, host, handlers, log);
         byte[]? sessionKey = null;
 
-        foreach (var frame in frames)
+        foreach (var frame in TakeSlice())
         {
             if (!EnvelopeCodec.TryDecode(frame, out var envelope) || envelope is null)
             {
                 continue;
             }
 
-            // The relay's answer to this host's code request (R-1.2a). Registering is the one thing
-            // a host waits on, and before BUG-36 nothing consumed these at all — the request was
-            // never sent, so the answer never came and no handler was missed.
-            if (host is not null && InboundApplication.ApplyRegistration(envelope, host))
-            {
-                continue;
-            }
-
-            // Content from inside the session (D-11). Handled before the outcome arms for the same
-            // reason JoinRequest is: a payload is not an outcome and matches none of them, so it
-            // would fall through to nothing — the shape that cost BUG-42 an entire feature.
-            //
-            // A payload we cannot open is DISCARDED IN SILENCE, and that is correct rather than
-            // lenient. Keys are pairwise, so the host seals one copy per participant and the relay
-            // forwards every copy to every member: a client legitimately receives payloads sealed
-            // for other people, all the time. Treating an unopenable payload as an error would make
-            // ordinary traffic look like an attack.
-            if (envelope.Type == WireMessageType.SessionPayload)
-            {
-                // The key derived EARLIER IN THIS DRAIN wins over the one we came in with. A
-                // reconnecting client is admitted and sent the current roster in quick succession,
-                // so JoinAccepted and the first payload can land in the same batch — and A-1.13a is
-                // exactly the case that would silently show an empty list if the freshly derived
-                // key were not used until the next frame arrived.
-                InboundApplication.ApplyContent(envelope, sessionKey ?? handlers.HostAuthored.OpenWith, handlers.HostAuthored.OnContent, log);
-
-                // THE HOST'S SIDE OF THE SAME FRAME (R-1.3k, DMXENG-50). Both arms run, and only
-                // one of them can ever fire: the line above opens HOST-authored content with the
-                // key a joiner derived on admission, and this one opens MEMBER-authored content
-                // with the keys a host shares with its peers. A payload is sealed under exactly one
-                // of those, so the other simply finds nothing to do.
-                //
-                // NOT AN `else`, DELIBERATELY. An else would make the arms exclusive by control
-                // flow, and the property that makes them exclusive is the SEAL — one key opens a
-                // payload and the rest cannot. Writing it as an else would hide a real question
-                // (what if a client is both?) behind a branch that answers it by accident.
-                MemberContentReader.Apply(envelope, handlers, log);
-                continue;
-            }
-
-            // A joiner asking to be let in. The consumer existed and was well tested from the day it
-            // was written; nothing routed to it, so the relay forwarded every request to a host that
-            // dropped it and no prompt was ever shown (BUG-42). Handled before the outcome arms
-            // because a JoinRequest is not an outcome and matches none of them -- which is exactly
-            // how it fell through to nothing.
-            if (envelope.Type == WireMessageType.JoinRequest)
-            {
-                // THE KEY IS CHECKED HERE, AT THE ONE DOOR IT ARRIVES THROUGH (BUG-56). A joiner
-                // controls these bytes and nothing validated them, so a peer the host could never
-                // derive a key for could be admitted: addressable by the relay, unreachable by the
-                // host, and silent to everyone. Guarding each place that derives instead is a
-                // denylist of the call sites that happen to exist today, and the next one is
-                // unprotected — which is why this is at the boundary and not beside the crypto.
-                //
-                // A refused request is DROPPED, exactly as any frame that does not parse is dropped
-                // a few lines above. That is the existing rule for unusable input on this path, not
-                // a new answer to what the DM should be told about it — that remains a product
-                // question (D-8) and is deliberately left open.
-                if (handlers.Admission.OnJoinRequest is { } onJoinRequest
-                    && envelope.PublicKey is { } joinerPublicKey
-                    && SessionKeyExchange.CanAgreeWith(joinerPublicKey))
-                {
-                    // Validated HERE rather than trusted, and a bad name does not drop the request:
-                    // the person behind it is still waiting, and the prompt they need carries the
-                    // fingerprint whatever the name turns out to be. See DisplayName.OrNone.
-                    // The claim travels as the RAW STRING it arrived as and is resolved by the
-                    // host (T-37) -- unvalidated here on purpose, because nothing is granted on it
-                    // and CampaignRelink.Resolve is where it meets a parse and a roster. See
-                    // JoinerAdmission.OnJoinRequest.
-                    onJoinRequest(
-                        joinerPublicKey,
-                        DisplayName.OrNone(envelope.DisplayName),
-                        envelope.ClaimedParticipantId);
-                }
-
-                continue;
-            }
-
-            // THE HOP THAT DID NOT EXIST (BUG-75). The joiner SENDS this (OutboundHandshake), the
-            // relay ROUTES it to the host (RelayRouter), and until now nothing here consumed it --
-            // so it reached the host and fell through to nothing. Sent, routed, silently dropped:
-            // the same shape as BUG-42's consumer nothing routed to, arriving from the other side.
-            //
-            // Handled BEFORE the outcome arms for the same reason JoinRequest is: a receipt is not
-            // an outcome and matches none of them, which is exactly how it fell through.
-            //
-            // ESTABLISHES STATE 1 ONLY (R-1.3a-iv). It reports that the joiner HELD THE HOST KEY and
-            // could render a fingerprint -- a CAPABILITY, never a claim that a human compared
-            // anything. R-1.3a-iii forbids the second: an acknowledgement of the human act rides the
-            // channel an attacker controls, so it is forgeable exactly when it matters.
-            // A-1.28. The door delivers through itself; the reasoning is on TransportNotices.
-            if (envelope.Type == WireMessageType.ConnectionDropped)
-            {
-                handlers.Transport.Deliver(envelope);
-                continue;
-            }
-
-            if (envelope.Type == WireMessageType.JoinerHoldsFingerprint)
-            {
-                if (handlers.Admission.OnComparabilityReceipt is { } onReceipt
-                    && envelope.TryGetFingerprintReceiptKey() is { } receiptKey)
-                {
-                    onReceipt(receiptKey);
-                }
-
-                continue;
-            }
-
-            // The relay refusing a code the JOINER asked for means no session is live under it —
-            // in practice a mistyped code, which is the most common thing a joiner ever does. The
-            // same message means something different to a host ("that code is taken, pick another"),
-            // which is why this is a separate arm rather than a widened ApplyRegistration: one
-            // function serving both readings is how the host's arm gets hijacked (BUG-43).
-            if (envelope.Type == WireMessageType.CodeRefused && attempt.Phase == JoinPhase.Contacting)
-            {
-                attempt.Fail(SessionFailure.SessionCodeNotActive);
-                continue;
-            }
-
-            // Pending notices first, and they are not outcomes. A pending notice says the DM is
-            // looking; applying it is what gives this client something to compare while the
-            // decision is still open (R-1.3a-i, A-1.3f-1).
-            if (envelope.TryGetPendingHostKey() is { } hostPublicKey)
-            {
-                attempt.AwaitDecision(envelope.TryGetDeadline());
-
-                if (keys is not null)
-                {
-                    attempt.HostKeyOffered(hostPublicKey, keys.PublicKey);
-                }
-
-                continue;
-            }
-
-            if (envelope.TryGetAdmissionOutcome(keys?.PublicKey) is { } outcome)
-            {
-                // The participant id rides the SAME envelope as the outcome and is read from it
-                // here rather than folded into AdmissionOutcome. It decides nothing about the
-                // admission, and a consumer that could read it through Match would be reading an
-                // identity as an answer -- the same separation TryGetFingerprintReceiptKey keeps.
-                sessionKey = InboundApplication.Apply(
-                    outcome, attempt, keys, ParticipantReceipt.TryRead(envelope, keys?.PublicKey)) ?? sessionKey;
-            }
+            // THE KEY DERIVED EARLIER IN THIS DRAIN IS CARRIED FORWARD, and that is A-1.13a. A
+            // reconnecting client is admitted and sent the current roster in quick succession, so
+            // JoinAccepted and the first payload can land in the same batch -- and the roster would
+            // silently render empty if the freshly derived key were not used until the next frame.
+            sessionKey = arriving.Apply(envelope, sessionKey);
         }
 
         return sessionKey;
+    }
+
+    /// <summary>A bounded FIFO slice of what has arrived, leaving the remainder queued (BUG-58).</summary>
+    /// <remarks>
+    /// Taking the whole queue let a stranger decide how much work this client did in one frame: the
+    /// join path is open to strangers by design. Draining one costs key agreement; see
+    /// <c>FramesPerDrain</c> for why no per-frame count is quoted. This DEFERS and refuses nobody --
+    /// the remainder stays queued, in order, for a later tick.
+    /// </remarks>
+    private byte[][] TakeSlice()
+    {
+        lock (_gate)
+        {
+            var taking = Math.Min(_frames.Count, FramesPerDrain);
+            var frames = new byte[taking][];
+
+            for (var i = 0; i < taking; i++)
+            {
+                frames[i] = _frames.Dequeue();
+            }
+
+            return frames;
+        }
     }
 
     /// <summary>Empties the queue, for the end of a session.</summary>
