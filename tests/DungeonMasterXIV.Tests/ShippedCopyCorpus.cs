@@ -126,13 +126,47 @@ internal static IReadOnlyList<string> SweptSources(string root, IReadOnlyList<st
             + string.Join(", ", missing));
     }
 
-    return Directory.EnumerateFiles(Path.Combine(root, "Windows"), "*.cs")
+    // BUG-105. Top level only meant a window in a subdirectory of Windows/ COMPILED INTO THE PLUGIN
+    // AND SHIPPED WITH ITS STRINGS NEVER EXAMINED, while every guard over this corpus stayed green.
+    // Measured: with one planted subdirectory the scan saw 9 files where the tree held 10.
+    return Directory.EnumerateFiles(Path.Combine(root, "Windows"), "*.cs", SearchOption.AllDirectories)
         .Concat(named)
         .OrderBy(path => path, StringComparer.Ordinal)
         .ToList();
 }
 
 internal static string WindowsDirectory() => Path.Combine(RepositoryRoot(), "Windows");
+
+/// <summary>Every <c>.cs</c> file beneath <c>Windows/</c>, found by walking rather than by globbing.</summary>
+/// <remarks>
+/// <para>
+/// <b>A SECOND SOURCE for guards over this corpus, and the recursion is written out for that reason
+/// (BUG-105).</b> The obvious implementation is the <c>SearchOption.AllDirectories</c> call
+/// <see cref="SourcesSwept"/> makes, and a guard comparing those two would be comparing one function
+/// with itself: both sides would miss a subdirectory, miss it EQUALLY, and the equality would pass.
+/// That is what left <c>TheSweepReadsEveryWindowOnDisk</c> green over a planted window.
+/// </para>
+/// <para>
+/// It lives HERE rather than in the test file because both the subject and its control already
+/// depend on this type. That is placement, not deduplication — the open question about the other
+/// copies of this walk is deliberately untouched.
+/// </para>
+/// </remarks>
+internal static IEnumerable<string> EveryWindowFileBeneath(string directory)
+{
+    foreach (var file in Directory.GetFiles(directory, "*.cs"))
+    {
+        yield return file;
+    }
+
+    foreach (var subdirectory in Directory.GetDirectories(directory))
+    {
+        foreach (var file in EveryWindowFileBeneath(subdirectory))
+        {
+            yield return file;
+        }
+    }
+}
 
 internal static string RepositoryRoot()
 {
