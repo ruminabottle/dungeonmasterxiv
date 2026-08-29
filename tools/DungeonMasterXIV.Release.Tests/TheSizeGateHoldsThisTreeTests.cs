@@ -40,6 +40,17 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
         var intake = SizeGateIntake.Files();
         var expected = SizeGateBaseline.Files();
 
+        // BOTH OPERANDS ASSERTED NON-EMPTY BEFORE THEY ARE COMPARED, because two empty sets AGREE.
+        // `expected.Except(intake)` is empty when the floor is empty, when the intake is empty, and
+        // when the tree is genuinely clean -- three states, one answer. The baseline already refuses
+        // a zero-entry floor and the intake already throws when git cannot answer, so neither can be
+        // empty by the time this runs; asserting it here says so at the point of comparison rather
+        // than leaving it to two guarantees made elsewhere.
+        Assert.True(expected.Count > 0, "the population floor is empty, so the comparison below would "
+            + "pass against any tree at all");
+        Assert.True(intake.Count > 0, "the intake is empty, so nothing was measured and the "
+            + "comparison below would pass by agreeing with an empty floor");
+
         // (2) THE POPULATION FLOOR, AND IT IS THE ONLY ARM THAT CATCHES A SHORT RUN. A file that
         // leaves intake has no baseline and therefore no delta, so a regression in it reads as zero.
         var departed = expected.Except(intake, System.StringComparer.Ordinal).ToList();
