@@ -3,6 +3,7 @@ using System.Linq;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using DungeonMasterXIV.Campaigns;
+using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
@@ -47,14 +48,22 @@ public sealed class SessionWindow : Window
     /// Which campaign a hosted session belongs to (A-1.9i). Settled when hosting starts, forgotten
     /// when it ends, and never asked about first — hosting is one action.
     /// </param>
-    public SessionWindow(SessionCoordinator coordinator, Func<DisplayName> displayName, HostingCampaign hosting)
+    /// <param name="relink">
+    /// What this client remembers about who it is, per session code (R-1.5b). Passed straight to the
+    /// join flow, which is the only thing here that reads it.
+    /// </param>
+    public SessionWindow(
+        SessionCoordinator coordinator,
+        Func<DisplayName> displayName,
+        HostingCampaign hosting,
+        Func<RelinkMemory> relink)
         : base("Dungeon Master XIV session###dmx-session")
     {
         _coordinator = coordinator;
         _admissionPrompts = new AdmissionPromptView(coordinator);
         _hosting = hosting;
         _campaignPicker = new HostCampaignPicker(hosting);
-        _joinFlow = new JoinFlowView(coordinator, displayName);
+        _joinFlow = new JoinFlowView(coordinator, displayName, relink);
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new System.Numerics.Vector2(420, 260),

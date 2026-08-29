@@ -17,6 +17,7 @@ public sealed class ConfigWindow : Window
 
     // Built once: Draw runs every frame and the schema version cannot change while we are loaded.
     private readonly string _schemaVersionLabel;
+    private readonly RelinkMemoryView _relinkMemory;
 
     // R-1.7a, verbatim. Bold markers from the requirement are dropped because ImGui text has no
     // bold; nothing else is altered. If this needs to change, R-1.7a changes first.
@@ -74,6 +75,13 @@ public sealed class ConfigWindow : Window
     {
         _configurationStore = configurationStore;
         _characterName = characterName;
+
+        // Both suppliers read through the STORE rather than capturing the settings object, so a
+        // configuration reloaded from disk underneath this window is still the one the player sees
+        // and deletes from.
+        _relinkMemory = new RelinkMemoryView(
+            () => _configurationStore.Configuration.Settings.Relink,
+            _configurationStore.Save);
         _schemaVersionLabel = $"Settings schema version {configurationStore.Configuration.Version}";
 
         SizeConstraints = new WindowSizeConstraints
@@ -109,6 +117,13 @@ public sealed class ConfigWindow : Window
 
         ImGui.Separator();
         DrawWhatThisPluginKnows();
+
+        // R-1.5b, IMMEDIATELY AFTER "what this plugin knows" AND NOT IN A WINDOW OF ITS OWN. A-1.9b
+        // gives the player a right to SEE what is stored about them; a reader already here to answer
+        // that question should not have to discover a second place where the rest of the answer is.
+        ImGui.Separator();
+        ImGui.TextUnformatted("What this plugin remembers about you");
+        _relinkMemory.Draw();
 
         ImGui.Separator();
         ImGui.TextDisabled(_schemaVersionLabel);

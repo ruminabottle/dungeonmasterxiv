@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
+using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
@@ -77,6 +78,7 @@ internal sealed class JoinFlowView
     /// player switches character — see <c>LocalCharacterName</c>.
     /// </summary>
     private readonly Func<DisplayName> _displayName;
+    private readonly Func<RelinkMemory> _relink;
 
     private string _codeEntry = string.Empty;
     private string _nameEntry = string.Empty;
@@ -84,10 +86,23 @@ internal sealed class JoinFlowView
 
     /// <param name="coordinator">The session layer this surface reflects.</param>
     /// <param name="displayName">What to call ourselves when joining (R-1.3e). Asked each time.</param>
-    public JoinFlowView(SessionCoordinator coordinator, Func<DisplayName> displayName)
+    /// <param name="relink">
+    /// What this client remembers about who it is, per session code (R-1.5b).
+    /// <para>
+    /// <b>A supplier rather than the object, so this reads it AT THE MOMENT OF THE JOIN.</b> The
+    /// player may delete an entry from the settings window while this one is open, and a captured
+    /// reference would let a join carry a claim the player had just removed — a deletion that
+    /// appeared to work and did not.
+    /// </para>
+    /// </param>
+    public JoinFlowView(
+        SessionCoordinator coordinator,
+        Func<DisplayName> displayName,
+        Func<RelinkMemory> relink)
     {
         _coordinator = coordinator;
         _displayName = displayName;
+        _relink = relink;
     }
 
     /// <summary>Draws the joiner's half of the session window.</summary>
@@ -195,7 +210,14 @@ internal sealed class JoinFlowView
                 //
                 // Sent from the same resolved value that was SHOWN, not re-resolved here: a second
                 // call would be a second chance to disagree with the line above.
-                _coordinator.RequestJoin(code, willSend);
+                // R-1.5b's CARRYING half, and the line DMXENG-1 exists for: until now the only
+                // production caller passed two arguments, so claimedParticipantId was null on every
+                // join the shipped build made and relink was unreachable however much of it existed.
+                //
+                // Null when we have never been admitted under this code, or when the player has
+                // deleted it -- both mean "join as a stranger", which is what makes the deletion in
+                // the settings window actually undo the relink rather than merely hide it.
+                _coordinator.RequestJoin(code, willSend, _relink().IdFor(code));
             }
         }
 

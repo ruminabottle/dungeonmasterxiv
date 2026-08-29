@@ -82,6 +82,24 @@ public sealed class PluginSettings
     public TimeSpan InterruptionWindow { get; set; } = Net.GraceWindow.Default;
 
     /// <summary>
+    /// What this client remembers about which participant it is, per session code (R-1.5b). Empty
+    /// until it has been admitted somewhere.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Carried by the settings because that is what already persists, and NOT because it is a
+    /// setting.</b> Nothing here is a preference and none of it is shown in the settings window as
+    /// one — see <see cref="RelinkMemory"/> for what it is and what the player may do with it.
+    /// </para>
+    /// <para>
+    /// <b>No schema bump.</b> <see cref="CurrentSchemaVersion"/> moves when settings already on disk
+    /// would not survive being read as-is; a key absent from an older file leaves this at its
+    /// initializer, which is an empty memory — exactly what an older build had.
+    /// </para>
+    /// </remarks>
+    public RelinkMemory Relink { get; set; } = new();
+
+    /// <summary>
     /// The window to actually use: <see cref="InterruptionWindow"/> when it is safe, otherwise
     /// R-1.4's default.
     /// </summary>

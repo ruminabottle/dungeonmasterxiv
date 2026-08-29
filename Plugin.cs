@@ -108,7 +108,8 @@ public sealed class Plugin : IDalamudPlugin
         _sessionWindow = new SessionWindow(
             _sessionCoordinator,
             () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName()),
-            _hostingCampaign);
+            _hostingCampaign,
+            () => _configurationStore.Configuration.Settings.Relink);
         _mainWindow.OpenSession = _sessionWindow.Open;
         _campaignListWindow = new CampaignListWindow(_campaignStore);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
@@ -194,7 +195,38 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnCommand(string command, string arguments) => _commandDispatcher.Execute(arguments);
 
-    private void OnFrameworkUpdate(IFramework framework) => _sessionCoordinator.Tick(framework.UpdateDelta, DateTimeOffset.UtcNow);
+    // R-1.5b's storing half. HERE RATHER THAN IN A WINDOW, because persisting is not drawing and a
+    // Draw method runs only while a window is open -- a player who closed the join window mid-
+    // admission would never have been told to remember anything.
+    //
+    // SAVES ONLY WHEN THE MEMORY ACTUALLY CHANGED. This runs at frame rate, so an unconditional
+    // Save() here would write the config file sixty times a second: Remember returns whether
+    // anything moved and that is the whole guard.
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        _sessionCoordinator.Tick(framework.UpdateDelta, DateTimeOffset.UtcNow);
+        RememberWhoWeAre();
+    }
+
+    // The host told us which participant we are (R-1.5c) and this is what makes it survive the
+    // process. Guarded on Admitted so nothing is written from an attempt that was refused, lapsed or
+    // is still waiting -- R-1.3b, and JoinAttempt already refuses to hold an id outside Admitted.
+    private void RememberWhoWeAre()
+    {
+        var join = _sessionCoordinator.Join;
+
+        if (join.Phase != JoinPhase.Admitted
+            || join.ParticipantId is not { } participantId
+            || join.Code is not { } code)
+        {
+            return;
+        }
+
+        if (_configurationStore.Configuration.Settings.Relink.Remember(code, participantId))
+        {
+            _configurationStore.Save();
+        }
+    }
 
     private void OnCampaignsCommand(string command, string arguments) => _campaignListWindow.Open();
 }
