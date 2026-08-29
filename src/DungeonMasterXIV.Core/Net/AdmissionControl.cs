@@ -349,10 +349,6 @@ public sealed class AdmissionControl
         Desk.Find(PeerCodeFor(joinerPublicKey))?.JoinerReportedItCanCompare();
 
     /// <summary>
-    /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
-    /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
-    /// </summary>
-    /// <summary>
     /// A member said it is leaving, so it stops being a member at once (R-1.3g, A-1.16a). Returns
     /// whether anybody was removed.
     /// </summary>
@@ -378,6 +374,10 @@ public sealed class AdmissionControl
     /// <param name="peerCode">Whose key opened the departure notice.</param>
     public bool Departed(PeerCode peerCode) => Audience.Remove(peerCode);
 
+    /// <summary>
+    /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
+    /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
+    /// </summary>
     public void Deny(PeerCode peerCode)
     {
         var request = Desk.Decide(peerCode);
