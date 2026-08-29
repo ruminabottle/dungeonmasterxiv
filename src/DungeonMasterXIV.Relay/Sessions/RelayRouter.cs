@@ -68,10 +68,12 @@ public sealed class RelayRouter(SessionRegistry registry)
             WireMessageType.JoinerHoldsFingerprint =>
                 RouteFingerprintReceipt(envelope, code, senderConnectionId),
 
-            // CodeAccepted and CodeRefused are the relay's own answers. A client sending one is not
-            // a case the plugin can produce, so it is something hand-rolled talking to us, and the
-            // relay must not launder it onward as though it had arbitrated.
-            WireMessageType.CodeAccepted or WireMessageType.CodeRefused =>
+            // These are the relay's own answers. A client sending one is not a case the plugin can
+            // produce, so it is something hand-rolled talking to us, and the relay must not launder
+            // it onward as though it had arbitrated. ConnectionDropped is the one that matters most
+            // and its type doc says why: forwarding a client's would let any keyholder tell a host
+            // that somebody else vanished, and the host's own guard does NOT cover that case.
+            WireMessageType.CodeAccepted or WireMessageType.CodeRefused or WireMessageType.ConnectionDropped =>
                 RelayDecision.Drop(RelayOutcome.RelayOnlyMessageFromClient),
 
             // D-14: the wire format only grows, so an unknown type is a message from a newer

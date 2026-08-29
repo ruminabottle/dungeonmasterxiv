@@ -350,4 +350,28 @@ public sealed record WireEnvelope
         };
     }
 
+    /// <summary>
+    /// The relay telling a host that a member's connection went away (A-1.28, R-1.5a).
+    /// </summary>
+    /// <remarks>
+    /// <b>It names the member by the key the host already knows</b>, and carries nothing else about
+    /// them — no name, no participant id. See <see cref="WireMessageType.ConnectionDropped"/> for
+    /// why that is the whole design and what forwarding a client-sent one would buy an attacker.
+    /// <para>
+    /// Kept short deliberately: <c>WireEnvelope</c> sits against a DECLARED RAISED FLAG of 360
+    /// (<c>engineering-standards.md:8003</c>), and a flag raised on purpose is one that has to stay
+    /// visible. The reasoning lives on the message type, which is where a reader looking for it
+    /// would go.
+    /// </para>
+    /// </remarks>
+    /// <param name="code">The session the member was in.</param>
+    /// <param name="memberPublicKey">The key that member joined with.</param>
+    public static WireEnvelope ForConnectionDropped(SessionCode code, byte[] memberPublicKey)
+    {
+        ArgumentNullException.ThrowIfNull(memberPublicKey);
+        return new WireEnvelope(WireMessageType.ConnectionDropped, code.Value)
+        {
+            PublicKey = memberPublicKey,
+        };
+    }
 }

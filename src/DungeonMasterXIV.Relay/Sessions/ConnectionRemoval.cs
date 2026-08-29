@@ -14,10 +14,22 @@ namespace DungeonMasterXIV.Relay.Sessions;
 /// its own side (R-1.8), and a relay narrating session lifecycle would be asserting authority D-3
 /// denies it.
 /// </param>
+/// <param name="HostConnectionId">
+/// Who hosts this session, so a member's departure can be reported to them (A-1.28). Empty when
+/// the departure IS the host's, since there is then nobody to tell and no session to tell them
+/// about.
+/// </param>
+/// <param name="DepartedMemberKey">
+/// The base64 public key the departing member joined with, or null when the departure was the host
+/// or a connection that was only ever pending. <b>The only thing the relay says about who left</b>
+/// — the host turns it into a peer code itself, which is D-3 kept rather than merely respected.
+/// </param>
 public readonly record struct SessionDeparture(
     string Code,
     bool EndedSession,
-    IReadOnlyList<string> OrphanedConnections);
+    IReadOnlyList<string> OrphanedConnections,
+    string HostConnectionId = "",
+    string? DepartedMemberKey = null);
 
 /// <summary>
 /// Everything a connection leaving did, across every session it was part of.

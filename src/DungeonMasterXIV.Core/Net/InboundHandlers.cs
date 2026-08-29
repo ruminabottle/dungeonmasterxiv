@@ -108,6 +108,11 @@ namespace DungeonMasterXIV.Net;
 /// How this client opens host-authored content and what it does with it. <c>default</c> on a pure
 /// host — see <see cref="HostAuthoredContent"/>.
 /// </param>
+/// <param name="Transport">
+/// What the RELAY says about the transport, as opposed to what a PEER says about the session — a
+/// fourth door for the one author D-2 denies authority over the session. See
+/// <see cref="TransportNotices"/>.
+/// </param>
 /// <param name="MemberAuthored">
 /// How a host opens member-authored content and what it does with it. <c>default</c> on every
 /// joiner-only client — see <see cref="MemberAuthoredContent"/>.
@@ -115,4 +120,5 @@ namespace DungeonMasterXIV.Net;
 public readonly record struct InboundHandlers(
     JoinerAdmission Admission = default,
     HostAuthoredContent HostAuthored = default,
-    MemberAuthoredContent MemberAuthored = default);
+    MemberAuthoredContent MemberAuthored = default,
+    TransportNotices Transport = default);

@@ -101,6 +101,11 @@ public sealed class EveryMessageTypeReachesAnArmTests
         [WireMessageType.JoinerHoldsFingerprint] = new(
             As: Arrangement.Registering, Reached: p => p.ReceiptSeen),
 
+        // A-1.28. RELAY-AUTHORED, which is why it is arranged as a HOST: the relay tells a host that
+        // one of ITS members went away, and no other client is a recipient of one.
+        [WireMessageType.ConnectionDropped] = new(
+            As: Arrangement.Registering, Reached: p => p.DropSeen),
+
         [WireMessageType.JoinPending] = new(
             As: Arrangement.Contacting, Reached: p => p.DecisionIsPending),
 
@@ -246,6 +251,8 @@ public sealed class EveryMessageTypeReachesAnArmTests
 
         public bool ReceiptSeen { get; private set; }
 
+        public bool DropSeen { get; private set; }
+
         public bool HostIsLive => _host.Phase == HostingPhase.Hosting;
 
         public bool JoinFailedAsCodeNotActive =>
@@ -269,7 +276,8 @@ public sealed class EveryMessageTypeReachesAnArmTests
                 new InboundHandlers(
                     Admission: new JoinerAdmission(
                         OnJoinRequest: (_, _, _) => JoinRequestSeen = true,
-                        OnComparabilityReceipt: _ => ReceiptSeen = true)));
+                        OnComparabilityReceipt: _ => ReceiptSeen = true),
+                    Transport: new TransportNotices(OnConnectionDropped: _ => DropSeen = true)));
         }
 
         // Built through the REAL factories, so every frame this file delivers is one the product can
@@ -291,6 +299,8 @@ public sealed class EveryMessageTypeReachesAnArmTests
                 WireEnvelope.ForJoinAccepted(Code, mine.PublicKey, theirs.PublicKey),
             WireMessageType.JoinDenied => WireEnvelope.ForJoinDenied(Code, mine.PublicKey),
             WireMessageType.JoinLapsed => WireEnvelope.ForJoinLapsed(Code, mine.PublicKey),
+            WireMessageType.ConnectionDropped =>
+                WireEnvelope.ForConnectionDropped(Code, theirs.PublicKey),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(type), type, "no frame builder for a type this file claims is dispatched"),
         };

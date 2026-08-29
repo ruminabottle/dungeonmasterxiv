@@ -81,6 +81,12 @@ internal static class ClientSendTable
         [nameof(WireEnvelope.ForCodeRefused)] = new(
             Origin.Relay, "as CodeAccepted -- the relay's own answer"),
 
+        // A-1.28. The relay is the ONLY party that can observe a dropped connection, which is what
+        // makes it the author; a client sending one would be forging a transport fact about somebody
+        // else, and RelayRouter drops it into RelayOnlyMessageFromClient alongside the two above.
+        [nameof(WireEnvelope.ForConnectionDropped)] = new(
+            Origin.Relay, "only the relay can see a connection go away; a client sending one is forging"),
+
         // Matched on the ABSENCE of a claim, so this row cannot be satisfied by a relink and the
         // relink row cannot be satisfied by a plain join. Before this file derived over factories,
         // one assertion covered both and the weaker one was doing all the work.
