@@ -70,8 +70,29 @@ public sealed class RelinkMemory
     /// offering deletion without first showing what is stored FAILS — you cannot meaningfully delete
     /// what you cannot see."</i> So this exists for the UI to render and is not an afterthought of
     /// the delete path.
+    /// <para>
+    /// <b>BUG-146: A METHOD, NOT A PROPERTY, AND THAT IS THE WHOLE FIX.</b> As a property this was a
+    /// second PUBLIC GETTABLE view of <see cref="Remembered"/>, so the serialiser wrote the list
+    /// twice — and on load Newtonsoft populates a read-only collection property by ADDING to it, into
+    /// the same list. Every save/load DOUBLED the memory: 1, 2, 4, 8, 16, 32, and about a million
+    /// after twenty ordinary settings cycles.
+    /// </para>
+    /// <para>
+    /// <c>[JsonIgnore]</c> is the usual remedy and is not available: this project does not reference
+    /// Newtonsoft, and adding a serialiser dependency to the domain to describe how the domain is
+    /// serialised is the wrong direction. A method is not a serialisable member at all, so the defect
+    /// is removed by construction rather than by an annotation someone must remember to copy onto the
+    /// next alias.
+    /// </para>
+    /// <para>
+    /// <b>Kept rather than deleted, deliberately.</b> Dropping it and pointing the UI at
+    /// <see cref="Remembered"/> also fixes the doubling, and hands the render path a mutable
+    /// <see cref="List{T}"/> with a public setter — the read-only view is the thing A-1.9b's
+    /// "show it before you delete it" actually leans on.
+    /// </para>
     /// </remarks>
-    public IReadOnlyList<RememberedParticipant> All => Remembered;
+    /// <returns>Everything stored, in the order it was learned.</returns>
+    public IReadOnlyList<RememberedParticipant> All() => Remembered;
 
     /// <summary>
     /// The participant this client is under <paramref name="code"/>, or null if it has never been
