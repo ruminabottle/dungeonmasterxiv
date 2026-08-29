@@ -85,6 +85,11 @@ public sealed class SessionCoordinator
         _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code, log);
         _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport, window);
         _joiner = new JoinRequester(_handshake, _interruption, Join, _newKeys, SynchroniseTransport);
+        // AFTER _interruption, which owns the Grace window this reads. The Func defers that read to
+        // use time, so the ordering hazard DMXENG-45 detected does not extend to it -- but HostRunner
+        // guards every argument anyway, which is the point of those guards.
+        _hosting = new HostRunner(
+            Host, _admissions, _inbox, _handshake, () => Grace, _newKeys, SynchroniseTransport);
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
@@ -95,6 +100,7 @@ public sealed class SessionCoordinator
     private readonly RosterBroadcast _roster;
     private readonly SessionInterruption _interruption;
     private readonly JoinRequester _joiner;
+    private readonly HostRunner _hosting;
     private IReadOnlyList<RosterEntry> _receivedRoster = [];
     private TimeSpan _timeInPhase;
     private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
@@ -131,7 +137,7 @@ public sealed class SessionCoordinator
     /// D-8 forbids an identifier that links a player across two session codes, and a key pair that
     /// survived would be one.
     /// </remarks>
-    public SessionKeyExchange? HostKeys { get; private set; }
+    public SessionKeyExchange? HostKeys => _hosting.Keys;
 
     /// <summary>This client's key pair when joining somebody else's session, or null.</summary>
     /// <remarks>Owned by <see cref="JoinRequester"/>, which is the only thing that creates it.</remarks>
@@ -158,42 +164,13 @@ public sealed class SessionCoordinator
 
 
     /// <summary>Starts hosting under a freshly generated code (R-1.1, R-1.2a).</summary>
-    public void StartHosting()
-    {
-        HostKeys?.Dispose();
-        HostKeys = null;
-
-        // BUG-61. This throws on at least one real machine, and it used to unwind out of the button
-        // handler and out of Draw -- so the user got an exception every frame rather than an answer
-        // once. Caught HERE rather than at the button, because both of the product's two entry
-        // points construct a key pair and a guard at one of them leaves the other open.
-        if (!SessionKeyPair.TryMake(_newKeys, out var hostKeys))
-        {
-            Host.Fail(SessionFailure.SessionKeysUnavailable);
-            return;
-        }
-
-        HostKeys = hostKeys;
-        Host.Start(SessionCodeGenerator.Next());
-        _handshake.ForgetHostRegistration();
-        SynchroniseTransport();
-    }
+    public void StartHosting() => _hosting.Start();
 
     /// <summary>
     /// Ends the session. R-1.1 makes this the same path as closing or unloading the plugin, so the
     /// connection cannot outlive the session by taking a different exit.
     /// </summary>
-    public void StopHosting()
-    {
-        Host.Stop();
-        HostKeys?.Dispose();
-        HostKeys = null;
-        _admissions.Clear();
-        _inbox.Clear();
-        Grace.Reset();
-        _handshake.ForgetHostRegistration();
-        SynchroniseTransport();
-    }
+    public void StopHosting() => _hosting.Stop();
 
     /// <summary>Requests to join <paramref name="code"/>. A human action (R-1.3).</summary>
     public void RequestJoin(SessionCode code) => RequestJoin(code, DisplayName.None);
