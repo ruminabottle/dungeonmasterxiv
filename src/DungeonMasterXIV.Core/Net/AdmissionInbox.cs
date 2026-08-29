@@ -34,11 +34,28 @@ public sealed class AdmissionInbox
     /// between machines and the party does not.
     /// </para>
     /// <para>
-    /// <b>What it costs when it bites.</b> Measured on this machine, a valid join request costs
-    /// ~0.44ms to drain, so eight is ~3.5ms — about a fifth of a 60fps frame. Two other harnesses
-    /// measured the per-request cost lower (a 16.67ms frame filled by ~54 and ~55 requests against
-    /// my ~38), which is the reason this is not tuned to any one of those numbers: they disagree by
-    /// 40% across machines while all three agree the unbounded case is unbounded.
+    /// <b>What it costs when it bites, to an order of magnitude and deliberately no further.</b>
+    /// Draining a valid join request is well under a millisecond here, so a full drain of eight is a
+    /// small fraction of a 16.67ms frame. No precise per-frame count is stated, because every precise
+    /// count this file has carried has been wrong.
+    /// </para>
+    /// <para>
+    /// <b>The earlier figure was an artefact, and its supporting arithmetic was an artefact of the
+    /// artefact.</b> This paragraph used to read "~0.44ms, so eight is ~3.5ms" and "~38 requests per
+    /// frame against ~54 and ~55, so they disagree by 40%". The harness timed ECDH key generation
+    /// and the public-key export INSIDE the loop, so it measured making a joiner rather than
+    /// draining its request. The "40%" was then arithmetically correct given that bad input — which
+    /// is exactly what made it read as verified rather than as derived.
+    /// </para>
+    /// <para>
+    /// <b>The measurements disagree too much to tune to, and that is the durable part.</b> A
+    /// corrected harness — every frame built outside the timed region, the key-agreement arm proven
+    /// reached on all 24000 requests rather than assumed — puts a 16.67ms frame at roughly 70
+    /// requests. Two other harnesses put it at ~54 and ~55. An earlier corrected run of my own put
+    /// it near 50. That is a spread of about 40% between two runs of the SAME harness on the SAME
+    /// machine, which I cannot account for and am not going to paper over. It is the reason the
+    /// bound is sized to a full FFXIV party, which does not move between machines, rather than to
+    /// any millisecond figure, which plainly does.
     /// </para>
     /// <para>
     /// <b>This defers; it refuses nobody.</b> Every frame is still processed, in order, on a later
@@ -99,7 +116,7 @@ public sealed class AdmissionInbox
 
         // A bounded slice, FIFO, leaving the remainder queued (BUG-58). Taking the whole queue let
         // a stranger decide how much work this client did in one frame: the join path is open to
-        // strangers by design, and ~38 valid requests filled a 60fps frame here.
+        // strangers by design. Draining one costs key agreement; FramesPerDrain says why no count.
         byte[][] frames;
         lock (_gate)
         {
