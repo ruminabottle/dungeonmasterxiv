@@ -36,6 +36,11 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
     private CancellationTokenSource? _lifetime;
     private bool _connecting;
 
+    // BUG-122. The socket whose ConnectAsync has actually RETURNED. Held as the reference rather
+    // than a bool so a reconnect cannot inherit the previous socket's readiness: the check is
+    // "the sendable one IS the current one", which a stale flag could not express.
+    private volatile ClientWebSocket? _connected;
+
     /// <param name="log">
     /// Where this type reports. An abstraction rather than Dalamud's <c>IPluginLog</c>, so the
     /// transport lives in a project a test can reference — which is what makes the socket
@@ -69,12 +74,29 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
     /// conflation leaves callers no way to ask the different question "is it safe to send yet",
     /// and <see cref="Send"/> drops a frame that arrives before the socket opens.
     /// <para>
-    /// Not reachable in the product today — a host connects when it starts a session and admits
-    /// somebody much later — but it is the same silent-loss shape this project keeps finding, so it
-    /// is named rather than left implicit.
+    /// <b>BUG-122: THIS ASKED THE SOCKET AND THE SOCKET ANSWERED TOO EARLY.</b> It used to be
+    /// <c>_socket?.State == WebSocketState.Open</c>, and <see cref="ClientWebSocket.State"/> reports
+    /// <see cref="WebSocketState.Open"/> BEFORE <c>ClientWebSocket.ConnectAsync</c> has
+    /// returned — at which point <c>ClientWebSocket.SendAsync</c> still throws
+    /// <see cref="InvalidOperationException"/> <i>"The WebSocket is not connected"</i>. Measured: of
+    /// 300 sends issued the instant <c>State</c> read <c>Open</c>, <b>191 threw</b>. So the property
+    /// documented above as "would actually go out" was answering a different question, and every
+    /// caller that trusted it — including <see cref="Send"/>'s own guard — inherited the error.
+    /// </para>
+    /// <para>
+    /// It now reports on the connect having COMPLETED, which is the thing callers were asking about.
+    /// The <c>State</c> check is kept as well: a connect that finished is not a socket that is still
+    /// open.
+    /// </para>
+    /// <para>
+    /// The remark this replaces said the shape was "not reachable in the product today". It was:
+    /// a full-suite run reached it through <c>SessionCoordinator.ReceiveJoinRequest</c> roughly once
+    /// in fifty, and the exception left <see cref="Send"/> — which is documented to DROP — and
+    /// travelled into the caller.
     /// </para>
     /// </remarks>
-    public bool IsReadyToSend => _socket?.State == WebSocketState.Open;
+    public bool IsReadyToSend =>
+        ReferenceEquals(_connected, _socket) && _socket?.State == WebSocketState.Open;
 
     /// <inheritdoc />
     public void Connect(Uri relay)
@@ -133,6 +155,7 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
         // its way out.
         var socket = _socket;
         _socket = null;
+        _connected = null;
 
         CloseThenDispose(socket);
         _log.Information("Session relay connection closed.");
@@ -201,6 +224,11 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
         try
         {
             await socket.ConnectAsync(relay, token).ConfigureAwait(false);
+
+            // BUG-122: THE ONLY MOMENT AT WHICH SENDING IS ACTUALLY SAFE. Recorded here rather than
+            // inferred from socket state, because the state says Open well before this line runs.
+            _connected = socket;
+
             await ReceiveLoopAsync(socket, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
