@@ -44,17 +44,27 @@ namespace DungeonMasterXIV.Net;
 /// object and reaching two parameters instead of three.
 /// </para>
 /// <para>
-/// They are kept apart <b>because admission is a group by PROVENANCE</b>: both its members are
-/// <b>supplied from the admission side</b>, which is what makes it a group in its own right rather
-/// than whatever was left over. A shape that reads better against the parameter row is not worth
-/// dissolving a grouping that has its own reason to exist.
+/// They are kept apart <b>because the merge would dissolve <see cref="MemberAuthoredContent"/> from
+/// a DOOR into a HOST-SIDE BAG.</b> The D-3 split is made structural by the two door types existing
+/// AS doors; a type holding the member-content door plus two unrelated admission handlers no longer
+/// names one thing, and the next reader cannot tell from the type what it is for. That is a cohesion
+/// claim about the TARGET of the merge, and it is deliberately weaker than the boundary-crossing
+/// claim this paragraph used to make — it is also the reason that actually reaches the question.
 /// </para>
 /// <para>
-/// That reason is the CLAUSE and not the sentence it sits in. The paragraph above joins it to
-/// "both are null on exactly the same clients" with an <i>and</i>, and that second half is
-/// co-nullity — the property this residual exists to call weaker. Anyone following the reference
-/// lands on the whole sentence, so: the load-bearing half is provenance, and the co-nullity half is
-/// carried along, not relied upon.
+/// <b>Provenance is NOT that reason, and the difference is the whole point (BUG-109).</b> "Both
+/// admission members are supplied from the admission side" answers <i>is admission a coherent group
+/// at all</i> — and it does, which is why it belongs above at the grouping. It does not answer
+/// <i>why not merge that group into another one</i>: TWO GROUPS CAN EACH BE COHERENT AND STILL
+/// BELONG MERGED. Reaching for it here would have replaced one reason that does not reach the
+/// question with another, which is this bug a second time.
+/// </para>
+/// <para>
+/// And where provenance IS cited above, the load-bearing half is the CLAUSE and not the sentence:
+/// that sentence joins it to "both are null on exactly the same clients" with an <i>and</i>, and
+/// co-nullity is the property this residual exists to call too weak to justify a merge. A reason too
+/// weak to justify merging is too weak to be grouping evidence three lines earlier, so treat that
+/// half as corroborating and never load-bearing.
 /// </para>
 /// <para>
 /// <b>This paragraph used to cite the D-3 door boundary, and that was the wrong reason for the
