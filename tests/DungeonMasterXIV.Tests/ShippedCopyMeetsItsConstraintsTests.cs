@@ -215,7 +215,7 @@ public class ShippedCopyMeetsItsConstraintsTests
     public void TheSweepReadsEveryWindowOnDisk()
     {
         var scanned = ShippedCopyCorpus.SourcesSwept().Select(Path.GetFileName).ToList();
-        var windows = Directory.EnumerateFiles(ShippedCopyCorpus.WindowsDirectory(), "*.cs").Select(Path.GetFileName);
+        var windows = ShippedCopyCorpus.EveryWindowFileBeneath(ShippedCopyCorpus.WindowsDirectory()).Select(Path.GetFileName);
 
         Assert.All(windows, window => Assert.Contains(window, scanned));
         Assert.True(scanned.Count > 1, "The sweep narrowed to one file; it claims to cover the shipped copy.");
