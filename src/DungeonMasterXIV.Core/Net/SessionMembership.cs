@@ -37,6 +37,7 @@ namespace DungeonMasterXIV.Net;
 public sealed class SessionMembership
 {
     private readonly JoinRequester _joiner;
+    private readonly ReceivedClosing _closing = new();
     private readonly MemberDeparture _departure;
 
     /// <summary>Binds the member half to the joiner that owns its key material.</summary>
@@ -89,4 +90,77 @@ public sealed class SessionMembership
     /// this client was never admitted. Quitting the join screen has nobody to tell.
     /// </remarks>
     public bool AnnounceDeparture() => _departure.Announce();
+
+    /// <summary>
+    /// What the host has said about this session ending, or null if it has said nothing (R-1.3g).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The joiner's half of a notice the product has published since DMXENG-58 and nobody read.</b>
+    /// Measured before this: <c>SessionClosing</c> had zero occurrences under <c>Windows/</c> or
+    /// <c>Plugin.cs</c>, so the host sealed a closing instant to every participant and every
+    /// participant discarded it. R-1.3g requires them to see both THAT it is closing and HOW LONG
+    /// REMAINS, and the countdown is a requirement rather than a courtesy — "the session is closing"
+    /// without a duration is the indefinite wait R-1.3c and R-1.8 forbid.
+    /// </para>
+    /// <para>
+    /// <b>Null on the host, by design.</b> D-3 makes the host the author; a host reading its own
+    /// broadcast back would be believing a copy of what it already decided. See
+    /// <see cref="ReceivedClosing"/> for the two ways a notice can be LOST after it arrives.
+    /// </para>
+    /// </remarks>
+    public SessionClosing? Closing => _closing.Notice;
+
+    /// <summary>
+    /// Leaves this session because the player asked to (R-1.3g, A-1.16a).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The notice is best effort and the departure is not.</b> The host is told first, so its
+    /// roster can drop this client at once, and the teardown then runs WHETHER OR NOT that send
+    /// succeeded. A leave conditional on an acknowledgement is a player held in a session by a host
+    /// that never answers, which is the state this exists to remove.
+    /// </para>
+    /// <para>
+    /// <b>An undelivered notice is not a defect, and R-1.5a is why.</b> From the host's side a joiner
+    /// whose notice never arrived is a client that VANISHED, and holding its seat for five minutes is
+    /// then CORRECT. PRD-1:733 says in terms that removing vanished members to close that apparent
+    /// gap files a false gap and breaks R-1.5a.
+    /// </para>
+    /// <para>
+    /// <b>Announcing stays its own member rather than being folded in.</b> It is a distinct wire act
+    /// with its own coverage — the first member-authored send in the product — and hiding it behind
+    /// this would delete that coverage to save a line.
+    /// </para>
+    /// </remarks>
+    public void Leave()
+    {
+        AnnounceDeparture();
+        _closing.Clear();
+        _joiner.Left();
+    }
+
+    /// <summary>
+    /// Records a closing instant that arrived from the host, if the payload carried one (R-1.3g).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE LINE THIS WHOLE CHUNK EXISTS FOR.</b> The closing instant was already arriving at the
+    /// client and being discarded: the frame handler read <c>content.Roster</c> and nothing else, so
+    /// a participant of a session the DM had ended saw a roster that never changed and was told
+    /// nothing at all. The notice had been sent since DMXENG-58 and read by no one.
+    /// </para>
+    /// <para>
+    /// <b>Both halves come off the SAME <see cref="SessionContent"/></b>, which is why the caller
+    /// applies them together rather than through two independent lambdas that could disagree about
+    /// which payload they were looking at.
+    /// </para>
+    /// <para>
+    /// <b>What a MISSING field means is decided in <see cref="ReceivedClosing"/>, not here.</b> Most
+    /// payloads carry no closing, so "absent" must not read as "no longer closing" — and a malformed
+    /// value must not read as a retraction either, because under D-3 only the host decides.
+    /// </para>
+    /// </remarks>
+    /// <param name="utcTicks">The instant from the payload, or null.</param>
+    internal void HeardFromTheHost(long? utcTicks) => _closing.Apply(utcTicks);
 }

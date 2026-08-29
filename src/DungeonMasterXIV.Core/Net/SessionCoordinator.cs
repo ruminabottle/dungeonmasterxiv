@@ -330,7 +330,7 @@ public sealed class SessionCoordinator
             Membership.Keys,
             Host,
             new InboundWiring(_admissions, _resources, _resolveRelink)
-                .For(now, Membership.SessionKey, content => _received.Replace(content.Roster)),
+                .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;
         _handshake.SendWhatIsDue();
@@ -393,6 +393,16 @@ public sealed class SessionCoordinator
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
     public void Detach() => _link.Detach();
 
+
+    /// <summary>
+    /// Applies what the host said in one payload. See <see cref="SessionMembership.HeardFromTheHost"/>.
+    /// </summary>
+    /// <param name="content">What the host sent.</param>
+    private void HeardFromTheHost(SessionContent content)
+    {
+        _received.Replace(content.Roster);
+        Membership.HeardFromTheHost(content.ClosingAtUtcTicks);
+    }
 
     /// <summary>What this client's phases mean. See <see cref="SessionLiveness"/>.</summary>
     private SessionLiveness Liveness => new(Host, Join);

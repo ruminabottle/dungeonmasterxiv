@@ -37,6 +37,8 @@ internal sealed class JoinFlowView
 
     private readonly JoinComparisonView _comparison = new();
 
+    private readonly SessionEndingView _ending;
+
     private readonly JoinRequestForm _requestForm;
 
     /// <param name="coordinator">The session layer this surface reflects.</param>
@@ -57,6 +59,7 @@ internal sealed class JoinFlowView
     {
         _coordinator = coordinator;
         _requestForm = new JoinRequestForm(coordinator, displayName, relink);
+        _ending = new SessionEndingView(coordinator);
     }
 
     /// <summary>Draws the joiner's half of the session window.</summary>
@@ -73,6 +76,8 @@ internal sealed class JoinFlowView
         }
 
         _comparison.Draw(join);
+
+        _ending.Draw(join);
 
         // R-1.3f / A-1.13a: a joined player renders the roster the HOST authored and never
         // originates one. Rebuilding on reconnect needs nothing here: the host republishes on
