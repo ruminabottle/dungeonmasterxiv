@@ -76,23 +76,53 @@ internal static class SizeGateFlags
     }
 
     /// <summary>
-    /// The report the Code Reviewer reads. <b>Empty when nothing crossed</b> — silence is the
-    /// ordinary outcome and a report that says something every time is one nobody reads.
+    /// The report the Code Reviewer reads. <b>Empty when nothing newly crossed</b> — silence is the
+    /// ordinary outcome, and a report that says something every time is one nobody reads.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// <b>BUG-111: the standing and the margin BOTH name their own row.</b> A bare "margin 11" says
     /// nothing about which limit it is 11 away from, and an absent row is not read as absent — the
     /// reader fills the gap with whichever row they arrived asking about.
+    /// </para>
+    /// <para>
+    /// <b>IT STATES THE TOTALS IT WAS COMPUTED FROM, AND THAT IS THE FIX FOR THIS TYPE'S OWN
+    /// DOCUMENTED FALSE POSITIVE (#216 review).</b> The rename caveat above is the disambiguator, and
+    /// the first draft left it in <c>&lt;remarks&gt;</c> — <b>where no reader of the REPORT will ever
+    /// look.</b> A crossing count that did not move while a new crossing appeared is the rename
+    /// signature, and it is only visible if the totals travel WITH the rows.
+    /// </para>
+    /// <para>
+    /// <b>It takes the two measurements rather than a precomputed list, so the totals CANNOT disagree
+    /// with the rows.</b> Handing it both a crossing list and its totals would let a caller supply
+    /// sets that do not correspond — a header stating a total the rows were not drawn from is a
+    /// worse defect than the omission it replaced.
+    /// </para>
     /// </remarks>
-    /// <param name="crossings">What <see cref="NewlyCrossedFlags"/> returned.</param>
-    internal static IReadOnlyList<string> FlagReport(IReadOnlyList<Breach> crossings)
+    /// <param name="before">Flag crossings in the tree as it was.</param>
+    /// <param name="after">Flag crossings in the tree as it is.</param>
+    internal static IReadOnlyList<string> FlagReport(
+        IReadOnlyList<Breach> before, IReadOnlyList<Breach> after)
     {
-        ArgumentNullException.ThrowIfNull(crossings);
+        var crossings = NewlyCrossedFlags(before, after);
+        if (crossings.Count == 0)
+        {
+            return [];
+        }
 
-        return crossings
-            .Select(crossing => $"{crossing.File}  {crossing.Row} {crossing.Unit} = {crossing.Value}, "
-                + $"NEWLY OVER THE {crossing.Row.ToUpperInvariant()} FLAG of {crossing.Capacity} "
-                + $"({-crossing.Margin} over the {crossing.Row} flag). Not a refusal: flags are a conversation.")
-            .ToList();
+        var totals = $"{before.Count} flag crossing(s) before, {after.Count} after, "
+            + $"{crossings.Count} NEWLY crossed.";
+        var caution = before.Count == after.Count
+            ? " The crossing count did NOT move while a new one appeared — that is the rename"
+                + " signature (one key retires, another arrives). Check whether the unit was renamed"
+                + " before reading this as new length."
+            : string.Empty;
+
+        return [totals + caution, .. crossings.Select(Describe)];
     }
+
+    private static string Describe(Breach crossing) =>
+        $"{crossing.File}  {crossing.Row} {crossing.Unit} = {crossing.Value}, "
+        + $"NEWLY OVER THE {crossing.Row.ToUpperInvariant()} FLAG of {crossing.Capacity} "
+        + $"({-crossing.Margin} over the {crossing.Row} flag). Not a refusal: flags are a conversation.";
 }

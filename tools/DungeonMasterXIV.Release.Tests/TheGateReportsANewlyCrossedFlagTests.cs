@@ -32,6 +32,10 @@ public class TheGateReportsANewlyCrossedFlagTests
     private const string Path = "src/Fixture.cs";
 
     /// <summary>A class of <paramref name="span"/> body lines — over 250 flags, over 400 blocks.</summary>
+    /// <summary>A class of <paramref name="span"/> body lines under a chosen name.</summary>
+    private static string ClassNamed(string name, int span) =>
+        $"namespace F;\npublic sealed class {name}\n{{\n{string.Join('\n', Enumerable.Repeat("    // x", span))}\n}}\n";
+
     private static string ClassOf(int span) =>
         $"namespace F;\npublic sealed class Wide\n{{\n{string.Join('\n', Enumerable.Repeat("    // x", span))}\n}}\n";
 
@@ -71,7 +75,7 @@ public class TheGateReportsANewlyCrossedFlagTests
         var crossed = SizeGateFlags.NewlyCrossedFlags(FlagsOf(ClassOf(100)), FlagsOf(ClassOf(240)));
 
         Assert.Empty(crossed);
-        Assert.Empty(SizeGateFlags.FlagReport(crossed));
+        Assert.Empty(SizeGateFlags.FlagReport(FlagsOf(ClassOf(100)), FlagsOf(ClassOf(240))));
     }
 
     // The other direction of the same control: ALREADY over stays quiet. It is not NEWLY crossed, and
@@ -107,7 +111,8 @@ public class TheGateReportsANewlyCrossedFlagTests
     {
         var crossed = SizeGateFlags.NewlyCrossedFlags(FlagsOf(ClassOf(240)), FlagsOf(ClassOf(260)));
 
-        var line = Assert.Single(SizeGateFlags.FlagReport(crossed));
+        var report = SizeGateFlags.FlagReport(FlagsOf(ClassOf(240)), FlagsOf(ClassOf(260)));
+        var line = report[^1];
         Assert.Contains("CLASS FLAG", line);
         Assert.Contains("250", line);
         Assert.Contains(Path, line);
@@ -126,5 +131,51 @@ public class TheGateReportsANewlyCrossedFlagTests
 
         Assert.NotEmpty(SizeGate.FlagCrossingsIn(Path, source).Breaches);   // the flag IS crossed
         Assert.Empty(SizeGate.Refusals(current, current, [Path], [Path]));  // and the gate is silent
+    }
+
+    // >>> #216 REVIEW: THE REPORT STATES THE TOTALS IT WAS COMPUTED FROM <<<
+    //
+    // The totals are the disambiguator for this mechanism's own documented false positive, and the
+    // first draft left them in <remarks> -- where no reader of the REPORT will ever look. A reader
+    // had to have read the type's doc to survive the rename case; now the artefact tells them.
+    [Fact]
+    public void TheReportStatesTheTotalsItWasComputedFrom()
+    {
+        var report = SizeGateFlags.FlagReport(FlagsOf(ClassOf(240)), FlagsOf(ClassOf(260)));
+
+        Assert.Contains("0 flag crossing(s) before", report[0]);
+        Assert.Contains("1 after", report[0]);
+        Assert.Contains("1 NEWLY crossed", report[0]);
+    }
+
+    // A RENAME: the same over-flag class under a new name. One key retires, another arrives, so the
+    // TOTALS DO NOT MOVE while a new crossing appears -- exactly the case the type documents.
+    [Fact]
+    public void EqualTotalsBesideANewCrossingCarryTheRenameCaution()
+    {
+        var before = FlagsOf(ClassNamed("Wide", 260));
+        var after = FlagsOf(ClassNamed("Broad", 260));
+
+        var report = SizeGateFlags.FlagReport(before, after);
+
+        Assert.Equal(before.Count, after.Count);
+        Assert.Contains("rename signature", report[0]);
+    }
+
+    // >>> THE CONTROL, WITHOUT WHICH A BUILD THAT ALWAYS PRINTS THE CAUTION PASSES <<<
+    //
+    // A genuine new crossing RAISES the total, and must NOT be explained away as a possible rename.
+    // A caution that fires on everything would turn the one signal that separates the two cases into
+    // noise attached to both.
+    [Fact]
+    public void ARisingTotalDoesNotCarryTheRenameCaution()
+    {
+        var before = FlagsOf(ClassOf(240));
+        var after = FlagsOf(ClassOf(260));
+
+        var report = SizeGateFlags.FlagReport(before, after);
+
+        Assert.NotEqual(before.Count, after.Count);
+        Assert.DoesNotContain("rename signature", report[0]);
     }
 }
