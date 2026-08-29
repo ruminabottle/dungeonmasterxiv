@@ -114,8 +114,15 @@ internal sealed class RosterBroadcast
     /// told the session is ending, so failing to reach them is worth the same line.
     /// </para>
     /// <para>
-    /// <b>No duration is decided here.</b> The instant arrives already chosen — R-1.3g names no
-    /// number, and picking one in this method would answer a product question by implementation.
+    /// <b>No duration is decided here.</b> The instant arrives already chosen; R-1.3g's sixty
+    /// seconds live in <see cref="SessionClosing.Window"/>, applied once by the host.
+    /// </para>
+    /// <para>
+    /// <b>IT DECLINES WHEN THERE IS NO LIVE LINK, AND THAT IS THE COMMON CASE ON ONE PATH.</b> A
+    /// session can also end because the interruption window LAPSED rather than because the DM pressed
+    /// close — and that path has no link by definition, since losing it is why the session is ending.
+    /// The notice is attempted there anyway rather than special-cased: one meaning for "hosting
+    /// stopped at this instant", and the early return below is what makes attempting it harmless.
     /// </para>
     /// </remarks>
     public void PublishClosing(SessionClosing closing)

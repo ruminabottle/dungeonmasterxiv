@@ -148,7 +148,7 @@ public sealed class Plugin : IDalamudPlugin
         // Registered as an unwind step so it runs on a constructor throw as well as on Dispose.
         _unwind.Push("session and relay connection", () =>
         {
-            _sessionCoordinator.StopHosting();
+            _sessionCoordinator.StopHosting(DateTimeOffset.UtcNow);
             _sessionCoordinator.Detach();
             _relayTransport.Dispose();
         });

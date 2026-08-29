@@ -57,13 +57,13 @@ public class TheClosingNoticeReachesParticipantsTests
         var (broadcast, transport, hostKeys, audience) = Hosting();
         using var joiner = new SessionKeyExchange();
         audience.Admit(PeerCodes.Of(PeerCode), publicKey: joiner.PublicKey);
-        var closing = SessionClosing.DecidedByHost(Now.AddMinutes(5));
+        var closing = SessionClosing.DecidedByHost(Now);
 
         broadcast.PublishClosing(closing);
 
         var content = OpenAs(joiner, hostKeys, transport);
         Assert.Equal(closing.UtcTicks, content.ClosingAtUtcTicks);
-        Assert.Equal(TimeSpan.FromMinutes(5), SessionClosing.TryFromWire(content.ClosingAtUtcTicks!.Value)!.Value.RemainingAt(Now));
+        Assert.Equal(SessionClosing.Window, SessionClosing.TryFromWire(content.ClosingAtUtcTicks!.Value)!.Value.RemainingAt(Now));
     }
 
     // Sealed per participant like the roster — a relay operator forwarding the frame learns nothing,
@@ -74,7 +74,7 @@ public class TheClosingNoticeReachesParticipantsTests
         var (broadcast, transport, _, audience) = Hosting();
         using var joiner = new SessionKeyExchange();
         audience.Admit(PeerCodes.Of(PeerCode), publicKey: joiner.PublicKey);
-        var closing = SessionClosing.DecidedByHost(Now.AddMinutes(5));
+        var closing = SessionClosing.DecidedByHost(Now);
 
         broadcast.PublishClosing(closing);
 
@@ -94,7 +94,7 @@ public class TheClosingNoticeReachesParticipantsTests
         audience.Admit(PeerCodes.Of(PeerCode), publicKey: first.PublicKey);
         audience.Admit(PeerCodes.Of(SpeakableAlphabet.Characters[..SessionCode.Length]), publicKey: second.PublicKey);
 
-        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now.AddMinutes(5)));
+        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now));
 
         Assert.Equal(2, transport.Sent.Count);
     }
@@ -107,7 +107,7 @@ public class TheClosingNoticeReachesParticipantsTests
     {
         var (broadcast, transport, _, _) = Hosting();
 
-        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now.AddMinutes(5)));
+        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now));
 
         Assert.Empty(transport.Sent);
     }
@@ -123,9 +123,59 @@ public class TheClosingNoticeReachesParticipantsTests
         audience.Admit(PeerCodes.Of("JNKBCD"), publicKey: [1, 2, 3]);
         audience.Admit(PeerCodes.Of(PeerCode), publicKey: good.PublicKey);
 
-        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now.AddMinutes(5)));
+        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now));
 
         Assert.Single(transport.Sent);
+    }
+
+    // >>> A-1.16b. THE CRITERION THAT EXISTS BECAUSE FIXING THE VALUE REMOVED A GUARD.
+    //
+    // Sixty seconds is now a constant. So a build with a sixty-second constant on the HOST and a
+    // sixty-second constant on EACH CLIENT displays the right countdown everywhere and PASSES A-1.16
+    // WHILE SENDING NOTHING AT ALL — and then drifts, because the two clocks start at different
+    // instants. A CONFIGURABLE window had to travel in order to be observed, so the criterion would
+    // have policed the mechanism by accident. A constant does not, so this test does it deliberately.
+    //
+    // The demonstration is that the participant's countdown FOLLOWS the host's rather than agreeing
+    // with it: two sessions ended a minute apart must produce deadlines a minute apart on the wire.
+    // A client computing sixty seconds locally produces the SAME remaining time for both.
+    [Fact]
+    public void EveryParticipantsCountdownFollowsTheHostsRatherThanAgreeingByCoincidence()
+    {
+        var (broadcast, transport, hostKeys, audience) = Hosting();
+        using var joiner = new SessionKeyExchange();
+        audience.Admit(PeerCodes.Of(PeerCode), publicKey: joiner.PublicKey);
+
+        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now));
+        var early = Received(joiner, hostKeys, transport, 0);
+
+        broadcast.PublishClosing(SessionClosing.DecidedByHost(Now.AddMinutes(1)));
+        var late = Received(joiner, hostKeys, transport, 1);
+
+        // The deadlines differ by exactly the difference in when the host ended. A locally computed
+        // sixty seconds would make these identical.
+        Assert.Equal(TimeSpan.FromMinutes(1), late.Instant - early.Instant);
+
+        // And read at ONE instant, the two give different remaining times — which is what a
+        // participant would actually see, and what a local constant cannot reproduce.
+        Assert.NotEqual(early.RemainingAt(Now), late.RemainingAt(Now));
+    }
+
+    /// <summary>The closing instant as it arrived, opened from the nth frame this host sent.</summary>
+    private static SessionClosing Received(
+        SessionKeyExchange peer, SessionKeyExchange hostKeys, FakeTransport transport, int index)
+    {
+        Assert.True(EnvelopeCodec.TryDecode(transport.Sent[index], out var envelope));
+        var plaintext = SessionCipher.Open(
+            peer.DeriveSharedKey(hostKeys.PublicKey, Code),
+            envelope!.TryGetSealedPayload()!,
+            envelope.AssociatedData());
+
+        Assert.True(SessionContentCodec.TryDecode(plaintext, out var content));
+
+        // Rebuilt through TryFromWire, never constructed here — a participant reads the instant it
+        // was SENT. Constructing one on this side would be the very defect A-1.16b catches.
+        return SessionClosing.TryFromWire(content!.ClosingAtUtcTicks!.Value)!.Value;
     }
 
     private sealed class FakeTransport : ISessionTransport

@@ -174,7 +174,7 @@ public class AdmissionOnTheWireTests
         var (coordinator, _) = Hosting();
         Assert.NotNull(coordinator.HostKeys);
 
-        coordinator.StopHosting();
+        coordinator.StopHosting(Now);
 
         Assert.Null(coordinator.HostKeys);
     }

@@ -31,7 +31,7 @@ public class SessionClosingTravelsTests
     [Fact]
     public void ASectionOtherThanTheRosterSurvivesVetting()
     {
-        var closing = SessionClosing.DecidedByHost(Now.AddMinutes(5));
+        var closing = SessionClosing.DecidedByHost(Now);
         var encoded = SessionContentCodec.Encode(new SessionContent
         {
             Roster = [new RosterEntry(PeerCodeThisProductGenerates, "Ysera", SessionRole.Player)],
@@ -57,9 +57,10 @@ public class SessionClosingTravelsTests
     [Fact]
     public void AClosingNoticeCarriesWhenItCloses()
     {
-        var closing = SessionClosing.DecidedByHost(Now.AddMinutes(5));
+        var closing = SessionClosing.DecidedByHost(Now);
 
-        Assert.Equal(TimeSpan.FromMinutes(5), closing.RemainingAt(Now));
+        Assert.Equal(SessionClosing.Window, closing.RemainingAt(Now));
+        Assert.Equal(TimeSpan.FromSeconds(60), SessionClosing.Window);
         Assert.False(closing.HasClosedAt(Now));
     }
 
@@ -71,10 +72,10 @@ public class SessionClosingTravelsTests
     [Fact]
     public void TwoReadersAtDifferentMomentsSeeDifferentRemainingTime()
     {
-        var closing = SessionClosing.DecidedByHost(Now.AddMinutes(5));
+        var closing = SessionClosing.DecidedByHost(Now);
 
-        Assert.Equal(TimeSpan.FromMinutes(5), closing.RemainingAt(Now));
-        Assert.Equal(TimeSpan.FromMinutes(3), closing.RemainingAt(Now.AddMinutes(2)));
+        Assert.Equal(TimeSpan.FromSeconds(60), closing.RemainingAt(Now));
+        Assert.Equal(TimeSpan.FromSeconds(20), closing.RemainingAt(Now.AddSeconds(40)));
     }
 
     // Floored at zero. A countdown that runs negative is a countdown a participant cannot read, and
@@ -102,7 +103,7 @@ public class SessionClosingTravelsTests
     [Fact]
     public void APossibleInstantFromTheWireRebuildsExactly()
     {
-        var closing = SessionClosing.DecidedByHost(Now.AddMinutes(5));
+        var closing = SessionClosing.DecidedByHost(Now);
 
         Assert.Equal(closing, SessionClosing.TryFromWire(closing.UtcTicks));
     }

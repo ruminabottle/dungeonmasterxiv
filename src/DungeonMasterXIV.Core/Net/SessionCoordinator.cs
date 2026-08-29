@@ -185,7 +185,40 @@ public sealed class SessionCoordinator
     /// Ends the session. R-1.1 makes this the same path as closing or unloading the plugin, so the
     /// connection cannot outlive the session by taking a different exit.
     /// </summary>
-    public void StopHosting() => _hosting.Stop();
+    /// <param name="endedAt">
+    /// When the DM ended it — <b>the moment, not a deadline</b>. R-1.3g's sixty seconds are added by
+    /// <see cref="SessionClosing"/>, which cannot represent any other window, so no caller can set
+    /// one; see <see cref="RosterBroadcast.PublishClosing"/> for why the deadline travels as one
+    /// value.
+    /// </param>
+    /// <remarks>
+    /// <para>
+    /// <b>REQUIRED, not optional, and the reason is the failure it forecloses.</b> A defaulted
+    /// parameter would let a call site end the session while sending <i>no closing notice at all</i>
+    /// — A-1.16 failing silently at that one call site with the whole suite green. A required
+    /// parameter fails at compile time, which is the loudest place available. It is also the
+    /// existing seam rather than a concession: <b>Core cannot see a clock</b>, which is why
+    /// <see cref="Tick"/> takes <c>now</c>, and it is what makes A-1.16b's demonstration drivable —
+    /// <i>"change the deadline the host sends, and assert every participant's displayed remaining
+    /// time moves with it"</i> needs something a test can vary.
+    /// </para>
+    /// <para>
+    /// <b>The notice goes out BEFORE the delegation, and the order is load-bearing rather than
+    /// stylistic.</b> Teardown lives inside <see cref="HostRunner.Stop"/> since DMXENG-51, and it
+    /// empties the admissions — <b>publishing afterwards would seal to nobody and fail silently</b>,
+    /// which is exactly the shape of the three teardown steps whose deletion left this suite green.
+    /// Pinned by mutation, not by a passing run.
+    /// </para>
+    /// <para>
+    /// R-1.3g: <i>"D-3 makes the closing deadline the host's, sent out, not each client's to
+    /// decide."</i> One value, sent, never recomputed on receipt.
+    /// </para>
+    /// </remarks>
+    public void StopHosting(DateTimeOffset endedAt)
+    {
+        _roster.PublishClosing(SessionClosing.DecidedByHost(endedAt));
+        _hosting.Stop();
+    }
 
     /// <summary>Requests to join <paramref name="code"/>. A human action (R-1.3).</summary>
     public void RequestJoin(SessionCode code) => RequestJoin(code, DisplayName.None);
@@ -323,7 +356,8 @@ public sealed class SessionCoordinator
 
         if (_interruption.Tick(sinceLastTick))
         {
-            StopHosting();
+            // Lapsed rather than closed by the DM; PublishClosing declines it, see there.
+            StopHosting(now);
             return;
         }
 
