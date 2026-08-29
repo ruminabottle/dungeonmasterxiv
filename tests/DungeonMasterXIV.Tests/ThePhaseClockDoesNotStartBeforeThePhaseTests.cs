@@ -20,6 +20,17 @@ namespace DungeonMasterXIV.Tests;
 /// host.ExpireIfRegistration...-> 4 tests fail    covered
 /// </code>
 /// <para>
+/// <b>That table was measured against the whole BLOCK, and it hid a line (BUG-95).</b> Deleting the
+/// reset block is caught, because it takes the early return with it. Deleting only
+/// <c>_timeInPhase = TimeSpan.Zero</c> was invisible to all 978 tests, including the four this file
+/// added for that very line. The reason is a convention rather than an oversight: <b>no test ticked
+/// the coordinator before the phase changed</b>, so the clock was always already zero when the reset
+/// ran, and zeroing zero cannot be observed. A mutation survey measures the intersection of what you
+/// deleted and what your setup arranged, and a convention every test shares is invisible to every
+/// test. <see cref="ASessionStartedAfterThePluginHasBeenTickingIsNotInstantlyStale"/> is the one that
+/// ticks first; the single-line deletion now reddens it.
+/// </para>
+/// <para>
 /// <b>Pre-existing rather than introduced, and measured rather than assumed</b> — the same two
 /// deletions made to the code in its old home in <c>SessionCoordinator.Tick</c> at <c>origin/main</c>
 /// are equally invisible. Half the clock was being moved on the strength of a suite that could not
@@ -53,6 +64,43 @@ public sealed class ThePhaseClockDoesNotStartBeforeThePhaseTests
         // The first tick after the phase moved. Far longer than the timeout, and it must not count.
         host.Tick(HostSession.RegistrationTimeout * 10, Now);
 
+        Assert.Equal(HostingPhase.Registering, host.Host.Phase);
+        Assert.Equal(SessionFailure.None, host.Host.Failure);
+    }
+
+    // BUG-95. THE ONE ABOVE CANNOT SEE THE ZEROING, AND NEITHER COULD ANY OF THE 978.
+    //
+    // Delete only `_timeInPhase = TimeSpan.Zero` — leaving the two phase assignments and the early
+    // return — and the whole suite stays green. Not because the tests are weak, but because EVERY
+    // test transitions the phase before it ever ticks, so the clock is ALREADY ZERO when the reset
+    // runs. Zeroing something that is zero is unobservable by construction. The four tests written
+    // for this very line share that shape, which is why the mutation round that produced them could
+    // not have caught it: a mutation survey measures the intersection of what you deleted and what
+    // your setup arranged, and a convention every test follows is invisible to every test.
+    //
+    // THIS ONE TICKS FIRST. That is the whole difference, and it is a change inside the test rather
+    // than to the fixture — Coordinator() is untouched, so no other test's floor moves.
+    //
+    // THE HAZARD IT PINS IS WORSE THAN THE ONE ABOVE. That needs a stalled frame; this needs
+    // nothing. Both timeouts are ten seconds, so a plugin merely LOADED AND TICKING for ten seconds
+    // hands the new phase the old phase's clock: play for ten seconds, press Host, and be told the
+    // relay never answered. Every ordinary session, no stall required.
+    [Fact]
+    public void ASessionStartedAfterThePluginHasBeenTickingIsNotInstantlyStale()
+    {
+        var host = Coordinator(out _);
+
+        // Loaded and ticking, NOT hosting. This is every real session before the DM presses Host.
+        host.Tick(TimeSpan.FromSeconds(30), Now);
+        host.Tick(TimeSpan.FromSeconds(30), Now);
+
+        host.StartHosting();
+        Assert.Equal(HostingPhase.Registering, host.Host.Phase);
+
+        host.Tick(TimeSpan.FromMilliseconds(16), Now);   // the frame the phase changed on
+        host.Tick(TimeSpan.FromMilliseconds(16), Now);   // one ordinary frame after it
+
+        // Two frames of 16ms against a ten-second timeout. Only an inherited clock can fail this.
         Assert.Equal(HostingPhase.Registering, host.Host.Phase);
         Assert.Equal(SessionFailure.None, host.Host.Failure);
     }
