@@ -267,8 +267,9 @@ public sealed class EveryMessageTypeReachesAnArmTests
                 _keys,
                 _host,
                 new InboundHandlers(
-                    OnJoinRequest: (_, _, _) => JoinRequestSeen = true,
-                    OnComparabilityReceipt: _ => ReceiptSeen = true));
+                    Admission: new JoinerAdmission(
+                        OnJoinRequest: (_, _, _) => JoinRequestSeen = true,
+                        OnComparabilityReceipt: _ => ReceiptSeen = true)));
         }
 
         // Built through the REAL factories, so every frame this file delivers is one the product can

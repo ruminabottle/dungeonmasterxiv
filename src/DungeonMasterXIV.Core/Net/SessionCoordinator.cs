@@ -327,15 +327,19 @@ public sealed class SessionCoordinator
                 // the campaign. Until now it arrived on the envelope and was dropped -- the joiner
                 // sent it, the relay routed it, and every relink branch took the not-a-relink path
                 // because Receive was only ever reached with RelinkClaim.None.
-                OnJoinRequest: (key, name, claimed) =>
-                    _admissions.AdmitToTheQueue(key, now, name, _resolveRelink(claimed)),
-                OpenWith: SessionKey,
-                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster,
-                OnComparabilityReceipt: _admissions.RecordComparabilityReceipt,
+                Admission: new JoinerAdmission(
+                    OnJoinRequest: (key, name, claimed) =>
+                        _admissions.AdmitToTheQueue(key, now, name, _resolveRelink(claimed)),
+                    OnComparabilityReceipt: _admissions.RecordComparabilityReceipt),
+                HostAuthored: new HostAuthoredContent(
+                    OpenWith: SessionKey,
+                    OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster),
                 // R-1.3k. DELIBERATELY NOT THE LAMBDA ABOVE: that is what a JOINER was told, and
-                // letting a member reach it would invert D-3 — see InboundHandlers.OnMemberContent.
-                OpenMemberContentWith: _resources.MemberKeys.Candidates,
-                OnMemberContent: _resources.MemberContent.Record),
+                // letting a member reach it would invert D-3 — see MemberAuthoredContent.OnContent.
+                // Since DMXENG-59 the two doors are two TYPES, so the swap will not compile either.
+                MemberAuthored: new MemberAuthoredContent(
+                    OpenWith: _resources.MemberKeys.Candidates,
+                    OnContent: _resources.MemberContent.Record)),
             _log)
             ?? SessionKey;
         _handshake.SendWhatIsDue();

@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
@@ -14,9 +11,9 @@ namespace DungeonMasterXIV.Net;
 /// sites had begun carrying meaning in argument order rather than in names.
 /// </para>
 /// <para>
-/// They travel together because they answer one question: <i>this frame arrived, now what?</i>
-/// <see cref="OpenWith"/> belongs with them rather than beside them — it is not configuration, it is
-/// the thing that decides whether <see cref="OnContent"/> can be called at all.
+/// They travel together because they answer one question: <i>this frame arrived, now what?</i> Each
+/// key belongs with the handler it enables rather than beside it — it is not configuration, it is
+/// the thing that decides whether that handler can be called at all.
 /// </para>
 /// <para>
 /// <b>Moved out of <c>AdmissionInbox.cs</c> by DMXENG-50, and the move fixed a defect rather than
@@ -27,77 +24,41 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>THERE ARE TWO DOORS HERE, NOT ONE, AND THE SPLIT IS THE D-3 BOUNDARY MADE STRUCTURAL.</b>
-/// <see cref="OpenWith"/>/<see cref="OnContent"/> carry <b>host-authored</b> content to a joiner.
-/// <see cref="OpenMemberContentWith"/>/<see cref="OnMemberContent"/> carry <b>member-authored</b>
-/// content to a host. Merging them would be smaller and would be wrong: see
-/// <see cref="OnMemberContent"/> for what it costs.
+/// <see cref="HostAuthoredContent"/> carries <b>host-authored</b> content to a joiner.
+/// <see cref="MemberAuthoredContent"/> carries <b>member-authored</b> content to a host. Merging them
+/// would be smaller and would be wrong: see <see cref="MemberAuthoredContent.OnContent"/> for what it
+/// costs. Since DMXENG-59 the two doors are two TYPES, so the wrong one will not compile.
+/// </para>
+/// <para>
+/// <b>Why the six members group into exactly these three, and not some other three (DMXENG-59).</b>
+/// The record was AT the parameter block (6 of 6), so <see cref="MemberAuthoredContent"/>'s sibling
+/// door could not gain a seventh member and DMXENG-58 was blocked behind it. Grouping by the D-3
+/// boundary the file already bolded gives the two doors and leaves admission as the remainder —
+/// which is a group in its own right, not a leftover: both its members are supplied from the
+/// admission side and both are null on exactly the same clients.
+/// </para>
+/// <para>
+/// <b>The residual, stated rather than left for a reviewer to find.</b>
+/// <see cref="JoinerAdmission"/> and <see cref="MemberAuthoredContent"/> share a nullity condition —
+/// both are host-only — so co-nullity alone would have permitted merging them into one host-side
+/// object and reaching two parameters instead of three. They are kept apart because the D-3 door
+/// boundary is a stronger claim than co-nullity, and a shape that reads better against the parameter
+/// row is not worth blurring the boundary this file exists to hold.
 /// </para>
 /// </remarks>
-/// <param name="OnJoinRequest">
-/// Called with the joiner's public key, self-declared name, and the participant id it CLAIMS, for
-/// each inbound <see cref="WireMessageType.JoinRequest"/>, when this client is a host. Null when
-/// there is nobody to tell, which is every joiner-only client (BUG-42).
-/// <para>
-/// <b>The claim travels as the raw string it arrived as (R-1.5, T-37).</b> This layer decodes and
-/// routes; deciding whether a claimed participant is one this campaign knows needs the campaign,
-/// which is not Core's to look up — see <see cref="SessionCapabilities.RelinkSource"/>. Null means
-/// no claim was made, which is every first-time join.
-/// </para>
+/// <param name="Admission">
+/// What a host is told while a joiner is trying to get in. <c>default</c> on every joiner-only
+/// client — see <see cref="JoinerAdmission"/>.
 /// </param>
-/// <param name="OpenWith">
-/// The shared key to open inbound <b>host-authored</b> content with, or null before one exists. A
-/// key derived during the same drain takes precedence — see the call site. Null on a pure host,
-/// which is correct: a host authors the roster and never receives one.
+/// <param name="HostAuthored">
+/// How this client opens host-authored content and what it does with it. <c>default</c> on a pure
+/// host — see <see cref="HostAuthoredContent"/>.
 /// </param>
-/// <param name="OnContent">
-/// Called for each <b>host-authored</b> payload this client could open (D-11). Payloads sealed for
-/// somebody else are ordinary traffic and pass in silence.
-/// </param>
-/// <param name="OnComparabilityReceipt">
-/// Called with the joiner's public key when that joiner reports it held the host key and could
-/// render the fingerprint (R-1.3a-iv, BUG-75). Null when there is nobody to tell, which is every
-/// joiner-only client — only a host keeps a record this can establish anything on.
-/// <para>
-/// <b>It carries a CAPABILITY, never a comparison.</b> R-1.3a-iii forbids the second: an
-/// acknowledgement of the human act would ride the channel an attacker controls, so it is forgeable
-/// exactly when it matters. Its ABSENCE establishes nothing either — a fast admission (A-1.2p)
-/// decides before any receipt could arrive, which is why
-/// <see cref="ComparabilityEvidence.NotEstablished"/> is a state and not a false.
-/// </para>
-/// </param>
-/// <param name="OpenMemberContentWith">
-/// The keys a <b>host</b> may open <b>member-authored</b> content with, one per admitted peer
-/// (R-1.3k). Null when there is nobody to hear from, which is every joiner-only client.
-/// <para>
-/// <b>A function rather than a list, because the answer changes between frames.</b> Admitting or
-/// removing a participant changes the candidate set, and a list captured when the handlers were
-/// built would be the set as it stood at the start of the tick.
-/// </para>
-/// </param>
-/// <param name="OnMemberContent">
-/// Called for each <b>member-authored</b> payload a host opened, with the peer whose key opened it
-/// (R-1.3k, A-1.13c). Null when there is nobody to tell.
-/// <para>
-/// <b>SEPARATE FROM <see cref="OnContent"/> ON PURPOSE, AND MERGING THEM INVERTS D-3.</b>
-/// <c>SessionCoordinator.Roster</c> documents that on a host it stays empty because <b>the host
-/// authors the roster and never receives one</b> — and that invariant held only because a host had
-/// no key to open anything with. The moment R-1.3k gives it keys, a shared handler would let a
-/// MEMBER author what the HOST believes the roster is: D-3 inverted by a capability added for an
-/// unrelated reason. Two delegates make that structural — member content cannot reach the roster
-/// because it is not wired to it — rather than leaving it to whoever edits the lambda next.
-/// </para>
-/// <para>
-/// <b>The peer is the one that DECRYPTED it, never one that was claimed.</b> Nothing on the wire
-/// says who sent a <see cref="WireMessageType.SessionPayload"/>: <c>WireEnvelope.ForSessionPayload</c>
-/// sets only the nonce and the ciphertext, and the relay forwards it unmodified. Identity is
-/// therefore established by the seal — the key that opened it is shared with exactly one peer — and
-/// a sender field would have been a forgeable hint that still had to be confirmed this way.
-/// </para>
+/// <param name="MemberAuthored">
+/// How a host opens member-authored content and what it does with it. <c>default</c> on every
+/// joiner-only client — see <see cref="MemberAuthoredContent"/>.
 /// </param>
 public readonly record struct InboundHandlers(
-    Action<byte[], DisplayName, string?>? OnJoinRequest = null,
-    byte[]? OpenWith = null,
-    Action<SessionContent>? OnContent = null,
-    Action<byte[]>? OnComparabilityReceipt = null,
-    Func<IEnumerable<PeerContentKey>>? OpenMemberContentWith = null,
-    Action<PeerCode, SessionContent>? OnMemberContent = null);
+    JoinerAdmission Admission = default,
+    HostAuthoredContent HostAuthored = default,
+    MemberAuthoredContent MemberAuthored = default);
