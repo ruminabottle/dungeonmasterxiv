@@ -35,4 +35,27 @@ public static class Census
             : $"{scope}: {measured} measured, {refused} NOT MEASURED — the counts above cover "
               + $"{measured} of {types}.";
     }
+
+    /// <summary>The same statement for the member rows added by DMXENG-55.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A SEPARATE LINE RATHER THAN A BIGGER NUMBER, AND THIS WAS A DEFECT I CAUGHT IN MY OWN
+    /// WORK.</b> The first version of the member rows incremented the SAME counters as the type
+    /// census, so a run over two files reported "22 type(s)" when it had seen two types and twenty
+    /// members. <b>A census that silently changes what it is counting is worse than no census</b> —
+    /// it is the exact miscount this tool exists to prevent, committed inside the tool.
+    /// </para>
+    /// <para>
+    /// Two populations, two lines. A reader can add them; a reader cannot un-add them.
+    /// </para>
+    /// </remarks>
+    public static string DescribeMembers(int measured, int refused)
+    {
+        var members = measured + refused;
+
+        return refused == 0
+            ? $"{members} member(s): {measured} measured, 0 refused."
+            : $"{members} member(s): {measured} measured, {refused} NOT MEASURED — the member rows "
+              + $"above cover {measured} of {members}.";
+    }
 }
