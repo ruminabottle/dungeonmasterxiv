@@ -49,7 +49,7 @@ public sealed class RelinkMemoryView
     {
         ImGui.TextWrapped(RelinkDisclosure.WhatIsStored);
 
-        var remembered = _relink().All;
+        var remembered = _relink().All();
 
         if (remembered.Count == 0)
         {

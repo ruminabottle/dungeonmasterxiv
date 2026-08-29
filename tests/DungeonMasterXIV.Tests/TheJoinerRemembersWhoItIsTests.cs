@@ -73,7 +73,7 @@ public sealed class TheJoinerRemembersWhoItIsTests
 
         Assert.True(memory.Forget(Code));
 
-        Assert.Empty(memory.All);
+        Assert.Empty(memory.All());
         Assert.DoesNotContain(memory.Remembered, entry => entry.SessionCode == Code.Value);
     }
 
@@ -97,7 +97,7 @@ public sealed class TheJoinerRemembersWhoItIsTests
         var memory = new RelinkMemory();
 
         Assert.False(memory.Forget(Code));
-        Assert.Empty(memory.All);
+        Assert.Empty(memory.All());
     }
 
     // THE SAVE GUARD. Remember runs from the framework update, at frame rate: if it reported change
@@ -111,7 +111,7 @@ public sealed class TheJoinerRemembersWhoItIsTests
 
         Assert.True(memory.Remember(Code, me));
         Assert.False(memory.Remember(Code, me));
-        Assert.Single(memory.All);
+        Assert.Single(memory.All());
     }
 
     // The host is authoritative for who we are (D-3). Fails if a second, DIFFERENT id under a known
@@ -128,14 +128,24 @@ public sealed class TheJoinerRemembersWhoItIsTests
 
         Assert.True(memory.Remember(Code, second));
         Assert.Equal(second, memory.IdFor(Code));
-        Assert.Single(memory.All);
+        Assert.Single(memory.All());
     }
 
     // WHAT EVERY PERSISTED TYPE IS ALLOWED TO CONTAIN. Adding a member without adding it here
     // fails, whatever the member is called and whatever its type.
+    // BUG-146: `All` LEFT THIS LIST BECAUSE IT LEFT THE PERSISTED SURFACE. It was a second public
+    // gettable view of Remembered, so the serialiser wrote the list twice and doubled it on every
+    // load; it is now a method, which is not a serialisable member. This sweep reads GetProperties,
+    // so the entry going away IS the fix being visible here.
+    //
+    // AND THIS GUARD DID ITS JOB AT THE WRONG MOMENT TO HELP. It fired when `All` was added, exactly
+    // as designed -- and the answer given was to WRITE `All` INTO THE EXPECTED LIST, which recorded
+    // the defect as intended behaviour and made every run afterwards confirm it. A shape guard asks
+    // "did the persisted surface change"; it cannot ask "should it have". The second question is the
+    // one that needed answering and only a reader can answer it.
     private static readonly Dictionary<Type, string[]> PersistedShape = new()
     {
-        [typeof(RelinkMemory)] = ["Remembered", "All"],
+        [typeof(RelinkMemory)] = ["Remembered"],
         [typeof(RememberedParticipant)] = ["SessionCode", "ParticipantId"],
     };
 
