@@ -35,7 +35,7 @@ namespace DungeonMasterXIV.Net;
 /// door could not gain a seventh member and DMXENG-58 was blocked behind it. Grouping by the D-3
 /// boundary the file already bolded gives the two doors and leaves admission as the remainder —
 /// which is a group in its own right, not a leftover: both its members are supplied from the
-/// admission side and both are null on exactly the same clients.
+/// admission side.
 /// </para>
 /// <para>
 /// <b>The residual, stated rather than left for a reviewer to find.</b>
@@ -60,11 +60,12 @@ namespace DungeonMasterXIV.Net;
 /// question with another, which is this bug a second time.
 /// </para>
 /// <para>
-/// And where provenance IS cited above, the load-bearing half is the CLAUSE and not the sentence:
-/// that sentence joins it to "both are null on exactly the same clients" with an <i>and</i>, and
-/// co-nullity is the property this residual exists to call too weak to justify a merge. A reason too
-/// weak to justify merging is too weak to be grouping evidence three lines earlier, so treat that
-/// half as corroborating and never load-bearing.
+/// The grouping sentence above used to carry a second clause — "both are null on exactly the same
+/// clients" — and it has been STRIPPED rather than demoted, which is a ruling and not a tidy.
+/// Co-nullity is the property this residual exists to call too weak to justify a merge, and a reason
+/// too weak to justify merging is too weak to be grouping evidence three lines earlier. Demoting it
+/// would have left a disproven property visible as support with no way for the next reader to tell
+/// demoted-but-retained from load-bearing.
 /// </para>
 /// <para>
 /// <b>This paragraph used to cite the D-3 door boundary, and that was the wrong reason for the
