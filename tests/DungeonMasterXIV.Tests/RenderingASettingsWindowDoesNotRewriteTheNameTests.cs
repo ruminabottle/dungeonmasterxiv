@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text;
+using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 using Xunit;
@@ -7,7 +8,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A-1.2v-2: drawing the settings window must not rewrite the stored name. Nothing the user did not
+/// A-1.2v-2: drawing the campaign window must not rewrite the stored name. Nothing the user did not
 /// type may be persisted over what they did.
 /// </summary>
 /// <remarks>
@@ -25,7 +26,7 @@ namespace DungeonMasterXIV.Tests;
 /// only refuses to PERSIST a shortening of a name the field could not have shown whole.
 /// </para>
 /// <para>
-/// <b>Both directions, because a guard that refuses everything breaks the settings screen</b> and
+/// <b>Both directions, because a guard that refuses everything breaks the campaign screen</b> and
 /// would pass every negative test here. The positives are not decoration: they are the half that
 /// fails if the guard is too broad.
 /// </para>
@@ -53,17 +54,17 @@ public class RenderingASettingsWindowDoesNotRewriteTheNameTests
     [Fact]
     public void ANameLargerThanTheFieldIsValidAndStorable()
     {
-        var settings = new PluginSettings();
+        var campaign = new Campaign();
 
         Assert.True(
             DisplayName.TryParse(TooLargeToShow, out _),
             "The oversized fixture is not a VALID name, so nothing could store it and every test in "
             + "this file is vacuous. The clause under test is TryParse's, not the field's.");
 
-        Assert.True(settings.RecordChosenName(TooLargeToShow, CharacterName));
+        Assert.True(CampaignDisplayName.RecordChosen(campaign, TooLargeToShow, CharacterName));
 
         Assert.True(
-            Encoding.UTF8.GetByteCount(settings.DisplayNameAlias) > DisplayName.MaxUtf8Bytes,
+            Encoding.UTF8.GetByteCount(CampaignDisplayName.Stored(campaign)) > DisplayName.MaxUtf8Bytes,
             "The stored alias fits inside the input field, so the field could show it whole and no "
             + "render could shorten it. The clause under test is byte-count-exceeds-field-capacity.");
     }
@@ -74,17 +75,17 @@ public class RenderingASettingsWindowDoesNotRewriteTheNameTests
     [Fact]
     public void AShorterValueDoesNotOverwriteANameTheFieldCouldNotShow()
     {
-        var settings = new PluginSettings();
-        settings.RecordChosenName(TooLargeToShow, CharacterName);
+        var campaign = new Campaign();
+        CampaignDisplayName.RecordChosen(campaign, TooLargeToShow, CharacterName);
 
         var asTheFieldMightReturnIt = TooLargeToShow[..120];
-        var changed = settings.RecordChosenName(asTheFieldMightReturnIt, CharacterName);
+        var changed = CampaignDisplayName.RecordChosen(campaign, asTheFieldMightReturnIt, CharacterName);
 
         Assert.False(
             changed,
             "A shortening of an unshowable stored name was reported as a change, so the caller saves. "
             + "The clause under test is incoming-is-shorter-than-an-unshowable-stored-name.");
-        Assert.Equal(TooLargeToShow, settings.DisplayNameAlias);
+        Assert.Equal(TooLargeToShow, CampaignDisplayName.Stored(campaign));
     }
 
     // THE OTHER DIRECTION, and the half a refuse-everything guard fails. An ordinary name is stored
@@ -92,11 +93,11 @@ public class RenderingASettingsWindowDoesNotRewriteTheNameTests
     [Fact]
     public void AnOrdinaryNameIsStillRecorded()
     {
-        var settings = new PluginSettings();
+        var campaign = new Campaign();
 
-        Assert.True(settings.RecordChosenName("The Cartographer", CharacterName));
+        Assert.True(CampaignDisplayName.RecordChosen(campaign, "The Cartographer", CharacterName));
 
-        Assert.Equal("The Cartographer", settings.DisplayNameAlias);
+        Assert.Equal("The Cartographer", CampaignDisplayName.Stored(campaign));
     }
 
     // Shortening an ordinary alias is a normal edit and must keep working. This is the case a naive
@@ -104,12 +105,12 @@ public class RenderingASettingsWindowDoesNotRewriteTheNameTests
     [Fact]
     public void AnOrdinaryNameCanStillBeShortened()
     {
-        var settings = new PluginSettings();
-        settings.RecordChosenName("The Cartographer", CharacterName);
+        var campaign = new Campaign();
+        CampaignDisplayName.RecordChosen(campaign, "The Cartographer", CharacterName);
 
-        Assert.True(settings.RecordChosenName("Carto", CharacterName));
+        Assert.True(CampaignDisplayName.RecordChosen(campaign, "Carto", CharacterName));
 
-        Assert.Equal("Carto", settings.DisplayNameAlias);
+        Assert.Equal("Carto", CampaignDisplayName.Stored(campaign));
     }
 
     // The escape hatch, and it is required rather than a nicety: without it a user whose stored alias
@@ -118,12 +119,12 @@ public class RenderingASettingsWindowDoesNotRewriteTheNameTests
     [Fact]
     public void AnUnshowableNameCanStillBeClearedByTheUser()
     {
-        var settings = new PluginSettings();
-        settings.RecordChosenName(TooLargeToShow, CharacterName);
+        var campaign = new Campaign();
+        CampaignDisplayName.RecordChosen(campaign, TooLargeToShow, CharacterName);
 
-        Assert.True(settings.RecordChosenName(string.Empty, CharacterName));
+        Assert.True(CampaignDisplayName.RecordChosen(campaign, string.Empty, CharacterName));
 
-        Assert.Equal(string.Empty, settings.DisplayNameAlias);
+        Assert.Equal(string.Empty, CampaignDisplayName.Stored(campaign));
     }
 
     // And replacing it outright works, so the guard refuses only SHORTENING rather than refusing to
@@ -132,13 +133,13 @@ public class RenderingASettingsWindowDoesNotRewriteTheNameTests
     [Fact]
     public void AnUnshowableNameCanStillBeReplacedWithALongerOne()
     {
-        var settings = new PluginSettings();
-        settings.RecordChosenName(TooLargeToShow, CharacterName);
+        var campaign = new Campaign();
+        CampaignDisplayName.RecordChosen(campaign, TooLargeToShow, CharacterName);
 
         var longer = TooLargeToShow + "̅";
 
-        Assert.True(settings.RecordChosenName(longer, CharacterName));
+        Assert.True(CampaignDisplayName.RecordChosen(campaign, longer, CharacterName));
 
-        Assert.Equal(longer, settings.DisplayNameAlias);
+        Assert.Equal(longer, CampaignDisplayName.Stored(campaign));
     }
 }

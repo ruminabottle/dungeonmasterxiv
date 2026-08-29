@@ -1,6 +1,7 @@
 using System;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 
@@ -14,6 +15,13 @@ public sealed class ConfigWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;
     private readonly Func<DisplayName> _characterName;
+
+    // R-2.17/A-2.31. The name is scoped to ONE campaign, so this window reads and writes through
+    // the campaign rather than through settings -- there is no global alias to reach for any more.
+    // Supplied the same way _relinkMemory is: a supplier and a save, so a campaign store reloaded
+    // underneath this window is still the one the player edits.
+    private readonly Func<Campaign?> _currentCampaign;
+    private readonly Action<Campaign> _saveCampaign;
 
     // Built once: Draw runs every frame and the schema version cannot change while we are loaded.
     private readonly string _schemaVersionLabel;
@@ -70,11 +78,27 @@ public sealed class ConfigWindow : Window
     /// What the game says this player is called, read at draw time rather than captured — a
     /// character name is not stable for the life of the plugin.
     /// </param>
-    public ConfigWindow(ConfigurationStore configurationStore, Func<DisplayName> characterName)
+    /// <param name="currentCampaign">
+    /// The campaign the display name is scoped to (R-2.17), or null when none is current. Read at
+    /// draw time for the same reason as the character name: the current campaign changes underneath
+    /// a window that stays open.
+    /// </param>
+    /// <param name="saveCampaign">
+    /// Persists a campaign after its name changes. The name lives on the campaign now, so the
+    /// campaign store is what writes it — <c>ConfigurationStore.Save</c> would write the settings
+    /// file, which no longer carries a name at all.
+    /// </param>
+    public ConfigWindow(
+        ConfigurationStore configurationStore,
+        Func<DisplayName> characterName,
+        Func<Campaign?> currentCampaign,
+        Action<Campaign> saveCampaign)
         : base("Dungeon Master XIV settings###dmx-settings")
     {
         _configurationStore = configurationStore;
         _characterName = characterName;
+        _currentCampaign = currentCampaign;
+        _saveCampaign = saveCampaign;
 
         // Both suppliers read through the STORE rather than capturing the settings object, so a
         // configuration reloaded from disk underneath this window is still the one the player sees
@@ -154,12 +178,16 @@ public sealed class ConfigWindow : Window
         // used to be (MaxLength * 2) + 1 = 65, which was room to over-type only in ASCII: a
         // 32-character Devanagari name is 192 bytes and would have been truncated at the boundary
         // this box exists to let the user cross deliberately.
-        var typed = settings.NameToEdit(characterName);
+        var campaign = _currentCampaign();
+        var typed = CampaignDisplayName.ToEdit(campaign, characterName);
         if (ImGui.InputText("Name others see", ref typed, DisplayName.MaxUtf8Bytes))
         {
-            if (settings.RecordChosenName(typed, characterName))
+            // The campaign is what persists the name now, so the campaign is what gets saved.
+            // RecordChosen reports false when nothing changed AND when there is no campaign to
+            // record against, so neither case writes a file.
+            if (campaign is not null && CampaignDisplayName.RecordChosen(campaign, typed, characterName))
             {
-                _configurationStore.Save();
+                _saveCampaign(campaign);
             }
         }
 
@@ -177,10 +205,11 @@ public sealed class ConfigWindow : Window
             ImGui.TextWrapped(NameFieldIsFull);
         }
 
-        var effective = settings.DisplayNameOr(characterName);
+        var effective = CampaignDisplayName.Or(campaign, characterName);
         ImGui.TextUnformatted($"You will join as: {effective.Value}");
 
-        if (settings.DisplayNameAlias.Length > 0 && !DisplayName.TryParse(settings.DisplayNameAlias, out _))
+        var stored = CampaignDisplayName.Stored(campaign);
+        if (stored.Length > 0 && !DisplayName.TryParse(stored, out _))
         {
             ImGui.TextWrapped(UnusableAliasWarning);
         }

@@ -48,6 +48,21 @@ public sealed class Campaign
     /// </remarks>
     public string? Name { get; set; }
 
+    /// <summary>
+    /// The name this player sends in THIS campaign, or null when they have not chosen one
+    /// (R-2.17, A-2.30). Null is the ordinary case, not a missing value.
+    /// </summary>
+    /// <remarks>
+    /// <b>Here rather than on <see cref="Data.PluginSettings"/>, and that is the requirement rather
+    /// than a preference.</b> D-8 is titled <i>"Identity is campaign-scoped and never portable"</i>;
+    /// a single alias on plugin settings would follow the player into every other campaign, which is
+    /// the portable identifier A-2.31 forbids. <b>Additive exactly as <see cref="Name"/> is</b> — a
+    /// campaign written by an older build reads back null here and behaves as it always did, so
+    /// nothing is backfilled and <c>CurrentSchemaVersion</c> does not move. The rules that operate on
+    /// it live in <see cref="CampaignDisplayName"/>.
+    /// </remarks>
+    public string? DisplayNameAlias { get; set; }
+
     /// <summary>Everyone the DM has admitted to this campaign, with their campaign-scoped UUIDs.</summary>
     public List<CampaignParticipant> Participants { get; set; } = new();
 

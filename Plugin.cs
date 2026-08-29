@@ -66,7 +66,8 @@ public sealed class Plugin : IDalamudPlugin
         // disagree about what this player is called.
         var characterName = new LocalCharacterName(objects).Current;
 
-        _configWindow = new ConfigWindow(_configurationStore, characterName);
+        _hostingCampaign = new HostingCampaign(_campaignStore);
+        _configWindow = SettingsWindowFor(characterName);
         // ONE adapter, TWO consumers. The coordinator needs it so that a roster entry dropped on
         // the way in is observable to a developer rather than silent (BUG-70) -- the codec has said
         // so since #120, but nothing production-side was listening until this line existed.
@@ -85,7 +86,6 @@ public sealed class Plugin : IDalamudPlugin
         // dependency DMXENG-45 exists because of -- one nothing detects, which a reorder turns into
         // a null nobody refuses. Constructing it first removes the dependency instead of
         // documenting it; it needs only the store, which exists well above here.
-        _hostingCampaign = new HostingCampaign(_campaignStore);
         _sessionCoordinator = new SessionCoordinator(
             _relayTransport,
             () => _configurationStore.Configuration.Settings.RelayAddress,
@@ -138,9 +138,11 @@ public sealed class Plugin : IDalamudPlugin
     /// <remarks>
     /// <para>
     /// <b>ONE expression, called twice, rather than two that mean to agree.</b>
-    /// <c>DisplayNameOr</c> is the single rule for "the alias if the player set a usable one,
-    /// otherwise the character name" — it lives in <c>PluginSettings</c> so it is testable without
-    /// Dalamud, and the settings window calls the same method to show what will be sent. <b>So the
+    /// <c>CampaignDisplayName.Or</c> is the single rule for "the alias if the player set a usable
+    /// one, otherwise the character name" — it lives in <c>Core/Campaigns</c> so it is testable
+    /// without Dalamud, and the settings window calls the same method to show what will be sent.
+    /// <b>It answers for ONE campaign</b> (R-2.17, D-8): the name is scoped, so the rule has to be
+    /// told which campaign it is answering for rather than reading a global alias. <b>So the
     /// name the DM publishes in its own roster entry (A-1.13b), the name a joiner sends, and the
     /// preview the session window draws cannot drift apart</b>, which the comment here used to
     /// claim while a second copy of the expression sat four lines below it.
@@ -154,7 +156,27 @@ public sealed class Plugin : IDalamudPlugin
     /// </para>
     /// </remarks>
     private Func<DisplayName> NameWeSendAs(Func<DisplayName> characterName) =>
-        () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName());
+        () => CampaignDisplayName.Or(_hostingCampaign.Current, characterName());
+
+    /// <summary>The settings window, wired to the campaign the display name is scoped to.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b><see cref="_hostingCampaign"/> is constructed BEFORE this runs, not closed over and hoped
+    /// for.</b> The coordinator below records why: <i>a closure that is merely not-invoked-yet is
+    /// the ordering dependency DMXENG-45 exists because of — one nothing detects, which a reorder
+    /// turns into a null nobody refuses.</i> Same argument here, so the same remedy.
+    /// </para>
+    /// <para>
+    /// <b>A method rather than lines in the constructor, and the reason is a measurement.</b>
+    /// <c>Plugin</c>'s constructor is a grandfathered breach at 88 lines against a 60 capacity
+    /// (BUG-103). Inline these lines and it reaches 95 — <b>the size gate refused exactly that,</b>
+    /// naming the margin moving from -28 to -35. Grandfathered breaches may stay where they are;
+    /// they may not grow. The same reasoning already put <see cref="NameWeSendAs"/> here.
+    /// </para>
+    /// </remarks>
+    /// <param name="characterName">What the game says this player is called.</param>
+    private ConfigWindow SettingsWindowFor(Func<DisplayName> characterName) =>
+        new(_configurationStore, characterName, () => _hostingCampaign.Current, _campaignStore.Save);
 
     /// <summary>Unwinds construction in reverse order.</summary>
     public void Dispose()
