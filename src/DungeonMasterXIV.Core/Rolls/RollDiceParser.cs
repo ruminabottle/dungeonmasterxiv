@@ -121,7 +121,8 @@ internal static class RollDiceParser
         }
 
         return new ModifierParse(
-            high ? current with { KeepHighest = howMany } : current with { KeepLowest = howMany },
+            high ? OnlyKeepDrop(current) with { KeepHighest = howMany }
+                 : OnlyKeepDrop(current) with { KeepLowest = howMany },
             RollFault.None,
             null);
     }
@@ -155,10 +156,37 @@ internal static class RollDiceParser
         }
 
         return new ModifierParse(
-            low ? current with { DropLowest = howMany } : current with { DropHighest = howMany },
+            low ? OnlyKeepDrop(current) with { DropLowest = howMany }
+                : OnlyKeepDrop(current) with { DropHighest = howMany },
             RollFault.None,
             null);
     }
+
+    /// <summary>Clears all four keep/drop fields, so the suffix about to be written is the only one.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>LAST SUFFIX WINS, which is this grammar's existing convention rather than a new one</b> —
+    /// exploding already says so a few lines up, <i>"each arm clears the other so the last suffix
+    /// written wins"</i>. Consistency inside one grammar beats the most expressive reading, and
+    /// there are three defensible readings here (refuse, last-wins, compose) that A-2.2 does not
+    /// choose between.
+    /// </para>
+    /// <para>
+    /// <b>BUG-148: the four fields were independent and the evaluator read two of them for different
+    /// questions.</b> <c>Keeping</c> took the COUNT from the first non-null in a fixed order, while
+    /// the sort direction was decided by a SEPARATE test — so <c>4d6kh3dh1</c> took its count from
+    /// <c>KeepHighest</c> and its direction from <c>DropHighest</c> and kept the three LOWEST. No
+    /// refusal, no report, a confident wrong number. Clearing here means the evaluator can never see
+    /// two of the four set, so the count and the direction cannot come from different suffixes.
+    /// </para>
+    /// <para>
+    /// <b>Pre-existing, and reachable through the <c>k</c> arm alone</b> — <c>4d6kh3kl2</c> hits it
+    /// without any of BUG-142's new <c>d</c> parsing. That fix widened the reachable surface; it did
+    /// not create this.
+    /// </para>
+    /// </remarks>
+    private static DiceModifiers OnlyKeepDrop(DiceModifiers current) =>
+        current with { KeepHighest = null, KeepLowest = null, DropHighest = null, DropLowest = null };
 
     /// <summary>
     /// Reads a test: an operator and a number, or <b>a bare number meaning equality</b>.
