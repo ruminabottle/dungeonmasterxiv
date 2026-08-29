@@ -76,19 +76,35 @@ public sealed class Plugin : IDalamudPlugin
         // rather than trusted from disk. This is the only production construction of the
         // coordinator, so this is the only place the windows can get their length -- which is what
         // makes "no literal in the grace path" structural rather than something a test hopes for.
+        // The connection that did not exist until DMXENG-48: the store and the coordinator were both
+        // built here and never joined, so no session had a campaign and AddParticipant had no
+        // production caller at all.
+        //
+        // MOVED ABOVE THE COORDINATOR RATHER THAN LEFT BELOW IT AND COMMENTED. The minter below
+        // closes over this field, and a closure that is merely not-invoked-yet is the ordering
+        // dependency DMXENG-45 exists because of -- one nothing detects, which a reorder turns into
+        // a null nobody refuses. Constructing it first removes the dependency instead of
+        // documenting it; it needs only the store, which exists well above here.
+        _hostingCampaign = new HostingCampaign(_campaignStore);
         _sessionCoordinator = new SessionCoordinator(
             _relayTransport,
             () => _configurationStore.Configuration.Settings.RelayAddress,
             _configurationStore.Configuration.Settings.InterruptionWindowOrDefault(),
-            log: sessionLog);
+            log: sessionLog,
+            // R-1.5c half 1, and the line that gives AddParticipant its FIRST production caller.
+            // Until now nothing minted a participant in the shipped build at all, so the joiner had
+            // nothing to be told and relink was a protocol capability away rather than a call away.
+            //
+            // Null when no campaign is current, which is every JOINING client -- an ordinary state,
+            // not a failure. A HOST that reaches here with no campaign is a different matter and
+            // AdmissionControl warns on it by peer code, so the quiet version of this cannot ship.
+            mintParticipant: label => _hostingCampaign.Current is { } campaign
+                ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
+                : null);
         // The alias if the player set a usable one, otherwise the character name (R-1.3e). The rule
         // lives in PluginSettings so it is testable without Dalamud, and the settings window calls
         // the same method to show what will be sent -- one expression, so the preview cannot drift
         // from the thing it previews.
-        // The connection that did not exist until DMXENG-48: the store and the coordinator were both
-        // built here and never joined, so no session had a campaign and AddParticipant had no
-        // production caller at all.
-        _hostingCampaign = new HostingCampaign(_campaignStore);
         _sessionWindow = new SessionWindow(
             _sessionCoordinator,
             () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName()),

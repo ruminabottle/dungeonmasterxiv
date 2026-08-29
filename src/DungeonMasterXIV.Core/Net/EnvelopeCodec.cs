@@ -35,6 +35,7 @@ public static class EnvelopeCodec
             DeadlineUtcTicks = envelope.DeadlineUtcTicks,
             DisplayName = envelope.DisplayName,
             ClaimedParticipantId = envelope.ClaimedParticipantId,
+            ParticipantId = envelope.ParticipantId,
         };
 
         return JsonSerializer.SerializeToUtf8Bytes(wire, Options);

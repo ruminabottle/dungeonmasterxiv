@@ -57,4 +57,17 @@ internal sealed class WireShape
     /// heard of it decode unchanged.
     /// </summary>
     public string? ClaimedParticipantId { get; set; }
+
+    /// <summary>
+    /// The participant the HOST created for this joiner, on an acceptance (R-1.5c). Optional in the
+    /// same sense as everything above: a host that omits it created none, and older peers that have
+    /// never heard of it decode unchanged.
+    /// </summary>
+    /// <remarks>
+    /// <b>A DIFFERENT FACT FROM <see cref="ClaimedParticipantId"/>, which is why it is a different
+    /// field.</b> That one travels joiner to host and is an unauthenticated CLAIM; this one travels
+    /// host to joiner and is the host's own ANSWER. One field serving both would make the direction
+    /// the only thing distinguishing a claim from a record, and direction is not carried on the wire.
+    /// </remarks>
+    public string? ParticipantId { get; set; }
 }

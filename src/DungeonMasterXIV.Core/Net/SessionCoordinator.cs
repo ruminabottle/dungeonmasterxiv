@@ -43,12 +43,18 @@ public sealed class SessionCoordinator
     /// default, and every construction site moved with it.
     /// </para>
     /// </param>
+    /// <param name="mintParticipant">
+    /// Creates a participant for a joiner about to be admitted (R-1.5c). Null when not hosting into
+    /// a campaign. <b>Optional deliberately; the reasoning lives on <see cref="AdmissionControl"/>'s
+    /// parameter of the same name, where it is consumed.</b>
+    /// </param>
     public SessionCoordinator(
         ISessionTransport transport,
         Func<string> relayAddress,
         TimeSpan window,
         ISessionTransportLog log,
-        Func<SessionKeyExchange>? newKeys = null)
+        Func<SessionKeyExchange>? newKeys = null,
+        Func<DisplayName, Guid?>? mintParticipant = null)
     {
         ArgumentNullException.ThrowIfNull(log);
 
@@ -58,7 +64,9 @@ public sealed class SessionCoordinator
         _admissions = new AdmissionControl(
             new AdmissionAnnouncer(transport),
             () => Host.Code,
-            () => HostKeys);
+            () => HostKeys,
+            mintParticipant ?? (static _ => null),
+            log);
         // Null-conditional because _joiner is built FURTHER DOWN this constructor: the closure is
         // not INVOKED until after construction, but the compiler cannot know that. Suppressing with
         // ! would assert something this constructor does not yet guarantee. That reasoning stands.

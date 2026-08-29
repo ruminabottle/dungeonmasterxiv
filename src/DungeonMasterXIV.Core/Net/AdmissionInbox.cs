@@ -278,7 +278,12 @@ public sealed class AdmissionInbox
 
             if (envelope.TryGetAdmissionOutcome(keys?.PublicKey) is { } outcome)
             {
-                sessionKey = Apply(outcome, attempt, keys) ?? sessionKey;
+                // The participant id rides the SAME envelope as the outcome and is read from it
+                // here rather than folded into AdmissionOutcome. It decides nothing about the
+                // admission, and a consumer that could read it through Match would be reading an
+                // identity as an answer -- the same separation TryGetFingerprintReceiptKey keeps.
+                sessionKey = Apply(
+                    outcome, attempt, keys, ParticipantReceipt.TryRead(envelope, keys?.PublicKey)) ?? sessionKey;
             }
         }
 
@@ -374,7 +379,11 @@ public sealed class AdmissionInbox
 
     // Every outcome C6 defines is handled. Match takes a delegate per case, so omitting one is a
     // compile error rather than a branch that silently does nothing.
-    private static byte[]? Apply(AdmissionOutcome outcome, JoinAttempt attempt, SessionKeyExchange? keys) =>
+    private static byte[]? Apply(
+        AdmissionOutcome outcome,
+        JoinAttempt attempt,
+        SessionKeyExchange? keys,
+        Guid? participantId) =>
         outcome.Match(
             onAccepted: hostPublicKey =>
             {
@@ -398,6 +407,15 @@ public sealed class AdmissionInbox
                 }
 
                 attempt.Admitted();
+
+                // AFTER Admitted(), never before, and ToldItIsParticipant guards the phase itself
+                // so the ordering is stated in two places on purpose. R-1.3b: an unadmitted client
+                // is entitled to nothing, and the guard above can fail this attempt before here.
+                if (participantId is { } told)
+                {
+                    attempt.ToldItIsParticipant(told);
+                }
+
                 return keys is not null && attempt.Code is { } code
                     ? keys.DeriveSharedKey(hostPublicKey, code)
                     : null;

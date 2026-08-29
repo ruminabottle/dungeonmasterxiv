@@ -82,6 +82,21 @@ public sealed record WireEnvelope
     public string? ClaimedParticipantId { get; private init; }
 
     /// <summary>
+    /// The participant the host created for this joiner, on
+    /// <see cref="WireMessageType.JoinAccepted"/> (R-1.5c). Null means none was created.
+    /// </summary>
+    /// <remarks>
+    /// <b>The host's ANSWER, and a separate field from <see cref="ClaimedParticipantId"/> because
+    /// that one is the joiner's CLAIM travelling the other way</b> — one field for both would leave
+    /// DIRECTION as the only thing telling them apart, and the wire does not carry direction. D-3:
+    /// a participant's roster identity is shared state, so the joiner cannot mint it. <b>It is not a
+    /// credential</b> (relink is DM-approved every time), and it is <b>read through
+    /// <see cref="ParticipantReceipt"/>, never directly</b> — that is where the type, the
+    /// addressee and the parse are checked.
+    /// </remarks>
+    public string? ParticipantId { get; private init; }
+
+    /// <summary>
     /// The envelope metadata a payload is bound to: the session it belongs to and what kind of
     /// message it is. Authenticated by <see cref="SessionCipher"/> but never transmitted — the
     /// receiver rebuilds it from the envelope in front of it, so a re-framed payload fails its tag
@@ -208,13 +223,32 @@ public sealed record WireEnvelope
             DeadlineUtcTicks = wire.DeadlineUtcTicks,
             DisplayName = wire.DisplayName,
             ClaimedParticipantId = wire.ClaimedParticipantId,
+            ParticipantId = wire.ParticipantId,
         };
 
     /// <summary>
     /// Host admits a joiner. Carries <b>two</b> keys: the joiner's, echoed so they know which
     /// request this answers, and the host's, without which the joiner can derive no shared key.
     /// </summary>
-    public static WireEnvelope ForJoinAccepted(SessionCode code, byte[] joinerPublicKey, byte[] hostPublicKey)
+    /// <param name="code">The session being joined.</param>
+    /// <param name="joinerPublicKey">Echoed so the joiner knows which request this answers.</param>
+    /// <param name="hostPublicKey">Without which the joiner can derive no shared key.</param>
+    /// <param name="participantId">
+    /// The participant the host created for this joiner (R-1.5c), or null if none was.
+    /// <para>
+    /// <b>THIS ENVELOPE IS THE CARRIER BECAUSE OF A ROUTING PROPERTY, NOT FOR CONVENIENCE.</b> The
+    /// relay forwards an acceptance as <c>Forward(JoinerAdmitted, [admitted])</c> — a
+    /// <b>single-element</b> recipient list — so R-1.5c's <i>only to the joiner it belongs to</i>
+    /// and <i>after admission, never before</i> hold <b>by construction</b>. A new message type
+    /// would need both re-established by routing rules editable apart from the requirement.
+    /// Optional, and D-14 makes that safe: a build that has never heard of it decodes unchanged.
+    /// </para>
+    /// </param>
+    public static WireEnvelope ForJoinAccepted(
+        SessionCode code,
+        byte[] joinerPublicKey,
+        byte[] hostPublicKey,
+        Guid? participantId = null)
     {
         ArgumentNullException.ThrowIfNull(joinerPublicKey);
         ArgumentNullException.ThrowIfNull(hostPublicKey);
@@ -222,6 +256,7 @@ public sealed record WireEnvelope
         {
             PublicKey = joinerPublicKey,
             HostPublicKey = hostPublicKey,
+            ParticipantId = participantId?.ToString("D"),
         };
     }
 

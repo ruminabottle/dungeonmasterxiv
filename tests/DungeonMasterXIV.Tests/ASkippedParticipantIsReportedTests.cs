@@ -247,8 +247,21 @@ public sealed class ASkippedParticipantIsReportedTests
     private static (SessionCoordinator Coordinator, RecordingLog Log) Hosting()
     {
         var log = new RecordingLog();
+        // A MINTER IS SUPPLIED THOUGH THIS FILE IS NOT ABOUT MINTING, and leaving it out is what
+        // made these two tests fail when R-1.5c landed: a host that admits without creating a
+        // participant now WARNS about it (AdmissionControl.Admit), so the negative half below --
+        // "nothing is reported when every participant is reachable" -- was reporting something.
+        //
+        // Arranged rather than filtered out of the assertion. The subject here is a peer the
+        // broadcast skips, and a host with no campaign is not what this file means to describe;
+        // weakening Assert.Empty to ignore a category of warning would blunt the only half that
+        // proves the skip line is not noise.
         var coordinator = new SessionCoordinator(
-            new FakeTransport(), () => RelayEndpoint.Default, GraceWindow.Default, log: log);
+            new FakeTransport(),
+            () => RelayEndpoint.Default,
+            GraceWindow.Default,
+            log: log,
+            mintParticipant: static _ => Guid.NewGuid());
 
         coordinator.StartHosting();
         coordinator.Host.Registered();

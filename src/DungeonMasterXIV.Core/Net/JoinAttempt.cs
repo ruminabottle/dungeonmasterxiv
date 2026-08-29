@@ -76,6 +76,32 @@ public sealed class JoinAttempt
     /// </remarks>
     public bool FingerprintWasComparableAtDecision { get; private set; }
 
+    /// <summary>
+    /// The participant the host says this client is, once it has been admitted and told (R-1.5c).
+    /// Null until then, and null for a host that created none.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>IN MEMORY ONLY, AND THAT IS A RULING RATHER THAN AN OMISSION (SQ-53).</b> R-1.5b's
+    /// obligations — the player can SEE what is stored and DELETE it per campaign, without the DM's
+    /// involvement — attach to <b>persistence</b>, not to conveyance, because retention and deletion
+    /// are meaningless for a value that dies with the process. So a receipt that lives only in this
+    /// object conforms, and <b>the moment anything writes it to disk those obligations attach IN THE
+    /// SAME CHANGE</b>, not in a follow-up ticket.
+    /// </para>
+    /// <para>
+    /// <b>So this does NOT deliver R-1.5, and A-1.9g stays RED.</b> That criterion was tightened the
+    /// same day to <i>retains it across a plugin restart</i>, precisely because <i>"and stores it"</i>
+    /// is satisfied by an in-memory receipt while relink — which is by definition across launches —
+    /// remains impossible. <b>If A-1.9g goes green on this, something is wrong.</b>
+    /// </para>
+    /// <para>
+    /// <b>Not a credential.</b> Relink is DM-approved every time, so nothing is granted on holding
+    /// this. R-1.5a's proof-of-possession governs <i>resume</i>, a different path.
+    /// </para>
+    /// </remarks>
+    public Guid? ParticipantId { get; private set; }
+
     /// <summary>The player asked to join. A human action, never automatic (R-1.3).</summary>
     public void Request(SessionCode code)
     {
@@ -85,6 +111,13 @@ public sealed class JoinAttempt
         Deadline = null;
         Fingerprint = null;
         FingerprintWasComparableAtDecision = false;
+
+        // CLEARED WITH THE REST, and it is the one that would do damage if it were not. A new
+        // attempt may be to a DIFFERENT session under a different host, and R-1.5b binds a stored
+        // UUID under a session code -- carrying the previous host's answer into it would let this
+        // client present one campaign's participant to another, which is the cross-campaign linkage
+        // D-8 exists to refuse. It survives no longer than the attempt that was told it.
+        ParticipantId = null;
     }
 
     /// <summary>
@@ -169,6 +202,28 @@ public sealed class JoinAttempt
 
         FingerprintWasComparableAtDecision = Fingerprint is not null;
         Phase = JoinPhase.Admitted;
+    }
+
+    /// <summary>
+    /// The host has told this client which participant it is (R-1.5c). Ignored unless this client
+    /// is admitted.
+    /// </summary>
+    /// <remarks>
+    /// <b>The phase guard is R-1.3b, not tidiness.</b> An unadmitted client receives no session
+    /// traffic at all, so a participant id arriving before the decision is one this client was never
+    /// entitled to — and accepting it would record an identity granted by a message rather than by
+    /// an admission. Silently ignored rather than failed: the frame is dropped exactly as any
+    /// unusable input on this path is, and the join itself is unaffected.
+    /// </remarks>
+    /// <param name="participantId">The participant the host created.</param>
+    public void ToldItIsParticipant(Guid participantId)
+    {
+        if (Phase != JoinPhase.Admitted)
+        {
+            return;
+        }
+
+        ParticipantId = participantId;
     }
 
     /// <summary>
