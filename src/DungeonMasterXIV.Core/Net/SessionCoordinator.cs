@@ -380,6 +380,30 @@ public sealed class SessionCoordinator
     /// </summary>
     public bool InAJoinedSession => _interruption.InAJoinedSession;
 
+    /// <summary>
+    /// Whether this client is hosting a session someone could still be in (R-1.3h, BUG-115).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The sibling of <see cref="InAJoinedSession"/>, and it exists because the window's
+    /// exclusivity guard only had the other one.</b> "Start session" was gated on the JOIN side
+    /// alone, so a live host was one click from starting a second session on top of the first.
+    /// </para>
+    /// <para>
+    /// <b>Registering counts, Failed does not.</b> Registering is already a session a DM can lose,
+    /// so the offer must be withdrawn before the code comes back. A FAILED attempt is the opposite
+    /// case: there is nothing to protect and the DM's next action is to try again, so hiding the
+    /// button there would strand them. That distinction is what separates "hosting is live" from
+    /// "hosting was attempted", and it is what stops this predicate becoming always-true.
+    /// </para>
+    /// <para>
+    /// The window asks this rather than reading <see cref="HostSession.Phase"/> itself, for the same
+    /// reason it does not read the join phase: which phases count is Core's decision, and a window
+    /// that enumerates them is a second place to update when one is added.
+    /// </para>
+    /// </remarks>
+    public bool InAHostedSession => Host.Phase is HostingPhase.Registering or HostingPhase.Hosting;
+
     /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
     /// <param name="failure">What the transport reported.</param>
     public void Fail(SessionFailure failure) => _interruption.Fail(failure);
