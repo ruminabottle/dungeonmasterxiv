@@ -43,9 +43,18 @@ public sealed class ContainsMainFactAttribute : FactAttribute
             return;
         }
 
-        Skip = "This branch does not contain origin/main, so the working tree is NOT the merged "
-             + "tree and a pass here would describe a tree nobody is going to merge. "
-             + $"Rebase or merge main and the gate runs. ({detail})";
+        // BUG-125: THE LEADING SENTENCE NAMED A CAUSE THE CHECK HAD NOT ESTABLISHED. `Containment`
+        // returns contains:false on five arms and only ONE of them is "this branch is behind main":
+        // git can fail, origin can be unreachable, the clone can have no cached ref, and the cached
+        // ref can be stale -- and on a stale ref the branch may well contain main. The true reason
+        // was appended in brackets AFTER the false one, so the message asserted something untrue and
+        // then quietly contradicted itself. "Rebase or merge main" was wrong on the same four arms:
+        // an instruction that will not help is worse than no instruction.
+        //
+        // So the wrapper states the CONSEQUENCE, which is true on every arm, and leaves the CAUSE
+        // entirely to `detail` -- each of which now ends in the action for its own arm.
+        Skip = "SIZE GATE NOT RUN, so this tree is not known to be the merged tree and a pass "
+             + $"here would describe a tree nobody is going to merge: {detail}";
 
         // BUG-123: THE SKIP FIRED CORRECTLY AND NOBODY COULD SEE WHY. `Skip` is printed only at -v n
         // or above; the DEFAULT invocation prints the test's DISPLAY NAME and nothing else about a
@@ -144,7 +153,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         return code switch
         {
             0 => (true, $"origin/main ({Short(remoteHead)}) is current and an ancestor of HEAD"),
-            1 => (false, "origin/main is not an ancestor of HEAD"),
+            1 => (false, "origin/main is not an ancestor of HEAD -- merge or rebase main and the gate runs"),
             _ => (false, $"git could not answer (exit {code}): {errors.Trim()}{output.Trim()}"),
         };
     });
