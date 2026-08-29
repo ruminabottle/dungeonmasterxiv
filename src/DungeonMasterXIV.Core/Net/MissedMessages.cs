@@ -33,6 +33,23 @@ namespace DungeonMasterXIV.Net;
 /// <see cref="NoteGap"/>, and this type guarantees only that a reported loss is MARKED. Choosing a
 /// number here would settle a product question by building a mechanism for it.
 /// </para>
+/// <para>
+/// <b>AND THE SPEC OWNER SUPPLIED THE FLOOR THAT WAS MISSING (2026-08-29), WHICH LANDS ON THAT
+/// CALLER RATHER THAN HERE.</b> Marking is decision 7's <i>exception</i> clause, not its ordinary
+/// outcome: the feature is <i>you get your messages back</i>, not <i>you are told you did not</i>.
+/// So <b>a drop at the SHORT end of R-1.5a's seat window must not produce a gap where a drop at the
+/// LONG end may</b> — stated relatively, so it asserts no constant, cannot go stale, and still fails
+/// the decorative build that holds a handful of messages and gaps at both ends.
+/// </para>
+/// <para>
+/// <b>A build that MARKS NOTHING is therefore conforming, and is the one to reach for first.</b> The
+/// hold is already bounded in practice by the seat window — past it the seat is gone and there is
+/// nothing to deliver to — so "hold everything until the seat expires" satisfies R-2.10, and
+/// satisfies the floor trivially, because a build that never gaps never gaps at the short end. That
+/// leaves <see cref="NoteGap"/> as dead code rather than a violated clause, which is a legitimate
+/// outcome: <b>decision 7 says gaps are marked, not that gaps must exist.</b> Whether memory permits
+/// it is the resource judgement, and it is the caller's.
+/// </para>
 /// </remarks>
 internal sealed class MissedMessages
 {
