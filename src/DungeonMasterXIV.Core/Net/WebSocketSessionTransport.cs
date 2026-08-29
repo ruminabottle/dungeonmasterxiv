@@ -39,6 +39,17 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
     // BUG-122. The socket whose ConnectAsync has actually RETURNED. Held as the reference rather
     // than a bool so a reconnect cannot inherit the previous socket's readiness: the check is
     // "the sendable one IS the current one", which a stale flag could not express.
+    //
+    // AND THAT IS DEFENCE IN DEPTH RATHER THAN A BEHAVIOUR, WHICH IS WORTH SAYING PLAINLY. Readiness
+    // is cleared by two independent mechanisms: Connect() calls Disconnect() first and Disconnect
+    // nulls this field; and separately _socket is replaced before the new ConnectAsync fires, which
+    // is the one a bool could not express. The second never runs alone, because nothing reaches
+    // Connect without Disconnect. So A PLAIN BOOL PASSES EVERY TEST IN THIS REPOSITORY -- measured,
+    // not assumed, including a test written specifically to try to separate them.
+    //
+    // The reference is kept because it stops depending on Disconnect being correct, and a reader who
+    // later simplifies it to a bool should know they are removing a guarantee that no test holds,
+    // rather than discovering the tests all pass and concluding the reference was decorative.
     private volatile ClientWebSocket? _connected;
 
     /// <param name="log">

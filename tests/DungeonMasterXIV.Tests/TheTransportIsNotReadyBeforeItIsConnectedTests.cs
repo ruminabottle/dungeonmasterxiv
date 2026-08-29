@@ -103,6 +103,43 @@ public class TheTransportIsNotReadyBeforeItIsConnectedTests
         Assert.False(transport.IsReadyToSend);
     }
 
+    // A RECONNECT IN FLIGHT IS NOT READY. Nothing else covers the moment a second Connect has
+    // replaced the socket and its ConnectAsync has not yet returned.
+    //
+    // WHAT THIS DOES NOT HOLD, MEASURED RATHER THAN ASSUMED. It was proposed as a pin on the choice
+    // to store the connected SOCKET rather than a bool. It is not one, and it does not pin the
+    // BUG-122 fix either -- three variants, same four tests:
+    //
+    //     socket reference (shipped)   this passes
+    //     plain bool                   this passes
+    //     the PRE-FIX raw socket state this passes   <- only AFrameSent... reddens here
+    //
+    // The reason is that Connect() calls Disconnect() first, and Disconnect clears readiness under
+    // BOTH designs; and under the pre-fix property a freshly constructed socket is not Open anyway.
+    // So all three agree here by different routes. It is kept for what it DOES hold -- that a
+    // reconnect in flight reports not-ready, which would redden if Connect ever stopped disconnecting
+    // first -- and labelled, because an assertion that cannot fail for the reason it was added reads
+    // as protection nobody is getting.
+    [Fact]
+    public async Task ATransportReconnectingIsNotReadyUntilTheNewConnectLands()
+    {
+        await using var first = new TestWebSocketServer();
+        await using var second = new TestWebSocketServer();
+        using var transport = new WebSocketSessionTransport(new SilentLog());
+        transport.Connect(first.Address);
+
+        var deadline = DateTime.UtcNow + Patience;
+        while (!transport.IsReadyToSend && DateTime.UtcNow < deadline)
+        {
+        }
+
+        Assert.True(transport.IsReadyToSend, "The first connect never landed, so the premise is untested.");
+
+        transport.Connect(second.Address);
+
+        Assert.False(transport.IsReadyToSend);
+    }
+
     // AND READINESS DOES NOT SURVIVE THE CONNECTION. Disconnect clears the recorded socket, so a
     // reconnect cannot inherit the previous one's readiness -- the reason the fix holds a reference
     // rather than a bool.
