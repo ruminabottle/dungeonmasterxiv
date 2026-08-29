@@ -94,7 +94,26 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     internal static string SkippedDisplayName(string? test, string detail) =>
         $"{test} -- SIZE GATE NOT RUN, so this tree is not known to be the merged tree: {detail}";
 
-    private static readonly Lazy<(bool Contains, string Detail)> Containment = new(() =>
+    private static readonly Lazy<(bool Contains, string Detail)> Containment = new(() => Decide(Git));
+
+    /// <summary>Decides containment from whatever the supplied git returns.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE RUNNER IS A PARAMETER SO THE ARMS CAN BE DRIVEN.</b> Every branch below depends on a
+    /// network condition that cannot be created from a test — and the two that BUG-126 added were
+    /// measurably unguarded while this was a closure: deleting the timeout arm, and dropping the
+    /// bound from the call, both left the whole suite green. A seam is what makes the difference
+    /// between a reason that exists and a reason that is reached.
+    /// </para>
+    /// <para>
+    /// It takes the runner rather than the results so that the ARGUMENTS are observable too. The
+    /// bound being passed is half of this fix, and a test that only saw return values could not
+    /// tell a bounded call from an unbounded one.
+    /// </para>
+    /// </remarks>
+    /// <param name="git">Runs a git command with an optional bound, as <see cref="Git"/> does.</param>
+    internal static (bool Contains, string Detail) Decide(
+        Func<string, TimeSpan?, (int Code, string Output, string Errors, bool TimedOut)> git)
     {
         // CURRENCY BEFORE ANCESTRY, AND THE ORDER IS THE FIX (BUG-124). `merge-base` reads
         // refs/remotes/origin/main, which is a LOCAL CACHE as fresh as this clone's last fetch --
@@ -106,7 +125,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         // That is the one sentence the three outcomes exist to make impossible -- "could not
         // validate" reported as "clean" -- arriving through the check meant to prevent it.
         var (remoteCode, remote, remoteErrors, remoteTimedOut) =
-            Git("ls-remote origin refs/heads/main", RemoteTimeout);
+            git("ls-remote origin refs/heads/main", RemoteTimeout);
 
         // UNREACHABLE AND UNRESPONSIVE ARE DIFFERENT FACTS AND GET DIFFERENT REASONS (BUG-126). A
         // refused connection returns at once because the host sends RST; a DROPPED one sends
@@ -131,7 +150,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
                 + $"this check has not validated. ({remoteErrors.Trim()})");
         }
 
-        var (cachedCode, cached, _, _) = Git("rev-parse refs/remotes/origin/main");
+        var (cachedCode, cached, _, _) = git("rev-parse refs/remotes/origin/main", null);
         var cachedHead = cached.Trim();
 
         if (cachedCode != 0 || cachedHead.Length == 0)
@@ -146,7 +165,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
                 + "this reports rather than a result. Fetch and re-run.");
         }
 
-        var (code, output, errors, _) = Git("merge-base --is-ancestor origin/main HEAD");
+        var (code, output, errors, _) = git("merge-base --is-ancestor origin/main HEAD", null);
 
         // Exit 0 = ancestor, 1 = not. Anything else is git failing, and a git failure must not be
         // read as "contained" -- that would resurrect the green this whole attribute exists to stop.
@@ -156,7 +175,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
             1 => (false, "origin/main is not an ancestor of HEAD -- merge or rebase main and the gate runs"),
             _ => (false, $"git could not answer (exit {code}): {errors.Trim()}{output.Trim()}"),
         };
-    });
+    }
 
     /// <summary>How long origin gets to answer the currency check before the gate stops waiting.</summary>
     /// <remarks>
@@ -198,9 +217,9 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     /// </remarks>
     internal static string TimedOutDetail =>
         $"origin was reached but did not answer within {RemoteTimeout.TotalSeconds:F0}s, so whether "
-        + "the cached origin/main is current could not be established and a pass here would "
-        + "describe a tree this check has not validated. This is a responsive-network problem "
-        + "rather than an offline one -- a VPN, proxy or DNS sink will do it.";
+        + "the cached origin/main is current could not be established. That is a responsive-network "
+        + "problem rather than an offline one -- a VPN, proxy or DNS sink will do it, and being "
+        + "genuinely offline will not. Check the path to origin and re-run.";
 
     private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
 

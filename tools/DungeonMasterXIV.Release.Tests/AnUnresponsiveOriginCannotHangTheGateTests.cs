@@ -133,6 +133,67 @@ public class AnUnresponsiveOriginCannotHangTheGateTests
             StringComparison.Ordinal);
     }
 
+    // M3 CLOSED. The reason existing and the reason being REACHED are different facts, and the
+    // second was unguarded: deleting the arm entirely left the whole suite green, because the only
+    // tests over the message read the constant rather than the decision. This drives the decision.
+    [Fact]
+    public void ATimedOutRemoteIsReportedAsUnresponsiveRatherThanAsUnreachable()
+    {
+        var (contains, detail) = ContainsMainFactAttribute.Decide(
+            (_, _) => (ContainsMainFactAttribute.TimedOutCode, string.Empty, string.Empty, true));
+
+        Assert.False(contains);
+        Assert.Equal(ContainsMainFactAttribute.TimedOutDetail, detail);
+    }
+
+    // M1 CLOSED, and this is the half the detector cannot see. The detector proves the helper CAN
+    // be bounded; nothing proved the containment check actually asks it to. Dropping the argument
+    // at the call site restores the whole defect and left the suite green.
+    [Fact]
+    public void TheCurrencyCheckAsksForABoundRatherThanWaitingIndefinitely()
+    {
+        TimeSpan? bound = null;
+        var asked = false;
+
+        ContainsMainFactAttribute.Decide((arguments, limit) =>
+        {
+            if (arguments.StartsWith("ls-remote", StringComparison.Ordinal))
+            {
+                asked = true;
+                bound = limit;
+            }
+
+            return (0, "sha\trefs/heads/main", string.Empty, false);
+        });
+
+        Assert.True(asked, "The containment check never ran ls-remote at all.");
+        Assert.Equal(ContainsMainFactAttribute.RemoteTimeout, bound);
+    }
+
+    // THE CONTROL FOR BOTH OF THOSE. A fake that reports success must reach the CONTAINED outcome,
+    // or "the timeout arm was returned" above would be satisfied by a Decide that returns the same
+    // thing on every input -- which is exactly what a mangled arm ordering would produce.
+    [Fact]
+    public void TheSameSeamStillReachesTheContainedOutcome()
+    {
+        const string Head = "0123456789abcdef0123456789abcdef01234567";
+
+        // Each command answers in ITS OWN format. Returning one shape for all of them looks like a
+        // healthy git and is not: ls-remote answers "<sha>\t<ref>" while rev-parse answers the bare
+        // sha, so a single canned string compares unequal and lands on the STALE arm instead. That
+        // is what this control caught on its first run, which is the reason it exists.
+        var (contains, detail) = ContainsMainFactAttribute.Decide((arguments, _) => arguments switch
+        {
+            _ when arguments.StartsWith("ls-remote", StringComparison.Ordinal) =>
+                (0, $"{Head}\trefs/heads/main", string.Empty, false),
+            _ when arguments.StartsWith("rev-parse", StringComparison.Ordinal) =>
+                (0, Head, string.Empty, false),
+            _ => (0, string.Empty, string.Empty, false),
+        });
+
+        Assert.True(contains, $"A wholly healthy git did not reach the contained outcome: {detail}");
+    }
+
     /// <summary>
     /// A socket that completes the handshake and then says nothing — the condition git has no
     /// defence against, and the one arm 4 does not cover.
