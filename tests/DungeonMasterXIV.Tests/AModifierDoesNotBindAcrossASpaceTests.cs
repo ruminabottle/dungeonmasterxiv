@@ -4,7 +4,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A-2.3c — a modifier is not bound to its term across whitespace (R-2.1, DMXENG-93).
+/// A-2.3c — a modifier is not bound to its term across <b>a space</b> (R-2.1, DMXENG-93).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -35,7 +35,7 @@ namespace DungeonMasterXIV.Tests;
 /// Foundry do it.</b>
 /// </para>
 /// </remarks>
-public class AModifierDoesNotBindAcrossWhitespaceTests
+public class AModifierDoesNotBindAcrossASpaceTests
 {
     // THE PARSER'S WHOLE MODIFIER SET, not a sample: keep, drop, reroll, explode, count-successes.
     // Taken from RollDiceParser.ParseOne so a modifier added later without a row here shows up as a
@@ -46,7 +46,7 @@ public class AModifierDoesNotBindAcrossWhitespaceTests
     [InlineData("r1")]
     [InlineData("x")]
     [InlineData(">4")]
-    public void NoModifierBindsToATermAcrossWhitespace(string modifier)
+    public void NoModifierBindsToATermAcrossASpace(string modifier)
     {
         var parsed = RollParser.Parse($"2d6 {modifier}", RollLimits.Default);
 
@@ -76,21 +76,43 @@ public class AModifierDoesNotBindAcrossWhitespaceTests
             + "rather than scoping it.");
     }
 
-    // Whitespace is whitespace: a tab separates a term from a suffix exactly as a space does. Foundry's
-    // class excludes the space character specifically, so this is the one row where our rule is WIDER
-    // than the established evidence -- stated rather than hidden, and safe in the direction it errs,
-    // because binding across a tab is the reading A-2.3c exists to prevent.
+    // >>> UNRULED, AND PINNED RATHER THAN CLAIMED. This row records a CHOICE, not a requirement. <<<
+    //
+    // WHAT THIS REPLACED, because the replacement is the point: the comment here used to read
+    // "whitespace is whitespace: a tab separates a term from a suffix exactly as a space does",
+    // offered as the REASON the code was right. That is a general rule the evidence does not
+    // support, and a stated justification outranks a loose name -- a name can be read as shorthand,
+    // a reason is what the next reader believes.
+    //
+    // WHAT THE EVIDENCE ACTUALLY SAYS. Foundry's MODIFIERS_REGEXP_STRING is a negated class that
+    // excludes U+0020 SPECIFICALLY. Measured by feature-engineer-3 by executing the pattern, with a
+    // control, and reproduced here as they recorded it:
+    //
+    //     source ([^ (){}[\]+\-*/]+)   accepts a letter, a digit and '>'; rejects ' ', '+' and '('
+    //     space  U+0020  excluded: TRUE
+    //     tab    U+0009  excluded: FALSE      newline, CR, NBSP: also FALSE
+    //     'd 20'  -> modifier match 'd'       'd\t20' -> modifier match 'd\t20'
+    //
+    // So A-2.3c reaches U+0020 and is SILENT on the tab, and Foundry may well bind across one.
+    // This build does not, because RollCursor.AtWhitespace asks char.IsWhiteSpace. THAT IS NOT
+    // ESTABLISHED AS A DIVERGENCE -- only as not established as conformance, and it is taken at
+    // exactly that strength.
+    //
+    // The behaviour is UNMOVED by DMXENG-96 on purpose: changing it would settle by implementation
+    // the very question this ticket exists to keep open. If this row reddens, the tab question has
+    // been ruled and this file follows the ruling -- it is not on its own a defect.
     [Fact]
-    public void ATabSeparatesATermFromASuffixToo()
+    public void ATabAlsoEndsTheTerm_UNRULED_ThisBuildsChoiceNotARequirement()
     {
         Assert.False(AnyTermCarriesAModifier(RollParser.Parse("2d6\td1", RollLimits.Default)));
     }
 
-    // Whitespace elsewhere is untouched, and this is the regression the change could most easily
-    // cause: the cursor skips whitespace before EVERY read, and only the modifier loop was narrowed.
-    // '2d6 + 3' is one expression and must stay one.
+    // A SPACE elsewhere is untouched, and this is the regression the change could most easily cause:
+    // the cursor skips whitespace before EVERY read, and only the modifier loop was narrowed.
+    // '2d6 + 3' is one expression and must stay one. Named for the character it actually parses --
+    // the row says nothing about a tab around an operator, which nobody has tested or ruled.
     [Fact]
-    public void WhitespaceAroundAnOperatorIsStillFine()
+    public void ASpaceAroundAnOperatorIsStillFine()
     {
         var parsed = RollParser.Parse("2d6 + 3", RollLimits.Default);
 
