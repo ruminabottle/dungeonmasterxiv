@@ -9,12 +9,15 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THIS TYPE HAS NO CLOCK AND THAT ABSENCE IS THE MECHANISM, NOT AN OVERSIGHT.</b> A-2.5 fails a
-/// build in which <i>any client's local clock reaches the log</i>. The usual way to satisfy that is a
-/// rule everyone remembers; the way taken here is that <b>there is no clock in the receiving path to
-/// forget about</b>. <see cref="Record"/> accepts a <see cref="StreamStamp"/> and cannot make one,
-/// <see cref="HostSequencer"/> is the only minter, and a member's build constructs no sequencer. A
-/// reviewer can check that by reading the constructor rather than by trusting the author.
+/// <b>THIS TYPE READS NO CLOCK, AND THE GUARANTEE IS EXACTLY THAT — NO MORE.</b> A-2.5 fails a build
+/// in which <i>any client's local clock reaches the log</i>. <see cref="Record"/> accepts a
+/// <see cref="StreamStamp"/> and cannot make one; <see cref="HostSequencer"/> is the only minter.
+/// <para>
+/// <b>WHAT IS NOT GUARANTEED, STATED BECAUSE THE FIRST DRAFT CLAIMED IT WAS.</b> A reviewer planted a
+/// clock FACTORY into this type and both test arms stayed green, so <i>"there is no clock in the
+/// receiving path to forget about"</i> was stronger than the code supports. <b>Nothing prevents a
+/// future edit injecting one</b> — what the tests now do is refuse a direct clock read AND a clock
+/// factory in this file, which is a checked property rather than an architectural impossibility.</para>
 /// </para>
 /// <para>
 /// <b>ORDER COMES FROM THE STAMP, NEVER FROM ARRIVAL.</b> Entries are inserted at their sequence

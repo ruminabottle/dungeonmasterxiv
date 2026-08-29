@@ -109,6 +109,18 @@ public class TwoClientsSeeOneOrderAndOneClockTests
     // without deleting an assertion -- the difference between "we checked" and "it is unconstructable".
     // Reads the SOURCE rather than reflecting over the types, because a clock call is a statement
     // inside a method body and metadata cannot see it.
+    // A CLOCK FACTORY IS ON THE LIST, AND IT IS THERE BECAUSE A REVIEWER GOT PAST THE FIRST VERSION.
+    // The original list held six direct-read literals; a planted Func<DateTimeOffset> in SessionStream
+    // left BOTH arms green, because an injected clock is neither a literal read nor visible in the
+    // behavioural fixture. The factory forms close that, and HostSequencer -- which legitimately holds
+    // one -- is deliberately not in the file list below.
+    private static readonly string[] ClockSources =
+    {
+        "DateTime.Now", "DateTime.UtcNow", "DateTimeOffset.Now", "DateTimeOffset.UtcNow",
+        "Environment.TickCount", "Stopwatch", "TimeProvider",
+        "Func<DateTime>", "Func<DateTimeOffset>",
+    };
+
     [Theory]
     [InlineData("SessionStream.cs")]
     [InlineData("StreamEntry.cs")]
@@ -118,7 +130,7 @@ public class TwoClientsSeeOneOrderAndOneClockTests
     {
         var source = File.ReadAllText(Path.Combine(NetDirectory(), file));
 
-        foreach (var clock in new[] { "DateTime.Now", "DateTime.UtcNow", "DateTimeOffset.Now", "DateTimeOffset.UtcNow", "Environment.TickCount", "Stopwatch" })
+        foreach (var clock in ClockSources)
         {
             Assert.False(
                 source.Contains(clock, StringComparison.Ordinal),
@@ -128,18 +140,36 @@ public class TwoClientsSeeOneOrderAndOneClockTests
         }
     }
 
-    // THE CONTROL FOR THE STRUCTURAL HALF, AND WITHOUT IT EVERY ROW ABOVE PASSES AGAINST A MISSPELLED
-    // PATH, A MISSING FILE READ AS EMPTY, OR A LIST OF CLOCK NAMES NONE OF WHICH THIS CODEBASE USES.
+    // THE POSITIVE CASE THE SEARCH HAD NOWHERE, AND ITS ABSENCE WAS THE DEFECT.
     //
-    // HostSequencer is the one type on this path that SHOULD hold a clock -- it is the host's, and it
-    // is the only minter of a stamp. So the same search must FIND one there. An empty result is only
-    // evidence when the search is known to find something.
+    // The forbidden list held six literals and the control asserted "Func<DateTimeOffset>" -- WHICH WAS
+    // NOT ONE OF THEM. So the control demonstrated that a DIFFERENT string is findable, and none of the
+    // six appeared anywhere in this repository. A search with no demonstrated positive case is
+    // indistinguishable from one that matches nothing, which is the exact defect this file exists to
+    // guard against, sitting inside the guard.
+    //
+    // Every entry is now checked against a sample that CONTAINS it. If a form stops matching -- an
+    // escaping slip, a renamed API -- this reddens instead of going quietly green.
     [Fact]
-    public void TheClockSearchFindsTheOneClockThatIsSupposedToBeThere()
+    public void EveryClockFormTheSearchForbidsIsOneItCanActuallyFind()
+    {
+        foreach (var clock in ClockSources)
+        {
+            Assert.Contains(clock, $"var t = {clock};", StringComparison.Ordinal);
+        }
+    }
+
+    // AND A POSITIVE CASE ON A REAL FILE, not only on a synthetic one: HostSequencer is the one type
+    // here that SHOULD hold a clock, and the SAME list must find it there. A synthetic sample proves
+    // the matcher; this proves the matcher against the codebase as it is actually written.
+    [Fact]
+    public void TheSameSearchFindsTheOneClockThatIsSupposedToExist()
     {
         var sequencer = File.ReadAllText(Path.Combine(NetDirectory(), "HostSequencer.cs"));
 
-        Assert.Contains("Func<DateTimeOffset>", sequencer, StringComparison.Ordinal);
+        Assert.Contains(
+            ClockSources.Where(c => sequencer.Contains(c, StringComparison.Ordinal)),
+            _ => true);
     }
 
     // Deliberately NOT DateTimeOffset.UtcNow: the test supplies the host's clock, so the expected

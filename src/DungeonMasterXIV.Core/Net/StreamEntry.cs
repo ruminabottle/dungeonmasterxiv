@@ -5,9 +5,15 @@ namespace DungeonMasterXIV.Net;
 /// (R-2.3, R-2.4).
 /// </summary>
 /// <remarks>
-/// <b>THERE IS NO CONSTRUCTOR THAT DOES NOT TAKE A STAMP.</b> An entry without the host's order and
-/// clock is not a stream entry, and making one expressible is how a client's own clock would find its
-/// way in. A-2.5 fails a build for exactly that, so the type refuses to represent it.
+/// <b>A CLASS, NOT A RECORD STRUCT, AND THAT IS THE WHOLE POINT OF THE TYPE.</b> An entry without
+/// the host's order and clock is not a stream entry — but <b>every struct has an implicit
+/// parameterless constructor</b>, so as a record struct <c>new StreamEntry()</c> compiled, carried
+/// <c>Sequence 0</c>, and <b>SORTED TO THE FRONT OF A POPULATED LOG</b>. Measured, not reasoned: the
+/// first draft was a record struct and a probe confirmed it. The doc then claimed no such constructor
+/// existed, which was false in the file asserting it.
+///
+/// A reference type has no implicit parameterless constructor, so the unstamped entry is now
+/// genuinely unconstructable rather than merely undocumented.
 /// </remarks>
 /// <param name="Stamp">The host's order and time. See <see cref="StreamStamp"/>.</param>
 /// <param name="Kind">What happened.</param>
@@ -18,7 +24,7 @@ namespace DungeonMasterXIV.Net;
 /// here would be a bad value with a long life.
 /// </param>
 /// <param name="Text">What was said or rolled, empty for a membership change.</param>
-public readonly record struct StreamEntry(
+public sealed record StreamEntry(
     StreamStamp Stamp,
     StreamEventKind Kind,
     PeerCode Peer,
