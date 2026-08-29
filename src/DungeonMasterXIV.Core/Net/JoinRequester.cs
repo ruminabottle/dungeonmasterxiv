@@ -51,6 +51,30 @@ internal sealed class JoinRequester
         Func<SessionKeyExchange> newKeys,
         Action synchronise)
     {
+        // DMXENG-45. THE CONSTRUCTION ORDER IN SessionCoordinator IS LOAD-BEARING AND WAS UNDETECTED.
+        //
+        // Three of these arrive from FIELDS assigned earlier in that constructor -- handshake,
+        // interruption and newKeys -- so building this type before them passes a NULL. Nothing
+        // refused it: the assignment succeeded, the object was valid-looking, and the failure
+        // surfaced later on a join path, or never in a test that does not join. A compile error is
+        // loud and a throw is loud; a silent null assignment is neither.
+        //
+        // These guards make the violation LOUD AT CONSTRUCTION: any coordinator built in the wrong
+        // order throws here, so every test that constructs one fails immediately. That is detection
+        // BY CONSTRUCTION rather than by a comment somebody has to read -- and the comment above
+        // this one had itself gone stale, which is why a comment was never going to be the fix.
+        //
+        // ALL FIVE are guarded rather than only the three that are order-sensitive TODAY. Which
+        // arguments come from earlier fields is a fact about SessionCoordinator that can change
+        // without anyone editing this file; a guard that tracked it would be correct now and wrong
+        // later, silently. A constructor that cannot work with a null collaborator should say so
+        // about all of them.
+        ArgumentNullException.ThrowIfNull(handshake);
+        ArgumentNullException.ThrowIfNull(interruption);
+        ArgumentNullException.ThrowIfNull(join);
+        ArgumentNullException.ThrowIfNull(newKeys);
+        ArgumentNullException.ThrowIfNull(synchronise);
+
         _handshake = handshake;
         _interruption = interruption;
         _join = join;
