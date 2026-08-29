@@ -110,6 +110,15 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     /// bound being passed is half of this fix, and a test that only saw return values could not
     /// tell a bounded call from an unbounded one.
     /// </para>
+    /// <para>
+    /// <b>THE TIMEOUT ARM IS CHECKED BEFORE THE EXIT-CODE ARM, AND THAT ORDERING IS LOAD-BEARING
+    /// (BUG-126).</b> Unreachable and unresponsive are different facts. A refused connection returns
+    /// at once because the host sends RST, and the exit-code arm below already reports it as "could
+    /// not reach origin". A DROPPED connection sends nothing, so only the bound ends it — and if it
+    /// fell through to that same arm the reader would be told origin could not be reached when
+    /// origin WAS reached, which is a cause this check never observed. Naming the wrong cause is
+    /// BUG-125's whole subject.
+    /// </para>
     /// </remarks>
     /// <param name="git">Runs a git command with an optional bound, as <see cref="Git"/> does.</param>
     internal static (bool Contains, string Detail) Decide(
@@ -127,11 +136,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         var (remoteCode, remote, remoteErrors, remoteTimedOut) =
             git("ls-remote origin refs/heads/main", RemoteTimeout);
 
-        // UNREACHABLE AND UNRESPONSIVE ARE DIFFERENT FACTS AND GET DIFFERENT REASONS (BUG-126). A
-        // refused connection returns at once because the host sends RST; a DROPPED one sends
-        // nothing, so the wait below is the only thing that ends it. Checked BEFORE the exit-code
-        // arm so the timeout cannot be reported as "could not reach origin", which is the other
-        // arm's fact and would name a cause this check did not observe.
+        // BUG-126, and the ORDER is the point -- see the arm ordering note on this method.
         if (remoteTimedOut)
         {
             return (false, TimedOutDetail);
