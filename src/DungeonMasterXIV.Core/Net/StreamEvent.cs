@@ -33,4 +33,16 @@ public enum StreamEventKind
 
     /// <summary>Someone who had dropped came back.</summary>
     Reconnected,
+
+    /// <summary>
+    /// Something this member missed could not be held, so their stream is incomplete here (R-2.10).
+    /// </summary>
+    /// <remarks>
+    /// <b>The marker exists so the omission is VISIBLE rather than silent.</b> R-2.10: a member is
+    /// "told that something is missing rather than shown a stream that silently omits it". A replay
+    /// that quietly skips what it could not hold satisfies the delivery half of A-2.6a and fails the
+    /// marking half — and it fails invisibly, because a stream with a hole in it looks exactly like a
+    /// stream with nothing in the hole.
+    /// </remarks>
+    Gap,
 }
