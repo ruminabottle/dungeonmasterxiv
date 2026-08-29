@@ -92,7 +92,64 @@ internal sealed class RosterBroadcast
             return;
         }
 
-        var plaintext = SessionContentCodec.Encode(new SessionContent { Roster = roster });
+        SealToEveryRecipient(new SessionContent { Roster = roster }, keys, code);
+    }
+
+    /// <summary>
+    /// Tells every participant the DM has ended the session, and when it stops (R-1.3g, A-1.16).
+    /// </summary>
+    /// <param name="closing">When the session stops. Decided by the host; see <see cref="SessionClosing"/>.</param>
+    /// <remarks>
+    /// <para>
+    /// <b>It goes out BEFORE teardown or it does not go out at all.</b> The notice is the last thing
+    /// a host says, so it has to be sent while the link is still up — a closing announcement issued
+    /// after the socket is gone is the silence R-1.3g exists to remove.
+    /// </para>
+    /// <para>
+    /// <b>Unlike a roster, this is sent even when there is nobody with a key to receive it.</b>
+    /// <see cref="Publish"/> returns early on an empty roster because a roster of nobody says
+    /// nothing; a closing notice to nobody is simply a session with no participants, and the loop
+    /// below does nothing on its own. The DIFFERENCE is that a participant whose key will not import
+    /// is skipped and LOGGED here exactly as it is for a roster — under R-1.3g that person is being
+    /// told the session is ending, so failing to reach them is worth the same line.
+    /// </para>
+    /// <para>
+    /// <b>No duration is decided here.</b> The instant arrives already chosen; R-1.3g's sixty
+    /// seconds live in <see cref="SessionClosing.Window"/>, applied once by the host.
+    /// </para>
+    /// <para>
+    /// <b>IT DECLINES WHEN THERE IS NO LIVE LINK, AND THAT IS THE COMMON CASE ON ONE PATH.</b> A
+    /// session can also end because the interruption window LAPSED rather than because the DM pressed
+    /// close — and that path has no link by definition, since losing it is why the session is ending.
+    /// The notice is attempted there anyway rather than special-cased: one meaning for "hosting
+    /// stopped at this instant", and the early return below is what makes attempting it harmless.
+    /// </para>
+    /// </remarks>
+    public void PublishClosing(SessionClosing closing)
+    {
+        if (_hostKeys() is not { } keys || _hostCode() is not { } code || !_link.IsReadyToSend)
+        {
+            return;
+        }
+
+        SealToEveryRecipient(new SessionContent { ClosingAtUtcTicks = closing.UtcTicks }, keys, code);
+    }
+
+    /// <summary>
+    /// Seals <paramref name="content"/> once per participant and sends it (D-11).
+    /// </summary>
+    /// <remarks>
+    /// <b>Shared by the roster and the closing notice rather than copied.</b> The interesting part
+    /// of this loop is not the sending — it is the two ways a participant can be unreachable and the
+    /// requirement that neither passes in silence (PR #86 finding 5). A second copy would be a
+    /// second place for that silence to come back.
+    /// </remarks>
+    /// <param name="content">What to say.</param>
+    /// <param name="keys">The host's key pair.</param>
+    /// <param name="code">The session code, which the associated data binds to.</param>
+    private void SealToEveryRecipient(SessionContent content, SessionKeyExchange keys, SessionCode code)
+    {
+        var plaintext = SessionContentCodec.Encode(content);
         var associatedData = WireEnvelope.AssociatedDataFor(code, WireMessageType.SessionPayload);
 
         foreach (var peer in _audience.Recipients)

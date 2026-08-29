@@ -16,7 +16,7 @@ public class SessionCoordinatorTests
         coordinator.StartHosting();
         Assert.True(transport.IsConnected);
 
-        coordinator.StopHosting();
+        coordinator.StopHosting(Now);
 
         Assert.False(transport.IsConnected);
     }
@@ -42,7 +42,7 @@ public class SessionCoordinatorTests
         var coordinator = new SessionCoordinator(transport, () => address, GraceWindow.Default, log: SilentLog.Instance);
 
         coordinator.StartHosting();
-        coordinator.StopHosting();
+        coordinator.StopHosting(Now);
         address = "wss://second.example.org/session";
         coordinator.StartHosting();
 
@@ -148,7 +148,7 @@ public class SessionCoordinatorTests
         coordinator.StartHosting();
         coordinator.Admit(PeerCodes.Of("PRBCD2"));
 
-        coordinator.StopHosting();
+        coordinator.StopHosting(Now);
 
         Assert.Equal(0, coordinator.Audience.Count);
     }

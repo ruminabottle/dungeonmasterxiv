@@ -81,7 +81,7 @@ public sealed class EndingASessionReleasesWhatItHeldTests
 
         // Arrives before the session ends and is never drained -- the DM stops hosting first.
         transport.Deliver(WireEnvelope.ForCodeAccepted(answeredCode));
-        host.StopHosting();
+        host.StopHosting(Now);
 
         host.StartHosting();
         Assert.NotEqual(answeredCode.Value, host.Host.Code!.Value.Value);
@@ -121,7 +121,7 @@ public sealed class EndingASessionReleasesWhatItHeldTests
         host.Fail(SessionFailure.ConnectionLost);
         Assert.True(host.Grace.IsRunning, "arrangement failed: the lost connection did not start a window");
 
-        host.StopHosting();
+        host.StopHosting(Now);
 
         Assert.False(host.Grace.IsRunning);
     }
@@ -149,7 +149,7 @@ public sealed class EndingASessionReleasesWhatItHeldTests
         // Session one reached the relay and its code request went out.
         Assert.NotEmpty(transport.Sent);
 
-        host.StopHosting();
+        host.StopHosting(Now);
 
         // Session two cannot reach the relay at all.
         transport.RefuseToConnect();

@@ -185,7 +185,24 @@ public sealed class SessionCoordinator
     /// Ends the session. R-1.1 makes this the same path as closing or unloading the plugin, so the
     /// connection cannot outlive the session by taking a different exit.
     /// </summary>
-    public void StopHosting() => _hosting.Stop();
+    /// <param name="endedAt">
+    /// When the DM ended it — <b>the moment, not a deadline</b>; the window is
+    /// <see cref="SessionClosing"/>'s and no caller can choose one. REQUIRED rather than defaulted,
+    /// because a default would let a call site end the session sending no notice at all — A-1.16
+    /// failing silently with the suite green, where a required parameter fails at compile time.
+    /// </param>
+    /// <remarks>
+    /// <b>The notice goes out BEFORE the delegation, and the order is load-bearing.</b> Teardown
+    /// lives inside <see cref="HostRunner.Stop"/> since DMXENG-51 and empties the admissions, so
+    /// publishing afterwards seals to nobody and fails silently. Both that and the call's absence
+    /// are pinned by <c>EndingASessionAnnouncesItTests</c>, which exists because each mutation left
+    /// the whole suite green.
+    /// </remarks>
+    public void StopHosting(DateTimeOffset endedAt)
+    {
+        _roster.PublishClosing(SessionClosing.DecidedByHost(endedAt));
+        _hosting.Stop();
+    }
 
     /// <summary>Requests to join <paramref name="code"/>. A human action (R-1.3).</summary>
     public void RequestJoin(SessionCode code) => RequestJoin(code, DisplayName.None);
@@ -323,7 +340,8 @@ public sealed class SessionCoordinator
 
         if (_interruption.Tick(sinceLastTick))
         {
-            StopHosting();
+            // Lapsed rather than closed by the DM; PublishClosing declines it, see there.
+            StopHosting(now);
             return;
         }
 

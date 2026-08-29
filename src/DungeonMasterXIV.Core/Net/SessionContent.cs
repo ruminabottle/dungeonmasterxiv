@@ -41,6 +41,58 @@ public sealed class SessionContent
     /// than starting empty and waiting for changes it missed.
     /// </remarks>
     public IReadOnlyList<RosterEntry>? Roster { get; init; }
+
+    /// <summary>
+    /// When the DM has ended this session and it stops, as UTC ticks — null while it is running
+    /// (R-1.3g, A-1.16).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The host announces its own departure; a player's client never sets this.</b> R-1.3g's
+    /// asymmetry is deliberate rather than an oversight to tidy up: a departed player costs the
+    /// group nothing because the session and its record live on the DM's machine, whereas a departed
+    /// DM costs them everything. So this section exists on the host's side of the wire only.
+    /// </para>
+    /// <para>
+    /// <b>An instant, never a duration, and the ticks are the wire form of
+    /// <see cref="SessionClosing"/>.</b> R-1.3g requires participants to see the session is closing
+    /// AND how long remains — a duration would be stale before it arrived, which is the
+    /// indefinite-wait failure the requirement names. Read it back through
+    /// <see cref="SessionClosing.TryFromWire"/> rather than constructing a
+    /// <c>DateTimeOffset</c> here: the value comes from another client and is rendered in a draw
+    /// path, so an out-of-range number is a crash rather than a bad countdown.
+    /// </para>
+    /// <para>
+    /// <b>Optional, like every field here (D-14).</b> A build that has not heard of a closing notice
+    /// ignores the section and behaves exactly as it does today — which is what lets this ship
+    /// without both ends releasing together.
+    /// </para>
+    /// <para>
+    /// <b>WHAT R-1.3g's OTHER HALVES DO, so nobody reads the wrong thing as a gap.</b> R-1.3g has
+    /// three parts and they fail separately:
+    /// </para>
+    /// <para>
+    /// <b>1. This notice — the DM's outward announcement with time remaining. BUILT.</b>
+    /// </para>
+    /// <para>
+    /// <b>2. Removal when a player DELIBERATELY QUITS (A-1.15, A-1.16a). NOT BUILT, and the reason is
+    /// a capability rather than an omission here:</b> a host cannot READ member-authored content at
+    /// all. <c>InboundHandlers.OpenWith</c> is a single key and a host holds one per admitted peer,
+    /// so a departure notice would be forwarded by the relay and dropped unopened. That capability is
+    /// R-1.3k / A-1.13c and it is <b>DMXENG-50</b>; A-1.15 and A-1.16a wait on it. Adding a departure
+    /// section here before then would put a message on the wire that nothing can receive.
+    /// </para>
+    /// <para>
+    /// <b>3. A member that VANISHES — a crash or a dropped link — IS NOT REMOVED, AND THAT IS
+    /// CORRECT.</b> Not a gap, not a deferral: <b>R-1.5a holds that seat for the reconnect window</b>,
+    /// and a build that removed vanished members would BREAK it. D-8's SQ-20 amendment is explicit
+    /// that a DELIBERATE QUIT removes immediately and an ungraceful drop does not — the two are
+    /// different events with different answers, and A-1.30 exists to keep them apart.
+    /// <b>If you are here to "finish" R-1.3g by removing members who went quiet, stop: that is the
+    /// defect, not the fix.</b>
+    /// </para>
+    /// </remarks>
+    public long? ClosingAtUtcTicks { get; init; }
 }
 
 /// <summary>

@@ -139,7 +139,7 @@ public sealed class SessionWindow : Window
 
             if (ImGui.Button("End session"))
             {
-                _coordinator.StopHosting();
+                _coordinator.StopHosting(DateTimeOffset.UtcNow);
 
                 // The ASSOCIATION ends; the campaign does not. R-1.6 keeps participants on the DM's
                 // machine, so a session ending must not take them with it.

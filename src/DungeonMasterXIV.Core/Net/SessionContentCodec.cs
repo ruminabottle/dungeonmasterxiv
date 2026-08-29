@@ -112,7 +112,21 @@ public static class SessionContentCodec
         // caller decides whether anyone hears about it — this stays the door rather than becoming
         // the diagnostics layer (BUG-70).
         dropped = content.Roster.Count - kept.Count;
-        return new SessionContent { Roster = kept };
+        // EVERY SECTION IS CARRIED FORWARD EXPLICITLY, AND A NEW ONE MUST BE ADDED HERE.
+        //
+        // This REBUILDS the document rather than editing it, because Roster is init-only. So a
+        // section added to SessionContent and not added to this line is SILENTLY DROPPED ON DECODE
+        // — the sender sets it, the wire carries it, the receiver never sees it, and nothing fails.
+        // That is the same shape as the peer-code hole this method was written to close (BUG-57):
+        // vetting that quietly deletes what it does not recognise.
+        //
+        // ASectionOtherThanTheRosterSurvivesVetting is the guard. It fails if a future section is
+        // added to the type and forgotten here, which is the only moment anyone would notice.
+        return new SessionContent
+        {
+            Roster = kept,
+            ClosingAtUtcTicks = content.ClosingAtUtcTicks,
+        };
     }
 
     /// <summary>Serialises <paramref name="content"/> for sealing.</summary>
