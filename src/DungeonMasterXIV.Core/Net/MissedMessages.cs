@@ -66,7 +66,10 @@ internal sealed class MissedMessages
     /// <param name="entry">What they missed.</param>
     public void Hold(PeerCode member, StreamEntry entry)
     {
+        // The entry check stays FIRST so that Hold(default, null) throws exactly what it always
+        // threw. The new refusal is added beneath it rather than in front of it.
         ArgumentNullException.ThrowIfNull(entry);
+        RefuseAnAbsentCode(member);
 
         if (!_held.TryGetValue(member, out var entries))
         {
@@ -85,7 +88,43 @@ internal sealed class MissedMessages
     /// here is that once a loss is reported, the replay says so.
     /// </remarks>
     /// <param name="member">The member whose stream is now incomplete.</param>
-    public void NoteGap(PeerCode member) => _gapped.Add(member);
+    public void NoteGap(PeerCode member)
+    {
+        RefuseAnAbsentCode(member);
+        _gapped.Add(member);
+    }
+
+    /// <summary>Refuses an absent code, which <see cref="PeerCode"/> requires of every caller.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THIS IS PeerCode's RULE BEING KEPT, NOT A POLICY CHOSEN HERE.</b> Its remarks say a caller
+    /// that defaults one <i>"has an absent code, not a valid one, and must treat it as a refusal"</i>.
+    /// Two collections here are keyed on it, and until DMXENG-105 neither honoured that.
+    /// </para>
+    /// <para>
+    /// <b>An absent key MERGES members rather than losing them.</b> <c>default(PeerCode)</c> equals
+    /// every other default and hashes to 0, so every member whose code failed to parse is one key.
+    /// Holding under it hands one member what was kept for another, and a gap marker minted for one
+    /// arrives in another's replay. Nothing looks wrong at the call site and nothing is dropped —
+    /// which is why this survived a suite that tests WHO IS ASKING with two present codes.
+    /// </para>
+    /// <para>
+    /// <b>Both WRITERS, and neither reader.</b> Guarding <see cref="Replay"/> or
+    /// <see cref="IsHoldingFor"/> as well would imply the bad state is still representable when it is
+    /// not: if nothing can be stored under an absent key, nothing can be read back from one.
+    /// </para>
+    /// </remarks>
+    private static void RefuseAnAbsentCode(PeerCode member)
+    {
+        if (!member.IsPresent)
+        {
+            throw new ArgumentException(
+                "the peer code is absent, so this is not a member this can hold for or mark a gap "
+                + "against. Every absent code is the same key, so accepting one merges members' "
+                + "streams rather than losing them. See PeerCode's remarks on default (DMXENG-105).",
+                nameof(member));
+        }
+    }
 
     /// <summary>
     /// Gives back what <paramref name="member"/> missed, marked if any of it was lost (R-2.10, A-2.6a).
