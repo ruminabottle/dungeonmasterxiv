@@ -52,7 +52,7 @@ internal sealed class ClientSendHarness
         public void HostKeyArrives() =>
             _transport.Deliver(WireEnvelope.ForJoinPending(
                 SessionCode.FromValid("BCDFGH"),
-                Coordinator.JoinerKeys!.PublicKey,
+                Coordinator.Membership.Keys!.PublicKey,
                 new SessionKeyExchange().PublicKey,
                 AdmissionDeadline.DecidedByHost(Now)));
 

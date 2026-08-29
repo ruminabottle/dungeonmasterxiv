@@ -177,12 +177,12 @@ public class ADroppedJoinerKeepsItsSeatTests
         // to AwaitingDecision — Admitted is unreachable from Contacting.
         transport.Deliver(WireEnvelope.ForJoinPending(
             Code,
-            joiner.JoinerKeys!.PublicKey,
+            joiner.Membership.Keys!.PublicKey,
             hostKeys.PublicKey,
             AdmissionDeadline.DecidedByHost(Now)));
         joiner.Tick(TimeSpan.Zero, Now);
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, joiner.JoinerKeys!.PublicKey, hostKeys.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, joiner.Membership.Keys!.PublicKey, hostKeys.PublicKey));
         joiner.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Admitted, joiner.Join.Phase);

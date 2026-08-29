@@ -107,12 +107,12 @@ public class TheDropSignalIsWiredThroughTheCoordinatorTests
 
         coordinator.RequestJoin(Code);
         coordinator.Join.AwaitDecision(AdmissionDeadline.DecidedByHost(Now));
-        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.Membership.Keys!.PublicKey, host.PublicKey));
         coordinator.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Admitted, coordinator.Join.Phase);
-        var key = host.DeriveSharedKey(coordinator.JoinerKeys!.PublicKey, Code);
-        Assert.Equal(key, coordinator.SessionKey);
+        var key = host.DeriveSharedKey(coordinator.Membership.Keys!.PublicKey, Code);
+        Assert.Equal(key, coordinator.Membership.SessionKey);
 
         return (coordinator, transport, key);
     }

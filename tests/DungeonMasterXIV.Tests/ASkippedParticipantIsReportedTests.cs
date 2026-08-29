@@ -225,7 +225,7 @@ public sealed class ASkippedParticipantIsReportedTests
         player.RequestJoin(code, DisplayName.OrNone("Bob"));
         player.SynchroniseTransport();
         player.Tick(TimeSpan.Zero, Now);
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, hostKeys.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, hostKeys.PublicKey));
         player.Tick(TimeSpan.Zero, Now);
 
         log.Warnings.Clear();
@@ -237,7 +237,7 @@ public sealed class ASkippedParticipantIsReportedTests
     private static WireEnvelope SealedGarbage(SessionKeyExchange from, SessionCoordinator player, SessionCode code)
     {
         var sealedPayload = SessionCipher.Seal(
-            from.DeriveSharedKey(player.JoinerKeys!.PublicKey, code),
+            from.DeriveSharedKey(player.Membership.Keys!.PublicKey, code),
             System.Text.Encoding.UTF8.GetBytes("this is not json"),
             WireEnvelope.AssociatedDataFor(code, WireMessageType.SessionPayload));
 
