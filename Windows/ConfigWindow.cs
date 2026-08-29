@@ -43,6 +43,16 @@ public sealed class ConfigWindow : Window
         + "formatting characters - they are shown next to the code you compare, and a name that can "
         + "redraw that line is a way to hide it.";
 
+    // A-1.2v, and the wording is doing careful work: the box being full says that nothing MORE will
+    // be accepted. It does NOT say anything was lost -- a user who typed to the ceiling and stopped
+    // lost nothing, and a message claiming otherwise would be a second false statement about what
+    // happened to their name. "If you were still typing" carries the conditional honestly.
+    //
+    // Written under R-1.7a's constraints without being R-1.7a copy, like the warning above.
+    private const string NameFieldIsFull =
+        "This box is full and will not take any more. If you were still typing, the rest did not go "
+        + "in - use a shorter name.";
+
     // D-8: a name may be shown and may never be acted on. Said in the place a user chooses one,
     // because that is where somebody would otherwise assume it identifies them.
     private const string NameIsNotIdentity =
@@ -142,6 +152,16 @@ public sealed class ConfigWindow : Window
         // are meant to agree drift; one that is shared cannot disagree with itself. A-1.2g asserts
         // on what LEAVES THE CLIENT rather than on what this line says, which is the right way
         // round — this is a preview, and a preview is not evidence.
+        // A-1.2v (BUG-92). Said BEFORE the "you will join as" line, because it is about the box the
+        // user is still looking at rather than about the outcome -- and it is separate from the
+        // unusable-name warning below on purpose: a full box is not an invalid name. What is in the
+        // field may parse perfectly; the point is that the field stopped taking input and until now
+        // said nothing.
+        if (NameInputCapacity.IsFull(typed))
+        {
+            ImGui.TextWrapped(NameFieldIsFull);
+        }
+
         var effective = settings.DisplayNameOr(characterName);
         ImGui.TextUnformatted($"You will join as: {effective.Value}");
 

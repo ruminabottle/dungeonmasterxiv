@@ -52,6 +52,19 @@ internal sealed class JoinFlowView
         "Your DM's client has not sent a code to compare. You cannot check who you are talking to, "
         + "and being admitted will not tell you.";
 
+    // A-1.2v (BUG-92). SAID IN BOTH PLACES A NAME IS TYPED, deliberately: a joiner who never opens
+    // settings meets this box and no other, so a message that lived only in ConfigWindow would leave
+    // the criterion unmet on the surface most people actually use — the same argument A-1.2n makes
+    // for the name control itself being here.
+    //
+    // The conditional is load-bearing. A full box means nothing MORE will be accepted; it does not
+    // mean anything was lost, because a user who typed to the ceiling and stopped lost nothing.
+    // Duplicated as a literal rather than shared with ConfigWindow: these are two audiences and the
+    // wording is free to diverge, and a shared constant would quietly forbid that.
+    private const string NameFieldIsFull =
+        "This box is full and will not take any more. If you were still typing, the rest did not go "
+        + "in - use a shorter name.";
+
     private const string AdmittedUncompared =
         "You were admitted without ever having a code to compare. Nothing here proves the DM is who "
         + "you think - it only proves someone admitted you.";
@@ -156,6 +169,15 @@ internal sealed class JoinFlowView
             // One value, used twice. The two cannot disagree by construction rather than by anyone
             // remembering to keep them in step.
             var willSend = DisplayName.OrNone(_nameEntry);
+
+            // A-1.2v (BUG-92): the field stopping is told, not left to be noticed. SEPARATE from the
+            // line below, which is about whether the name can be SENT -- a full box is not an
+            // invalid name, and what is in it may resolve perfectly. Both can be true at once and
+            // they answer different questions, so neither is an else-branch of the other.
+            if (NameInputCapacity.IsFull(_nameEntry))
+            {
+                ImGui.TextWrapped(NameFieldIsFull);
+            }
 
             ImGui.TextWrapped(willSend.WasStated
                 ? $"They will see: {willSend.Value}"

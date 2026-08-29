@@ -112,8 +112,20 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     /// </para>
     /// <para>
     /// <b>Which is why the buffer is not the rule.</b> It is UI capacity; <see cref="TryParse"/> is
-    /// the gate. A pathological name is truncated in the field, and what the user is left looking at
-    /// is what gets validated — the two never disagree about a name that was actually entered.
+    /// the gate.
+    /// </para>
+    /// <para>
+    /// <b>A paragraph here used to argue that running out of room was harmless</b> — that a
+    /// pathological name is truncated in the field, that what the user is left looking at is what
+    /// gets validated, and that the two therefore never disagree. <b>It is struck rather than
+    /// reworded, because it was not a clumsy sentence: it was a considered position, and A-1.2v
+    /// decided against it.</b> A field that stops accepting keystrokes with no explanation fails the
+    /// criterion (BUG-92), and the reasoning was wrong in a way worth keeping visible — it took
+    /// "the user sees what gets validated" as the property that mattered, when the property that
+    /// matters is whether <b>the user can tell that anything happened at all</b>.
+    /// </para>
+    /// <para>
+    /// <b>Running out of room is now SAID, and <see cref="NameInputCapacity"/> is what says it.</b>
     /// </para>
     /// </remarks>
     public const int MaxUtf8Bytes = (MaxLength * 8) + 1;
