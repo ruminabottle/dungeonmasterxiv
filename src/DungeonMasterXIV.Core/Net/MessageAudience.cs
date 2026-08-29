@@ -7,10 +7,22 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>THE PRIVACY DECISION LIVES HERE AND IS MADE ONCE.</b> A message is held, replayed, echoed and
 /// exported by different code; if each decided the audience for itself, the four would drift and the
-/// drift would be a disclosure. <c>MissedMessages</c> was measured to be structurally incapable of
-/// widening an audience — <c>Replay</c> returns exactly what was <c>Hold</c>ed for that member — so
-/// <b>the leak, if there is one, is authored at the moment of holding, by whoever chose to hold.</b>
-/// This is the function that choice must consult.
+/// drift would be a disclosure. This is the function they must all consult.
+/// </para>
+/// <para>
+/// <b>AN EARLIER VERSION OF THIS PARAGRAPH CITED A PREMISE THAT HAS SINCE BEEN RETRACTED, AND SAYING
+/// SO IS CHEAPER THAN LEAVING IT.</b> It read that <c>MissedMessages</c> is <i>structurally incapable
+/// of widening an audience</i>. The true version, from its author: <c>Replay</c> cannot return entries
+/// stored under a different KEY, and distinct members are distinct keys <b>only when their codes are
+/// present</b> — <c>default(PeerCode)</c> equals every other default, so two absent-code members share
+/// one hold (DMXENG-105). <b>So consulting this function is NECESSARY and not, today, SUFFICIENT.</b>
+/// </para>
+/// <para>
+/// <b>AND THE SAME ROOT CAUSE WAS LIVE HERE.</b> <c>reader.Equals(sender)</c> is TRUE for two absent
+/// codes, so an absent reader was admitted to DM-private traffic whenever the sender was also absent.
+/// Measured on this file before it was fixed. <c>PeerCode</c>'s own remarks state the precondition —
+/// <i>a caller that defaults one has an absent code, not a valid one, and must treat it as a
+/// refusal</i> — and this is now the third writer found not honouring it.
 /// </para>
 /// <para>
 /// <b>THE SENDER IS ALWAYS IN THE AUDIENCE OF THEIR OWN MESSAGE</b>, including a private one — a
@@ -43,14 +55,28 @@ public static class MessageAudience
         MessageTarget target,
         PeerCode sender,
         PeerCode reader,
-        SessionRole readerRole) => target switch
+        SessionRole readerRole)
     {
-        MessageTarget.Everyone => true,
-        MessageTarget.DungeonMasterOnly =>
-            readerRole is SessionRole.DungeonMaster || reader.Equals(sender),
+        // PeerCode's stated precondition, honoured rather than assumed: an absent code is not a
+        // participant and must be treated as a refusal. Without this, reader.Equals(sender) is TRUE
+        // for two defaults -- default equals default -- and an absent reader is admitted to
+        // DM-private traffic. Refusing on BOTH codes rather than only the reader: an absent sender
+        // means the message has no identifiable author, and admitting anyone on that basis is the
+        // same defect with the operands swapped.
+        if (!sender.IsPresent || !reader.IsPresent)
+        {
+            return false;
+        }
 
-        // A target added later reaches here rather than defaulting to Everyone. Defaulting a new
-        // privacy level to "visible to all" is the failure this arm exists to make impossible.
-        _ => false,
-    };
+        return target switch
+        {
+            MessageTarget.Everyone => true,
+            MessageTarget.DungeonMasterOnly =>
+                readerRole is SessionRole.DungeonMaster || reader.Equals(sender),
+
+            // A target added later reaches here rather than defaulting to Everyone. Defaulting a new
+            // privacy level to "visible to all" is the failure this arm exists to make impossible.
+            _ => false,
+        };
+    }
 }

@@ -139,6 +139,57 @@ public class WhatAMessageCarriesTests
         Assert.True(MessageAudience.Includes(MessageTarget.Everyone, sender, bystander, SessionRole.Player));
     }
 
+    // THE ABSENT-CODE DEFECT, WHICH WAS LIVE IN THIS FILE'S SUBJECT UNTIL fe-2 DEMONSTRATED IT.
+    //
+    // default(PeerCode) equals every other default -- absent == absent is TRUE -- so
+    // reader.Equals(sender) admitted an absent reader to DM-private traffic whenever the sender was
+    // also absent. PeerCode's own remarks state the precondition: "a caller that defaults one has an
+    // absent code, not a valid one, and MUST TREAT IT AS A REFUSAL."
+    //
+    // Note what PeerCode's doc does NOT say: it says a default "can never equal a real code and can
+    // never be mistaken for one", which is TRUE and reads as covering more than it does. It is a
+    // statement about absent-versus-PRESENT. The hole is absent-versus-ABSENT.
+    [Fact]
+    public void AnAbsentReaderIsRefusedEvenWhenTheSenderIsAlsoAbsent()
+    {
+        var absent = default(PeerCode);
+
+        Assert.False(absent.IsPresent, "the premise of this test: a default code is absent");
+        Assert.True(absent.Equals(absent), "and the hazard: absent equals absent");
+
+        Assert.False(
+            MessageAudience.Includes(MessageTarget.DungeonMasterOnly, absent, absent, SessionRole.Player),
+            "AN ABSENT READER MUST NOT RECEIVE DM-PRIVATE TRAFFIC. Before the fix this returned true, "
+            + "because reader.Equals(sender) matched two defaults.");
+    }
+
+    // AND THE PRECONDITION IS HONOURED ON EVERY TARGET, not only the private one. An absent code is
+    // not a participant; admitting one to ordinary traffic is not a disclosure but it is the same
+    // unhonoured precondition, and honouring it only where it currently bites is how the next
+    // instance is written.
+    [Theory]
+    [InlineData(MessageTarget.Everyone)]
+    [InlineData(MessageTarget.DungeonMasterOnly)]
+    public void AnAbsentCodeIsRefusedOnEveryTarget(MessageTarget target)
+    {
+        Assert.True(PeerCode.TryParse("BCDFGH", out var present));
+
+        Assert.False(MessageAudience.Includes(target, present, default, SessionRole.Player));
+        Assert.False(MessageAudience.Includes(target, default, present, SessionRole.Player));
+    }
+
+    // AND THE CONTROL, or every row above passes against an Includes that refuses everyone: a DM
+    // with a PRESENT code still receives private traffic from a PRESENT sender.
+    [Fact]
+    public void PresentCodesStillGetTheTrafficTheyAreEntitledTo()
+    {
+        Assert.True(PeerCode.TryParse("BCDFGH", out var sender));
+        Assert.True(PeerCode.TryParse("JKMNPR", out var dm));
+
+        Assert.True(MessageAudience.Includes(MessageTarget.DungeonMasterOnly, sender, dm, SessionRole.DungeonMaster));
+        Assert.True(MessageAudience.Includes(MessageTarget.DungeonMasterOnly, sender, sender, SessionRole.Player));
+    }
+
     // R-2.7 ACROSS PATHS: the parenthetical is in the rendered line itself, not added by a surface.
     // That is what makes "not dropped in the echo, the export, or a narrow window" a property of one
     // function rather than a promise repeated at three call sites.
