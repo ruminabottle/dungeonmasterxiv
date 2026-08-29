@@ -25,64 +25,19 @@ namespace DungeonMasterXIV.Windows;
 /// parameter there would drag the composition root into a chunk that changes no behaviour.
 /// </para>
 /// <para>
-/// <b>The copy travelled with the surface it belongs to.</b> The three constants below address the
-/// person joining and nobody else, so <see cref="SessionWindow"/> no longer carries wording for a
-/// screen it does not draw. The host's copy stayed with the host.
+/// <b>The copy travelled with the surface it belongs to.</b> The constants below address the person
+/// joining and nobody else, so <see cref="SessionWindow"/> no longer carries wording for a screen it
+/// does not draw. The host's copy stayed with the host, and the name-field wording left again with
+/// <see cref="JoinRequestForm"/> for the same reason.
 /// </para>
 /// </remarks>
 internal sealed class JoinFlowView
 {
-    // Not R-1.7a copy — R-1.7a covers the session window, the admission prompt and settings, and does
-    // not supply wording for these. Written here under the same constraint: no phrasing from its
-    // forbidden list, and no claim that a session is protected when nobody checked.
-    //
-    // Travelled with the constants it governs (DMXENG-15). It sat above all four in SessionWindow;
-    // three came here and CodeChangedWarning stayed, so it is stated in both places rather than
-    // left behind pointing at copy that had moved.
-
-    // The joiner's side of CompareOutOfBand. Same instruction, same constraint, addressed to the
-    // person who until now was told to read out a code their client never showed them (BUG-31).
-    private const string ReadYourCodeAloud =
-        "Read this code to your DM over voice or chat while they decide, and check it matches what "
-        + "they see. Do not send it through the plugin - a channel someone has tampered with cannot "
-        + "prove it has not been tampered with.";
-
-    // R-1.3a-i: the honest rendering when there is nothing to compare. Never a blank space where a
-    // code would go, and never a placeholder that could be mistaken for one.
-    private const string NoCodeToCompare =
-        "Your DM's client has not sent a code to compare. You cannot check who you are talking to, "
-        + "and being admitted will not tell you.";
-
-    // A-1.2v (BUG-92). SAID IN BOTH PLACES A NAME IS TYPED, deliberately: a joiner who never opens
-    // settings meets this box and no other, so a message that lived only in ConfigWindow would leave
-    // the criterion unmet on the surface most people actually use — the same argument A-1.2n makes
-    // for the name control itself being here.
-    //
-    // The conditional is load-bearing. A full box means nothing MORE will be accepted; it does not
-    // mean anything was lost, because a user who typed to the ceiling and stopped lost nothing.
-    // Duplicated as a literal rather than shared with ConfigWindow: these are two audiences and the
-    // wording is free to diverge, and a shared constant would quietly forbid that.
-    private const string NameFieldIsFull =
-        "This box is full and will not take any more. If you were still typing, the rest did not go "
-        + "in - use a shorter name.";
-
-    private const string AdmittedUncompared =
-        "You were admitted without ever having a code to compare. Nothing here proves the DM is who "
-        + "you think - it only proves someone admitted you.";
-
     private readonly SessionCoordinator _coordinator;
 
-    /// <summary>
-    /// What to call ourselves when asking to join (R-1.3e). A function rather than a value because
-    /// the answer changes with who is logged in, and a name captured once is stale exactly when a
-    /// player switches character — see <c>LocalCharacterName</c>.
-    /// </summary>
-    private readonly Func<DisplayName> _displayName;
-    private readonly Func<RelinkMemory> _relink;
+    private readonly JoinComparisonView _comparison = new();
 
-    private string _codeEntry = string.Empty;
-    private string _nameEntry = string.Empty;
-    private string _seededFrom = string.Empty;
+    private readonly JoinRequestForm _requestForm;
 
     /// <param name="coordinator">The session layer this surface reflects.</param>
     /// <param name="displayName">What to call ourselves when joining (R-1.3e). Asked each time.</param>
@@ -101,8 +56,7 @@ internal sealed class JoinFlowView
         Func<RelinkMemory> relink)
     {
         _coordinator = coordinator;
-        _displayName = displayName;
-        _relink = relink;
+        _requestForm = new JoinRequestForm(coordinator, displayName, relink);
     }
 
     /// <summary>Draws the joiner's half of the session window.</summary>
@@ -116,28 +70,9 @@ internal sealed class JoinFlowView
             // R-1.3c's harder half: the bound is visible while the wait runs, not only at the end.
             ImGui.TextUnformatted($"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");
 
-            // R-1.3a-i: the joiner's half of the comparison, and it must be here rather than after
-            // admission. The DM is shown the same value in their prompt; whichever side reads it
-            // out, the other confirms.
-            if (join.Fingerprint is { } fingerprint)
-            {
-                ImGui.TextUnformatted($"Code to compare: {fingerprint}");
-                ImGui.TextWrapped(ReadYourCodeAloud);
-            }
-            else
-            {
-                ImGui.TextWrapped(NoCodeToCompare);
-            }
         }
 
-        // Said once the decision is made, because by then the code on screen is no longer something
-        // that could have informed it. Reads from the snapshot taken at admission, not from whether
-        // a fingerprint exists now - the host's key arrives again in the acceptance envelope, so
-        // "do we have one?" is true a moment later and answers the wrong question (A-1.3f-1).
-        if (join.Phase == JoinPhase.Admitted && !join.FingerprintWasComparableAtDecision)
-        {
-            ImGui.TextWrapped(AdmittedUncompared);
-        }
+        _comparison.Draw(join);
 
         // R-1.3f / A-1.13a: a joined player renders the roster the HOST authored and never
         // originates one. Rebuilding on reconnect needs nothing here: the host republishes on
@@ -162,63 +97,14 @@ internal sealed class JoinFlowView
         }
 
         // R-1.3h, the other direction: while this client is hosting there is no way to join. The
-        // code box goes with the button — leaving a field to type into is still offering the way.
+        // code box goes with the button — leaving a field to type into is still offering the way,
+        // and R-1.3h means the affordance is ABSENT rather than disabled-and-explained.
+        //
+        // The decision stays HERE and the composing left with DMXENG-75: what the window OFFERS is
+        // this view's, how a request is built is the form's.
         if (!InAHostedSession() && (join.MayRequestAgain || join.Phase == JoinPhase.Denied))
         {
-            ImGui.InputText("Session code", ref _codeEntry, 16);
-
-            // A-1.2n: the name that will be sent is shown and editable HERE, on the screen the user
-            // is already on. A build whose only name control is in settings fails the criterion
-            // however well the settings work, because a user who never opens settings never learns
-            // what is about to be sent on their behalf. The settings value pre-fills this; it does
-            // not replace it.
-            SeedNameFromSettings();
-            ImGui.InputText("Name they will see", ref _nameEntry, DisplayName.MaxUtf8Bytes);
-
-            // RESOLVED ONCE, then shown and sent. A-1.2n says the name that WILL BE SENT is shown,
-            // so the box alone does not satisfy it: DisplayName refuses a large class of ordinary
-            // invented names — Bob_123, Bob!, Bob (DM), an emoji — and a field showing one of those
-            // beside a wire carrying "a player who gave no name" makes the criterion's own sentence
-            // false, under a label that is literally the promise being broken.
-            //
-            // One value, used twice. The two cannot disagree by construction rather than by anyone
-            // remembering to keep them in step.
-            var willSend = DisplayName.OrNone(_nameEntry);
-
-            // A-1.2v (BUG-92): the field stopping is told, not left to be noticed. SEPARATE from the
-            // line below, which is about whether the name can be SENT -- a full box is not an
-            // invalid name, and what is in it may resolve perfectly. Both can be true at once and
-            // they answer different questions, so neither is an else-branch of the other.
-            if (NameInputCapacity.IsFull(_nameEntry))
-            {
-                ImGui.TextWrapped(NameFieldIsFull);
-            }
-
-            ImGui.TextWrapped(willSend.WasStated
-                ? $"They will see: {willSend.Value}"
-                : $"That name cannot be sent, so they will see \"{DisplayName.Unstated}\". Letters, "
-                  + "digits, spaces, apostrophes and hyphens work.");
-
-            // JoinFlowCode.Accepts, not SessionCode.TryParse inline (DMXENG-15). The decision about
-            // what this field takes is Core's, so a test can call the same thing this button calls
-            // instead of re-deriving it and claiming the two agree in a comment.
-            if (ImGui.Button("Request to join") && JoinFlowCode.Accepts(_codeEntry, out var code))
-            {
-                // R-1.3e: we name ourselves on the request, so the DM's prompt has a name without a
-                // second round trip. It is a label and never a credential — the fingerprint the DM
-                // compares is what decides, and it is unaffected by whatever this returns.
-                //
-                // Sent from the same resolved value that was SHOWN, not re-resolved here: a second
-                // call would be a second chance to disagree with the line above.
-                // R-1.5b's CARRYING half, and the line DMXENG-1 exists for: until now the only
-                // production caller passed two arguments, so claimedParticipantId was null on every
-                // join the shipped build made and relink was unreachable however much of it existed.
-                //
-                // Null when we have never been admitted under this code, or when the player has
-                // deleted it -- both mean "join as a stranger", which is what makes the deletion in
-                // the settings window actually undo the relink rather than merely hide it.
-                _coordinator.RequestJoin(code, willSend, _relink().IdFor(code));
-            }
+            _requestForm.Draw();
         }
 
         if (join.Failure != SessionFailure.None)
@@ -252,15 +138,6 @@ internal sealed class JoinFlowView
     /// to update one without the other.
     /// </remarks>
     // RECORDED, NOT REDESIGNED (BUG-64, qa-3). Returning the pair makes correct use a one-liner; it
-    // does NOT make misuse impossible. Give this a block body and assign only the field —
-    //     { _nameEntry = JoinFlowName.Resolve(...).Entry; }
-    // — and it builds, and the suite passes, while _seededFrom freezes and the pre-fill silently
-    // stops following a character switch. The expression body is what keeps both assignments in one
-    // statement, so it is load-bearing rather than terse. Left as an observation because closing it
-    // properly is a seam change and this ticket is a test fix.
-    private void SeedNameFromSettings() =>
-        (_nameEntry, _seededFrom) = JoinFlowName.Resolve(_displayName().Value, _seededFrom, _nameEntry);
-
     // Every phase gets a sentence. R-1.3 forbids leaving anyone looking at an ambiguous spinner,
     // so there is no state here that renders as "..." and nothing else.
     private static string DescribeJoin(JoinPhase phase) => phase switch

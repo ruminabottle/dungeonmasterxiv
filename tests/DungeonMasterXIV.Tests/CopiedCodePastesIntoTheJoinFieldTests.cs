@@ -278,8 +278,14 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     //     SECOND path, hand-rolled, banned identifier absent   -> NOT CAUGHT  (9 passed, 0 failed)
     //     SECOND path in ANOTHER window file entirely          -> NOT CAUGHT  (9 passed, 0 failed)
     //
+    // THE FILE MOVED AND THE SCOPE DID NOT (DMXENG-75): the code box and the button left
+    // JoinFlowView for JoinRequestForm when JoinFlowView.Draw was cut from 121 lines to 53. This
+    // still reads ONE NAMED FILE -- the one that now holds the button -- rather than being widened
+    // to the directory on the way past, because the paragraph below argues against widening and a
+    // move is not a licence to do it.
+    //
     // THE LAST ROW IS A SECOND GAP AND IS MINE, not the one I was asked to declare: this reads
-    // JoinFlowView.cs ALONE, so an acceptance path in any other window is invisible to it. Widening
+    // ONE FILE ALONE, so an acceptance path in any other window is invisible to it. Widening
     // to the directory does not fix it either -- it would only move the boundary out one file.
     //
     // NO FOURTH ASSERTION, DELIBERATELY. Banning every other parser call needs an exception list,
@@ -299,7 +305,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     {
         var joinFlow = string.Join(
             "\n",
-            File.ReadAllLines(WindowSources().Single(path => path.EndsWith("JoinFlowView.cs", StringComparison.Ordinal)))
+            File.ReadAllLines(WindowSources().Single(path => path.EndsWith("JoinRequestForm.cs", StringComparison.Ordinal)))
                 .Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
 
         Assert.Contains("JoinFlowCode.Accepts(", joinFlow, StringComparison.Ordinal);

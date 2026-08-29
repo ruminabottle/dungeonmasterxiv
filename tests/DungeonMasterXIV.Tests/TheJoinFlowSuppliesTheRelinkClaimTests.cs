@@ -55,7 +55,10 @@ public class TheJoinFlowSuppliesTheRelinkClaimTests
     {
         var source = JoinFlowSource();
 
-        Assert.Contains("class JoinFlowView", source, StringComparison.Ordinal);
+        // DMXENG-75 moved the button, and this asserts the file read is the one that holds it --
+        // a path that resolves to the wrong file would otherwise fail the argument check below for
+        // a reason no message would explain.
+        Assert.Contains("class JoinRequestForm", source, StringComparison.Ordinal);
 
         var arguments = ArgumentsOfTheJoinCall(source);
 
@@ -137,7 +140,7 @@ public class TheJoinFlowSuppliesTheRelinkClaimTests
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            var candidate = Path.Combine(directory.FullName, "Windows", "JoinFlowView.cs");
+            var candidate = Path.Combine(directory.FullName, "Windows", "JoinRequestForm.cs");
 
             if (File.Exists(candidate))
             {
@@ -148,6 +151,6 @@ public class TheJoinFlowSuppliesTheRelinkClaimTests
             }
         }
 
-        throw new InvalidOperationException("No Windows/JoinFlowView.cs above the test binary.");
+        throw new InvalidOperationException("No Windows/JoinRequestForm.cs above the test binary.");
     }
 }

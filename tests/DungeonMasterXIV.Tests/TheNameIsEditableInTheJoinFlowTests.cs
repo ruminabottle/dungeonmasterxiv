@@ -318,7 +318,7 @@ public class TheNameIsEditableInTheJoinFlowTests
     /// <see cref="TheScanActuallyFoundTheWindowsItClaimsToRead"/> instead of silently reading air.
     /// </remarks>
     private static string JoinFlowPath() =>
-        WindowSources().Single(path => path.EndsWith("JoinFlowView.cs", StringComparison.Ordinal));
+        WindowSources().Single(path => path.EndsWith("JoinRequestForm.cs", StringComparison.Ordinal));
 
     /// <summary>
     /// Every window's source, enumerated from disk rather than named — a window added tomorrow is
