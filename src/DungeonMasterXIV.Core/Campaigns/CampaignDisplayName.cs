@@ -94,6 +94,17 @@ public static class CampaignDisplayName
     /// and make a typo look like deliberate anonymity. The settings window says the alias is
     /// unusable; the join does not silently become nameless because of it.
     /// </para>
+    /// <para>
+    /// <b>THERE IS DELIBERATELY NO OVERLOAD OF THIS METHOD TAKING THE SQ-87 CARRIED-OVER
+    /// DEFAULT, AND THE ABSENCE IS LOAD-BEARING.</b> A-2.31 permits exactly one globally
+    /// stored name <i>"whose ONLY permitted reader is the pre-fill path"</i>, and A-2.32 fails
+    /// any build that sends it unaccepted. Both hold here because this method — the send path —
+    /// cannot be handed that value, so sending it is unrepresentable rather than merely
+    /// forbidden. <b>If a future caller wants to pass it in, that is the criterion failing, not
+    /// a missing convenience.</b> The carried value reaches the wire only after
+    /// <see cref="RecordChosen"/> has stored it against a campaign, which is the player
+    /// accepting it.
+    /// </para>
     /// </remarks>
     /// <param name="campaign">The campaign being played, or null when none is current.</param>
     /// <param name="characterName">What the game says this player is called.</param>
@@ -119,7 +130,57 @@ public static class CampaignDisplayName
     /// <param name="campaign">The campaign being played, or null when none is current.</param>
     /// <param name="characterName">What the game says this player is called.</param>
     public static string ToEdit(Campaign? campaign, Net.DisplayName characterName) =>
-        Stored(campaign) is { Length: > 0 } stored ? stored : characterName.Value;
+        ToEdit(campaign, carriedOverDefault: null, characterName);
+
+    /// <summary>
+    /// What the settings box starts out showing when this client carries a display name stored
+    /// BEFORE names were campaign-scoped (SQ-87): the campaign's own alias, else that carried-over
+    /// default, else the character name.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE CARRIED-OVER VALUE IS OFFERED, NEVER APPLIED.</b> SQ-87 rules that a name stored
+    /// before campaign-scoping <i>"becomes a LOCAL PRE-FILL DEFAULT — not migrated, not dropped,
+    /// not asked about at upgrade"</i>, because an upgrade-time prompt would ask the player to
+    /// decide about campaign-scoped names before they have met the concept. It reaches the player
+    /// here, in the box, at the point where the decision is legible.
+    /// </para>
+    /// <para>
+    /// <b>THE CAMPAIGN'S OWN ALIAS WINS, AND THE ORDER IS THE REQUIREMENT RATHER THAN A
+    /// PREFERENCE.</b> A name the player accepted IN THIS CAMPAIGN is a decision; the carried-over
+    /// value is a leftover. Reversing them would let a pre-campaign default overwrite a considered
+    /// choice every time the box was opened.
+    /// </para>
+    /// <para>
+    /// <b>THIS OVERLOAD EXISTS AND <see cref="Or"/> HAS NO COUNTERPART, WHICH IS THE WHOLE
+    /// SEPARATION.</b> <see cref="Or"/> is what the client SENDS; this is what the client SHOWS.
+    /// A-2.32 is over PROVENANCE rather than over the string — <i>"a build that sends the stored
+    /// default fails, even though the same bytes would be correct had the player accepted
+    /// them"</i> — so the carried value must be unable to reach the send path at all. <b>It is
+    /// unable to because no method on the send path takes it</b>, not because a check refuses it.
+    /// The route from here to the wire runs through <see cref="RecordChosen"/>, which is the
+    /// player's act (A-2.33).
+    /// </para>
+    /// <para>
+    /// <b>Stated because it would otherwise look like an oversight:</b> a caller with no carried
+    /// value passes null and gets exactly the previous behaviour, which is why the two-argument
+    /// form delegates here rather than keeping a second copy of the rule. Two expressions meant to
+    /// agree drift; one that is shared cannot disagree with itself.
+    /// </para>
+    /// </remarks>
+    /// <param name="campaign">The campaign being played, or null when none is current.</param>
+    /// <param name="carriedOverDefault">
+    /// <c>Data.PluginSettings.DisplayNameAlias</c> — a name stored before campaign-scoping. Null or
+    /// empty when there is none, which is every client that never ran v0.1.5.
+    /// </param>
+    /// <param name="characterName">What the game says this player is called.</param>
+    public static string ToEdit(
+        Campaign? campaign, string? carriedOverDefault, Net.DisplayName characterName) =>
+        Stored(campaign) is { Length: > 0 } stored
+            ? stored
+            : carriedOverDefault is { Length: > 0 } carried
+                ? carried
+                : characterName.Value;
 
     /// <summary>
     /// Records what the user left in the settings box, reporting whether anything changed.
