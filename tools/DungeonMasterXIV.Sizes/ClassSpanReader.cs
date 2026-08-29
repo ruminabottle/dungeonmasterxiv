@@ -101,12 +101,15 @@ public static class ClassSpanReader
     {
         var depth = 0;
         var opened = false;
+        var inBlockComment = false;
 
         for (var index = from; index < lines.Count; index++)
         {
-            var line = lines[index];
-            var trimmed = line.TrimStart();
-            var code = trimmed.StartsWith("//", StringComparison.Ordinal) ? string.Empty : line;
+            // COMMENTS AND LITERALS BLANKED FIRST. This used to skip only lines that START with a
+            // comment, so a trailing "// }" counted as a brace -- and a '{' in a char or string
+            // literal opened one that never closed. Seven types in this tree were refused for that
+            // reason, five of them for braces in ordinary JSON string fixtures. See CodeOnly.
+            var code = CodeOnly.Of(lines[index], ref inBlockComment);
 
             foreach (var character in code)
             {
