@@ -27,7 +27,7 @@ public class AdmissionVocabularyTests
         var acceptance = WireEnvelope.ForJoinAccepted(Code, joiner.PublicKey, host.PublicKey);
         Assert.True(EnvelopeCodec.TryDecode(EnvelopeCodec.Encode(acceptance), out var received));
 
-        var joinerKey = received!.TryGetAdmissionOutcome()!
+        var joinerKey = received!.TryGetAdmissionOutcome(joiner.PublicKey)!
             .Match(hostKey => joiner.DeriveSharedKey(hostKey, Code), () => null!, () => null!);
         var hostKey = host.DeriveSharedKey(joiner.PublicKey, Code);
 
@@ -62,8 +62,8 @@ public class AdmissionVocabularyTests
         var lapsed = WireEnvelope.ForJoinLapsed(Code, joiner.PublicKey);
 
         Assert.NotEqual(denied.Type, lapsed.Type);
-        Assert.Equal("denied", denied.TryGetAdmissionOutcome()!.Match(_ => "accepted", () => "denied", () => "lapsed"));
-        Assert.Equal("lapsed", lapsed.TryGetAdmissionOutcome()!.Match(_ => "accepted", () => "denied", () => "lapsed"));
+        Assert.Equal("denied", denied.TryGetAdmissionOutcome(joiner.PublicKey)!.Match(_ => "accepted", () => "denied", () => "lapsed"));
+        Assert.Equal("lapsed", lapsed.TryGetAdmissionOutcome(joiner.PublicKey)!.Match(_ => "accepted", () => "denied", () => "lapsed"));
     }
 
     // Fails if: an admission answer stops surviving encoding. A denial that does not arrive is
@@ -81,14 +81,14 @@ public class AdmissionVocabularyTests
         Assert.True(EnvelopeCodec.TryDecode(EnvelopeCodec.Encode(original), out var received));
 
         Assert.Equal(type, received!.Type);
-        Assert.NotNull(received.TryGetAdmissionOutcome());
+        Assert.NotNull(received.TryGetAdmissionOutcome(joiner.PublicKey));
     }
 
     // Fails if: a message that is not an admission answer starts producing one.
     [Fact]
     public void AMessageThatIsNotAnAdmissionAnswerYieldsNoOutcome()
     {
-        Assert.Null(WireEnvelope.ForCodeRequest(Code).TryGetAdmissionOutcome());
+        Assert.Null(WireEnvelope.ForCodeRequest(Code).TryGetAdmissionOutcome(ownPublicKey: null));
     }
 
     // Fails if: acceptance without the host's key is treated as a usable acceptance. A malformed
@@ -102,6 +102,6 @@ public class AdmissionVocabularyTests
 
         Assert.True(EnvelopeCodec.TryDecode(System.Text.Encoding.UTF8.GetBytes(tampered), out var received));
         Assert.Equal(WireMessageType.JoinAccepted, received!.Type);
-        Assert.Null(received.TryGetAdmissionOutcome());
+        Assert.Null(received.TryGetAdmissionOutcome(joiner.PublicKey));
     }
 }

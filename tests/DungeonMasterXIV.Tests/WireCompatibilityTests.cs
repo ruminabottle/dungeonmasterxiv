@@ -42,7 +42,7 @@ public class WireCompatibilityTests
         Assert.True(EnvelopeCodec.TryDecode(fromANewerRelay, out var received));
 
         Assert.Equal(WireMessageType.Unknown, received!.Type);
-        Assert.Null(received.TryGetAdmissionOutcome());
+        Assert.Null(received.TryGetAdmissionOutcome(ownPublicKey: null));
     }
 
     // Fails if: unknown FIELDS start being rejected. A newer relay adding a field must not break an

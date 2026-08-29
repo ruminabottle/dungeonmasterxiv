@@ -276,7 +276,7 @@ public sealed class AdmissionInbox
                 continue;
             }
 
-            if (envelope.TryGetAdmissionOutcome() is { } outcome)
+            if (envelope.TryGetAdmissionOutcome(keys?.PublicKey) is { } outcome)
             {
                 sessionKey = Apply(outcome, attempt, keys) ?? sessionKey;
             }
