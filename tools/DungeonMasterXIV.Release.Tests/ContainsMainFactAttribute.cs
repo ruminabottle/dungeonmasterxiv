@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Xunit;
 
 namespace DungeonMasterXIV.Release.Tests;
@@ -30,16 +31,59 @@ namespace DungeonMasterXIV.Release.Tests;
 public sealed class ContainsMainFactAttribute : FactAttribute
 {
     /// <summary>Skips, with the reason, when this branch does not contain <c>origin/main</c>.</summary>
-    public ContainsMainFactAttribute()
+    /// <param name="test">
+    /// Supplied by the compiler as the name of the annotated method — never passed by a caller. It is
+    /// here so the display name can keep the test's identity while carrying the reason.
+    /// </param>
+    public ContainsMainFactAttribute([CallerMemberName] string? test = null)
     {
         var (contains, detail) = Containment.Value;
-        if (!contains)
+        if (contains)
         {
-            Skip = "This branch does not contain origin/main, so the working tree is NOT the merged "
-                 + "tree and a pass here would describe a tree nobody is going to merge. "
-                 + $"Rebase or merge main and the gate runs. ({detail})";
+            return;
         }
+
+        Skip = "This branch does not contain origin/main, so the working tree is NOT the merged "
+             + "tree and a pass here would describe a tree nobody is going to merge. "
+             + $"Rebase or merge main and the gate runs. ({detail})";
+
+        // BUG-123: THE SKIP FIRED CORRECTLY AND NOBODY COULD SEE WHY. `Skip` is printed only at -v n
+        // or above; the DEFAULT invocation prints the test's DISPLAY NAME and nothing else about a
+        // skip. So on the invocation everyone actually runs, a reader got a name and had to already
+        // know that test's skip condition to interpret it -- and "Skipped 1" beside "Failed 0" reads
+        // as a pass to anyone not already counting.
+        //
+        // That matters more here than for an ordinary skip: this gate exists so that a green meaning
+        // "some tree was clean" cannot be mistaken for one meaning "the MERGED tree is clean". The
+        // skip is the only thing keeping those apart, so its reason being invisible reproduces the
+        // very confusion the gate was built to end, one level up.
+        //
+        // The name is supplied by the compiler rather than written here, so a rename cannot leave a
+        // stale label behind. And DisplayName is DISPLAY ONLY: --filter matches the fully qualified
+        // method name and still finds this test while it is skipping (measured).
+        DisplayName = SkippedDisplayName(test, detail);
     }
+
+    /// <summary>
+    /// What the default invocation prints instead of the bare method name when the gate cannot run.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Separated so the property can be asserted without a behind-main working tree: the runner's
+    /// behaviour is measured, this is the part a test can hold.
+    /// </para>
+    /// <para>
+    /// <b>IT REPEATS THE DETAIL RATHER THAN NAMING A CAUSE.</b> Not contained is not the only way
+    /// <see cref="Containment"/> answers false — a git failure answers false too, deliberately, and
+    /// says so in its detail. A display name that asserted non-containment would state something
+    /// FALSE on that arm, having been written for the arm its author had in mind. Repeating the
+    /// detail is also why a reason added later is visible here without this line being revisited.
+    /// </para>
+    /// </remarks>
+    /// <param name="test">The annotated method's name.</param>
+    /// <param name="detail">Why the gate could not run, from the containment check itself.</param>
+    internal static string SkippedDisplayName(string? test, string detail) =>
+        $"{test} -- SIZE GATE NOT RUN, so this tree is not known to be the merged tree: {detail}";
 
     private static readonly Lazy<(bool Contains, string Detail)> Containment = new(() =>
     {
