@@ -116,10 +116,7 @@ internal sealed class JoinRequester
 
         // R-1.5a: a deliberate quit removes the seat immediately, and asking to join again is that.
         // Without this the suppression would outlive the intent that justified it.
-        _interruption.SeatReleased();
-        Keys?.Dispose();
-        Keys = null;
-        SessionKey = null;
+        ReleaseTheSeatAndKeys();
 
         // The same guard, because joining fails identically to hosting: both make a key pair, which
         // is why an affected machine has nothing left that works (BUG-61).
@@ -137,5 +134,55 @@ internal sealed class JoinRequester
         // never needs it because R-1.2a regenerates a fresh code on every refusal.
         _handshake.ForgetJoinRequest();
         _synchronise();
+    }
+
+    /// <summary>
+    /// Leaves the session this client joined, at the player's request (R-1.3g).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This is the trigger the teardown never had.</b> Every line below already ran on the
+    /// deliberate-quit path — inlined in <see cref="Request"/>, under a comment reading "a deliberate
+    /// quit removes the seat immediately, AND ASKING TO JOIN AGAIN IS THAT". The comment named its
+    /// only trigger: the plugin could already do this and nobody could ask it to.
+    /// </para>
+    /// <para>
+    /// <b>It does not wait for anything.</b> The host is told separately and best effort; whether
+    /// that notice arrives changes nothing here. A leave conditional on an acknowledgement is a
+    /// player held in a session by a host that never answers.
+    /// </para>
+    /// <para>
+    /// <b>And an undelivered notice is not a defect — R-1.5a is why.</b> From the host's side a
+    /// joiner whose notice never arrived is a client that VANISHED, and holding its seat for five
+    /// minutes is then CORRECT. PRD-1:733 says in terms that removing vanished members to close that
+    /// apparent gap breaks R-1.5a.
+    /// </para>
+    /// </remarks>
+    public void Left()
+    {
+        ReleaseTheSeatAndKeys();
+        _join.Left();
+
+        // Nothing wants a connection any more, so the link comes down through the one place that
+        // decides that (R-1.1). Not called by Request, which wants the socket it is about to use.
+        _synchronise();
+    }
+
+    /// <summary>
+    /// Drops the seat and the key material, which both leaving and re-asking do (R-1.5a).
+    /// </summary>
+    /// <remarks>
+    /// <b>Shared rather than duplicated, and NOT reached by having <see cref="Request"/> call
+    /// <see cref="Left"/>.</b> That would have been the shorter refactor and it changes behaviour:
+    /// <c>Left</c> synchronises the transport, and a request that tore the link down in the middle
+    /// of itself is not the method that was there before. The extraction is pure only if the caller
+    /// that already existed behaves identically, so the shared part is what moved.
+    /// </remarks>
+    private void ReleaseTheSeatAndKeys()
+    {
+        _interruption.SeatReleased();
+        Keys?.Dispose();
+        Keys = null;
+        SessionKey = null;
     }
 }

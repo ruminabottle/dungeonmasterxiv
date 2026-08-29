@@ -106,11 +106,13 @@ public class TheNameFieldSaysWhenItIsFullTests
     // the plugin running in-game, which nothing here links. Stated so a green run is not read as more
     // than it is -- the same limit TheNameIsEditableInTheJoinFlowTests records for its own scan.
     //
-    // BOTH SURFACES, because a joiner who never opens settings meets JoinFlowView and no other name
-    // box. A fix present in ConfigWindow alone leaves the criterion unmet where most people type.
+    // BOTH SURFACES, because a joiner who never opens settings meets the join form and no other
+    // name box. A fix present in ConfigWindow alone leaves the criterion unmet where most people
+    // type. The joiner's box moved from JoinFlowView.cs to JoinRequestForm.cs in DMXENG-75; the
+    // surface is the same one, and it is still named rather than globbed.
     [Theory]
     [InlineData("ConfigWindow.cs")]
-    [InlineData("JoinFlowView.cs")]
+    [InlineData("JoinRequestForm.cs")]
     public void EveryWindowWithANameBoxAsksWhetherItIsFull(string window)
     {
         var source = WindowSource(window);

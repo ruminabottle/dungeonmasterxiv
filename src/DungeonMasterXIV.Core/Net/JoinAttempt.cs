@@ -124,6 +124,49 @@ public sealed class JoinAttempt
     }
 
     /// <summary>
+    /// The player has left this session deliberately (R-1.3g).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>To <see cref="JoinPhase.Idle"/>, and the phase is chosen for what it SAYS.</b> Three
+    /// existing transitions would move the client out of the session, and each renders a sentence
+    /// that is false for someone who chose to go: <see cref="Lapsed"/> is shown as "the DM did not
+    /// answer in time", <see cref="Denied"/> as "not admitted", <see cref="Fail"/> as "stopped after
+    /// a problem". <c>Idle</c> renders "not in a session", which is what happened.
+    /// </para>
+    /// <para>
+    /// <b>AND THAT LAST STEP IS AN INFERENCE, NOT A CITATION.</b> R-1.3c forbids reporting a LAPSE
+    /// as a REFUSAL; it does not name a leave. Reading it as also forbidding "a leave reported as a
+    /// lapse" is mine, and the Spec Owner has not ruled on it. Recorded here rather than only in a
+    /// PR body, because a prediction written in the past tense inside merged code becomes a premise
+    /// and the next reader cannot tell which it was.
+    /// </para>
+    /// <para>
+    /// <b>Idle also restores what leaving is FOR.</b> It satisfies
+    /// <see cref="MayRequestAgain"/> by the existing predicate — no line there changes — so the
+    /// player can join somewhere else at once, and it takes the phase out of the set
+    /// <c>SessionInterruption.InAJoinedSession</c> reads, which is what lets R-1.3h stop suppressing
+    /// the offer to host. R-1.3h says exclusivity ends on a deliberate quit; this is that quit.
+    /// </para>
+    /// <para>
+    /// <b>Clears exactly what <see cref="Request"/> clears, including the participant id.</b> The
+    /// reasoning there applies unchanged and more directly: a client that has left must not carry
+    /// one host's answer into whatever it joins next, which is the cross-campaign linkage D-8
+    /// refuses. Leaving is a stronger break than re-asking, not a weaker one.
+    /// </para>
+    /// </remarks>
+    public void Left()
+    {
+        Phase = JoinPhase.Idle;
+        Code = null;
+        Failure = SessionFailure.None;
+        Deadline = null;
+        Fingerprint = null;
+        FingerprintWasComparableAtDecision = false;
+        ParticipantId = null;
+    }
+
+    /// <summary>
     /// The host offered its public key, so this client can compute the fingerprint (R-1.3a-i).
     /// </summary>
     /// <remarks>
