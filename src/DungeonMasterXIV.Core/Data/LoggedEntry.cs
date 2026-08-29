@@ -21,9 +21,20 @@ namespace DungeonMasterXIV.Data;
 /// written one, and they are allowed to drift.
 /// </para>
 /// <para>
-/// <b>No display name appears here, ever</b> (A-2.31, D-8). The peer code is the identifier the
-/// session already uses, and a name written into an export would be a portable identifier leaving
-/// the campaign that holds it.
+/// <b>No display name appears here, ever.</b> The governing directive is <b>D-8, and it is
+/// UNQUALIFIED</b>: <i>"No identifier may be stable across campaigns, derivable from a character
+/// name or account, or present in any exported artifact. Local history on the DM's own machine may
+/// hold real character names; exports may not."</i> <b>A-1.2a already implements it</b> — <i>"no
+/// display name appears in any export"</i>.
+/// <para>
+/// <b>This citation is corrected, and the correction matters more than the claim.</b> It first read
+/// "(A-2.31, D-8)" — but A-2.31's <i>"outside a campaign"</i> qualifier is the one clause that does
+/// NOT govern here, and I had written a contested reading as though it were settled. Raising it
+/// found a genuine conflict: <b>A-2.24 required the <c>Character (Player)</c> parenthetical IN an
+/// export while R-2.7 states that parenthetical IS a display name.</b> The Spec Owner ruled that
+/// A-2.24's export clause <b>could not be satisfied by any conforming build, and struck it.</b> The
+/// outcome here was right; the reason given for it was half wrong.
+/// </para>
 /// </para>
 /// </remarks>
 public readonly record struct LoggedEntry(LoggedStamp Stamp, string Kind, string Peer, string Text);
