@@ -111,9 +111,15 @@ public class AdmissionDeadlineTests
 
         Assert.True(EnvelopeCodec.TryDecode(hostile, out var received));
 
-        var deadline = received!.TryGetDeadline();
-        Assert.Null(deadline);
-        Assert.Null(Record.Exception(() => received.TryGetDeadline()));
+        // Bound to a NON-NULLABLE local rather than repeating `!`. Reading these became extension
+        // methods when WireEnvelopeReading was split out, so the receiver is now an ARGUMENT and its
+        // nullability is checked at every call instead of flowing from the first `!` on the line.
+        // That is the extension form surfacing something the instance form hid, so it is answered
+        // once here rather than suppressed at each use.
+        var arrived = Assert.IsType<WireEnvelope>(received);
+
+        Assert.Null(arrived.TryGetDeadline());
+        Assert.Null(Record.Exception(() => arrived.TryGetDeadline()));
     }
 
     // The other half of the same defect: a value inside the range must still work, or the fix would
@@ -129,8 +135,10 @@ public class AdmissionDeadlineTests
 
         Assert.True(EnvelopeCodec.TryDecode(wire, out var received));
 
-        Assert.Equal(deadline, received!.TryGetDeadline());
-        Assert.Equal(AdmissionDeadline.Window, received.TryGetDeadline()!.Value.RemainingAt(HostDecidedAt));
+        var arrived = Assert.IsType<WireEnvelope>(received);
+
+        Assert.Equal(deadline, arrived.TryGetDeadline());
+        Assert.Equal(AdmissionDeadline.Window, arrived.TryGetDeadline()!.Value.RemainingAt(HostDecidedAt));
     }
 
     // Fails if: R-1.3a and R-1.3c drift apart. They are the same window seen from two sides and

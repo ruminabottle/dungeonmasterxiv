@@ -249,7 +249,11 @@ public sealed class TheJoinerIsToldWhichParticipantItIsTests
         Assert.Equal(WireMessageType.JoinAccepted, arrived!.Type);
         Assert.Equal(joiner.PublicKey, arrived.PublicKey);
         Assert.Equal(host.PublicKey, arrived.HostPublicKey);
-        Assert.NotNull(arrived.TryGetAdmissionOutcome());
+        // ADDRESSED TO joiner, so this asserts that it still reads as an OUTCOME rather than that
+        // BUG-85's addressee check happens to let it through. Passing a stranger's key here would
+        // return null for the right reason and prove nothing about D-14, which is what this test is
+        // for.
+        Assert.NotNull(arrived.TryGetAdmissionOutcome(joiner.PublicKey));
     }
 
     // A claim and an answer are DIFFERENT FACTS travelling in OPPOSITE DIRECTIONS, and they are

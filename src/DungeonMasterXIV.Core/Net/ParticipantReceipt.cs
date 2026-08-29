@@ -39,12 +39,20 @@ public static class ParticipantReceipt
     /// The UUID <i>is</i> the relink claim, so taking one addressed elsewhere is how a client comes
     /// to hold a credential it can present later and have the DM see a plausible returning player.
     /// <para>
-    /// <b>WHAT THIS DOES NOT FIX, stated so the guard cannot read as one.</b> The ADMISSION itself
-    /// has no addressee check: <see cref="WireEnvelope.TryGetAdmissionOutcome"/> accepts on any
-    /// acceptance carrying a host key, whoever it names — measured, a joiner awaiting a decision is
-    /// admitted by a stranger's acceptance and derives a session key. Pre-existing, reported
-    /// separately, and deliberately not papered over here. A partial fix that looks total is worse
-    /// than none, because it retires the problem in everyone's mind.
+    /// <b>THE ADMISSION IS NOW CHECKED TOO, AND THIS PARAGRAPH USED TO SAY IT WAS NOT.</b> While
+    /// DMXENG-47 was in review this read <i>"what this does not fix"</i> — the admission accepted on
+    /// any acceptance carrying a host key, whoever it named, so a joiner awaiting a decision was
+    /// admitted by a stranger's acceptance and derived a session key. That was BUG-85, found by this
+    /// feature's own two-joiner harness, fixed in
+    /// <see cref="WireEnvelopeReading.TryGetAdmissionOutcome"/>, and merged before this.
+    /// <b>Updated here because the change that falsifies a comment owns it</b>, and a stale
+    /// <i>"this is not fixed"</i> sitting beside the fix is worse than the caveat was ever worth.
+    /// </para>
+    /// <para>
+    /// <b>The two guards stay separate on purpose.</b> That one decides whether an ADMISSION
+    /// happened; this decides whether a FIELD may be believed. Same comparison, different
+    /// consequence — and folding this into that one would make a participant id something the
+    /// admission grants rather than something the envelope carries.
     /// </para>
     /// </para>
     /// <para>
