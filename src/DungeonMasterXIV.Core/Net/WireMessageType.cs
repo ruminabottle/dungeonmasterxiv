@@ -91,4 +91,32 @@ public enum WireMessageType
     /// </para>
     /// </remarks>
     JoinerHoldsFingerprint = 10,
+
+    /// <summary>
+    /// The relay telling a host that one of its members' connections went away (A-1.28, R-1.5a).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The only message the relay AUTHORS about a session's people, and the line it must not
+    /// cross is in its name.</b> It reports THAT A CONNECTION DROPPED — never <i>remove this
+    /// participant</i>. D-2 denies the relay authority over the SESSION; a dropped connection is a
+    /// TRANSPORT FACT, which is the distinction that makes this permissible at all. R-1.7b already
+    /// has the relay authoring a transport message and R-1.9 already discloses that it observes
+    /// that a connection exists.
+    /// </para>
+    /// <para>
+    /// <b>A positive notice rather than an inference from silence, and that is required rather than
+    /// tidy.</b> Deciding a member has gone because nothing has arrived starts a clock from an
+    /// absence — SQ-43's defect, and what A-1.28 forbids in terms.
+    /// </para>
+    /// <para>
+    /// <b>A CLIENT SENDING ONE IS REFUSED AT THE RELAY, and that guard is load-bearing.</b>
+    /// Forwarding a client-authored drop notice would let any keyholder tell a host that somebody
+    /// else vanished — a forged transport fact, which the host would then record against a real
+    /// member. <c>RelayRouter</c> drops it as <c>RelayOnlyMessageFromClient</c>, alongside the
+    /// relay's other own-answers. <b>The host refuses a key it has not admitted as well</b>, so
+    /// there are two independent guards rather than one.
+    /// </para>
+    /// </remarks>
+    ConnectionDropped = 11,
 }

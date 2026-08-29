@@ -343,7 +343,12 @@ public sealed class SessionCoordinator
                 // Since DMXENG-59 the two doors are two TYPES, so the swap will not compile either.
                 MemberAuthored: new MemberAuthoredContent(
                     OpenWith: _resources.MemberKeys.Candidates,
-                    OnContent: _resources.MemberContent.Record)),
+                    OnContent: _resources.MemberContent.Record),
+                // A-1.28, and the RELAY authors this one -- see TransportNotices for why that is
+                // permissible and where the line is. RecordDrop refuses a key this host has not
+                // admitted, so a stranger's notice records nothing.
+                Transport: new TransportNotices(
+                    OnConnectionDropped: key => _admissions.RecordDrop(key, now))),
             _log)
             ?? SessionKey;
         _handshake.SendWhatIsDue();

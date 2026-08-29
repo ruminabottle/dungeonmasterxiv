@@ -276,9 +276,14 @@ public sealed class SessionRegistry
 
     private static SessionDeparture LeaveSession(string code, LiveSession session, string connectionId)
     {
+        // TAKEN BEFORE THE REMOVAL, because after it there is nothing left to name them by. Null
+        // when the departing connection was only ever pending here -- a joiner that never got in
+        // is not a member whose seat the host is holding (A-1.28, R-1.5a).
+        var departedKey = session.Members.TryGetValue(connectionId, out var key) ? key : null;
+
         session.Members.Remove(connectionId);
         session.ForgetAllPending(connectionId);
-        return new SessionDeparture(code, EndedSession: false, []);
+        return new SessionDeparture(code, EndedSession: false, [], session.HostConnectionId, departedKey);
     }
 
     private bool TryResolvePending(
@@ -300,7 +305,7 @@ public sealed class SessionRegistry
 
             if (admit)
             {
-                session.Members.Add(pending);
+                session.Members[pending] = Convert.ToBase64String(joinerPublicKey);
             }
             else if (!session.IsMember(pending) && !session.HasPending(pending))
             {

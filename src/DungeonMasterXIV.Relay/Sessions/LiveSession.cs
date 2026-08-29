@@ -17,7 +17,22 @@ internal sealed class LiveSession(string hostConnectionId)
     public string HostConnectionId { get; } = hostConnectionId;
 
     /// <summary>Admitted connections, excluding the host. These are routed; nothing else is.</summary>
-    public HashSet<string> Members { get; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Every admitted member, connection id to the base64 public key it joined with.
+    /// </summary>
+    /// <remarks>
+    /// <b>A map rather than a set, because the relay had no way to NAME a member to its host.</b>
+    /// Admission used to drop the key: <c>Pending</c> is keyed by it, <c>TryResolvePending</c>
+    /// removed the entry and added the connection id to a set, and the key was gone. Connection ids
+    /// are relay-internal and mean nothing to a host, so a drop notice built from one would have
+    /// been unusable — the mechanism was missing rather than broken (A-1.28).
+    /// <para>
+    /// <b>The relay keeps the key and nothing else about a member.</b> Not a name, not a participant
+    /// id, not a peer code — the host derives that itself. Retaining the one value the two of them
+    /// already share is what lets the relay say WHAT IT SAW without asserting WHO IT WAS.
+    /// </para>
+    /// </remarks>
+    public Dictionary<string, string> Members { get; } = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Connections waiting on the host, by the SPKI key they presented. Held so a decision can find
@@ -35,14 +50,14 @@ internal sealed class LiveSession(string hostConnectionId)
         string.Equals(HostConnectionId, connectionId, StringComparison.Ordinal);
 
     /// <summary>Whether this connection may send and receive session traffic here.</summary>
-    public bool IsMember(string connectionId) => IsHost(connectionId) || Members.Contains(connectionId);
+    public bool IsMember(string connectionId) => IsHost(connectionId) || Members.ContainsKey(connectionId);
 
     /// <summary>Whether this connection has any request still outstanding here.</summary>
     public bool HasPending(string connectionId) =>
         Pending.Values.Contains(connectionId, StringComparer.Ordinal);
 
     /// <summary>Everyone entitled to session traffic: the host and every admitted member.</summary>
-    public IEnumerable<string> Everyone() => Members.Prepend(HostConnectionId);
+    public IEnumerable<string> Everyone() => Members.Keys.Prepend(HostConnectionId);
 
     /// <summary>
     /// Removes <b>every</b> pending entry naming this connection, not the first one found.

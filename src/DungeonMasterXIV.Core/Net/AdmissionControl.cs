@@ -217,6 +217,49 @@ public sealed class AdmissionControl
     }
 
     /// <summary>
+    /// When each member was last seen to drop, for the decision R-1.5a makes on their return.
+    /// </summary>
+    /// <remarks>
+    /// <b>Here rather than on <see cref="AdmittedPeer"/> because a peer is immutable</b> and a drop
+    /// instant is the one thing about a member that changes without the host admitting anybody.
+    /// Recording one changes NOTHING about membership — A-1.29 and R-1.5a both say a drop holds the
+    /// seat, so <see cref="SessionAudience"/> is deliberately untouched by it.
+    /// </remarks>
+    public MemberDrops Drops { get; } = new();
+
+    /// <summary>
+    /// Records that the member holding <paramref name="memberPublicKey"/> dropped (A-1.28).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The key is turned into a peer code by <see cref="PeerCodeFor"/>, the one derivation.</b>
+    /// The relay names a dropped member by the key it joined with because that is the only name the
+    /// two of them share; the host resolves it here and the member is thereafter the same subject
+    /// it is everywhere else. <b>The relay says what it saw; this says who that is.</b>
+    /// </para>
+    /// <para>
+    /// <b>Refused for a key that is not admitted here</b>, and returned rather than thrown so the
+    /// inbound path can carry on draining. Anyone can put bytes on the wire; a notice naming a
+    /// stranger records nothing, and silently recording one would let a keyholder plant a drop
+    /// instant against a member of a session it is not in.
+    /// </para>
+    /// </remarks>
+    /// <returns>Whether the notice named a member this host actually has.</returns>
+    public bool RecordDrop(byte[] memberPublicKey, DateTimeOffset when)
+    {
+        ArgumentNullException.ThrowIfNull(memberPublicKey);
+
+        var peerCode = PeerCodeFor(memberPublicKey);
+        if (!Audience.IsAdmitted(peerCode))
+        {
+            return false;
+        }
+
+        Drops.Record(peerCode, when);
+        return true;
+    }
+
+    /// <summary>
     /// Admits the pending participant. Only after this does anything become addressable to them —
     /// see <see cref="SessionAudience"/>, which is where D-13's None level is enforced.
     /// </summary>
@@ -238,6 +281,12 @@ public sealed class AdmissionControl
             request?.Verification ?? AdmissionVerification.NotCompared,
             request?.JoinerPublicKey,
             request?.DisplayName ?? DisplayName.None);
+
+        // They are back, so the instant R-1.5a would have measured is spent. Forgotten HERE, at the
+        // admission, rather than when traffic arrives: admission is the decision that ruling is
+        // about, and clearing it on traffic would be inferring presence from noise -- the same
+        // defect as inferring absence from silence, wearing its cheerful face (A-1.28).
+        Drops.Forget(peerCode);
 
         // MINTED BEFORE THE ANSWER IS SENT, because the answer is what carries it (R-1.5c). The two
         // halves fail separately as requirements and cannot ship separately as work: an id nobody is
@@ -340,6 +389,7 @@ public sealed class AdmissionControl
     {
         Audience.Clear();
         Desk.Clear();
+        Drops.Clear();
         JustLapsed = Array.Empty<PendingAdmission>();
     }
 }
