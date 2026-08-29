@@ -21,10 +21,15 @@
 #
 # WHAT THIS PROTECTS, not just what it sets: the relay is the deployed artefact and was the last
 # unpinned half of the build after global.json pinned the plugin (DMXENG-36). It also closes a trap —
-# there is no .dockerignore and compose builds with context "..", so the moment anyone widens the COPY
-# list below, or adds `COPY global.json ./` thinking they are being tidy, a FLOATING sdk tag that is
-# not exactly 10.0.400 fails at SDK resolution with no obvious connection to the commit that caused
-# it. Pinned, global.json is satisfied by the image and the trap cannot spring.
+# the .dockerignore added for BUG-77 excludes build output ONLY, and compose builds with context "..",
+# so global.json is still in the context. The moment anyone widens the COPY list below, or adds
+# `COPY global.json ./` thinking they are being tidy, a FLOATING sdk tag that is not exactly 10.0.400
+# fails at SDK resolution with no obvious connection to the commit that caused it. Pinned, global.json
+# is satisfied by the image and the trap cannot spring.
+#
+# Said explicitly because it is the tempting wrong reading: THE .dockerignore DOES NOT CLOSE THIS TRAP
+# and is not a second line of defence for it. Measured, not assumed — `COPY global.json ./` still
+# reaches the image with that file in place. This pin is what closes it, alone.
 ARG DOTNET_SDK_VERSION=10.0.400
 ARG DOTNET_RUNTIME_VERSION=10.0.11
 
