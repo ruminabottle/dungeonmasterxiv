@@ -131,7 +131,7 @@ public class AnAdmissionAnswerIsForItsAddresseeTests
     {
         var transport = new FakeTransport();
         var coordinator = new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
         var host = new SessionKeyExchange();
 
         coordinator.RequestJoin(Code);

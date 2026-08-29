@@ -18,11 +18,6 @@ public sealed class SessionCoordinator
     /// Reads the configured relay at the moment of connecting rather than at construction, so
     /// changing it in settings takes effect on the next session without a reload (R-1.8).
     /// </param>
-    /// <param name="newKeys">
-    /// How a session key pair is made. Injected so a failure to make one can be driven from a test
-    /// (BUG-61): on the machine that reported it, this throws, and there was no seam between that
-    /// throw and the frame loop.
-    /// </param>
     /// <param name="window">
     /// How long a session survives an interruption, from settings (A-1.23, A-1.27). Required, so no
     /// caller can silently fall back to the literal — see <c>SessionInterruption</c>'s remark.
@@ -38,34 +33,37 @@ public sealed class SessionCoordinator
     /// away from production not supplying it, and nothing would fail.</b>
     /// </para>
     /// <para>
-    /// <b>Ahead of <paramref name="newKeys"/> because C# will not allow otherwise</b> — a required
-    /// parameter cannot follow an optional one. So this is a signature change rather than a removed
-    /// default, and every construction site moved with it.
+    /// <b>It used to say it sat here because a required parameter cannot follow an optional one.</b>
+    /// That constraint is gone — DMXENG-57 left no optional parameters for it to precede — so the
+    /// position is now free and the requiredness is load-bearing on its own. Kept as a correction
+    /// rather than deleted, because "required for a C# reason" and "required for DMXENG-13's
+    /// reason" look identical in a signature and only one of them survives a reordering.
     /// </para>
     /// </param>
-    /// <param name="mintParticipant">
-    /// Creates a participant for a joiner about to be admitted (R-1.5c). Null when not hosting into
-    /// a campaign. <b>Optional deliberately; the reasoning lives on <see cref="AdmissionControl"/>'s
-    /// parameter of the same name, where it is consumed.</b>
+    /// <param name="capabilities">
+    /// What Core cannot do for itself — key generation and participant minting. <b>Required, and
+    /// a caller wanting the defaults says <see cref="SessionCapabilities.Default"/> out loud</b>
+    /// (DMXENG-13). A record rather than parameters so the NEXT capability costs a member here
+    /// instead of a seventh argument, which is what stopped two chunks at once (DMXENG-57).
     /// </param>
     public SessionCoordinator(
         ISessionTransport transport,
         Func<string> relayAddress,
         TimeSpan window,
         ISessionTransportLog log,
-        Func<SessionKeyExchange>? newKeys = null,
-        Func<DisplayName, Guid?>? mintParticipant = null)
+        SessionCapabilities capabilities)
     {
         ArgumentNullException.ThrowIfNull(log);
+        ArgumentNullException.ThrowIfNull(capabilities);
 
-        _newKeys = newKeys ?? (static () => new SessionKeyExchange());
+        _newKeys = capabilities.KeySource;
         _log = log;
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
         _admissions = new AdmissionControl(
             new AdmissionAnnouncer(transport),
             () => Host.Code,
             () => HostKeys,
-            mintParticipant ?? (static _ => null),
+            capabilities.ParticipantSource,
             log);
         // Null-conditional because _joiner is built FURTHER DOWN this constructor: the closure is
         // not INVOKED until after construction, but the compiler cannot know that. Suppressing with

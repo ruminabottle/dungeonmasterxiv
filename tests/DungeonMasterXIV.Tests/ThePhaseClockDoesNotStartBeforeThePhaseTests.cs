@@ -160,7 +160,7 @@ public sealed class ThePhaseClockDoesNotStartBeforeThePhaseTests
     {
         transport = new SilentTransport();
         return new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new SilentLog());
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new SilentLog(), capabilities: SessionCapabilities.Default);
     }
 
     private sealed class SilentLog : ISessionTransportLog

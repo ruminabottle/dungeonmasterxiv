@@ -140,7 +140,7 @@ public sealed class TheReceiptReachesTheHostsRecordTests
     {
         var transport = new DeliveringTransport();
         var host = new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, new SilentLog());
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, new SilentLog(), SessionCapabilities.Default);
 
         host.StartHosting();
         host.Host.Registered();

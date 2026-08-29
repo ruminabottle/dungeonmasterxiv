@@ -102,7 +102,7 @@ public class TheDropSignalIsWiredThroughTheCoordinatorTests
     {
         var transport = new FakeTransport();
         var coordinator = new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: log);
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: log, capabilities: SessionCapabilities.Default);
         var host = new SessionKeyExchange();
 
         coordinator.RequestJoin(Code);

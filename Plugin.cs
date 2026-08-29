@@ -98,9 +98,10 @@ public sealed class Plugin : IDalamudPlugin
             // Null when no campaign is current, which is every JOINING client -- an ordinary state,
             // not a failure. A HOST that reaches here with no campaign is a different matter and
             // AdmissionControl warns on it by peer code, so the quiet version of this cannot ship.
-            mintParticipant: label => _hostingCampaign.Current is { } campaign
-                ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
-                : null);
+            capabilities: new SessionCapabilities(
+                MintParticipant: label => _hostingCampaign.Current is { } campaign
+                    ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
+                    : null));
         // The alias if the player set a usable one, otherwise the character name (R-1.3e). The rule
         // lives in PluginSettings so it is testable without Dalamud, and the settings window calls
         // the same method to show what will be sent -- one expression, so the preview cannot drift

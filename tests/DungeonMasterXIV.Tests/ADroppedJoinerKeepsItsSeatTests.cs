@@ -68,7 +68,7 @@ public class ADroppedJoinerKeepsItsSeatTests
     public void AJoinThatNeverSucceededHoldsNoSeat()
     {
         var transport = new FakeTransport();
-        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
         joiner.RequestJoin(Code, DisplayName.OrNone("Bob"));
         joiner.SynchroniseTransport();
         joiner.Tick(TimeSpan.Zero, Now);
@@ -166,7 +166,7 @@ public class ADroppedJoinerKeepsItsSeatTests
     private static (SessionCoordinator Joiner, SessionKeyExchange HostKeys) Admitted()
     {
         var transport = new FakeTransport();
-        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+        var joiner = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
         var hostKeys = new SessionKeyExchange();
 
         joiner.RequestJoin(Code, DisplayName.OrNone("Bob"));

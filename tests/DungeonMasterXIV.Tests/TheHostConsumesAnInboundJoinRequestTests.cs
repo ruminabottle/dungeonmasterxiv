@@ -201,7 +201,7 @@ public class TheHostConsumesAnInboundJoinRequestTests
     public void AClientThatIsNotHostingIgnoresAJoinRequest()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
 
         transport.Deliver(WireEnvelope.ForJoinRequest(SessionCodeGenerator.Next(), new byte[] { 1, 2, 3 }));
         coordinator.Tick(TimeSpan.Zero, Now);
@@ -289,7 +289,7 @@ public class TheHostConsumesAnInboundJoinRequestTests
     private static (SessionCoordinator Coordinator, FakeTransport Transport) Hosting()
     {
         var transport = new FakeTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
         coordinator.StartHosting();
         coordinator.Host.Registered();
         transport.Sent.Clear();
