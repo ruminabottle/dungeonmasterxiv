@@ -9,10 +9,21 @@ namespace DungeonMasterXIV.Tests;
 /// A-1.16 / R-1.3g: the DM's closing notice, sealed to each participant, carrying when it stops.
 /// </summary>
 /// <remarks>
-/// <b>Driven through <see cref="RosterBroadcast"/> directly rather than the coordinator</b>, because
-/// the <c>StopHosting</c> wiring is deliberately not built yet — the window it would announce is a
-/// product question still with the Spec Owner. Testing the sender now means the wiring lands against
-/// something already demonstrated rather than both arriving unexamined.
+/// <para>
+/// <b>Driven through <see cref="RosterBroadcast"/> directly rather than the coordinator</b>, so the
+/// sender is demonstrated on its own. It was written while the <c>StopHosting</c> wiring did not
+/// exist and the window was still a product question; SQ-63 settled the window at sixty seconds and
+/// the wiring has since landed.
+/// </para>
+/// <para>
+/// <b>AND EVERY TEST HERE PASSED WITH THAT WIRING DELETED.</b> Not a criticism of these tests — they
+/// are about the sender and they are right about it — but a statement of what they cannot reach:
+/// <b>a test at this layer cannot fail on a call site that does not exist.</b> Removing
+/// <c>PublishClosing</c> from <c>StopHosting</c>, and separately moving it after teardown so it
+/// seals to an emptied audience, both left the whole suite green.
+/// <see cref="EndingASessionAnnouncesItTests"/> is the coordinator-level file that fails on those,
+/// and it exists because of that measurement rather than in anticipation of it.
+/// </para>
 /// </remarks>
 public class TheClosingNoticeReachesParticipantsTests
 {
