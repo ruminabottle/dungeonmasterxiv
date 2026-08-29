@@ -52,10 +52,71 @@ namespace DungeonMasterXIV.Net;
 public readonly struct DisplayName : IEquatable<DisplayName>
 {
     /// <summary>
-    /// Longest name accepted. Comfortably above a full FFXIV character name, and bounded so a name
-    /// cannot push the fingerprint out of the prompt.
+    /// Longest name accepted, counted in GRAPHEME CLUSTERS — what a reader would call characters.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Grapheme clusters, not <c>string.Length</c> (R-1.3j.3).</b> <c>string.Length</c> counts
+    /// UTF-16 code units, so it charges two for anything outside the BMP and one per combining mark
+    /// — a Devanagari or Vietnamese name is refused while a Japanese name that looks exactly as long
+    /// is accepted, because CJK is BMP and costs one. The limit was silently a different limit for
+    /// different scripts.
+    /// </para>
+    /// <para>
+    /// <b>THE PROPERTY OUTRANKS THE NUMBER: the limit must never reject a name FFXIV itself
+    /// permits.</b> The product PRE-FILLS the player's character name (A-1.2g), so a bound below the
+    /// game's own maximum makes our default invalid on arrival — and it would hit the player with the
+    /// longest name, who did nothing wrong. 32 is the current answer to that property, not the rule.
+    /// </para>
+    /// <para>
+    /// <b>And 32 rests on an UNVERIFIED fact.</b> It is believed to clear FFXIV's maximum of
+    /// 15 + 15 + a space = 31, but <b>the repository records the game's limit nowhere</b> and nobody
+    /// has checked the game. Do not treat 31 as confirmed because it is written down; if something
+    /// comes to depend on the exact number rather than on the property above, that dependency needs
+    /// the fact settled first.
+    /// </para>
+    /// </remarks>
     public const int MaxLength = 32;
+
+    /// <summary>
+    /// How many characters <paramref name="value"/> has as a reader would count them.
+    /// </summary>
+    /// <param name="value">The text to measure.</param>
+    /// <remarks>
+    /// <b>Grapheme clusters via <see cref="StringInfo"/>, because that is the unit the rule is
+    /// written in.</b> <c>string.Length</c> counts UTF-16 code units and
+    /// <c>EnumerateRunes().Count()</c> counts code points — the second is closer and still wrong,
+    /// because a base letter plus a combining mark is ONE character to the person who typed it and
+    /// two runes. Anything that measures storage rather than perception makes the bound depend on
+    /// the writing system.
+    /// </remarks>
+    internal static int PerceivedLength(string value) => new StringInfo(value).LengthInTextElements;
+
+    /// <summary>
+    /// How many BYTES a text buffer needs to hold a name this type accepts.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>ImGui input buffers are sized in BYTES, and <see cref="MaxLength"/> counts CHARACTERS.</b>
+    /// Sizing one from the other treated a character as a byte, which was true only for ASCII. A
+    /// 32-character Devanagari name is <b>192 UTF-8 bytes</b> and the buffer was 33 — so the field
+    /// would have truncated a name this type accepts, giving a build that ACCEPTS a name and a UI
+    /// that CANNOT HOLD IT.
+    /// </para>
+    /// <para>
+    /// <b>Eight bytes per character, which is generous rather than exact.</b> The heaviest realistic
+    /// script here is Devanagari at about six; Latin with combining marks runs to five. <b>There is
+    /// no exact answer to compute:</b> a grapheme cluster may carry arbitrarily many marks, and marks
+    /// are permitted (A-1.2i needs them), so no finite buffer holds every string this type would
+    /// accept.
+    /// </para>
+    /// <para>
+    /// <b>Which is why the buffer is not the rule.</b> It is UI capacity; <see cref="TryParse"/> is
+    /// the gate. A pathological name is truncated in the field, and what the user is left looking at
+    /// is what gets validated — the two never disagree about a name that was actually entered.
+    /// </para>
+    /// </remarks>
+    public const int MaxUtf8Bytes = (MaxLength * 8) + 1;
 
     /// <summary>
     /// What the prompt shows when a client sent no usable name — an older build, or a name that was
@@ -96,7 +157,7 @@ public readonly struct DisplayName : IEquatable<DisplayName>
         }
 
         var trimmed = candidate.Trim();
-        if (trimmed.Length == 0 || trimmed.Length > MaxLength)
+        if (trimmed.Length == 0 || PerceivedLength(trimmed) > MaxLength)
         {
             return false;
         }

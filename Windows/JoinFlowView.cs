@@ -145,7 +145,7 @@ internal sealed class JoinFlowView
             // what is about to be sent on their behalf. The settings value pre-fills this; it does
             // not replace it.
             SeedNameFromSettings();
-            ImGui.InputText("Name they will see", ref _nameEntry, DisplayName.MaxLength + 1);
+            ImGui.InputText("Name they will see", ref _nameEntry, DisplayName.MaxUtf8Bytes);
 
             // RESOLVED ONCE, then shown and sent. A-1.2n says the name that WILL BE SENT is shown,
             // so the box alone does not satisfy it: DisplayName refuses a large class of ordinary
