@@ -184,9 +184,16 @@ public class TheOtherThreeRowsAreMeasuredTests
     // A LOCAL FUNCTION IS REFUSED BY NAME, because the Deployment Manager DELIBERATELY did not rule
     // on how one counts -- its own member, or part of its container's length and depth.
     //
-    // Fails if it is silently measured or silently skipped. Both would settle an open question by
-    // implementation, which is the move that made writing this tool unsafe before the counting
-    // convention was written down.
+    // Fails if it is silently SKIPPED. It cannot fail if it is silently MEASURED THROUGH ITS
+    // CONTAINER, and that is a limit rather than an oversight to work around (BUG-94): the fixture
+    // below is empty, so there is nothing to fold, and nothing here asserts anything about Outer at
+    // all. qa-1 found the tool doing exactly that.
+    //
+    // WHAT WOULD CATCH IT, named so the gap is checkable rather than taken on trust: a fixture whose
+    // local function carries real nesting, asserting on the CONTAINER's Depth. That test is not
+    // written here because it would have to assert a number, and the container's number is precisely
+    // what the open question decides -- writing it either way would settle by implementation, which
+    // is the move this whole file exists to refuse.
     [Fact]
     public void ALocalFunctionIsRefusedRatherThanCountedEitherWay()
     {

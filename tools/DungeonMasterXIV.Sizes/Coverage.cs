@@ -58,7 +58,26 @@ public static class Coverage
 
         NOT MEASURED, AND SAYING SO IS THE POINT: property, indexer and event accessors are outside
         the method and nesting rows, because whether an accessor body is a "method" is unruled. A
-        local function is refused BY NAME for the same reason rather than folded into its container.
+        local function is refused BY NAME for the same reason.
+
+        BUT ITS BODY STILL COUNTS TOWARD ITS CONTAINER (BUG-94), AND YOU CAN CHECK THAT IN ONE RUN:
+        put a local function in a method whose own body is a declaration and a return, vary ONLY the
+        nesting inside the local function, and the CONTAINER's number moves with it. So a container
+        holding a local function carries a number that depends on the unruled question, printed a
+        few lines below this paragraph. This used to read "rather than folded into its container",
+        which was false, and it was false in the tool whose subject is instruments claiming more
+        than they deliver.
+
+        EXCLUDING IT WOULD ALSO ANSWER THE QUESTION, which is why this says so instead of fixing it.
+        Measured on one probe whose container body never changed: flat contents and the container is
+        not reported at all; six levels inside the local function and it reads nesting 6; seventy
+        statements inside it and it reads 79 lines. A container's number is therefore one reading or
+        the other, and excluding is as much an answer as folding. The neutral act is to refuse the
+        container too -- and that is a ruling to make, not one for a tool to take.
+
+        HOW MUCH to exclude is unruled as well, which is the second reason this stops here: whether
+        the declaration line belongs to the container is part of the same open question, so even
+        "exclude it" does not name one number.
 
         Class and file spans come from ClassSpanReader; the other three are parsed. The two original
         rows were deliberately not moved onto the parser — they are ruled, tested and already quoted,
