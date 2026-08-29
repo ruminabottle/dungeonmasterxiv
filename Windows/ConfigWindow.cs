@@ -179,10 +179,6 @@ public sealed class ConfigWindow : Window
         // 32-character Devanagari name is 192 bytes and would have been truncated at the boundary
         // this box exists to let the user cross deliberately.
         var campaign = _currentCampaign();
-        // The SQ-87 carried-over default is OFFERED here and reaches the wire only if the player
-        // leaves or edits it and RecordChosen stores it against this campaign. CampaignDisplayName.Or
-        // below has no overload that can see it, so a name the player never accepted cannot be sent
-        // (A-2.32, A-2.33).
         var typed = CampaignDisplayName.ToEdit(campaign, settings.DisplayNameAlias, characterName);
         if (ImGui.InputText("Name others see", ref typed, DisplayName.MaxUtf8Bytes))
         {
