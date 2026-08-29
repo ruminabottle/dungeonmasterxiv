@@ -40,6 +40,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly SessionWindow _sessionWindow;
     private readonly WebSocketSessionTransport _relayTransport;
     private readonly SessionCoordinator _sessionCoordinator;
+    private readonly HostingCampaign _hostingCampaign;
     private readonly CampaignListWindow _campaignListWindow;
     private readonly CommandDispatcher _commandDispatcher;
 
@@ -84,9 +85,14 @@ public sealed class Plugin : IDalamudPlugin
         // lives in PluginSettings so it is testable without Dalamud, and the settings window calls
         // the same method to show what will be sent -- one expression, so the preview cannot drift
         // from the thing it previews.
+        // The connection that did not exist until DMXENG-48: the store and the coordinator were both
+        // built here and never joined, so no session had a campaign and AddParticipant had no
+        // production caller at all.
+        _hostingCampaign = new HostingCampaign(_campaignStore);
         _sessionWindow = new SessionWindow(
             _sessionCoordinator,
-            () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName()));
+            () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName()),
+            _hostingCampaign);
         _mainWindow.OpenSession = _sessionWindow.Open;
         _campaignListWindow = new CampaignListWindow(_campaignStore);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);

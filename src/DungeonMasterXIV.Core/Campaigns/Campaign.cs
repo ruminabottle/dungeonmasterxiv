@@ -35,6 +35,19 @@ public sealed class Campaign
     /// </summary>
     public string? PreferredCode { get; set; }
 
+    /// <summary>
+    /// What the DM calls this campaign, or null when they have never renamed it (A-1.9k, R-1.5d).
+    /// </summary>
+    /// <remarks>
+    /// <b>Null is the ordinary case, not a missing value.</b> A campaign nobody has renamed shows an
+    /// automatic name composed from <see cref="CreatedUtc"/> at display time — see
+    /// <see cref="CampaignName"/> — so this field exists to hold a RENAME rather than to be
+    /// populated at creation. That is what makes the field additive: every campaign written by an
+    /// older build reads back with null here and still displays correctly, so nothing is backfilled
+    /// and <c>CurrentSchemaVersion</c> does not move.
+    /// </remarks>
+    public string? Name { get; set; }
+
     /// <summary>Everyone the DM has admitted to this campaign, with their campaign-scoped UUIDs.</summary>
     public List<CampaignParticipant> Participants { get; set; } = new();
 

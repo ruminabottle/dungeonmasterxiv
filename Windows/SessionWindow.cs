@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
@@ -28,6 +29,12 @@ public sealed class SessionWindow : Window
 
     private readonly SessionCoordinator _coordinator;
 
+    /// <summary>Which campaign the hosted session belongs to (A-1.9i). Told when hosting starts and ends.</summary>
+    private readonly HostingCampaign _hosting;
+
+    /// <summary>The resume offer beside the host button. Its own surface; see <see cref="HostCampaignPicker"/>.</summary>
+    private readonly HostCampaignPicker _campaignPicker;
+
     /// <summary>The DM's pending-request prompts. Its own surface; see <see cref="AdmissionPromptView"/>.</summary>
     private readonly AdmissionPromptView _admissionPrompts;
 
@@ -36,11 +43,17 @@ public sealed class SessionWindow : Window
 
     /// <param name="coordinator">The session layer this window reflects.</param>
     /// <param name="displayName">What to call ourselves when joining (R-1.3e). Asked each time.</param>
-    public SessionWindow(SessionCoordinator coordinator, Func<DisplayName> displayName)
+    /// <param name="hosting">
+    /// Which campaign a hosted session belongs to (A-1.9i). Settled when hosting starts, forgotten
+    /// when it ends, and never asked about first — hosting is one action.
+    /// </param>
+    public SessionWindow(SessionCoordinator coordinator, Func<DisplayName> displayName, HostingCampaign hosting)
         : base("Dungeon Master XIV session###dmx-session")
     {
         _coordinator = coordinator;
         _admissionPrompts = new AdmissionPromptView(coordinator);
+        _hosting = hosting;
+        _campaignPicker = new HostCampaignPicker(hosting);
         _joinFlow = new JoinFlowView(coordinator, displayName);
         SizeConstraints = new WindowSizeConstraints
         {
@@ -127,6 +140,10 @@ public sealed class SessionWindow : Window
             if (ImGui.Button("End session"))
             {
                 _coordinator.StopHosting();
+
+                // The ASSOCIATION ends; the campaign does not. R-1.6 keeps participants on the DM's
+                // machine, so a session ending must not take them with it.
+                _hosting.Ended();
             }
 
             return;
@@ -143,8 +160,15 @@ public sealed class SessionWindow : Window
         // exists to remove.
         if (!InAJoinedSession())
         {
+            // A-1.9j: the resume offer sits BEFORE the button and never gates it. Drawn only when
+            // there is something to resume, so a first run stays one action.
+            _campaignPicker.Draw();
+
             if (ImGui.Button("Start session"))
             {
+                // A-1.9i: settled BEFORE hosting starts and without asking anything, so the session
+                // has a campaign from its first frame rather than acquiring one later.
+                _hosting.StartFor();
                 _coordinator.StartHosting();
             }
         }
