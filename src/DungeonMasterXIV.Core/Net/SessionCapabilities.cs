@@ -24,7 +24,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>The log was considered for this record and deliberately left out, which is worth knowing
 /// because it is the obvious way to reach four.</b> Moving it would take the constructor from five
-/// to four — under the flag rather than merely under the block — and the reason not to is in its
+/// to four — AT the flag rather than merely clear of the block — and the reason not to is in its
 /// type name: <see cref="ISessionTransportLog"/> is the TRANSPORT's log, a sibling of
 /// <see cref="ISessionTransport"/>, and the two are passed together for the same reason. Grouping it
 /// with keys and campaigns would have been a grouping chosen for its arithmetic. <b>Five is over the
@@ -39,8 +39,10 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>FOUR MEMBERS IS AT THE PARAMETER FLAG, AND THE REASON IS REQUIRED RATHER THAN OPTIONAL.</b>
-/// The standing ruling is that a façade between flag (4) and block (6) is compliant <i>with the
-/// reason stated</i>, so here it is: <b>these are not four accumulated favours, they are one
+/// <c>engineering-standards.md:13185</c> rules that the table is authoritative and <i>"at 4 you
+/// flag"</i> — the tool's strict <c>&gt;</c> was one step loose and is the defect, so four is
+/// flagged rather than silent. A façade between flag and block is compliant <i>with the reason
+/// stated</i>, so here it is: <b>these are not four accumulated favours, they are one
 /// concept enumerated.</b> Each is a thing Core is asked to have done because it cannot do it —
 /// make a key pair, name the host, mint a participant, resolve a claimed one. Nothing here is a
 /// value Core reads; every member is something Core CALLS. A fifth that fits that sentence belongs
