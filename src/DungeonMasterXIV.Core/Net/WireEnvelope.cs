@@ -82,6 +82,21 @@ public sealed record WireEnvelope
     public string? ClaimedParticipantId { get; private init; }
 
     /// <summary>
+    /// The participant the host created for this joiner, on
+    /// <see cref="WireMessageType.JoinAccepted"/> (R-1.5c). Null means none was created.
+    /// </summary>
+    /// <remarks>
+    /// <b>The host's ANSWER, and a separate field from <see cref="ClaimedParticipantId"/> because
+    /// that one is the joiner's CLAIM travelling the other way</b> — one field for both would leave
+    /// DIRECTION as the only thing telling them apart, and the wire does not carry direction. D-3:
+    /// a participant's roster identity is shared state, so the joiner cannot mint it. <b>It is not a
+    /// credential</b> (relink is DM-approved every time), and it is <b>read through
+    /// <see cref="ParticipantReceipt"/>, never directly</b> — that is where the type, the
+    /// addressee and the parse are checked.
+    /// </remarks>
+    public string? ParticipantId { get; private init; }
+
+    /// <summary>
     /// The envelope metadata a payload is bound to: the session it belongs to and what kind of
     /// message it is. Authenticated by <see cref="SessionCipher"/> but never transmitted — the
     /// receiver rebuilds it from the envelope in front of it, so a re-framed payload fails its tag
@@ -208,13 +223,32 @@ public sealed record WireEnvelope
             DeadlineUtcTicks = wire.DeadlineUtcTicks,
             DisplayName = wire.DisplayName,
             ClaimedParticipantId = wire.ClaimedParticipantId,
+            ParticipantId = wire.ParticipantId,
         };
 
     /// <summary>
     /// Host admits a joiner. Carries <b>two</b> keys: the joiner's, echoed so they know which
     /// request this answers, and the host's, without which the joiner can derive no shared key.
     /// </summary>
-    public static WireEnvelope ForJoinAccepted(SessionCode code, byte[] joinerPublicKey, byte[] hostPublicKey)
+    /// <param name="code">The session being joined.</param>
+    /// <param name="joinerPublicKey">Echoed so the joiner knows which request this answers.</param>
+    /// <param name="hostPublicKey">Without which the joiner can derive no shared key.</param>
+    /// <param name="participantId">
+    /// The participant the host created for this joiner (R-1.5c), or null if none was.
+    /// <para>
+    /// <b>THIS ENVELOPE IS THE CARRIER BECAUSE OF A ROUTING PROPERTY, NOT FOR CONVENIENCE.</b> The
+    /// relay forwards an acceptance as <c>Forward(JoinerAdmitted, [admitted])</c> — a
+    /// <b>single-element</b> recipient list — so R-1.5c's <i>only to the joiner it belongs to</i>
+    /// and <i>after admission, never before</i> hold <b>by construction</b>. A new message type
+    /// would need both re-established by routing rules editable apart from the requirement.
+    /// Optional, and D-14 makes that safe: a build that has never heard of it decodes unchanged.
+    /// </para>
+    /// </param>
+    public static WireEnvelope ForJoinAccepted(
+        SessionCode code,
+        byte[] joinerPublicKey,
+        byte[] hostPublicKey,
+        Guid? participantId = null)
     {
         ArgumentNullException.ThrowIfNull(joinerPublicKey);
         ArgumentNullException.ThrowIfNull(hostPublicKey);
@@ -222,6 +256,7 @@ public sealed record WireEnvelope
         {
             PublicKey = joinerPublicKey,
             HostPublicKey = hostPublicKey,
+            ParticipantId = participantId?.ToString("D"),
         };
     }
 
@@ -297,19 +332,6 @@ public sealed record WireEnvelope
     }
 
     /// <summary>
-    /// The host's public key offered <b>before</b> a decision, or null if this envelope is not a
-    /// pending notice.
-    /// </summary>
-    /// <remarks>
-    /// Deliberately separate from <see cref="TryGetAdmissionOutcome"/> and deliberately not an
-    /// <see cref="AdmissionOutcome"/>: this message carries no decision, and folding it into the
-    /// outcome vocabulary would let a consumer treat "the DM is looking at your request" as an
-    /// answer. The distinction is the whole requirement.
-    /// </remarks>
-    public byte[]? TryGetPendingHostKey() =>
-        Type == WireMessageType.JoinPending ? HostPublicKey : null;
-
-    /// <summary>
     /// Joiner to host: this client holds the host's key and can render a fingerprint (R-1.3a-iii).
     /// </summary>
     /// <remarks>
@@ -328,88 +350,4 @@ public sealed record WireEnvelope
         };
     }
 
-    /// <summary>
-    /// The joiner's key from a fingerprint receipt, or null if this is not one.
-    /// </summary>
-    /// <remarks>
-    /// Deliberately not folded into <see cref="TryGetAdmissionOutcome"/>: this decides nothing about
-    /// the admission, and a consumer that could read it as an outcome would be reading a capability
-    /// as an answer.
-    /// </remarks>
-    public byte[]? TryGetFingerprintReceiptKey() =>
-        Type == WireMessageType.JoinerHoldsFingerprint ? PublicKey : null;
-
-    /// <summary>
-    /// The admission outcome this envelope expresses <b>for the client whose key is
-    /// <paramref name="ownPublicKey"/></b>, or null if it is not an admission answer or is not
-    /// addressed to that client. Consumers go through <see cref="AdmissionOutcome.Match{T}"/>, so none can drop a case.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>BUG-85 (D-11): every admission answer is addressed, and nothing read the address.</b> All
-    /// three carry the joiner's key so it can be matched to an attempt, and this returned an outcome
-    /// without looking — so a client could reach <c>Admitted</c>, with a derived key, on an
-    /// acceptance meant for somebody else. An honest relay resolves the addressee and forwards to it
-    /// alone, so a mis-addressed answer arrives from the relay position D-11 assumes an attacker may
-    /// hold.
-    /// </para>
-    /// <para>
-    /// <b>All three arms, and the reported one is the least exposed:</b> <c>Admitted()</c> has a
-    /// phase guard that narrows it to a joiner already awaiting a decision, while <c>Denied()</c> and
-    /// <c>Lapsed()</c> have none. Guarding only what was reported is the shape BUG-56 rejects, and
-    /// here it would have left the two EASIER arms open.
-    /// </para>
-    /// <para>
-    /// <b>Dropped, not failed — the opposite of the ruling one arm inward, deliberately.</b>
-    /// <c>AdmissionInbox</c> FAILS an unusable acceptance (BUG-59) because nothing lapses a joiner
-    /// locally, so dropping would leave it awaiting an answer that already came. That turns on the
-    /// answer being THIS CLIENT'S. Somebody else's says nothing about this attempt — the host may
-    /// still be deciding, so remaining in <c>AwaitingDecision</c> is the true state. Failing would
-    /// also let anyone who can post a frame end any joiner's attempt by naming a stranger, which
-    /// makes dropping a correctness question rather than a preference between two safe answers.
-    /// </para>
-    /// <para>
-    /// <b>Fixed-time, and required rather than defaulted.</b> The comparison matches
-    /// <c>ParticipantReceipt.TryRead</c> — the framework primitive used directly, because wrapping it
-    /// would be a second helper for one comparison. Required because any default would be "refuse
-    /// everything" or "check nothing", and both are answers a caller should give on purpose.
-    /// </para>
-    /// </remarks>
-    /// <param name="ownPublicKey">This client's own join key. Null is not addressable, so it decides
-    /// nothing.</param>
-    public AdmissionOutcome? TryGetAdmissionOutcome(byte[]? ownPublicKey)
-    {
-        // The type arms are UNCHANGED and the address is checked on their RESULT, not ahead of them.
-        // Gating first would make "not an answer" and "not my answer" the same null, so the tests
-        // pinning the first would start passing for the second while still claiming the first. It
-        // also means an arm added later inherits the check rather than having to remember it.
-        var outcome = Type switch
-        {
-            WireMessageType.JoinAccepted when HostPublicKey is not null => AdmissionOutcome.Accepted(HostPublicKey),
-            WireMessageType.JoinDenied => AdmissionOutcome.Denied(),
-            WireMessageType.JoinLapsed => AdmissionOutcome.Lapsed(),
-            _ => null,
-        };
-
-        return outcome is not null && IsAddressedTo(ownPublicKey) ? outcome : null;
-    }
-
-    /// <summary>Whether this envelope names <paramref name="ownPublicKey"/> as its addressee.</summary>
-    private bool IsAddressedTo(byte[]? ownPublicKey) =>
-        PublicKey is { } addressee
-        && ownPublicKey is not null
-        && CryptographicOperations.FixedTimeEquals(addressee, ownPublicKey);
-
-    /// <summary>The admission deadline carried here, if any.</summary>
-    public AdmissionDeadline? TryGetDeadline() =>
-        DeadlineUtcTicks is { } ticks ? AdmissionDeadline.TryFromWire(ticks) : null;
-
-    /// <summary>
-    /// Recovers the sealed payload from a received envelope, or null if this is not a payload
-    /// message or arrived without the fields one needs.
-    /// </summary>
-    public SealedPayload? TryGetSealedPayload() =>
-        Type == WireMessageType.SessionPayload && Nonce is not null && Payload is not null
-            ? SealedPayload.FromWire(Nonce, Payload)
-            : null;
 }

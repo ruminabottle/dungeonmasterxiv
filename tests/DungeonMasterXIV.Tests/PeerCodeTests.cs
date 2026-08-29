@@ -66,7 +66,11 @@ public sealed class PeerCodeTests
         var control = new AdmissionControl(
             new AdmissionAnnouncer(new SilentTransport()),
             () => SessionCode.FromValid("BKD7RM"),
-            () => null);
+            () => null,
+            // PeerCodeFor mints nothing and sends nothing; both exist only to satisfy the
+            // constructor, so they do nothing rather than pretending to.
+            static _ => null,
+            new SilentLog());
 
         var generated = control.PeerCodeFor(Encoding.UTF8.GetBytes("a joiner's public key"));
 
@@ -83,7 +87,11 @@ public sealed class PeerCodeTests
         var control = new AdmissionControl(
             new AdmissionAnnouncer(new SilentTransport()),
             () => SessionCode.FromValid("BKD7RM"),
-            () => null);
+            () => null,
+            // PeerCodeFor mints nothing and sends nothing; both exist only to satisfy the
+            // constructor, so they do nothing rather than pretending to.
+            static _ => null,
+            new SilentLog());
 
         var codes = Enumerable.Range(0, 32)
             .Select(i => control.PeerCodeFor(Encoding.UTF8.GetBytes($"joiner {i}")))

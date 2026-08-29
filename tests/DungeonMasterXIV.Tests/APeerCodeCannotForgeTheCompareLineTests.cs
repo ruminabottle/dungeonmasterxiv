@@ -81,7 +81,9 @@ public class APeerCodeCannotForgeTheCompareLineTests
         new AdmissionControl(
                 new AdmissionAnnouncer(new SilentTransport()),
                 () => SessionCode.FromValid("BKD7RM"),
-                () => null)
+                () => null,
+                static _ => null,
+                new SilentLog())
             .PeerCodeFor(Encoding.UTF8.GetBytes("a joiner's public key"))
             .Value;
 

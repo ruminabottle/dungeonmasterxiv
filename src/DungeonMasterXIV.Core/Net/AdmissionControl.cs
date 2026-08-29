@@ -32,20 +32,59 @@ namespace DungeonMasterXIV.Net;
 public sealed class AdmissionControl
 {
     private readonly AdmissionAnnouncer _announcer;
+    private readonly Func<DisplayName, Guid?> _mintParticipant;
+    private readonly ISessionTransportLog _log;
     private readonly Func<SessionCode?> _hostCode;
     private readonly Func<SessionKeyExchange?> _hostKeys;
 
     /// <param name="announcer">How answers reach a joiner. Owned by the caller.</param>
     /// <param name="hostCode">The session being hosted, read at each use rather than captured.</param>
     /// <param name="hostKeys">The host's ephemeral key pair, read at each use rather than captured.</param>
+    /// <param name="mintParticipant">
+    /// Creates a participant in the running campaign for a joiner about to be admitted, and returns
+    /// its id (R-1.5c half 1). Returns null when there is no campaign to create one in.
+    /// <para>
+    /// <b>A DELEGATE RATHER THAN THE CAMPAIGN ITSELF, and the reason is not layering.</b> This type
+    /// decides admissions; which campaign a session belongs to is settled elsewhere and can change
+    /// under it. Taking a function keeps the question <i>who is joining what</i> answerable at the
+    /// moment of admission rather than at construction — the same reason
+    /// <paramref name="hostCode"/> is a function, and the same reason DMXENG-45 exists.
+    /// </para>
+    /// <para>
+    /// <b>REQUIRED here and OPTIONAL on <see cref="SessionCoordinator"/>, which is not an
+    /// inconsistency.</b> This type runs only on a host, so "no minter" is always a defect at this
+    /// level. The coordinator is constructed by JOINING clients too — they host nothing, have no
+    /// campaign, and would have to pass a meaningless delegate to satisfy a required parameter,
+    /// across 23 files, to express a fact that is false for most of them.
+    /// </para>
+    /// <para>
+    /// <b>So the silence is closed HERE, where the fact is knowable</b>: <see cref="Admit"/> warns
+    /// on every admission that produced no participant, naming the peer code. A host wired without a
+    /// minter is loud rather than quiet — which is the property the coordinator's <c>log</c>
+    /// reasoning is actually protecting, reached by a different route.
+    /// </para>
+    /// </param>
+    /// <param name="log">
+    /// Where a joiner admitted <b>without</b> a participant is reported. <b>Required, not optional
+    /// with a null default</b> — this is the exact shape PR #86's finding 5 was: a real loss that
+    /// nobody was told about, surviving because the code that dropped it was under no obligation to
+    /// speak.
+    /// </param>
     public AdmissionControl(
         AdmissionAnnouncer announcer,
         Func<SessionCode?> hostCode,
-        Func<SessionKeyExchange?> hostKeys)
+        Func<SessionKeyExchange?> hostKeys,
+        Func<DisplayName, Guid?> mintParticipant,
+        ISessionTransportLog log)
     {
+        ArgumentNullException.ThrowIfNull(mintParticipant);
+        ArgumentNullException.ThrowIfNull(log);
+
         _announcer = announcer;
         _hostCode = hostCode;
         _hostKeys = hostKeys;
+        _mintParticipant = mintParticipant;
+        _log = log;
     }
 
     /// <summary>Who may receive session state. See <see cref="SessionAudience"/> for the D-13 levels.</summary>
@@ -196,9 +235,33 @@ public sealed class AdmissionControl
             request?.JoinerPublicKey,
             request?.DisplayName ?? DisplayName.None);
 
+        // MINTED BEFORE THE ANSWER IS SENT, because the answer is what carries it (R-1.5c). The two
+        // halves fail separately as requirements and cannot ship separately as work: an id nobody is
+        // told is a wire whose middle does not exist, and a carrier with nothing to carry conveys
+        // nothing. Both happen here, in that order, or neither does.
+        //
+        // THE NAME IS A LABEL AND NOTHING RESTS ON IT. It is self-declared (R-1.3e) and two joiners
+        // may send the same one (A-1.2d); it exists so the DM can read its own roster later. The
+        // participant is identified by its UUID, which this client mints and the joiner never
+        // originates -- D-3, since a participant's roster identity is shared state.
+        var participantId = _mintParticipant(peer.DisplayName);
+
         if (_hostCode() is { } code && _hostKeys() is { } hostKeys && request?.JoinerPublicKey is { } joinerKey)
         {
-            _announcer.Accepted(code, joinerKey, hostKeys.PublicKey);
+            _announcer.Accepted(code, joinerKey, hostKeys.PublicKey, participantId);
+        }
+
+        // A REAL LOSS, REPORTED RATHER THAN PASSED OVER -- PR #86's finding 5 in a new place. An
+        // admitted player with no participant can never relink to this campaign: next session the
+        // DM sees a stranger and approves them fresh, and NOTHING anywhere would have said why. The
+        // peer code names WHICH person, because two may share a display name (A-1.2d) and D-8 keeps
+        // a character name out of a log.
+        if (participantId is null)
+        {
+            _log.Warning(
+                $"Admitted {peerCode} without creating a participant, so this session has no "
+                + "campaign to record them in. They will not be able to relink and will be a new "
+                + "request next time.");
         }
 
         return peer;

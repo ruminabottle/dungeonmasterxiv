@@ -50,8 +50,20 @@ public sealed class AdmissionAnnouncer
     /// the host's is the half they cannot obtain any other way. Omitting the host's key admits
     /// somebody who is routed and permanently unable to decrypt, which reads as an encryption bug.
     /// </remarks>
-    public void Accepted(SessionCode code, byte[] joinerPublicKey, byte[] hostPublicKey) =>
-        Send(WireEnvelope.ForJoinAccepted(code, joinerPublicKey, hostPublicKey));
+    /// <param name="code">The session being joined.</param>
+    /// <param name="joinerPublicKey">Echoed so the joiner knows which request this answers.</param>
+    /// <param name="hostPublicKey">Without which the joiner can derive no shared key.</param>
+    /// <param name="participantId">
+    /// The participant the host created for this joiner (R-1.5c), or null if none was. Null is an
+    /// ordinary outcome, not an error — it is what a session with no campaign wired looks like, and
+    /// <see cref="AdmissionControl"/> reports it rather than letting it pass in silence.
+    /// </param>
+    public void Accepted(
+        SessionCode code,
+        byte[] joinerPublicKey,
+        byte[] hostPublicKey,
+        Guid? participantId = null) =>
+        Send(WireEnvelope.ForJoinAccepted(code, joinerPublicKey, hostPublicKey, participantId));
 
     /// <summary>
     /// Tells a joiner they were refused (R-1.3b).

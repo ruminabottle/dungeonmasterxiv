@@ -102,17 +102,34 @@ public sealed class CampaignStore
     /// <param name="campaignId">The campaign they played in.</param>
     /// <param name="label">What the DM calls them locally. May be a character name; never logged.</param>
     /// <remarks>
-    /// <b>UNCALLED IN PRODUCTION ON PURPOSE, and that is A-1.9m rather than an oversight.</b> An
-    /// empty roster is the CORRECT state today: this appends unconditionally with a fresh id, and
-    /// there is no durable joiner identity to de-duplicate on — the joiner is never told its
-    /// <see cref="CampaignParticipant.ParticipantId"/>, its keys are regenerated every join, and its
-    /// peer code is derived from two per-session inputs. So wiring this to admission would record
-    /// one person once per session and <see cref="Save"/> the result, putting phantom participants
-    /// on the DM's disk that no later migration can disentangle.
     /// <para>
-    /// It becomes callable when a returning client can present a claim — R-1.5c's conveyance, then
-    /// the joiner storing it. <b>Until then this looks exactly like an oversight, which is why the
-    /// prohibition is a criterion and this remark exists.</b>
+    /// <b>CALLED FROM ADMISSION SINCE R-1.5c, AND A-1.9f REQUIRES THAT.</b> <c>AdmissionControl</c>
+    /// mints one participant per admitted joiner, wired at <c>Plugin.cs</c>. This remark previously
+    /// said the method was <i>"uncalled in production on purpose"</i>; that is no longer true, and a
+    /// change which falsifies a comment owns the comment.
+    /// </para>
+    /// <para>
+    /// <b>AND THE OLD REMARK MIS-CITED THE CRITERION IT NAMED, which is why the reference is kept
+    /// and corrected rather than deleted.</b> It read A-1.9m as forbidding production callers at
+    /// large. <b>A-1.9m is narrower</b> — <i>"no participant is minted to populate a RESUMED
+    /// CAMPAIGN'S ROSTER … a build that creates participants AT THE PICKER fails"</i> — and it is
+    /// <b>still live and still unviolated</b>: nothing here is called from the picker, and a resumed
+    /// campaign's roster stays empty and honest. The broader prohibition was never a criterion, and
+    /// A-1.9f in the same table requires the opposite for admission: <i>"AddParticipant having zero
+    /// production callers FAILS this."</i>
+    /// </para>
+    /// <para>
+    /// <b>THE HARM THE OLD REMARK NAMED IS REAL AND IS NOT FIXED.</b> This still appends
+    /// unconditionally with a fresh id and <see cref="Save"/>s, so a person admitted on Monday and
+    /// again on Tuesday becomes TWO participants: <b>the roster counts admissions, not people</b>,
+    /// and the duplicates reach the DM's disk permanently — nothing records which of them were one
+    /// person, so no later migration can disentangle them.
+    /// </para>
+    /// <para>
+    /// <b>De-duplication needs a durable joiner identity, which does not exist yet.</b> R-1.5c
+    /// conveys the id to the joiner but <b>A-1.9g is RED</b>: the receipt is in memory and dies at
+    /// exit, so a returning client has nothing to present. It goes green when the joiner retains it
+    /// across a restart, and only then can this method match a returning person to an existing row.
     /// </para>
     /// </remarks>
     public CampaignParticipant? AddParticipant(Guid campaignId, string label)
