@@ -69,6 +69,16 @@ public class EveryDecodedMemberHasAVettingDecisionTests
                 "Rebuilt. Vetted filters the list and returns a new SessionContent, so no entry "
                 + "reaches a caller without passing the arms below. Null is returned untouched.",
 
+            ["SessionContent.ClosingAtUtcTicks"] =
+                "CARRIED THROUGH UNCHANGED (SessionContentCodec: "
+                + "ClosingAtUtcTicks = content.ClosingAtUtcTicks). A long?, so it cannot carry text "
+                + "and cannot forge a line — the same argument Role carries. NOTHING CONSUMES IT "
+                + "YET: the only other reference in the tree is the producer in RosterBroadcast, so "
+                + "no consumer can be handed an out-of-range tick count today. WHEN THE JOINER-SIDE "
+                + "HANDLING LANDS, whoever turns these ticks into a DateTimeOffset has to decide "
+                + "what an out-of-range value does, and THIS ENTRY IS WHERE THAT DECISION BELONGS. "
+                + "Recorded as pending rather than ticked off (DMXENG-11, #143).",
+
             ["RosterEntry.PeerCode"] =
                 "The whole entry is DROPPED unless PeerCode.TryParse accepts it. Nothing is "
                 + "repaired: the roster is host-authored and sealed, so a malformed code means our "
