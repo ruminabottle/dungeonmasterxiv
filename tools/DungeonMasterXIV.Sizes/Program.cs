@@ -128,13 +128,15 @@ foreach (var path in args)
         if (member.Parameters > ParameterFlag)
         {
             notes.Add($"{member.Parameters} parameters "
-                + (member.Parameters > ParameterBlock ? "OVER THE BLOCK" : "over the flag"));
+                + (member.Parameters > ParameterBlock ? "OVER THE BLOCK" : "over the flag")
+                + $", margin {ParameterBlock - member.Parameters}");
         }
 
         if (member.Depth > NestingFlag)
         {
             notes.Add($"nesting {member.Depth} "
-                + (member.Depth > NestingBlock ? "OVER THE BLOCK" : "over the flag"));
+                + (member.Depth > NestingBlock ? "OVER THE BLOCK" : "over the flag")
+                + $", margin {NestingBlock - member.Depth}");
         }
 
         if (notes.Count > 0)
