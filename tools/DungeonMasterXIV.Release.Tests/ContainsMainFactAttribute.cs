@@ -96,7 +96,19 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         //
         // That is the one sentence the three outcomes exist to make impossible -- "could not
         // validate" reported as "clean" -- arriving through the check meant to prevent it.
-        var (remoteCode, remote, remoteErrors) = Git("ls-remote origin refs/heads/main");
+        var (remoteCode, remote, remoteErrors, remoteTimedOut) =
+            Git("ls-remote origin refs/heads/main", RemoteTimeout);
+
+        // UNREACHABLE AND UNRESPONSIVE ARE DIFFERENT FACTS AND GET DIFFERENT REASONS (BUG-126). A
+        // refused connection returns at once because the host sends RST; a DROPPED one sends
+        // nothing, so the wait below is the only thing that ends it. Checked BEFORE the exit-code
+        // arm so the timeout cannot be reported as "could not reach origin", which is the other
+        // arm's fact and would name a cause this check did not observe.
+        if (remoteTimedOut)
+        {
+            return (false, TimedOutDetail);
+        }
+
         var remoteHead = remote.Split('\t')[0].Trim();
 
         // ASKING COSTS A NETWORK CALL AND NOT ASKING COSTS THE GUARANTEE. `ls-remote` reads the
@@ -110,7 +122,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
                 + $"this check has not validated. ({remoteErrors.Trim()})");
         }
 
-        var (cachedCode, cached, _) = Git("rev-parse refs/remotes/origin/main");
+        var (cachedCode, cached, _, _) = Git("rev-parse refs/remotes/origin/main");
         var cachedHead = cached.Trim();
 
         if (cachedCode != 0 || cachedHead.Length == 0)
@@ -125,7 +137,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
                 + "this reports rather than a result. Fetch and re-run.");
         }
 
-        var (code, output, errors) = Git("merge-base --is-ancestor origin/main HEAD");
+        var (code, output, errors, _) = Git("merge-base --is-ancestor origin/main HEAD");
 
         // Exit 0 = ancestor, 1 = not. Anything else is git failing, and a git failure must not be
         // read as "contained" -- that would resurrect the green this whole attribute exists to stop.
@@ -137,9 +149,74 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         };
     });
 
+    /// <summary>How long origin gets to answer the currency check before the gate stops waiting.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>TEN SECONDS, AND THE NUMBER IS THE CODEBASE'S OWN.</b> <c>JoinAttempt.ContactTimeout</c>
+    /// and <c>HostSession.RegistrationTimeout</c> are both ten seconds, and both answer the same
+    /// question this one does — how long a remote party gets to respond before we stop waiting.
+    /// </para>
+    /// <para>
+    /// <b>Generous on purpose, because the two errors are not symmetric.</b> A reachable origin
+    /// answers in about a second (measured twice, independently). Timing out too eagerly produces a
+    /// SKIP, and a skip blocks the merge gate — so a false one costs an engineer a merge, on a
+    /// network that was merely slow. Waiting too long costs ten seconds, and only ever on a run
+    /// where the network is already broken. The healthy path never pays it.
+    /// </para>
+    /// </remarks>
+    internal static readonly TimeSpan RemoteTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>The exit code reported when git was killed for exceeding its bound.</summary>
+    /// <remarks>
+    /// Distinct from any code git returns itself, so a timeout cannot be mistaken for git having
+    /// answered. Callers should branch on <c>TimedOut</c> rather than on this value.
+    /// </remarks>
+    internal const int TimedOutCode = -1;
+
+    /// <summary>Why the gate could not run when origin was reached but never replied.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>IT MUST NOT SAY ORIGIN COULD NOT BE REACHED, because origin WAS reached.</b> The
+    /// connection was accepted and then nothing came back, which is a different fact with a
+    /// different cause — a VPN, proxy or DNS sink rather than being offline — and pointing a reader
+    /// at the wrong one costs them the time it takes to disprove it. Naming a cause the check did
+    /// not observe is BUG-125's whole subject.
+    /// </para>
+    /// <para>
+    /// Extracted for the same reason <see cref="SkippedDisplayName"/> is: a test can hold this
+    /// without needing an unresponsive network to exist.
+    /// </para>
+    /// </remarks>
+    internal static string TimedOutDetail =>
+        $"origin was reached but did not answer within {RemoteTimeout.TotalSeconds:F0}s, so whether "
+        + "the cached origin/main is current could not be established and a pass here would "
+        + "describe a tree this check has not validated. This is a responsive-network problem "
+        + "rather than an offline one -- a VPN, proxy or DNS sink will do it.";
+
     private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
 
-    private static (int Code, string Output, string Errors) Git(string arguments)
+    /// <summary>
+    /// Runs git, optionally refusing to wait longer than <paramref name="bound"/> for it to answer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE READS ARE ASYNCHRONOUS BECAUSE A SYNCHRONOUS ONE BLOCKS BEFORE ANY TIMEOUT IS
+    /// CONSULTED.</b> <c>ReadToEnd()</c> returns only at end of stream, and a hung child holds its
+    /// pipe open — so the read, which runs first, is where an unresponsive origin actually stops.
+    /// Measured: against a socket that accepts and never answers, <c>ReadToEnd()</c> was still
+    /// blocked after 6s while <c>WaitForExit(1s)</c> returned false. <b>Bounding only
+    /// <c>WaitForExit</c> would read as a fix and still hang</b>, because control never reaches it.
+    /// </para>
+    /// <para>
+    /// Killing the tree is what releases the reads: closing the pipes is what ends them, and git
+    /// delegates to a transport helper that holds the socket, so killing only the parent leaves the
+    /// child holding it open.
+    /// </para>
+    /// </remarks>
+    /// <param name="arguments">The git command line.</param>
+    /// <param name="bound">How long to wait, or null to wait indefinitely as local calls do.</param>
+    internal static (int Code, string Output, string Errors, bool TimedOut) Git(
+        string arguments, TimeSpan? bound = null)
     {
         using var git = Process.Start(new ProcessStartInfo("git", arguments)
         {
@@ -148,9 +225,20 @@ public sealed class ContainsMainFactAttribute : FactAttribute
             RedirectStandardError = true,
         }) ?? throw new InvalidOperationException("git did not start");
 
-        var output = git.StandardOutput.ReadToEnd();
-        var errors = git.StandardError.ReadToEnd();
+        var output = git.StandardOutput.ReadToEndAsync();
+        var errors = git.StandardError.ReadToEndAsync();
+
+        if (bound is { } limit && !git.WaitForExit((int)limit.TotalMilliseconds))
+        {
+            git.Kill(entireProcessTree: true);
+
+            // Bounded again on purpose: the timeout path must contain no unbounded wait, or the
+            // fix reintroduces the defect on the one path that exists because waiting went wrong.
+            git.WaitForExit((int)limit.TotalMilliseconds);
+            return (TimedOutCode, string.Empty, string.Empty, true);
+        }
+
         git.WaitForExit();
-        return (git.ExitCode, output, errors);
+        return (git.ExitCode, output.Result, errors.Result, false);
     }
 }
