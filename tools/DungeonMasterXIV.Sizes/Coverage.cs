@@ -57,27 +57,23 @@ public static class Coverage
           Nesting depth   {nesting.Flag,4}   {nesting.Block,5}   yes — control flow only; a lambda resets the baseline
 
         NOT MEASURED, AND SAYING SO IS THE POINT: property, indexer and event accessors are outside
-        the method and nesting rows, because whether an accessor body is a "method" is unruled. A
-        local function is refused BY NAME for the same reason.
+        the method and nesting rows, because whether an accessor body is a "method" is unruled.
 
-        BUT ITS BODY STILL COUNTS TOWARD ITS CONTAINER (BUG-94), AND YOU CAN CHECK THAT IN ONE RUN:
-        put a local function in a method whose own body is a declaration and a return, vary ONLY the
-        nesting inside the local function, and the CONTAINER's number moves with it. So a container
-        holding a local function carries a number that depends on the unruled question, printed a
-        few lines below this paragraph. This used to read "rather than folded into its container",
-        which was false, and it was false in the tool whose subject is instruments claiming more
-        than they deliver.
+        A LOCAL FUNCTION IS NOW MEASURED, AND IT USED TO BE REFUSED (BUG-94). It is its own member
+        for both rows, and the two rows behave DIFFERENTLY on purpose:
 
-        EXCLUDING IT WOULD ALSO ANSWER THE QUESTION, which is why this says so instead of fixing it.
-        Measured on one probe whose container body never changed: flat contents and the container is
-        not reported at all; six levels inside the local function and it reads nesting 6; seventy
-        statements inside it and it reads 79 lines. A container's number is therefore one reading or
-        the other, and excluding is as much an answer as folding. The neutral act is to refuse the
-        container too -- and that is a ruling to make, not one for a tool to take.
+          LENGTH  counts TWICE. A member's span runs from its declaration to its closing brace with
+                  nothing excluded, so the container's span includes the local function's lines and
+                  the local function has its own span as well. Nested types already count twice.
+          NESTING counts ONCE, on the local function's own row. Its control flow does not reach its
+                  container, so a container whose own body is flat reads flat.
 
-        HOW MUCH to exclude is unruled as well, which is the second reason this stops here: whether
-        the declaration line belongs to the container is part of the same open question, so even
-        "exclude it" does not name one number.
+        CHECK BOTH IN ONE RUN: put a local function in a method whose own body is a declaration and
+        a return, and vary only the nesting inside the local function. The LOCAL FUNCTION's number
+        moves and the CONTAINER is not reported at all; make the local function long instead and
+        both rows report a length. Before this was ruled, the container's nesting tracked the local
+        function's, and the paragraph here claimed the opposite -- in the tool whose subject is
+        instruments claiming more than they deliver.
 
         Class and file spans come from ClassSpanReader; the other three are parsed. The two original
         rows were deliberately not moved onto the parser — they are ruled, tested and already quoted,

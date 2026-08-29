@@ -181,37 +181,65 @@ public class TheOtherThreeRowsAreMeasuredTests
         Assert.Equal(1, span.Depth);
     }
 
-    // A LOCAL FUNCTION IS REFUSED BY NAME, because the Deployment Manager DELIBERATELY did not rule
-    // on how one counts -- its own member, or part of its container's length and depth.
+    // A LOCAL FUNCTION IS ITS OWN MEMBER (BUG-94, rulings 2 and 4). It used to be REFUSED while the
+    // question was open, and the test here asserted only that the refusal existed -- with an EMPTY
+    // fixture, so it could not have failed if the local function were silently measured through its
+    // container, which is exactly what the tool was doing. qa-1 found that; this is the test that
+    // was missing.
     //
-    // Fails if it is silently SKIPPED. It cannot fail if it is silently MEASURED THROUGH ITS
-    // CONTAINER, and that is a limit rather than an oversight to work around (BUG-94): the fixture
-    // below is empty, so there is nothing to fold, and nothing here asserts anything about Outer at
-    // all. qa-1 found the tool doing exactly that.
+    // THE FIXTURE CARRIES REAL NESTING ON PURPOSE. An empty local function cannot distinguish a
+    // container that counts it from one that does not, and a fixture that cannot tell the correct
+    // build from the defective one is the shape this file exists to refuse.
     //
-    // WHAT WOULD CATCH IT, named so the gap is checkable rather than taken on trust: a fixture whose
-    // local function carries real nesting, asserting on the CONTAINER's Depth. That test is not
-    // written here because it would have to assert a number, and the container's number is precisely
-    // what the open question decides -- writing it either way would settle by implementation, which
-    // is the move this whole file exists to refuse.
+    // The two rows are ruled to behave DIFFERENTLY and both halves are asserted below:
+    //   LENGTH  counts twice -- the container's span includes every line inside its braces, and the
+    //           local function has its own span too, matching the nested-type precedent (ruling 3).
+    //   NESTING counts ONCE, on the local function's own row (ruling 4). Otherwise a breach is
+    //           attributed to a member that does not contain it, and whoever is sent to fix the
+    //           container finds it flat.
     [Fact]
-    public void ALocalFunctionIsRefusedRatherThanCountedEitherWay()
+    public void ALocalFunctionIsItsOwnMemberAndItsNestingStaysThere()
     {
         var spans = MemberReader.Read(
             """
             class Thing
             {
-                void Outer()
+                int Outer(int a)
                 {
-                    void Inner(int a) { }
-                    Inner(1);
+                    int Inner(int p1)
+                    {
+                        if (p1 > 0)
+                        {
+                            if (p1 > 1)
+                            {
+                                return p1;
+                            }
+                        }
+
+                        return p1;
+                    }
+
+                    return Inner(a);
                 }
             }
             """);
 
-        var local = Assert.Single(spans, span => !span.IsMeasured);
-        Assert.Contains("Inner", local.Name);
-        Assert.Contains("NOT RULED", local.Refusal!);
+        var outer = Assert.Single(spans, span => span.Name.StartsWith('O'));
+        var inner = Assert.Single(spans, span => span.Name.StartsWith('I'));
+
+        // Ruling 2: measured, not refused. The old NOT RULED refusal would now be a false statement.
+        Assert.True(inner.IsMeasured, "A local function is its own member and must carry numbers.");
+
+        // Ruling 4: the two ifs are Inner's, and they are Inner's alone.
+        Assert.Equal(2, inner.Depth);
+        Assert.Equal(0, outer.Depth);
+
+        // Ruling 3: both spans are complete, and they overlap. Outer's own body is a declaration and
+        // a return, so it is longer than Inner only because it CONTAINS Inner.
+        Assert.True(
+            outer.Lines > inner.Lines,
+            $"Outer is {outer.Lines} lines and Inner is {inner.Lines}: the container's span must "
+            + "still include the local function's lines (ruling 3).");
     }
 
     // The unmeasured population is stated rather than left to be noticed. An accessor body may well
