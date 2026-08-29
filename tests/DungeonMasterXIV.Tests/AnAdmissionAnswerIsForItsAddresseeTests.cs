@@ -49,7 +49,7 @@ public class AnAdmissionAnswerIsForItsAddresseeTests
         var (coordinator, _, _) = Awaiting();
 
         Assert.Equal(JoinPhase.AwaitingDecision, coordinator.Join.Phase);
-        Assert.Null(coordinator.SessionKey);
+        Assert.Null(coordinator.Membership.SessionKey);
     }
 
     // THE REPORTED DEFECT. Fails if: an acceptance addressed to another joiner admits this one.
@@ -61,7 +61,7 @@ public class AnAdmissionAnswerIsForItsAddresseeTests
         Deliver(coordinator, transport, WireEnvelope.ForJoinAccepted(Code, Stranger(), host.PublicKey));
 
         Assert.Equal(JoinPhase.AwaitingDecision, coordinator.Join.Phase);
-        Assert.Null(coordinator.SessionKey);
+        Assert.Null(coordinator.Membership.SessionKey);
     }
 
     // Denied() has NO phase guard, so this arm is reachable from any phase -- more exposed than the
@@ -99,7 +99,7 @@ public class AnAdmissionAnswerIsForItsAddresseeTests
         Deliver(coordinator, transport, WireEnvelope.ForJoinAccepted(Code, Mine(coordinator), host.PublicKey));
 
         Assert.Equal(JoinPhase.Admitted, coordinator.Join.Phase);
-        Assert.Equal(host.DeriveSharedKey(Mine(coordinator), Code), coordinator.SessionKey);
+        Assert.Equal(host.DeriveSharedKey(Mine(coordinator), Code), coordinator.Membership.SessionKey);
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class AnAdmissionAnswerIsForItsAddresseeTests
 
         coordinator.RequestJoin(Code);
         transport.Deliver(WireEnvelope.ForJoinPending(
-            Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey, AdmissionDeadline.DecidedByHost(Now)));
+            Code, coordinator.Membership.Keys!.PublicKey, host.PublicKey, AdmissionDeadline.DecidedByHost(Now)));
         coordinator.Tick(TimeSpan.Zero, Now);
 
         return (coordinator, transport, host);
@@ -149,7 +149,7 @@ public class AnAdmissionAnswerIsForItsAddresseeTests
     }
 
     /// <summary>This client's own key — the addressee an answer must name to be for it.</summary>
-    private static byte[] Mine(SessionCoordinator coordinator) => coordinator.JoinerKeys!.PublicKey;
+    private static byte[] Mine(SessionCoordinator coordinator) => coordinator.Membership.Keys!.PublicKey;
 
     /// <summary>Another joiner's key. A real one, so nothing passes because it was malformed.</summary>
     private static byte[] Stranger() => new SessionKeyExchange().PublicKey;

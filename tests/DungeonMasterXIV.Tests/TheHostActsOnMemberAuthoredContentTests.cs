@@ -82,7 +82,7 @@ public sealed class TheHostActsOnMemberAuthoredContentTests
         using var member = new SessionKeyExchange();
         var speaker = Admitted(host, Speaker, member);
 
-        Assert.Null(host.SessionKey);
+        Assert.Null(host.Membership.SessionKey);
 
         transport.Deliver(SealedBy(member, host));
         host.Tick(TimeSpan.Zero, Now);
@@ -278,7 +278,7 @@ public sealed class TheHostActsOnMemberAuthoredContentTests
             Roster = [new RosterEntry(Speaker, "Bob", SessionRole.Player)],
         };
 
-        transport.Deliver(SealedFor(hostKeys, player.JoinerKeys!.PublicKey, code, roster));
+        transport.Deliver(SealedFor(hostKeys, player.Membership.Keys!.PublicKey, code, roster));
         player.Tick(TimeSpan.Zero, Now);
 
         Assert.Single(player.Roster);
@@ -346,7 +346,7 @@ public sealed class TheHostActsOnMemberAuthoredContentTests
         player.RequestJoin(code, DisplayName.OrNone("Bob"));
         player.SynchroniseTransport();
         player.Tick(TimeSpan.Zero, Now);
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, hostKeys.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, hostKeys.PublicKey));
         player.Tick(TimeSpan.Zero, Now);
         return player;
     }

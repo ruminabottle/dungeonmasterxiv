@@ -76,7 +76,7 @@ public class TheJoinerSendsItsRequestTests
 
         joiner.AsksToJoin(Code);
 
-        Assert.Equal(joiner.Coordinator.JoinerKeys!.PublicKey, joiner.Sent.Single().PublicKey);
+        Assert.Equal(joiner.Coordinator.Membership.Keys!.PublicKey, joiner.Sent.Single().PublicKey);
     }
 
     // The hazard the real socket has and a naive fake does not. Fails if: the request is sent from

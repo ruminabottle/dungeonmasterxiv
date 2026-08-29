@@ -57,13 +57,13 @@ public class JoinerKeysAreMintedPerJoinTests
         var player = Joining();
 
         player.RequestJoin(Code, DisplayName.OrNone("Bob"), claimedParticipantId: null);
-        var first = player.JoinerKeys!.PublicKey;
+        var first = player.Membership.Keys!.PublicKey;
 
         player.RequestJoin(
             Code,
             DisplayName.OrNone("Bob"),
             secondJoin == "relink" ? Guid.NewGuid() : null);
-        var second = player.JoinerKeys!.PublicKey;
+        var second = player.Membership.Keys!.PublicKey;
 
         // THE PREMISE, asserted rather than trusted: two empty or absent keys would compare unequal
         // for the wrong reason, and a failure to mint would make the assertion below meaningless.
@@ -83,7 +83,7 @@ public class JoinerKeysAreMintedPerJoinTests
 
         player.RequestJoin(Code, DisplayName.OrNone("Bob"), claimedParticipantId: null);
 
-        Assert.Equal(player.JoinerKeys!.PublicKey, player.JoinerKeys!.PublicKey);
+        Assert.Equal(player.Membership.Keys!.PublicKey, player.Membership.Keys!.PublicKey);
     }
 
     private static SessionCoordinator Joining() =>

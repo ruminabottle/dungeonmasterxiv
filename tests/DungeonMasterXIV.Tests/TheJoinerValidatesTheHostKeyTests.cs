@@ -52,7 +52,7 @@ public class TheJoinerValidatesTheHostKeyTests
     {
         var (player, transport, code) = AwaitingDecision();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, KeyFor(which)));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, KeyFor(which)));
         player.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Failed, player.Join.Phase);
@@ -69,11 +69,11 @@ public class TheJoinerValidatesTheHostKeyTests
     {
         var (player, transport, code) = AwaitingDecision();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, KeyFor(which)));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, KeyFor(which)));
         player.Tick(TimeSpan.Zero, Now);
 
         Assert.False(player.Join.MayReceiveSessionState);
-        Assert.Null(player.SessionKey);
+        Assert.Null(player.Membership.SessionKey);
         Assert.NotEqual(JoinPhase.Admitted, player.Join.Phase);
 
         // A-1.5h: the ruling chose failing over dropping precisely so the player can act. Nothing
@@ -90,16 +90,16 @@ public class TheJoinerValidatesTheHostKeyTests
         var (player, transport, code) = AwaitingDecision();
         using var hostKeys = new SessionKeyExchange();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, hostKeys.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, hostKeys.PublicKey));
         player.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Admitted, player.Join.Phase);
         Assert.True(player.Join.MayReceiveSessionState);
-        Assert.NotNull(player.SessionKey);
+        Assert.NotNull(player.Membership.SessionKey);
 
         // Not merely non-null: it is the key the HOST derives for this joiner. A guard that admitted
         // the joiner but produced a key nobody shares would satisfy every assertion above.
-        Assert.Equal(hostKeys.DeriveSharedKey(player.JoinerKeys!.PublicKey, code), player.SessionKey);
+        Assert.Equal(hostKeys.DeriveSharedKey(player.Membership.Keys!.PublicKey, code), player.Membership.SessionKey);
     }
 
     // The joiner must not be made to throw by an acceptance it did not author. Stated separately
@@ -111,7 +111,7 @@ public class TheJoinerValidatesTheHostKeyTests
     {
         var (player, transport, code) = AwaitingDecision();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, KeyFor(which)));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, KeyFor(which)));
 
         var thrown = Record.Exception(() => player.Tick(TimeSpan.Zero, Now));
 
@@ -126,7 +126,7 @@ public class TheJoinerValidatesTheHostKeyTests
         var (player, transport, code) = AwaitingDecision();
         using var hostKeys = new SessionKeyExchange();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, NotAKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, NotAKey));
         player.Tick(TimeSpan.Zero, Now);
         Assert.True(player.Join.MayRequestAgain);
 
@@ -134,13 +134,13 @@ public class TheJoinerValidatesTheHostKeyTests
         player.SynchroniseTransport();
         player.Tick(TimeSpan.Zero, Now);
         transport.Deliver(WireEnvelope.ForJoinPending(
-            code, player.JoinerKeys!.PublicKey, hostKeys.PublicKey, AdmissionDeadline.DecidedByHost(Now)));
+            code, player.Membership.Keys!.PublicKey, hostKeys.PublicKey, AdmissionDeadline.DecidedByHost(Now)));
         player.Tick(TimeSpan.Zero, Now);
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, hostKeys.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, hostKeys.PublicKey));
         player.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Admitted, player.Join.Phase);
-        Assert.NotNull(player.SessionKey);
+        Assert.NotNull(player.Membership.SessionKey);
     }
 
     /// <summary>A joiner that has asked and been told the DM is looking, which arms the deadline.</summary>
@@ -156,7 +156,7 @@ public class TheJoinerValidatesTheHostKeyTests
         player.Tick(TimeSpan.Zero, Now);
 
         transport.Deliver(WireEnvelope.ForJoinPending(
-            code, player.JoinerKeys!.PublicKey, hostKeys.PublicKey, AdmissionDeadline.DecidedByHost(Now)));
+            code, player.Membership.Keys!.PublicKey, hostKeys.PublicKey, AdmissionDeadline.DecidedByHost(Now)));
         player.Tick(TimeSpan.Zero, Now);
         transport.Sent.Clear();
 

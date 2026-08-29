@@ -162,7 +162,7 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
         joiner.RequestJoin(SessionCode.FromValid("BCDFGH"), DisplayName.OrNone("Bob"));
         joiner.SynchroniseTransport();
 
-        Assert.False(joiner.AnnounceDeparture());
+        Assert.False(joiner.Membership.AnnounceDeparture());
     }
 
     // THE MEMBER'S OWN HALF, END TO END: an admitted client calls AnnounceDeparture, the frame it
@@ -179,7 +179,7 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
         var host = Hosting(out var hostTransport);
         var member = Joined(out var memberTransport, host, out var code);
 
-        Assert.True(member.AnnounceDeparture());
+        Assert.True(member.Membership.AnnounceDeparture());
 
         var frame = Assert.Single(memberTransport.Sent);
         Assert.True(EnvelopeCodec.TryDecode(frame, out var envelope));
@@ -236,14 +236,14 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
         host.ReceiveJoinRequest(
             new PendingAdmission(
                 PeerCodes.Of("PRBCD2"), "BKD-7RM-CDF-GH", AdmissionDeadline.DecidedByHost(Now),
-                RelinkClaim.None, member.JoinerKeys!.PublicKey, DisplayName.OrNone("Bob")));
+                RelinkClaim.None, member.Membership.Keys!.PublicKey, DisplayName.OrNone("Bob")));
 
         code = PeerCodes.Of("PRBCD2");
         host.Admit(code);
 
         // The acceptance the host sends is what gives the member its shared key.
         transport.Deliver(WireEnvelope.ForJoinAccepted(
-            sessionCode, member.JoinerKeys!.PublicKey, host.HostKeys!.PublicKey));
+            sessionCode, member.Membership.Keys!.PublicKey, host.HostKeys!.PublicKey));
         member.Tick(TimeSpan.Zero, Now);
         transport.Sent.Clear();
 

@@ -41,7 +41,7 @@ public class JoinOverASocketTests
         coordinator.Join.AwaitDecision(AdmissionDeadline.DecidedByHost(Now));
 
         await server.SendAsync(EnvelopeCodec.Encode(
-            WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey)));
+            WireEnvelope.ForJoinAccepted(Code, coordinator.Membership.Keys!.PublicKey, host.PublicKey)));
 
         await WaitForAsync(() =>
         {
@@ -51,8 +51,8 @@ public class JoinOverASocketTests
 
         Assert.Equal(JoinPhase.Admitted, coordinator.Join.Phase);
         Assert.Equal(
-            host.DeriveSharedKey(coordinator.JoinerKeys!.PublicKey, Code),
-            coordinator.SessionKey);
+            host.DeriveSharedKey(coordinator.Membership.Keys!.PublicKey, Code),
+            coordinator.Membership.SessionKey);
     }
 
     // THE BAR, negative half. Fails if: a denial does not survive the same path. Kept separate from
@@ -73,7 +73,7 @@ public class JoinOverASocketTests
         coordinator.Join.AwaitDecision(AdmissionDeadline.DecidedByHost(Now));
 
         await server.SendAsync(EnvelopeCodec.Encode(
-            WireEnvelope.ForJoinDenied(Code, coordinator.JoinerKeys!.PublicKey)));
+            WireEnvelope.ForJoinDenied(Code, coordinator.Membership.Keys!.PublicKey)));
 
         await WaitForAsync(() =>
         {
@@ -83,7 +83,7 @@ public class JoinOverASocketTests
 
         Assert.Equal(JoinPhase.Denied, coordinator.Join.Phase);
         Assert.False(coordinator.Join.MayReceiveSessionState);
-        Assert.Null(coordinator.SessionKey);
+        Assert.Null(coordinator.Membership.SessionKey);
     }
 
     // The other direction over the same socket. Fails if: what the host sends never reaches the
@@ -156,7 +156,7 @@ public class JoinOverASocketTests
         // Padded past the 8 KB receive buffer by an unknown field, which D-14 requires be ignored —
         // so the frame stays valid while forcing the multi-read path.
         var accepted = EnvelopeCodec.Encode(
-            WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+            WireEnvelope.ForJoinAccepted(Code, coordinator.Membership.Keys!.PublicKey, host.PublicKey));
         var json = System.Text.Encoding.UTF8.GetString(accepted);
         var padded = json[..^1] + ",\"PaddingFromAFutureVersion\":\"" + new string('x', 20_000) + "\"}";
         Assert.True(padded.Length > 8192);
