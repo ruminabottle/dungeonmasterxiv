@@ -34,7 +34,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </remarks>
 public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
 {
-    [Fact]
+    [ContainsMainFact]
     public void TheGateRefusesNothingOnThisTree()
     {
         var intake = SizeGateIntake.Files();
