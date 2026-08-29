@@ -99,6 +99,7 @@ public sealed class Plugin : IDalamudPlugin
             // not a failure. A HOST that reaches here with no campaign is a different matter and
             // AdmissionControl warns on it by peer code, so the quiet version of this cannot ship.
             capabilities: new SessionCapabilities(
+                HostDisplayName: NameWeSendAs(characterName),
                 MintParticipant: label => _hostingCampaign.Current is { } campaign
                     ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
                     : null,
@@ -111,13 +112,9 @@ public sealed class Plugin : IDalamudPlugin
                 // may start or resume a campaign while the session is live, and a claim must be
                 // resolved against the roster that is actually loaded.
                 ResolveRelink: claimed => CampaignRelink.Resolve(_hostingCampaign.Current, claimed)));
-        // The alias if the player set a usable one, otherwise the character name (R-1.3e). The rule
-        // lives in PluginSettings so it is testable without Dalamud, and the settings window calls
-        // the same method to show what will be sent -- one expression, so the preview cannot drift
-        // from the thing it previews.
         _sessionWindow = new SessionWindow(
             _sessionCoordinator,
-            () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName()),
+            NameWeSendAs(characterName),
             _hostingCampaign,
             () => _configurationStore.Configuration.Settings.Relink);
         _mainWindow.OpenSession = _sessionWindow.Open;
@@ -136,6 +133,28 @@ public sealed class Plugin : IDalamudPlugin
 
         _log.Information("Dungeon Master XIV loaded.");
     }
+
+    /// <summary>What this client sends as its name, host side and join side alike (R-1.3e).</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>ONE expression, called twice, rather than two that mean to agree.</b>
+    /// <c>DisplayNameOr</c> is the single rule for "the alias if the player set a usable one,
+    /// otherwise the character name" — it lives in <c>PluginSettings</c> so it is testable without
+    /// Dalamud, and the settings window calls the same method to show what will be sent. <b>So the
+    /// name the DM publishes in its own roster entry (A-1.13b), the name a joiner sends, and the
+    /// preview the session window draws cannot drift apart</b>, which the comment here used to
+    /// claim while a second copy of the expression sat four lines below it.
+    /// </para>
+    /// <para>
+    /// <b>A method rather than lines in the constructor, and the reason is a measurement.</b>
+    /// <c>Plugin</c>'s constructor is 91 lines against a 60 capacity — a pre-existing breach nobody
+    /// on this branch created (BUG-103). Putting new code inline would have taken it to 97.
+    /// <b>Declining to enlarge a breach is not the same as repairing one</b>: the other 91 lines
+    /// are not this chunk's to touch, but where its own lines go is its to choose.
+    /// </para>
+    /// </remarks>
+    private Func<DisplayName> NameWeSendAs(Func<DisplayName> characterName) =>
+        () => _configurationStore.Configuration.Settings.DisplayNameOr(characterName());
 
     /// <summary>Unwinds construction in reverse order.</summary>
     public void Dispose()

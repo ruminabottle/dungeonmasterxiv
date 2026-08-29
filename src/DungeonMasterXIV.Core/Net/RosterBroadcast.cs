@@ -36,15 +36,17 @@ internal sealed class RosterBroadcast
 {
     private readonly RelayLink _link;
     private readonly SessionAudience _audience;
-    private readonly Func<SessionKeyExchange?> _hostKeys;
-    private readonly Func<SessionCode?> _hostCode;
+    private readonly HostIdentity _host;
     private readonly ISessionTransportLog _log;
 
     /// <summary>Wires the broadcast to the host state it reads and the link it sends down.</summary>
     /// <param name="link">The connection. Sends; decides nothing.</param>
     /// <param name="audience">Who is admitted, and the keys to reach them.</param>
-    /// <param name="hostKeys">The host's ephemeral keys, read at send time rather than captured.</param>
-    /// <param name="hostCode">The session being hosted, or null when not hosting.</param>
+    /// <param name="host">
+    /// What this client is as the host — keys, code, name and its own peer code, all read at send
+    /// time. One argument rather than four: see <see cref="HostIdentity"/> for why it replaces two
+    /// parameters instead of adding two.
+    /// </param>
     /// <param name="log">
     /// Where a participant dropped from the broadcast is reported (PR #86 finding 5).
     /// <b>Required, not optional, and that is the point.</b> An optional log is one the single
@@ -55,14 +57,12 @@ internal sealed class RosterBroadcast
     public RosterBroadcast(
         RelayLink link,
         SessionAudience audience,
-        Func<SessionKeyExchange?> hostKeys,
-        Func<SessionCode?> hostCode,
+        HostIdentity host,
         ISessionTransportLog log)
     {
         _link = link;
         _audience = audience;
-        _hostKeys = hostKeys;
-        _hostCode = hostCode;
+        _host = host;
         _log = log;
     }
 
@@ -78,7 +78,7 @@ internal sealed class RosterBroadcast
     /// </remarks>
     public void Publish()
     {
-        if (_hostKeys() is not { } keys || _hostCode() is not { } code || !_link.IsReadyToSend)
+        if (_host.Keys() is not { } keys || _host.Code() is not { } code || !_link.IsReadyToSend)
         {
             return;
         }
@@ -90,6 +90,26 @@ internal sealed class RosterBroadcast
         if (roster.Count == 0)
         {
             return;
+        }
+
+        // A-1.13(b): a joined player sees the DM's name. THE HOST IS NOT ON Recipients AND MUST NOT
+        // BE PUT THERE -- that list is who things are ADDRESSED TO, and the host addresses rather
+        // than receives; adding it would change who gets sent what, and SessionAudience's own doc
+        // says it is absent "so nothing can be addressed to it". So the send list is left exactly as
+        // it was and the MEMBERSHIP list gains an author-side entry. The two had been one
+        // expression, which is why the DM was structurally absent rather than accidentally missing.
+        //
+        // FIRST, because the DM is who a joiner is looking for. Ordering is a rendering choice and
+        // this is the only place with an opinion about it; RosterView draws what it is given.
+        //
+        // Skipped rather than faked when the code is unavailable: an entry whose peer code will not
+        // parse is DROPPED by SessionContentCodec on the joiner's side, so a placeholder would
+        // reintroduce the absence this exists to fix -- loudly, since BUG-70 made that drop warn,
+        // but reintroduce it. A roster without the DM is the bug; a roster with a DM the other side
+        // deletes is the same bug wearing a receipt.
+        if (_host.OwnPeerCode() is { } ownCode)
+        {
+            roster.Insert(0, new RosterEntry(ownCode.Value, _host.Name().Value, SessionRole.DungeonMaster));
         }
 
         SealToEveryRecipient(new SessionContent { Roster = roster }, keys, code);
@@ -127,7 +147,7 @@ internal sealed class RosterBroadcast
     /// </remarks>
     public void PublishClosing(SessionClosing closing)
     {
-        if (_hostKeys() is not { } keys || _hostCode() is not { } code || !_link.IsReadyToSend)
+        if (_host.Keys() is not { } keys || _host.Code() is not { } code || !_link.IsReadyToSend)
         {
             return;
         }

@@ -38,6 +38,24 @@ namespace DungeonMasterXIV.Net;
 /// this ticket is a move rather than a redesign and two parameter objects at once is a redesign.
 /// </para>
 /// <para>
+/// <b>FOUR MEMBERS IS COMPLIANT AND SILENT — the flag is ABOVE four, not at it — so this
+/// paragraph is volunteered rather than owed.</b> It is here because the number will keep growing
+/// and the next person needs a criterion rather than a precedent: <b>these are not four
+/// accumulated favours, they are one concept enumerated.</b> Each is a thing Core is asked to have done because it cannot do it —
+/// make a key pair, name the host, mint a participant, resolve a claimed one. Nothing here is a
+/// value Core reads; every member is something Core CALLS. A fifth that fits that sentence belongs
+/// here; a fifth that has to be argued into it does not, and is the signal that this record has
+/// stopped being a concept and started being a parameter list with a name.
+/// </para>
+/// <para>
+/// <b>They arrived separately and that is not an argument for merging any of them.</b>
+/// <c>HostDisplayName</c> (DMXENG-33) and <c>ResolveRelink</c> (DMXENG-8) landed within an hour of
+/// each other and collided textually on this parameter list. <b>Adjacency is not kinship</b> —
+/// folding two members together because they arrived next to each other is a grouping chosen for
+/// its arithmetic, which is what DMXENG-57 refused when it declined to move the log in here to
+/// reach four.
+/// </para>
+/// <para>
 /// <b>NOT named for the plugin, though the plugin is what supplies it today.</b> A test supplies
 /// these too, and naming a Core type after one of its callers is how a layer starts depending on the
 /// thing above it in comments before it does in code.
@@ -47,6 +65,14 @@ namespace DungeonMasterXIV.Net;
 /// How a session key pair is made. A seam so that a failure to make one can be driven from a test
 /// (BUG-61): on the machine that reported it, this throws, and there was no seam between that throw
 /// and the frame loop. <b>Null takes the platform default</b> rather than disabling anything.
+/// </param>
+/// <param name="HostDisplayName">
+/// What the host calls itself, for its own roster entry (R-1.3e, A-1.13b). <b>Core cannot see the
+/// game</b>, so the name arrives from outside exactly as the joining name does — and it is a
+/// function rather than a value because it changes when the player switches character, which is the
+/// reason <c>SessionCoordinator.RequestJoin</c> gives for taking the joining name the same way.
+/// <b>Null is the honest default</b>: a client with no name supplied publishes the same unstated
+/// label a joiner would, rather than a blank beside a code somebody is comparing.
 /// </param>
 /// <param name="MintParticipant">
 /// Creates a participant for a joiner about to be admitted (R-1.5c). Null when not hosting into a
@@ -60,6 +86,7 @@ namespace DungeonMasterXIV.Net;
 /// </param>
 public sealed record SessionCapabilities(
     Func<SessionKeyExchange>? NewKeys = null,
+    Func<DisplayName>? HostDisplayName = null,
     Func<DisplayName, Guid?>? MintParticipant = null,
     Func<string?, RelinkClaim>? ResolveRelink = null)
 {
@@ -113,4 +140,12 @@ public sealed record SessionCapabilities(
     /// </remarks>
     public Func<string?, RelinkClaim> RelinkSource =>
         ResolveRelink ?? (static _ => RelinkClaim.None);
+
+    /// <summary>The host's own name, with the unstated case filled in.</summary>
+    /// <remarks>
+    /// <c>DisplayName.None</c> renders as <c>DisplayName.Unstated</c> — never blank. An empty label
+    /// beside a fingerprint reads as a rendering fault and invites the reader to look past it, which
+    /// is the argument that type already makes for itself.
+    /// </remarks>
+    public Func<DisplayName> HostNameSource => HostDisplayName ?? (static () => DisplayName.None);
 }

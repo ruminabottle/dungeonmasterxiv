@@ -42,7 +42,15 @@ public class TheClosingNoticeReachesParticipantsTests
         var hostKeys = new SessionKeyExchange();
 
         return (
-            new RosterBroadcast(link, audience, () => hostKeys, () => Code, SilentLog.Instance),
+            // OwnPeerCode is null because this fixture publishes CLOSING NOTICES, which carry no
+            // roster. Supplying a peer code here would mean inventing one, which is the thing
+            // HostIdentity's own doc refuses for production; the host's roster entry is
+            // TheHostIsInItsOwnRosterTests' subject, not this file's.
+            new RosterBroadcast(
+                link,
+                audience,
+                new HostIdentity(() => hostKeys, () => Code, () => DisplayName.None, () => null),
+                SilentLog.Instance),
             transport,
             hostKeys,
             audience);

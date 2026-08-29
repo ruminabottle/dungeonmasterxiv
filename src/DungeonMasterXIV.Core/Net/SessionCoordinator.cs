@@ -81,7 +81,11 @@ public sealed class SessionCoordinator
         // to precede this line, and nothing detects a reordering -- which is DMXENG-45's defect
         // exactly. Taking it from the argument removes the ordering dependency instead of
         // relying on it.
-        _roster = new RosterBroadcast(_link, Audience, () => HostKeys, () => Host.Code, log);
+        _roster = new RosterBroadcast(
+            _link,
+            Audience,
+            HostIdentity.ForHost(() => HostKeys, () => Host.Code, capabilities.HostNameSource, _admissions.PeerCodeFor),
+            log);
         // What RosterBroadcast reads to SEAL, read here to OPEN (R-1.3k).
         _resources = new SessionResources(
             _admissions,
