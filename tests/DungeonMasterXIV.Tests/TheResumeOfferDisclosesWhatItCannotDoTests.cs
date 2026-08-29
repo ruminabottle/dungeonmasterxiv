@@ -73,11 +73,12 @@ public class TheResumeOfferDisclosesWhatItCannotDoTests
         Assert.Contains("ImGui.TextWrapped(ResumeDisclosure)", Drawing(), StringComparison.Ordinal);
     }
 
-    // THE ASSERTION THAT MATTERS, and it is not "the sentence exists". The failure I am guarding is
-    // the disclosure surviving inside a branch that stops running — drawn only once a campaign is
-    // chosen, or only on some other condition — so it is present in the file and absent from the
-    // screen. It must sit ABOVE the early return's guard and ABOVE the combo, on the same
-    // unconditional path as the control itself: if the picker draws, the sentence draws.
+    // ORDER ONLY, and that is now stated rather than implied (BUG-82). This establishes that the
+    // disclosure comes after the nothing-to-resume return and before the control. IT DOES NOT
+    // ESTABLISH THAT THE DISCLOSURE IS UNCONDITIONAL -- this comment used to claim it did, and
+    // qa-2 wrote the mutation that proved otherwise: wrapping the call in `if (...)` moves it a few
+    // characters and changes neither ordering, so all four tests passed. Nesting is what that needs
+    // and it is asserted below, separately, so a failure names which of the two properties broke.
     [Fact]
     public void TheDisclosureIsDrawnWheneverThePickerIs()
     {
@@ -90,6 +91,67 @@ public class TheResumeOfferDisclosesWhatItCannotDoTests
         Assert.True(earlyReturn >= 0 && disclosure >= 0 && combo >= 0, "The picker no longer has the shape this reads.");
         Assert.True(disclosure > earlyReturn, "The disclosure must come after the nothing-to-resume return, so a first run is unaffected.");
         Assert.True(disclosure < combo, "The disclosure must precede the control, not sit inside it — the belief forms on seeing the offer.");
+    }
+
+    // THE ASSERTION THAT MATTERS (BUG-82). The failure guarded is the disclosure surviving inside a
+    // branch that stops running -- present in the file, absent from the screen -- and it is asserted
+    // as NESTING because ordering cannot see it.
+    //
+    // WHY A TEXT SCAN IS ALLOWED TO DECIDE THIS AT ALL, since a scan sees text and reachability is
+    // about execution. The property here is narrower than reachability, and the narrowing is what
+    // makes it decidable: AN EARLY RETURN CANNOT VIOLATE IT. A `return` skips the control as well as
+    // the disclosure, so "if the picker draws, the disclosure drew" still holds. The only way to
+    // have the control draw while the disclosure does not is to put the disclosure inside a block
+    // the control is not inside -- and that is nesting, which is lexical and exact.
+    //
+    // So this asserts the disclosure sits at the TOP STATEMENT LEVEL of Draw(), where every path
+    // reaching the control has already passed it. Not "at the same depth as the combo": two
+    // different branches can share a depth.
+    [Fact]
+    public void TheDisclosureIsNotNestedInsideACondition()
+    {
+        var drawing = Drawing();
+
+        var disclosure = drawing.IndexOf("ImGui.TextWrapped(ResumeDisclosure)", StringComparison.Ordinal);
+        Assert.True(disclosure >= 0, "The picker no longer has the shape this reads.");
+
+        Assert.Equal(TopLevelOfDraw, DepthInDraw(drawing, disclosure));
+    }
+
+    // Directly inside Draw's body: one unclosed brace since the body opened.
+    private const int TopLevelOfDraw = 1;
+
+    /// <summary>Brace depth at <paramref name="index"/>, counted from the opening of <c>Draw</c>'s body.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Its limits, stated rather than implied.</b> It counts braces in the comment-stripped
+    /// source, so a brace inside a string literal, a char literal, or a TRAILING comment would skew
+    /// it. An interpolated hole is balanced and cancels out; a lone <c>"{"</c> would not. The
+    /// failure direction is a wrong depth and therefore a false FAIL, which is the one somebody
+    /// investigates.
+    /// </para>
+    /// <para>
+    /// And it says nothing about whether <c>Draw</c> is called, or about what ImGui puts on screen.
+    /// Those are the caller's business and the in-game check's respectively. This decides exactly
+    /// one question, whether the statement is nested, and that question is genuinely textual.
+    /// </para>
+    /// </remarks>
+    private static int DepthInDraw(string drawing, int index)
+    {
+        var method = drawing.IndexOf("public void Draw()", StringComparison.Ordinal);
+        Assert.True(method >= 0 && method < index, "Draw() is not where this expects it.");
+
+        var body = drawing.IndexOf('{', method);
+        Assert.True(body >= 0 && body < index, "Draw() has no body before the statement being measured.");
+
+        var depth = 0;
+
+        for (var i = body; i < index; i++)
+        {
+            depth += drawing[i] switch { '{' => 1, '}' => -1, _ => 0 };
+        }
+
+        return depth;
     }
 
     // The sentence must actually BE a sentence. A constant emptied to silence a failing scan would
