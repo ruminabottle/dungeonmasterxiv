@@ -60,17 +60,27 @@ public class EveryMessageAClientSendsIsSentTests
         Origin Origin,
         string Reason,
         Action<Session>? Trigger = null,
-        Func<WireEnvelope, bool>? Matches = null);
+        Func<WireEnvelope, bool>? Matches = null,
+        Func<WireEnvelope>? Sample = null);
 
     // Keyed on FACTORY NAME, not message type -- that was the defect. Adding a public static factory
     // to WireEnvelope without adding a row fails EveryFactoryIsClassified by name, which is the only
     // reason this table is allowed to exist.
+    // ONE REPRESENTATIVE ENVELOPE PER CLIENT ROW, built by the REAL factory rather than hand-shaped.
+    // A hand-built envelope would let a predicate pass against something the product never emits,
+    // which is the same defect one layer down from the one this file was written to fix.
+    private static readonly SessionCode SampleCode = SessionCode.FromValid("BCDFGH");
+    private static readonly byte[] SampleKey = new SessionKeyExchange().PublicKey;
+    private static readonly byte[] SampleHostKey = new SessionKeyExchange().PublicKey;
+    private static readonly Guid SampleParticipant = Guid.NewGuid();
+
     private static readonly Dictionary<string, Classification> Expected = new(StringComparer.Ordinal)
     {
         [nameof(WireEnvelope.ForCodeRequest)] = new(
             Origin.Client, "the host claims its code (R-1.2a). BUG-36: this had no call site",
             s => { s.Coordinator.StartHosting(); s.Ready(); s.Coordinator.Tick(TimeSpan.Zero, Now); },
-            e => e.Type == WireMessageType.CodeRequest),
+            e => e.Type == WireMessageType.CodeRequest,
+            Sample: () => WireEnvelope.ForCodeRequest(SampleCode)),
 
         [nameof(WireEnvelope.ForCodeAccepted)] = new(
             Origin.Relay, "the relay arbitrates the code namespace; a client sending one is laundering"),
@@ -89,7 +99,8 @@ public class EveryMessageAClientSendsIsSentTests
                 s.Ready();
                 s.Coordinator.Tick(TimeSpan.Zero, Now);
             },
-            e => e.Type == WireMessageType.JoinRequest && e.ClaimedParticipantId is null),
+            e => e.Type == WireMessageType.JoinRequest && e.ClaimedParticipantId is null,
+            Sample: () => WireEnvelope.ForJoinRequest(SampleCode, SampleKey)),
 
         // EXPECTED TO FAIL ON TODAY'S MAIN, and deliberately NOT parked in NotYetReachable.
         //
@@ -137,12 +148,15 @@ public class EveryMessageAClientSendsIsSentTests
                 s.Ready();
                 s.Coordinator.Tick(TimeSpan.Zero, Now);
             },
-            e => e.Type == WireMessageType.JoinRequest && e.ClaimedParticipantId is not null),
+            e => e.Type == WireMessageType.JoinRequest && e.ClaimedParticipantId is not null,
+            Sample: () => WireEnvelope.ForRelinkRequest(SampleCode, SampleKey, SampleParticipant)),
 
         [nameof(WireEnvelope.ForJoinPending)] = new(
             Origin.Client, "the host sends its key before deciding (R-1.3a-i)",
             s => { s.Hosting(); s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now); },
-            e => e.Type == WireMessageType.JoinPending),
+            e => e.Type == WireMessageType.JoinPending,
+            Sample: () => WireEnvelope.ForJoinPending(
+                SampleCode, SampleKey, SampleHostKey, AdmissionDeadline.DecidedByHost(Now))),
 
         [nameof(WireEnvelope.ForJoinAccepted)] = new(
             Origin.Client, "the host admits (R-1.3b)",
@@ -152,7 +166,8 @@ public class EveryMessageAClientSendsIsSentTests
                 s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now);
                 s.Coordinator.Admit(PeerCodes.Of("PRBCD2"));
             },
-            e => e.Type == WireMessageType.JoinAccepted),
+            e => e.Type == WireMessageType.JoinAccepted,
+            Sample: () => WireEnvelope.ForJoinAccepted(SampleCode, SampleKey, SampleHostKey)),
 
         [nameof(WireEnvelope.ForJoinDenied)] = new(
             Origin.Client, "the host refuses, explicitly rather than by silence (R-1.3b)",
@@ -162,7 +177,8 @@ public class EveryMessageAClientSendsIsSentTests
                 s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now);
                 s.Coordinator.Deny(PeerCodes.Of("PRBCD2"));
             },
-            e => e.Type == WireMessageType.JoinDenied),
+            e => e.Type == WireMessageType.JoinDenied,
+            Sample: () => WireEnvelope.ForJoinDenied(SampleCode, SampleKey)),
 
         [nameof(WireEnvelope.ForJoinLapsed)] = new(
             Origin.Client, "the window closed and nobody looked -- never reported as a denial (R-1.3c)",
@@ -172,7 +188,8 @@ public class EveryMessageAClientSendsIsSentTests
                 s.Coordinator.ReceiveJoinRequest(PeerCodes.Of("PRBCD2"), s.JoinerKey, Now);
                 s.Coordinator.Tick(TimeSpan.Zero, Now + TimeSpan.FromHours(1));
             },
-            e => e.Type == WireMessageType.JoinLapsed),
+            e => e.Type == WireMessageType.JoinLapsed,
+            Sample: () => WireEnvelope.ForJoinLapsed(SampleCode, SampleKey)),
 
         // Carried forward from main during the rebase, re-keyed to its FACTORY. It arrived on main
         // (#88/#92) after this branch was cut; dropping it would lose coverage that already existed,
@@ -192,7 +209,8 @@ public class EveryMessageAClientSendsIsSentTests
                 s.HostKeyArrives();
                 s.Coordinator.Tick(TimeSpan.Zero, Now);
             },
-            e => e.Type == WireMessageType.JoinerHoldsFingerprint),
+            e => e.Type == WireMessageType.JoinerHoldsFingerprint,
+            Sample: () => WireEnvelope.ForJoinerHoldsFingerprint(SampleCode, SampleKey)),
 
         // Genuinely unbuilt rather than unmet: no feature produces session state to share, so there
         // is nothing that SHOULD be sending one today. Contrast with relink above.
@@ -308,6 +326,102 @@ public class EveryMessageAClientSendsIsSentTests
         Assert.Empty(transport.Sent);
     }
 
+    // A-1.12a's DEMONSTRATION, over every ordered pair rather than the one pair somebody wrote out.
+    // The criterion asks that a check TELL TWO ACTIONS APART, and #75 showed that for exactly one
+    // pair -- ForJoinRequest against ForRelinkRequest -- leaving SIX client rows whose predicate was
+    // only ever shown to ACCEPT ITS OWN ENVELOPE. Passing is not discriminating.
+    //
+    // DERIVED, so the six are covered without being listed and a NINTH row is covered the day it is
+    // added. That is the same correction this file already made once at the level of the vocabulary:
+    // enumerate nothing you can derive, because the enumeration is what goes stale.
+    //
+    // WHAT A FAILURE HERE MEANS: two rows claim the same envelope, so whichever is checked first
+    // satisfies both and one action can hide inside the other. That is BUG-40's shape exactly --
+    // relink hid inside JoinRequest because one predicate answered for two actions.
+    [Theory]
+    [MemberData(nameof(DistinctClientPairs))]
+    public void NoClientPredicateAcceptsAnotherActionsEnvelope(string predicateOwner, string sampleFrom)
+    {
+        var predicate = Expected[predicateOwner].Matches!;
+        var somebodyElses = Expected[sampleFrom].Sample!();
+
+        Assert.False(
+            predicate(somebodyElses),
+            $"{predicateOwner}'s predicate ACCEPTS the envelope {sampleFrom} produces, so those two "
+            + "actions are not told apart: whichever row is checked first satisfies both, and the "
+            + "other can stop being sent without this file noticing. That is BUG-40's shape -- "
+            + "relink hid inside JoinRequest because one predicate answered for two actions.");
+    }
+
+    // The other half, and without it the theory above is satisfied by a predicate that accepts
+    // NOTHING. "Rejects everyone else's" is trivially true of `_ => false`, which would also make
+    // DoingTheThingSendsTheMessage red for every row -- but this file is where that would be
+    // diagnosed, so it says so here rather than leaving the diagnosis to whoever is unlucky.
+    [Theory]
+    [MemberData(nameof(ClientFactories))]
+    public void EveryClientPredicateAcceptsItsOwnEnvelope(string factory)
+    {
+        var how = Expected[factory];
+
+        Assert.True(
+            how.Matches!(how.Sample!()),
+            $"{factory}'s predicate rejects the envelope its OWN factory produces. Every other "
+            + "assertion about this row is now vacuous -- a predicate matching nothing rejects all "
+            + "comers, which reads as perfect discrimination.");
+    }
+
+    // Guards the pair above the way EveryClientFactoryHasBothATriggerAndAPredicate guards the row:
+    // a client row without a sample silently drops out of BOTH, and dropping out is indistinguishable
+    // from passing when the data is derived from the table.
+    [Fact]
+    public void EveryClientFactoryHasASampleToBeToldApartBy()
+    {
+        foreach (var (name, how) in Expected.Where(e => e.Value.Origin == Origin.Client))
+        {
+            Assert.True(
+                how.Sample is not null,
+                $"{name} is client-sent and has no sample envelope, so nothing checks that its "
+                + "predicate rejects other actions -- it would pass by being absent.");
+        }
+    }
+
+    public static TheoryData<string> ClientFactories()
+    {
+        var data = new TheoryData<string>();
+        foreach (var name in ClientNames())
+        {
+            data.Add(name);
+        }
+
+        return data;
+    }
+
+    public static TheoryData<string, string> DistinctClientPairs()
+    {
+        var data = new TheoryData<string, string>();
+        foreach (var owner in ClientNames())
+        {
+            foreach (var other in ClientNames().Where(n => !string.Equals(n, owner, StringComparison.Ordinal)))
+            {
+                data.Add(owner, other);
+            }
+        }
+
+        return data;
+    }
+
+    private static IEnumerable<string> ClientNames() =>
+        Expected
+            .Where(e => e.Value.Origin == Origin.Client && e.Value.Matches is not null && e.Value.Sample is not null)
+            .Select(e => e.Key)
+            .OrderBy(name => name, StringComparer.Ordinal);
+
+    // KEPT THOUGH THE THEORY ABOVE NOW SUBSUMES ITS COVERAGE, because its value was never the
+    // coverage. It is the test that LICENSES DoingTheThingSendsTheMessage's red ForRelinkRequest row
+    // to be read as "the send does not happen" rather than "the predicate matches nothing", and that
+    // reasoning is written down here and nowhere else. Deleting it as a duplicate would remove an
+    // explanation, not a redundancy.
+    //
     // The predicates must tell the two JoinRequest actions apart, or the relink row is satisfiable
     // by a plain join and this whole correction achieves nothing. Asserted against constructed
     // envelopes because it is a property of the PREDICATES, not of the production path.
