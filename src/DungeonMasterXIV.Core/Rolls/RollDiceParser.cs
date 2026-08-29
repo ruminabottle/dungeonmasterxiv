@@ -50,6 +50,24 @@ internal static class RollDiceParser
 
         while (true)
         {
+            // A-2.3c: A MODIFIER BINDS ONLY WHEN ADJACENT TO ITS TERM. The cursor skips whitespace
+            // before every read, which is correct everywhere else -- `2d6 + 3` is one expression --
+            // but a modifier is a SUFFIX, so a space ends the term rather than being stepped over.
+            // Without this, `2d6 d20` reads as 2d6 with a drop-lowest-20, silently rolling something
+            // other than what was typed.
+            //
+            // Foundry's own MODIFIERS_REGEXP_STRING is "anything until a space, group symbol, or
+            // arithmetic operator", so this holds for EVERY modifier -- k, d, r, x and a bare
+            // comparison alike -- not only for the drop that exposed it.
+            //
+            // Deliberately silent about what `2d6 d20` DOES evaluate as: the criterion permits a
+            // refusal or a two-term reading, and only the modifier-binding reading is ruled out.
+            // Pinning either here would settle something nobody established.
+            if (cursor.NextIsSpace)
+            {
+                return RollParse.Parsed(dice with { Modifiers = modifiers }, null);
+            }
+
             var next = ParseOne(cursor, modifiers);
             if (next.Fault is not RollFault.None)
             {
