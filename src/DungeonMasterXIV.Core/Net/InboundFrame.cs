@@ -262,6 +262,31 @@ internal readonly record struct InboundFrame(
             sessionKey = InboundApplication.Apply(
                 outcome, attempt, keys, ParticipantReceipt.TryRead(envelope, keys?.PublicKey)) ?? sessionKey;
         }
+        else if (envelope.TryReadAdmissionAnswer() is not null)
+        {
+            // BUG-87: THE DROP THAT SAID NOTHING. An admission answer for a different client landed
+            // here and was discarded by the `if` above without a line or a counter, so the one place
+            // the D-11 addressing rule actually refuses something left no trace of having done so.
+            //
+            // ASKED AS A SECOND QUESTION, because the first cannot answer it: TryGetAdmissionOutcome
+            // returns the same null for "not an answer" and "not MY answer", and a log on that null
+            // would fire on every ordinary frame.
+            //
+            // WARNING RATHER THAN INFORMATION, and that is measured rather than assumed. The relay
+            // forwards an admission answer to exactly ONE recipient -- RelayRouter.RouteAdmission
+            // resolves the addressed joiner and forwards to it alone -- so this is not routine
+            // cross-talk a client should expect to see. It is a routing fault, or something
+            // hand-rolled putting traffic on the wire. If answers were ever broadcast this would
+            // fire on every join and should drop to Information.
+            //
+            // NO KEY IN THE LINE. The addressee is a public key, which is exactly the cross-session
+            // identifier D-8 keeps out of the log, and printing "not mine" is the whole content.
+            Log?.Warning(
+                "An admission answer arrived addressed to a different client and was discarded. "
+                + "These are sent to one recipient, so this is a routing fault or traffic from "
+                + "something other than this plugin rather than normal cross-talk. This client's "
+                + "own join was not affected.");
+        }
 
         return sessionKey;
     }

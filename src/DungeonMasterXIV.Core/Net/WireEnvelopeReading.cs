@@ -108,16 +108,40 @@ public static class WireEnvelopeReading
         // Gating first would make "not an answer" and "not my answer" the same null, so the tests
         // pinning the first would start passing for the second while still claiming the first. It
         // also means an arm added later inherits the check rather than having to remember it.
-        var outcome = envelope.Type switch
+        return envelope.TryReadAdmissionAnswer() is { } outcome && IsAddressedTo(envelope, ownPublicKey)
+            ? outcome
+            : null;
+    }
+
+    /// <summary>
+    /// The admission answer this envelope carries, <b>ignoring who it is addressed to</b>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE ARMS LIVE HERE ONCE SO A CALLER CAN TELL THE TWO NULLS APART (BUG-87).</b>
+    /// <see cref="TryGetAdmissionOutcome"/> returns null for "not an admission answer" and for "an
+    /// admission answer for somebody else" alike — deliberately, per the note above — which leaves a
+    /// caller unable to distinguish an envelope worth remarking on from ordinary traffic. Asking
+    /// this second question separates them.
+    /// </para>
+    /// <para>
+    /// <b>Extracted rather than restated at the call site.</b> A copy of the three type arms would
+    /// be a second list that agrees with this one only until an admission type is added — and the
+    /// new arm would then be silently unobservable, which is the failure the observation exists to
+    /// end. Nothing about the address rule moves: the check still runs on the RESULT of these arms.
+    /// </para>
+    /// <b>Not part of the public reading surface</b> — it answers "what does this say" without
+    /// answering "is it mine", and only the addressed question is safe for a consumer to act on.
+    /// </remarks>
+    /// <param name="envelope">What arrived.</param>
+    internal static AdmissionOutcome? TryReadAdmissionAnswer(this WireEnvelope envelope) =>
+        envelope.Type switch
         {
             WireMessageType.JoinAccepted when envelope.HostPublicKey is not null => AdmissionOutcome.Accepted(envelope.HostPublicKey),
             WireMessageType.JoinDenied => AdmissionOutcome.Denied(),
             WireMessageType.JoinLapsed => AdmissionOutcome.Lapsed(),
             _ => null,
         };
-
-        return outcome is not null && IsAddressedTo(envelope, ownPublicKey) ? outcome : null;
-    }
 
     /// <summary>Whether this envelope names <paramref name="ownPublicKey"/> as its addressee.</summary>
     private static bool IsAddressedTo(WireEnvelope envelope, byte[]? ownPublicKey) =>
