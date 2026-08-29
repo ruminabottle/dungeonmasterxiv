@@ -21,7 +21,26 @@ internal static class SizeGateBaseline
     private const string FileName = "size-gate-baseline.txt";
 
     /// <summary>Every file the gate is expected to measure. A FLOOR — arrivals are fine, departures are not.</summary>
-    public static IReadOnlyList<string> Files() => Lines("FILE ").Order(StringComparer.Ordinal).ToList();
+    /// <remarks>
+    /// <b>AN UNPARSEABLE BASELINE REFUSES RATHER THAN COMPARING, and this arm is not symmetric with
+    /// <see cref="Breaches"/>.</b> A floor that parses to the empty set makes the departure check
+    /// vacuous — `expected.Except(intake)` is empty for every possible tree, so the gate reports a
+    /// clean population having compared nothing. That fails OPEN. An empty BREACH set fails CLOSED
+    /// instead: every existing breach would read as NEW and the gate would refuse loudly. So only
+    /// this one needs the guard, and saying which is the point — a check that fires on nothing must
+    /// not sit where a working one should be.
+    /// </remarks>
+    public static IReadOnlyList<string> Files()
+    {
+        var files = Lines("FILE ").Order(StringComparer.Ordinal).ToList();
+
+        return files.Count > 0
+            ? files
+            : throw new InvalidOperationException(
+                $"{FileName} yielded ZERO 'FILE ' lines. The gate has no population floor, so its "
+                + "departure check would pass against any tree at all. Refusing rather than "
+                + "comparing against nothing.");
+    }
 
     /// <summary>The grandfathered breaches, at the margins they are allowed to keep.</summary>
     public static IReadOnlyList<Breach> Breaches() =>

@@ -90,6 +90,25 @@ public class TheSizeGateRefusesWhatItShouldTests
     }
 
     [Fact]
+    public void AClassBreachIsMeasuredAtAll()
+    {
+        var filler = string.Join('\n', Enumerable.Repeat("    // line", 405));
+        var measured = SizeGate.BreachesIn(Path, $"namespace F;\npublic sealed class Huge\n{{\n{filler}\n}}\n");
+
+        Assert.Empty(measured.Unmeasured);
+        Assert.Contains(measured.Breaches, b => b.Row == SizeGate.ClassRow);
+    }
+
+    [Fact]
+    public void AFileBreachIsMeasuredAtAll()
+    {
+        var measured = SizeGate.BreachesIn(Path, string.Join('\n', Enumerable.Repeat("// line", 460)));
+
+        Assert.Empty(measured.Unmeasured);
+        Assert.Contains(measured.Breaches, b => b.Row == SizeGate.FileRow);
+    }
+
+    [Fact]
     public void AClassBreachIsRefusedABSOLUTELY_EvenWhenTheBaselineRecordsIt()
     {
         var filler = string.Join('\n', Enumerable.Repeat("    // line", 405));
