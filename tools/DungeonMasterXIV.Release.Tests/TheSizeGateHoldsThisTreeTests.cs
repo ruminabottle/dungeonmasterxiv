@@ -40,24 +40,7 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
         var intake = SizeGateIntake.Files();
         var expected = SizeGateBaseline.Files();
 
-        // BOTH OPERANDS ASSERTED NON-EMPTY BEFORE THEY ARE COMPARED, because two empty sets AGREE.
-        // `expected.Except(intake)` is empty when the floor is empty, when the intake is empty, and
-        // when the tree is genuinely clean -- three states, one answer. The baseline already refuses
-        // a zero-entry floor and the intake already throws when git cannot answer, so neither can be
-        // empty by the time this runs; asserting it here says so at the point of comparison rather
-        // than leaving it to two guarantees made elsewhere.
-        Assert.True(expected.Count > 0, "the population floor is empty, so the comparison below would "
-            + "pass against any tree at all");
-        Assert.True(intake.Count > 0, "the intake is empty, so nothing was measured and the "
-            + "comparison below would pass by agreeing with an empty floor");
-
-        // (2) THE POPULATION FLOOR, AND IT IS THE ONLY ARM THAT CATCHES A SHORT RUN. A file that
-        // leaves intake has no baseline and therefore no delta, so a regression in it reads as zero.
-        var departed = expected.Except(intake, System.StringComparer.Ordinal).ToList();
-        Assert.True(
-            departed.Count == 0,
-            $"{departed.Count} file(s) left intake and are no longer measured: "
-            + $"{string.Join(", ", departed)}. Restore them or record the removal in the baseline.");
+        AssertNoFileLeftIntake(expected, intake);
 
         var breaches = new List<Breach>();
         var unmeasured = new List<string>();
@@ -97,6 +80,35 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
         var refusals = SizeGate.Refusals(SizeGateBaseline.Breaches(), breaches, expected, intake);
 
         Assert.True(refusals.Count == 0, "The size gate refuses this tree:\n  " + string.Join("\n  ", refusals));
+    }
+
+    /// <summary>The population floor: nothing that was measured before may stop being measured.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE ONLY ARM THAT CATCHES A SHORT RUN.</b> A file outside intake has no baseline and
+    /// therefore no delta, so a regression in it reads as ZERO — indistinguishable from compliant.
+    /// </para>
+    /// <para>
+    /// <b>BOTH OPERANDS ARE ASSERTED NON-EMPTY BEFORE THEY ARE COMPARED, because two empty sets
+    /// AGREE.</b> <c>expected.Except(intake)</c> is empty when the floor is empty, when the intake is
+    /// empty, <i>and</i> when the tree is genuinely clean — three states, one answer. The baseline
+    /// refuses a zero-entry floor and the intake throws when git cannot answer, so neither can be
+    /// empty by the time this runs; asserting it here says so <b>at the point of comparison</b>
+    /// rather than resting on two guarantees made elsewhere in other files.
+    /// </para>
+    /// </remarks>
+    private static void AssertNoFileLeftIntake(IReadOnlyList<string> expected, IReadOnlyList<string> intake)
+    {
+        Assert.True(expected.Count > 0, "the population floor is empty, so the comparison below would "
+            + "pass against any tree at all");
+        Assert.True(intake.Count > 0, "the intake is empty, so nothing was measured and the "
+            + "comparison below would pass by agreeing with an empty floor");
+
+        var departed = expected.Except(intake, System.StringComparer.Ordinal).ToList();
+        Assert.True(
+            departed.Count == 0,
+            $"{departed.Count} file(s) left intake and are no longer measured: "
+            + $"{string.Join(", ", departed)}. Restore them or record the removal in the baseline.");
     }
 
     // THE DUPLICATED LIMITS ARE POLICED. They cannot be referenced from Program.cs -- top-level
