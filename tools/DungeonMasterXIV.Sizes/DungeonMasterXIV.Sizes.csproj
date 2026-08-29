@@ -17,4 +17,21 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
+  <!--
+    ROSLYN, FOR THE THREE ROWS ADDED BY DMXENG-55 AND FOR THOSE ONLY.
+
+    The standards warn in their own words that "the obvious implementation of this rule is wrong",
+    with a measurement behind it: a hand-rolled class count was wrong on 5 of 81 files, in BOTH
+    directions. Methods, parameter lists and nesting are strictly harder to recognise by regex than
+    a type declaration is, and this ticket exists BECAUSE an approximate instrument quietly became
+    the rule. Three more approximations would repeat that at one remove.
+
+    The two ORIGINAL rows stay on ClassSpanReader. They are ruled, tested and quoted; re-deriving
+    them through a different parser would silently move numbers people have already cited, which is
+    a change nobody asked for and nobody would see.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+  </ItemGroup>
+
 </Project>

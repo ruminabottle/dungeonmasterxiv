@@ -13,6 +13,14 @@ const int ClassFlag = 250;
 const int ClassBlock = 400;
 const int FileFlag = 300;
 const int FileBlock = 450;
+// DMXENG-55: the three rows of the table that nothing measured. The values are the table's, and
+// they live beside the other four so a reader can see at a glance that there are now FIVE rows.
+const int MethodFlag = 40;
+const int MethodBlock = 60;
+const int ParameterFlag = 4;
+const int ParameterBlock = 6;
+const int NestingFlag = 3;
+const int NestingBlock = 4;
 
 if (args.Length == 0)
 {
@@ -30,15 +38,27 @@ if (missing.Count > 0)
     return 2;
 }
 
-Console.WriteLine($"Class limits: flag {ClassFlag}, block {ClassBlock}.   File limits: flag {FileFlag}, block {FileBlock}.");
+// COVERAGE FIRST, BEFORE ANY NUMBER. This tool measured two of five rows and its banner named
+// exactly those two -- it never lied, and we read its silence as breadth anyway. A banner that
+// states all five and marks each is the thing that stops a clean run being heard as a clean rule.
+Console.WriteLine(Coverage.Describe(
+    new SizeLimits(FileFlag, FileBlock),
+    new SizeLimits(ClassFlag, ClassBlock),
+    new SizeLimits(MethodFlag, MethodBlock),
+    new SizeLimits(ParameterFlag, ParameterBlock),
+    new SizeLimits(NestingFlag, NestingBlock)));
+Console.WriteLine();
 Console.WriteLine("Type span: first line of the declaration to its closing brace, inclusive, nothing excluded.");
-Console.WriteLine("File: every line, first to last. Records, structs, interfaces and enums count as classes.");
-Console.WriteLine("Ruled by the Deployment Manager; see engineering-standards.md, \"HOW TO COUNT A CLASS\"");
-Console.WriteLine("and \"THE SHAPES A REAL FILE HAS\". This tool cites that ruling; it does not make one.");
+Console.WriteLine("Member span: the same procedure applied to a member. File: every line, first to last.");
 Console.WriteLine();
 
 var measured = 0;
 var refused = 0;
+// SEPARATE COUNTERS FOR MEMBERS. Folding them into the type census made a run over two files
+// report "22 type(s)" for two types and twenty members -- a census that quietly changed its own
+// population, which is this tool's own failure mode committed inside the tool.
+var membersMeasured = 0;
+var membersRefused = 0;
 
 foreach (var path in args)
 {
@@ -80,6 +100,49 @@ foreach (var path in args)
             + $"  {standing}, margin {margin}");
     }
 
+    foreach (var member in MemberReader.Read(File.ReadAllText(path)))
+    {
+        if (!member.IsMeasured)
+        {
+            membersRefused++;
+            Console.WriteLine($"  {member.Name,-34} NOT MEASURED — {member.Refusal}");
+            continue;
+        }
+
+        membersMeasured++;
+
+        // ONE LINE PER MEMBER, AND ONLY WHEN A ROW HAS SOMETHING TO SAY. Printing every member of
+        // every file would bury the class and file lines that callers came for, and a reader who
+        // scrolls past a breach has not been told about it. Silence here means every row is under
+        // its flag -- which the coverage banner above has already said is a statement about five
+        // rows rather than about the two this tool used to measure.
+        var notes = new List<string>();
+
+        if (member.Lines > MethodFlag)
+        {
+            notes.Add($"{member.Lines} lines "
+                + (member.Lines > MethodBlock ? "OVER THE BLOCK" : "over the flag")
+                + $", margin {MethodBlock - member.Lines}");
+        }
+
+        if (member.Parameters > ParameterFlag)
+        {
+            notes.Add($"{member.Parameters} parameters "
+                + (member.Parameters > ParameterBlock ? "OVER THE BLOCK" : "over the flag"));
+        }
+
+        if (member.Depth > NestingFlag)
+        {
+            notes.Add($"nesting {member.Depth} "
+                + (member.Depth > NestingBlock ? "OVER THE BLOCK" : "over the flag"));
+        }
+
+        if (notes.Count > 0)
+        {
+            Console.WriteLine($"  {member.Name,-34} line {member.Line,4}  {string.Join("; ", notes)}");
+        }
+    }
+
     Console.WriteLine();
 }
 
@@ -93,6 +156,7 @@ foreach (var path in args)
 // ABSENCE would be ambiguous between "nothing was refused" and "this build does not report it" --
 // which is the same reassuring-direction failure the line exists to close.
 Console.WriteLine(Census.Describe(measured, refused, args.Length));
+Console.WriteLine(Census.DescribeMembers(membersMeasured, membersRefused));
 
 // Always 0 on a successful measurement, even for a breach. Whether a breach fails a build is a
 // policy question the standards do not answer -- they say a blocking limit is "a denial on its
