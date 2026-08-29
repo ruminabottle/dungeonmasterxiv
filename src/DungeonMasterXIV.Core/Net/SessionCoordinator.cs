@@ -60,6 +60,7 @@ public sealed class SessionCoordinator
         _resolveRelink = capabilities.RelinkSource;
         _log = log;
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
+        _departure = new MemberDeparture(_link, () => Join.Code, () => SessionKey);
         _admissions = new AdmissionControl(
             new AdmissionAnnouncer(transport),
             () => Host.Code,
@@ -105,6 +106,7 @@ public sealed class SessionCoordinator
     private readonly Func<string?, RelinkClaim> _resolveRelink;
     private readonly ISessionTransportLog _log;
     private readonly AdmissionControl _admissions;
+    private readonly MemberDeparture _departure;
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
     private readonly RosterBroadcast _roster;
@@ -171,6 +173,12 @@ public sealed class SessionCoordinator
 
     /// <summary>The requests waiting on the DM (R-1.3).</summary>
     public AdmissionDesk Admissions => _admissions.Desk;
+
+    /// <summary>
+    /// When each member's connection dropped, for members still holding a seat (A-1.28). <b>A drop
+    /// is not a departure</b> — see <see cref="AdmissionControl.Departed"/>.
+    /// </summary>
+    public MemberDrops Drops => _admissions.Drops;
 
     /// <summary>
     /// Participants whose request lapsed on the most recent tick, so the caller can tell them it
@@ -378,6 +386,16 @@ public sealed class SessionCoordinator
     public void HostReconnectedWithNewCode() => _interruption.HostReconnectedWithNewCode();
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
+    /// <summary>
+    /// Tells the host this client is leaving, so it is removed at once (R-1.3g, A-1.16a). Returns
+    /// whether anything was sent.
+    /// </summary>
+    /// <remarks>
+    /// <b>False and silent when there is nothing to leave</b> — no code, or no shared key because
+    /// this client was never admitted. Quitting the join screen has nobody to tell.
+    /// </remarks>
+    public bool AnnounceDeparture() => _departure.Announce();
+
     public void Detach() => _link.Detach();
 
 

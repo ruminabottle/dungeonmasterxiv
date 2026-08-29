@@ -80,7 +80,21 @@ internal sealed class InboundWiring(
             // DMXENG-59 the two doors are two TYPES, so the swap will not compile either.
             MemberAuthored: new MemberAuthoredContent(
                 OpenWith: resources.MemberKeys.Candidates,
-                OnContent: resources.MemberContent.Record),
+                // A-1.16a. RECORDED FIRST, THEN ACTED ON: the receipt is what a DM's UI reads, and a
+                // departure that removed the member without leaving a trace would take them off the
+                // roster with nothing anywhere saying why.
+                //
+                // The peer code comes from the KEY THE PAYLOAD OPENED UNDER, never from the payload,
+                // so a member can only ever remove itself -- see MemberContentReader.
+                OnContent: (peer, content) =>
+                {
+                    resources.MemberContent.Record(peer, content);
+
+                    if (content.Leaving is true)
+                    {
+                        admissions.Departed(peer);
+                    }
+                }),
             // A-1.28, and the RELAY authors this one -- see TransportNotices for why that is
             // permissible and where the line is. RecordDrop refuses a key this host has not
             // admitted, so a stranger's notice records nothing.

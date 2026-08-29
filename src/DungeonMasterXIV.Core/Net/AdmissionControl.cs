@@ -352,6 +352,32 @@ public sealed class AdmissionControl
     /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
     /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
     /// </summary>
+    /// <summary>
+    /// A member said it is leaving, so it stops being a member at once (R-1.3g, A-1.16a). Returns
+    /// whether anybody was removed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>IMMEDIATE, AND THAT IS THE WHOLE REQUIREMENT.</b> R-1.5a: a deliberate quit removes the
+    /// seat at once. There is no window, no grace and no confirmation — the member has said what it
+    /// intends and the DM is not being asked to approve a departure.
+    /// </para>
+    /// <para>
+    /// <b>DELIBERATELY NOT <see cref="RecordDrop"/>, AND A-1.30 IS THE REASON.</b> That one records
+    /// WHEN a member vanished and leaves it admitted, because a dropped connection is not a
+    /// decision. This one removes. <b>Two inbound paths, two outcomes, and no line of code shared
+    /// between them</b> — conflating them is how a false gap gets closed by breaking R-1.5a.
+    /// </para>
+    /// <para>
+    /// <b>A departure from somebody who is not admitted removes nothing and says so.</b> The peer
+    /// code reaching here was derived from the key the payload opened under, so a stranger cannot
+    /// name a victim — but a member that left twice, or one already removed, is an ordinary race and
+    /// not an error.
+    /// </para>
+    /// </remarks>
+    /// <param name="peerCode">Whose key opened the departure notice.</param>
+    public bool Departed(PeerCode peerCode) => Audience.Remove(peerCode);
+
     public void Deny(PeerCode peerCode)
     {
         var request = Desk.Decide(peerCode);
