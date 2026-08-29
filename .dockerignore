@@ -1,0 +1,26 @@
+# Keeps HOST build output out of the Docker build context (BUG-77).
+#
+# WHAT GOES WRONG WITHOUT THIS. deploy/Dockerfile restores inside the image, correctly, producing
+# /build/src/.../obj/project.assets.json with container paths. It then COPYs the source directories
+# wholesale, which sweeps in the host's obj/ and OVERWRITES that file with one naming
+# /Users/<someone>/.nuget/packages. The publish step runs --no-restore, so nothing repairs it and the
+# build fails inside the container while the same commit builds fine on the host.
+#
+# WHY IT IS WORSE THAN IT SOUNDS, and why this file is worth its comment: bin/ and obj/ are
+# GITIGNORED, so `git status` reports a clean tree while the context is contaminated. Every habit for
+# "am I building from a known state" answers yes. The failure then names BouncyCastle and
+# SessionKeyExchange, so it reads as a real regression in recently-changed crypto code rather than as
+# machine state. The reporter nearly took it that way.
+#
+# This file lives at the REPOSITORY ROOT because that is the build context for both ways the image is
+# produced: `docker build -f deploy/Dockerfile .` and deploy/compose.yaml, which sets `context: ..`.
+# Docker reads .dockerignore from the context root, not from beside the Dockerfile, so a copy in
+# deploy/ would be silently inert.
+#
+# DELIBERATELY NARROW. This excludes build output and nothing else. It is not a
+# make-the-context-smaller file: every additional pattern is a chance to exclude something the image
+# turns out to need, and that failure looks exactly like this bug did. Nothing tracked lives under
+# bin/ or obj/ (verified: `git ls-files` matches zero such paths), so these two lines cannot remove
+# an input the build requires.
+**/bin/
+**/obj/
