@@ -1,0 +1,85 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using DungeonMasterXIV.Net;
+
+namespace DungeonMasterXIV.Data;
+
+/// <summary>
+/// Turns the live stream's entries into the form a log is written in. <b>The single point of
+/// contact between retention and <c>Core/Net</c>.</b>
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>ONE FILE TOUCHES THE STREAM TYPES ON PURPOSE.</b> The ticket's boundary is a WRITE separation
+/// — I may not edit <c>Net/</c> — and <b>a write separation does not make a read safe.</b> Two live
+/// branches are editing <c>StreamEntry</c> and <c>StreamEvent</c> right now. Confining the
+/// dependency here means that when their shape moves, exactly one file fails to compile, loudly,
+/// instead of an exporter failing at export time on a real log.
+/// </para>
+/// <para>
+/// <b>AND THE ENUM HAS ALREADY MOVED.</b> Measured rather than assumed: <c>StreamEventKind</c> is
+/// <b>six members on <c>origin/main</c> and seven on the open PR #210</b>, which adds <c>Gap</c> —
+/// the marker for a stretch the host could not hold. <b>A switch over a closed set is exhaustive
+/// only against the set it was written against</b>, and this one would otherwise break at EXPORT
+/// time, on a stream that recorded a real gap, which is the worst moment to discover it.
+/// </para>
+/// <para>
+/// <b>So the default arm THROWS rather than guessing.</b> An unmapped kind is a new stream event
+/// this code has never seen; writing it as "Unknown" would put a silent lie in an archival record,
+/// and dropping it would lose a line the log is supposed to hold — and a dropped <c>Gap</c> is the
+/// worst case of all, because a stream with a hole in it would then look identical to a stream with
+/// nothing in the hole, which is the exact failure that marker exists to prevent.
+/// </para>
+/// <para>
+/// <b>AND ADDING A KIND WILL NOT BREAK THE BUILD, SO A TEST IS THE TRIPWIRE.</b> A new enum member
+/// compiles perfectly against this switch and falls to the default <i>at run time</i> — which for an
+/// exporter means at export time, on a DM's real log. <c>EveryKindTheStreamHasTodayIsMapped</c>
+/// iterates <c>Enum.GetValues</c> and fails the moment a kind exists that this file has not been
+/// taught, so the surprise lands in CI on the PR that adds it rather than on a user. <b>Whoever
+/// merges the PR adding a kind teaches this file in the same change.</b>
+/// </para>
+/// </remarks>
+public static class StreamLogProjection
+{
+    /// <summary>Projects one live entry into its written form.</summary>
+    /// <exception cref="NotSupportedException">The kind is one this projection has not been taught.</exception>
+    public static LoggedEntry From(StreamEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        return new LoggedEntry(
+            new LoggedStamp(entry.Stamp.Sequence, entry.Stamp.AtUtcTicks),
+            NameOf(entry.Kind),
+            entry.Peer.Value,
+            entry.Text);
+    }
+
+    /// <summary>Projects a whole stream, in order.</summary>
+    public static IReadOnlyList<LoggedEntry> From(IEnumerable<StreamEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        return entries.Select(From).ToList();
+    }
+
+    private static string NameOf(StreamEventKind kind) => kind switch
+    {
+        StreamEventKind.Message => "message",
+        StreamEventKind.Roll => "roll",
+        StreamEventKind.Joined => "joined",
+        StreamEventKind.Left => "left",
+        StreamEventKind.Dropped => "dropped",
+        StreamEventKind.Reconnected => "reconnected",
+
+        // NOT a catch-all for convenience. A kind that reaches here is one the stream gained after
+        // this file was written -- Gap is already queued on PR #210 -- and both silent options are
+        // wrong: naming it "unknown" writes a falsehood into an archive, dropping it loses a line
+        // the log exists to hold. This throws where a developer sees it, not where a DM does.
+        _ => throw new NotSupportedException(
+            $"The log projection has not been taught the stream event kind '{kind}'. "
+            + "The stream gained a kind after this file was written; teach it here rather than "
+            + "letting an export invent or discard the line."),
+    };
+}
