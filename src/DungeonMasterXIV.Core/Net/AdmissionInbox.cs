@@ -290,6 +290,19 @@ public sealed class AdmissionInbox
             return false;
         }
 
+        // BUG-89: THE ANSWER MUST NAME THE CODE THIS HOST ASKED ABOUT. The phase alone does not say
+        // that, so an answer queued from an EARLIER request was applied to a later one -- a new
+        // session registered under the relay's answer about an old code. Only _inbox.Clear() in
+        // StopHosting prevented it: a guard in one method covering an unchecked assumption in
+        // another. The refusal arm needs it more, not less: a stale refusal makes the host abandon a
+        // code nobody refused. FALSE rather than a drop, so the frame falls through instead of being
+        // CONSUMED by a branch that did nothing with it -- which is BUG-43 exactly.
+        if (host.Code is not { } outstanding
+            || !string.Equals(envelope.SessionCode, outstanding.Value, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         switch (envelope.Type)
         {
             case WireMessageType.CodeAccepted:
