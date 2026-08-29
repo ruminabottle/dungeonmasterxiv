@@ -198,10 +198,14 @@ public sealed class Plugin : IDalamudPlugin
 
         // R-1.1: unloading the plugin ends the session, and ending it drops the relay connection.
         // Registered as an unwind step so it runs on a constructor throw as well as on Dispose.
+        // R-1.1: unloading the plugin ends the session, and ending it drops the relay connection.
+        // BUG-154: the three calls this replaced were the HOST's half only, so a joiner quitting the
+        // game deliberately looked exactly like one that vanished and had its seat held five minutes.
+        // The ordered sequence lives in EndSessionForTeardown because the ORDER is the fix and a
+        // lambda here cannot be tested -- the test project reaches Core and not this project.
         _unwind.Push("session and relay connection", () =>
         {
-            _sessionCoordinator.StopHosting(DateTimeOffset.UtcNow);
-            _sessionCoordinator.Detach();
+            _sessionCoordinator.EndSessionForTeardown(DateTimeOffset.UtcNow);
             _relayTransport.Dispose();
         });
 
