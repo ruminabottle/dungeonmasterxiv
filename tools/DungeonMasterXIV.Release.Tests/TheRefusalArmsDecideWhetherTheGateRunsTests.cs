@@ -5,12 +5,12 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// The three currency arms added by #185 refuse, and each refuses for its own reason (BUG-128).
+/// Each arm on which the gate declines refuses for its OWN reason, not merely with a false (BUG-128).
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>These arms decide whether the merge gate runs at all</b>, and until now each of the three
-/// strings appeared exactly once in the repository — in the source that produces it. They are the
+/// <b>These arms decide whether the merge gate runs at all</b>, and until BUG-128 each of the three
+/// currency strings appeared exactly once in the repository — in the source that produces it. They are the
 /// mechanism keeping <i>"could not validate"</i> distinct from <i>"clean"</i>, which is the entire
 /// purpose of BUG-124's fix, and nothing held them.
 /// </para>
@@ -73,7 +73,7 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
     public void AnUnreachableOriginRefusesRatherThanFallingBackToTheLocalAnswer()
     {
         var (contains, detail) = ContainsMainFactAttribute.Decide(
-            Git(lsRemote: (128, string.Empty, "fatal: could not read from remote repository")));
+            Git(lsRemote: (128, string.Empty, "fatal: could not read from remote repository", false)));
 
         Assert.False(
             contains,
@@ -88,7 +88,7 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
     public void ACloneWithNoCachedOriginMainRefusesRatherThanComparingAgainstNothing()
     {
         var (contains, detail) = ContainsMainFactAttribute.Decide(
-            Git(revParse: (128, string.Empty, "fatal: ambiguous argument")));
+            Git(revParse: (128, string.Empty, "fatal: ambiguous argument", false)));
 
         Assert.False(
             contains,
@@ -105,7 +105,7 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
     public void AStaleCacheRefusesEvenWhenAncestryWouldSayContained()
     {
         var (contains, detail) = ContainsMainFactAttribute.Decide(
-            Git(revParse: (0, StaleHead + "\n", string.Empty)));
+            Git(revParse: (0, StaleHead + "\n", string.Empty, false)));
 
         Assert.False(
             contains,
@@ -116,6 +116,30 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
         Assert.Contains("is STALE", detail, StringComparison.Ordinal);
         Assert.Contains(StaleHead[..7], detail, StringComparison.Ordinal);
         Assert.Contains(OriginHead[..7], detail, StringComparison.Ordinal);
+    }
+
+    // THE FIFTH ARM (BUG-126's), AND THIS IS NOT A DUPLICATE OF THE TEST THAT ALREADY COVERS IT.
+    // AnUnresponsiveOriginCannotHangTheGateTests drives it with a fake that times out EVERY command,
+    // so local git is degenerate there and no later arm is reachable to compete. This drives the
+    // shape that actually happens: the NETWORK call times out while local git is perfectly healthy
+    // -- and the cached ref is stale, so the arm below would return false with a plausible reason of
+    // its own. The timeout arm sits above it and must win.
+    //
+    // Both halves matter. Assert.False alone passes either way, because the stale arm returns false
+    // too; the exact-equality assertion on the reason is what distinguishes "timed out" from
+    // "reported as something else that happens to also refuse".
+    [Fact]
+    public void ATimedOutRemoteIsReportedAsTimedOutEvenWhenTheCacheIsAlsoStale()
+    {
+        var (contains, detail) = ContainsMainFactAttribute.Decide(
+            Git(lsRemote: (ContainsMainFactAttribute.TimedOutCode, string.Empty, string.Empty, true),
+                revParse: (0, StaleHead + "\n", string.Empty, false)));
+
+        Assert.False(
+            contains,
+            $"A timed-out origin must not run the gate. Detail was: {detail}");
+
+        Assert.Equal(ContainsMainFactAttribute.TimedOutDetail, detail);
     }
 
     /// <summary>A git that answers the three questions <c>Decide</c> asks, and nothing else.</summary>
@@ -131,25 +155,25 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
     /// having. An unrecognised command is a red with the command in the message.
     /// </para>
     /// </remarks>
-    private static Func<string, (int Code, string Output, string Errors)> Git(
-        (int Code, string Output, string Errors)? lsRemote = null,
-        (int Code, string Output, string Errors)? revParse = null,
-        (int Code, string Output, string Errors)? mergeBase = null)
+    private static Func<string, TimeSpan?, (int Code, string Output, string Errors, bool TimedOut)> Git(
+        (int Code, string Output, string Errors, bool TimedOut)? lsRemote = null,
+        (int Code, string Output, string Errors, bool TimedOut)? revParse = null,
+        (int Code, string Output, string Errors, bool TimedOut)? mergeBase = null)
     {
         var asked = new List<string>();
 
-        return arguments =>
+        return (arguments, _) =>
         {
             asked.Add(arguments);
 
             if (arguments.StartsWith("ls-remote", StringComparison.Ordinal))
             {
-                return lsRemote ?? (0, $"{OriginHead}\trefs/heads/main\n", string.Empty);
+                return lsRemote ?? (0, $"{OriginHead}\trefs/heads/main\n", string.Empty, false);
             }
 
             if (arguments.StartsWith("rev-parse", StringComparison.Ordinal))
             {
-                return revParse ?? (0, OriginHead + "\n", string.Empty);
+                return revParse ?? (0, OriginHead + "\n", string.Empty, false);
             }
 
             // ANSWERED "YES, CONTAINED" BY DEFAULT, AND THAT IS THE POINT. Every refusal test above
@@ -157,7 +181,7 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
             // therefore cannot have come from here.
             if (arguments.StartsWith("merge-base", StringComparison.Ordinal))
             {
-                return mergeBase ?? (0, string.Empty, string.Empty);
+                return mergeBase ?? (0, string.Empty, string.Empty, false);
             }
 
             throw new InvalidOperationException(
