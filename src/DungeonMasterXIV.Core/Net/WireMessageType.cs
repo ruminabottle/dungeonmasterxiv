@@ -115,7 +115,23 @@ public enum WireMessageType
     /// else vanished — a forged transport fact, which the host would then record against a real
     /// member. <c>RelayRouter</c> drops it as <c>RelayOnlyMessageFromClient</c>, alongside the
     /// relay's other own-answers. <b>The host refuses a key it has not admitted as well</b>, so
-    /// there are two independent guards rather than one.
+    /// there are two independent guards rather than one — <b>but they are not co-equal, and the
+    /// difference matters to anyone thinking of relaxing either.</b> A forged notice naming a
+    /// member the host HAS admitted passes <c>RecordDrop</c>'s check, because that check asks only
+    /// whether the named member is real. <b>So the router guard carries the entire client threat;
+    /// the host guard covers relay error or a compromised relay.</b> Relaxing the first on the
+    /// strength of the second would remove the only thing standing between a keyholder and a
+    /// forged drop against a genuine member.
+    /// </para>
+    /// <para>
+    /// <b>WHAT THE RELAY CARRIES, AND THE CONDITION THE PRIVACY PROPERTY RESTS ON.</b> Naming a
+    /// member by public key means the relay now RETAINS that key for the life of the session. That
+    /// is not cross-session linkage <b>because joiner keys are ephemeral BY CONSTRUCTION</b> —
+    /// <c>JoinRequester</c> mints a fresh pair per join, so the key identifies a connection and
+    /// never a person. <b>If joiner keys ever became durable, this retention becomes linkage with
+    /// nothing in the relay changing</b>, and relink is the feature that would tempt exactly that.
+    /// Stated as a condition rather than a property so the next person changing key lifetime meets
+    /// it.
     /// </para>
     /// </remarks>
     ConnectionDropped = 11,

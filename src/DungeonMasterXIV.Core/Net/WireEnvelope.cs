@@ -354,22 +354,14 @@ public sealed record WireEnvelope
     /// The relay telling a host that a member's connection went away (A-1.28, R-1.5a).
     /// </summary>
     /// <remarks>
+    /// <b>It names the member by the key the host already knows</b>, and carries nothing else about
+    /// them — no name, no participant id. See <see cref="WireMessageType.ConnectionDropped"/> for
+    /// why that is the whole design and what forwarding a client-sent one would buy an attacker.
     /// <para>
-    /// <b>It names the member by the key the host already knows, because the relay has nothing else
-    /// the host could act on.</b> The host identifies participants by peer code, derived from the
-    /// session code and the joiner's public key — a derivation the relay does not have and must not
-    /// acquire. Sending the key lets the host run its own derivation and reach its own conclusion,
-    /// which is D-3 kept rather than merely respected: <b>the relay says what it saw, the host says
-    /// who that is.</b>
-    /// </para>
-    /// <para>
-    /// <b>No participant id and no name.</b> Either would be the relay asserting something about
-    /// the SESSION rather than about the transport, and a host that trusted them would be taking
-    /// its roster from a party D-2 says is not authoritative over it.
-    /// </para>
-    /// <para>
-    /// <b>Nothing here says "remove".</b> A drop HOLDS the seat (R-1.5a) and only the host decides
-    /// what follows; a build that removed a member on this message would fail A-1.29 twice over.
+    /// Kept short deliberately: <c>WireEnvelope</c> sits against a DECLARED RAISED FLAG of 360
+    /// (<c>engineering-standards.md:8003</c>), and a flag raised on purpose is one that has to stay
+    /// visible. The reasoning lives on the message type, which is where a reader looking for it
+    /// would go.
     /// </para>
     /// </remarks>
     /// <param name="code">The session the member was in.</param>
