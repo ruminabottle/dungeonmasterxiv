@@ -100,12 +100,30 @@ public class EveryMessageAClientSendsIsSentTests
         // absorb it -- a category for being honest about what is not built becomes a place to hide
         // what should be the moment it accepts something the product already requires.
         //
-        // T-30 makes the claim path reachable. This row goes green when it lands, and not before.
+        // GREEN SINCE DMXENG-1 (#141), AND THE TRIGGER HAD TO CHANGE FOR IT -- said plainly, because
+        // "the row went green when the feature landed" would be a nicer story and is not what
+        // happened. Until #141 nothing in the product could produce a claim: the joiner had no
+        // storage, so passing one here would have fabricated a state production could not reach,
+        // which is why this trigger deliberately called the ONE-ARGUMENT overload and this row
+        // deliberately failed.
+        //
+        // Now a claim exists -- JoinFlowView reads it from RelinkMemory and passes it to the
+        // three-argument RequestJoin -- so driving that same entry point with one is no longer a
+        // fabrication. IT IS THE PRODUCTION PATH, one layer below the window this assembly cannot
+        // reference.
+        //
+        // WHAT THIS STILL MEASURES, and it is the original defect: BUG-41 was the middle overload
+        // NULLING the claim on its way through. Break that again and this row fails again, because
+        // the predicate reads the WIRE and not the argument.
+        //
+        // WHAT IT NO LONGER MEASURES: that the UI supplies one. That is JoinFlowView, in the plugin
+        // project, and it is covered by TheJoinerRemembersWhoItIsTests instead.
         [nameof(WireEnvelope.ForRelinkRequest)] = new(
             Origin.Client, "a returning client claims its participant (R-1.5)",
             s =>
             {
-                s.Coordinator.RequestJoin(SessionCode.FromValid("BCDFGH"));
+                s.Coordinator.RequestJoin(
+                    SessionCode.FromValid("BCDFGH"), DisplayName.None, Guid.NewGuid());
                 s.Ready();
                 s.Coordinator.Tick(TimeSpan.Zero, Now);
             },
