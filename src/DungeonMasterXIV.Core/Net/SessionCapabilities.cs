@@ -53,9 +53,15 @@ namespace DungeonMasterXIV.Net;
 /// campaign. <b>Optional deliberately; the reasoning lives on <see cref="AdmissionControl"/>'s
 /// parameter of the same name, where it is consumed.</b>
 /// </param>
+/// <param name="ResolveRelink">
+/// Turns the participant id a joining client claims into what this host knows about it (R-1.5,
+/// T-37), or null to resolve nothing. See <see cref="RelinkSource"/> for why the default is correct
+/// for a joiner and reported for a host.
+/// </param>
 public sealed record SessionCapabilities(
     Func<SessionKeyExchange>? NewKeys = null,
-    Func<DisplayName, Guid?>? MintParticipant = null)
+    Func<DisplayName, Guid?>? MintParticipant = null,
+    Func<string?, RelinkClaim>? ResolveRelink = null)
 {
     /// <summary>
     /// What a caller that supplies nothing gets: platform key generation, and no campaign.
@@ -80,4 +86,31 @@ public sealed record SessionCapabilities(
 
     /// <summary>Minting, with the no-campaign case filled in.</summary>
     public Func<DisplayName, Guid?> ParticipantSource => MintParticipant ?? (static _ => null);
+
+    /// <summary>
+    /// Turns the participant id a joining client CLAIMS into what this host actually knows about it
+    /// (R-1.5), or <see cref="RelinkClaim.None"/> when nothing is wired.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A CLAIM IS NOT A CREDENTIAL, and the return type is what keeps that true.</b> The joiner
+    /// sends unauthenticated text; this returns what the host RESOLVED it to, and the DM still
+    /// approves every relink, every session (R-1.5, D-8). Nothing is granted on the strength of the
+    /// claim — its entire effect is to change what the DM's prompt SAYS.
+    /// </para>
+    /// <para>
+    /// <b>The default is today's behaviour exactly:</b> every request resolves to
+    /// <see cref="RelinkClaim.None"/> and every relink branch takes the not-a-relink path. That is
+    /// correct for a JOINING client, which hosts nothing and resolves nobody.
+    /// </para>
+    /// <para>
+    /// <b>A HOST wired without one is a real loss, and it is ALREADY REPORTED</b> — not silently
+    /// tolerated. It has the same root cause as a host with no <see cref="MintParticipant"/>: no
+    /// campaign. <see cref="AdmissionControl.Admit"/> already warns by peer code on exactly that
+    /// condition, so a second warning here would fire on the same misconfiguration and teach a DM to
+    /// skip both.
+    /// </para>
+    /// </remarks>
+    public Func<string?, RelinkClaim> RelinkSource =>
+        ResolveRelink ?? (static _ => RelinkClaim.None);
 }

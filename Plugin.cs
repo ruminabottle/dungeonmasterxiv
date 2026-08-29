@@ -101,7 +101,16 @@ public sealed class Plugin : IDalamudPlugin
             capabilities: new SessionCapabilities(
                 MintParticipant: label => _hostingCampaign.Current is { } campaign
                     ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
-                    : null));
+                    : null,
+                // T-37, and the line that gives CampaignRelink.Resolve its FIRST production caller.
+                // Until now every one of its eight call sites was in tests: a claim arrived on the
+                // wire and every relink branch took the not-a-relink path, so the host could not
+                // approve a relink no matter what a client sent.
+                //
+                // Current campaign, read at the MOMENT OF THE REQUEST rather than captured -- the DM
+                // may start or resume a campaign while the session is live, and a claim must be
+                // resolved against the roster that is actually loaded.
+                ResolveRelink: claimed => CampaignRelink.Resolve(_hostingCampaign.Current, claimed)));
         // The alias if the player set a usable one, otherwise the character name (R-1.3e). The rule
         // lives in PluginSettings so it is testable without Dalamud, and the settings window calls
         // the same method to show what will be sent -- one expression, so the preview cannot drift

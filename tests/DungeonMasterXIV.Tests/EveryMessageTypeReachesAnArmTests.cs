@@ -267,7 +267,7 @@ public sealed class EveryMessageTypeReachesAnArmTests
                 _keys,
                 _host,
                 new InboundHandlers(
-                    OnJoinRequest: (_, _) => JoinRequestSeen = true,
+                    OnJoinRequest: (_, _, _) => JoinRequestSeen = true,
                     OnComparabilityReceipt: _ => ReceiptSeen = true));
         }
 
