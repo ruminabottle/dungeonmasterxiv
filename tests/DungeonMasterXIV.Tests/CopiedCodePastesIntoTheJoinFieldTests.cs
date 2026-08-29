@@ -98,6 +98,45 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// up to date, and a window added tomorrow would be unscanned with nothing to say so — the same
     /// shape as the defect this replaces, moved into the test file.
     /// </remarks>
+    /// <summary>Every <c>.cs</c> file beneath <c>Windows/</c>, found by walking rather than by globbing.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason
+    /// (BUG-67, reaching this file as BUG-101).</b> The obvious implementation is
+    /// <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c> — which is the call
+    /// <see cref="WindowSources"/> makes. Comparing a function against itself is what left the old
+    /// control blind: both sides missed subdirectories, missed them EQUALLY, and the equality
+    /// passed. TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS NOT EVIDENCE.
+    /// </para>
+    /// <para>
+    /// <b>Measured, not argued.</b> With one subdirectory added under <c>Windows/</c>: before
+    /// BUG-101 both sides were top-level and the guard PASSED while missing the file entirely;
+    /// with only <see cref="WindowSources"/> made recursive it FAILED with "Collections differ",
+    /// blaming the guard rather than its own narrower control. Both sides now see the same tree by
+    /// different routes.
+    /// </para>
+    /// <para>
+    /// So this descends explicitly and takes no <c>SearchOption</c>. Narrowing
+    /// <see cref="WindowSources"/> back to top-level cannot narrow this with it, which is the
+    /// property the control needs and the one that was missing.
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<string> EveryCsFileBeneath(string directory)
+    {
+        foreach (var file in Directory.GetFiles(directory, "*.cs"))
+        {
+            yield return file;
+        }
+
+        foreach (var subdirectory in Directory.GetDirectories(directory))
+        {
+            foreach (var file in EveryCsFileBeneath(subdirectory))
+            {
+                yield return file;
+            }
+        }
+    }
+
     private static IReadOnlyList<string> WindowSources() =>
         Directory.EnumerateFiles(WindowsDirectory(), "*.cs", SearchOption.AllDirectories)
             .OrderBy(path => path, StringComparer.Ordinal)
@@ -126,7 +165,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     public void TheClipboardGuardReadsEveryWindowRatherThanOneNamedFile()
     {
         var scanned = WindowSources().Select(Path.GetFileName).ToList();
-        var onDisk = Directory.EnumerateFiles(WindowsDirectory(), "*.cs").Select(Path.GetFileName).ToList();
+        var onDisk = EveryCsFileBeneath(WindowsDirectory()).Select(Path.GetFileName).ToList();
 
         // Derived from disk on both sides, so a window added tomorrow is covered without anyone
         // remembering to add it here.
