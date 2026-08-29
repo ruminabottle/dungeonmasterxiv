@@ -94,7 +94,36 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     internal static string SkippedDisplayName(string? test, string detail) =>
         $"{test} -- SIZE GATE NOT RUN, so this tree is not known to be the merged tree: {detail}";
 
-    private static readonly Lazy<(bool Contains, string Detail)> Containment = new(() =>
+    private static readonly Lazy<(bool Contains, string Detail)> Containment = new(() => Decide(Git));
+
+    /// <summary>Decides containment from what git answers, without knowing how git was run.</summary>
+    /// <param name="git">
+    /// Runs a git command and returns its exit code, stdout and stderr. Injected so the refusal arms
+    /// can be driven from the suite; production passes <see cref="Git"/>, which shells out for real.
+    /// </param>
+    /// <remarks>
+    /// <para>
+    /// <b>THE EXTRACTION IS THE FIX FOR BUG-128, and it changes no behaviour.</b> These arms decide
+    /// whether the merge gate runs at all, and every one of them was reachable only by doctoring a
+    /// real clone by hand — which both breakfix engineers did, and which no test in the suite did. A
+    /// <c>static readonly Lazy</c> over a real process cannot be driven from a test: it resolves once
+    /// per process, against whatever tree the runner happens to be sitting in.
+    /// </para>
+    /// <para>
+    /// <b>What moved is the DECISION; what stayed is the INVOCATION.</b> <c>Git</c> is untouched, so
+    /// this does not collide with BUG-126's <c>WaitForExit</c> timeout in that same method. The
+    /// separation is also the honest one: which arm fires is a rule worth pinning, and how a process
+    /// is started is not something a unit test should be asserting about.
+    /// </para>
+    /// <para>
+    /// <b>The limit, stated rather than implied.</b> Driving this with a fake proves the arm SELECTED
+    /// for a given set of git answers. It does not prove those answers are what real git gives — that
+    /// <c>ls-remote</c> prints a tab-separated sha, or that <c>--is-ancestor</c> exits 1 rather than
+    /// 2 when the answer is no. That half is pinned by the clone-driving runs recorded on #185 and by
+    /// the gate running for real on every merge, not by anything here.
+    /// </para>
+    /// </remarks>
+    internal static (bool Contains, string Detail) Decide(Func<string, (int Code, string Output, string Errors)> git)
     {
         // CURRENCY BEFORE ANCESTRY, AND THE ORDER IS THE FIX (BUG-124). `merge-base` reads
         // refs/remotes/origin/main, which is a LOCAL CACHE as fresh as this clone's last fetch --
@@ -105,7 +134,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         //
         // That is the one sentence the three outcomes exist to make impossible -- "could not
         // validate" reported as "clean" -- arriving through the check meant to prevent it.
-        var (remoteCode, remote, remoteErrors) = Git("ls-remote origin refs/heads/main");
+        var (remoteCode, remote, remoteErrors) = git("ls-remote origin refs/heads/main");
         var remoteHead = remote.Split('\t')[0].Trim();
 
         // ASKING COSTS A NETWORK CALL AND NOT ASKING COSTS THE GUARANTEE. `ls-remote` reads the
@@ -119,7 +148,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
                 + $"this check has not validated. ({remoteErrors.Trim()})");
         }
 
-        var (cachedCode, cached, _) = Git("rev-parse refs/remotes/origin/main");
+        var (cachedCode, cached, _) = git("rev-parse refs/remotes/origin/main");
         var cachedHead = cached.Trim();
 
         if (cachedCode != 0 || cachedHead.Length == 0)
@@ -134,7 +163,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
                 + "this reports rather than a result. Fetch and re-run.");
         }
 
-        var (code, output, errors) = Git("merge-base --is-ancestor origin/main HEAD");
+        var (code, output, errors) = git("merge-base --is-ancestor origin/main HEAD");
 
         // Exit 0 = ancestor, 1 = not. Anything else is git failing, and a git failure must not be
         // read as "contained" -- that would resurrect the green this whole attribute exists to stop.
@@ -144,7 +173,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
             1 => (false, "origin/main is not an ancestor of HEAD -- merge or rebase main and the gate runs"),
             _ => (false, $"git could not answer (exit {code}): {errors.Trim()}{output.Trim()}"),
         };
-    });
+    }
 
     private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
 
