@@ -135,6 +135,13 @@ public sealed class JoinAttempt
     /// a problem". <c>Idle</c> renders "not in a session", which is what happened.
     /// </para>
     /// <para>
+    /// <b>AND THAT LAST STEP IS AN INFERENCE, NOT A CITATION.</b> R-1.3c forbids reporting a LAPSE
+    /// as a REFUSAL; it does not name a leave. Reading it as also forbidding "a leave reported as a
+    /// lapse" is mine, and the Spec Owner has not ruled on it. Recorded here rather than only in a
+    /// PR body, because a prediction written in the past tense inside merged code becomes a premise
+    /// and the next reader cannot tell which it was.
+    /// </para>
+    /// <para>
     /// <b>Idle also restores what leaving is FOR.</b> It satisfies
     /// <see cref="MayRequestAgain"/> by the existing predicate — no line there changes — so the
     /// player can join somewhere else at once, and it takes the phase out of the set

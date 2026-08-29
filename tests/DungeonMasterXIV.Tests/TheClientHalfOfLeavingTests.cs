@@ -104,7 +104,10 @@ public class TheClientHalfOfLeavingTests
     // Cutting the seat-and-keys release from the teardown left every other test in this file GREEN.
     // The phase moves to Idle either way, so "am I in a session" answers correctly while the client
     // still holds the key it derived on admission -- able to open payloads from a session it has
-    // left, and holding a key pair across session codes, which is the linkage D-8 refuses.
+    // left. CORRECTED AFTER REVIEW: I first justified this as D-8, holding a key pair ACROSS SESSION
+    // CODES. That exposure is NOT reachable -- JoinRequester.Request releases before minting -- and a
+    // right conclusion with a wrong reason is the one nobody re-runs. The property is narrower and
+    // still real: the key outlives the session it belongs to.
     //
     // A LEAVE THAT KEEPS THE KEY IS NOT A LEAVE. Asserted on the key material rather than on the
     // phase, because the phase is the half that was already covered.
@@ -120,6 +123,75 @@ public class TheClientHalfOfLeavingTests
 
         Assert.Null(member.Membership.SessionKey);
         Assert.Null(member.Membership.Keys);
+    }
+
+    // >>> THE KEY DOES NOT OUTLIVE THE SESSION IT BELONGS TO <<<
+    //
+    // Found by the Code Reviewer on #196, and it is a KEY-LIFETIME property rather than the D-8
+    // breach it was first ranked on. The cross-session exposure is NOT reachable -- JoinRequester
+    // .Request releases before minting, so no key survives into a different session code. What was
+    // real is narrower: from close-expiry until the next join or shutdown, the client held the key
+    // for a session that had ended. SessionClosing.HasClosedAt had ZERO production callers, so the
+    // countdown was rendered and its expiry acted on by nobody.
+    //
+    // THE PREMISE IS ASSERTED BEFORE THE PROPERTY. Without the first two assertions a fixture that
+    // never armed -- no notice, or an instant that has not passed -- would report the same green as
+    // a build that releases correctly, and the test would be measuring nothing.
+    [Fact]
+    public void WhenTheSessionClosesTheKeyGoesWithIt()
+    {
+        var host = Hosting(out var hostTransport);
+        var member = Joined(out var memberTransport, host, hostTransport);
+        EndTheSessionAndDeliverTheNotice(host, hostTransport, memberTransport, member);
+        var afterItCloses = Now.Add(SessionClosing.Window).AddSeconds(1);
+
+        Assert.NotNull(member.Membership.Closing);
+        Assert.True(
+            member.Membership.Closing!.Value.HasClosedAt(afterItCloses),
+            "The premise: the session must actually have closed, or this asserts nothing.");
+        Assert.NotNull(member.Membership.SessionKey);
+
+        member.Tick(TimeSpan.Zero, afterItCloses);
+
+        Assert.Null(member.Membership.SessionKey);
+        Assert.Null(member.Membership.Keys);
+    }
+
+    // FOUND BY MUTATION AGAIN: cutting the clear left everything green, so the doc claimed a
+    // property nothing pinned. Without it the expiry re-fires on EVERY frame, and the teardown
+    // synchronises the transport -- a per-frame reconnect for a session that no longer exists. The
+    // notice being gone is what makes it fire once, so that is what is asserted.
+    [Fact]
+    public void TheNoticeIsForgottenOnceItHasBeenActedOn()
+    {
+        var host = Hosting(out var hostTransport);
+        var member = Joined(out var memberTransport, host, hostTransport);
+        EndTheSessionAndDeliverTheNotice(host, hostTransport, memberTransport, member);
+        var afterItCloses = Now.Add(SessionClosing.Window).AddSeconds(1);
+        Assert.NotNull(member.Membership.Closing);
+
+        member.Tick(TimeSpan.Zero, afterItCloses);
+
+        Assert.Null(member.Membership.Closing);
+    }
+
+    // The other direction, or "release it once closed" is satisfied by releasing it always. A
+    // countdown that is still running is a session the player is still in.
+    [Fact]
+    public void WhileTheCountdownIsStillRunningTheKeyIsKept()
+    {
+        var host = Hosting(out var hostTransport);
+        var member = Joined(out var memberTransport, host, hostTransport);
+        EndTheSessionAndDeliverTheNotice(host, hostTransport, memberTransport, member);
+        var partway = Now.Add(SessionClosing.Window).AddSeconds(-1);
+
+        Assert.False(
+            member.Membership.Closing!.Value.HasClosedAt(partway),
+            "The premise: the session must NOT yet have closed.");
+
+        member.Tick(TimeSpan.Zero, partway);
+
+        Assert.NotNull(member.Membership.SessionKey);
     }
 
     // A notice outliving its session would show a countdown for a session the player is no longer

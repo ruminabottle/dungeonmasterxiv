@@ -141,6 +141,46 @@ public sealed class SessionMembership
     }
 
     /// <summary>
+    /// Releases what this client held for a session that has now closed (R-1.3g).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A KEY-LIFETIME PROPERTY, and deliberately not argued as a D-8 breach.</b> The key derived
+    /// at admission belongs to one session; when the host's closing instant passes, that session is
+    /// over and the key should go with it. <b>The cross-session exposure is NOT reachable</b> —
+    /// <see cref="JoinRequester.Request"/> releases before minting, so no key survives into a
+    /// different session code. Naming this as D-8 would be a right conclusion with a wrong reason,
+    /// and the next reader would look for cross-session leakage, find none, and conclude the release
+    /// was unnecessary. <b>The real residual is narrower: the key outlives its own session</b>, from
+    /// close-expiry until the next join or shutdown.
+    /// </para>
+    /// <para>
+    /// <b>Nothing was watching this instant at all.</b> Before this, <see cref="SessionClosing.HasClosedAt"/>
+    /// had zero production callers — the countdown was rendered and its expiry acted on by nobody.
+    /// </para>
+    /// <para>
+    /// <b>No departure is announced, and that is the difference from <see cref="Leave"/>.</b> The
+    /// host ended this; telling it we are leaving a session it has already closed asserts something
+    /// D-3 gives it and not us. The teardown is shared because it is the same teardown; only the
+    /// notice differs.
+    /// </para>
+    /// <para>
+    /// <b>The notice is cleared so this fires ONCE.</b> Left standing it would re-run every frame,
+    /// and the teardown synchronises the transport — a per-frame reconnect for a session that no
+    /// longer exists.
+    /// </para>
+    /// </remarks>
+    /// <param name="now">The current instant, supplied by the frame rather than read.</param>
+    internal void ExpireIfTheSessionHasClosed(DateTimeOffset now)
+    {
+        if (_closing.Notice is { } notice && notice.HasClosedAt(now))
+        {
+            _closing.Clear();
+            _joiner.Left();
+        }
+    }
+
+    /// <summary>
     /// Records a closing instant that arrived from the host, if the payload carried one (R-1.3g).
     /// </summary>
     /// <remarks>

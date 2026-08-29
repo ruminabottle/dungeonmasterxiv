@@ -335,6 +335,7 @@ public sealed class SessionCoordinator
             ?? Membership.SessionKey;
         _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);
+        Membership.ExpireIfTheSessionHasClosed(now);
 
         if (_interruption.Tick(sinceLastTick))
         {
