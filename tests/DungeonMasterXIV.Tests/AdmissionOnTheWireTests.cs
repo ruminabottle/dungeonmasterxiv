@@ -43,7 +43,7 @@ public class AdmissionOnTheWireTests
         var acceptance = Decode(transport).Single(e => e.Type == WireMessageType.JoinAccepted);
         var code = coordinator.Host.Code!.Value;
 
-        var joinerKey = acceptance.TryGetAdmissionOutcome()!
+        var joinerKey = acceptance.TryGetAdmissionOutcome(joiner.PublicKey)!
             .Match(hostKey => joiner.DeriveSharedKey(hostKey, code), () => null!, () => null!);
 
         Assert.Equal(coordinator.HostKeys!.DeriveSharedKey(joiner.PublicKey, code), joinerKey);
