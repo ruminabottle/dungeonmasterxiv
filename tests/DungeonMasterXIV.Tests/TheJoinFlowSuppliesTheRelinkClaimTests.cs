@@ -28,6 +28,13 @@ namespace DungeonMasterXIV.Tests;
 /// established way round that in this project. It asserts the SHAPE OF THE CALL, not that a join
 /// reaches a relay. The end-to-end coverage is the in-game check.
 /// </para>
+/// <para>
+/// <b>And it proves the call is WRITTEN, never that it RUNS.</b> A correct call inside a branch
+/// that never executes, or in a method nothing invokes, satisfies every assertion here. That is the
+/// honest boundary of reading text rather than driving the window, and it is stated because the
+/// weaker sentence above does not cover it: "the shape of the call" and "the call happens" are
+/// different claims, and only the first one is checked.
+/// </para>
 /// </remarks>
 public class TheJoinFlowSuppliesTheRelinkClaimTests
 {
