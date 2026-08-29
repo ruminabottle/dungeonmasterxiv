@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using DungeonMasterXIV.Rolls;
 using Xunit;
 
@@ -103,24 +107,70 @@ public class EveryGrammarConstructIsReachableFromAStringTests
         Assert.Equal(6, dropped.Value);
     }
 
-    // THE CENSUS ITSELF. Without this, a construct could be deleted from the theory above and the
-    // file would go green while covering less -- the same "absence reads as coverage" failure the
-    // whole file exists to catch, reappearing one level up in the test.
+    // THE CENSUS, AND IT NOW READS THE THEORY RATHER THAN REPEATING IT (BUG-150). The previous
+    // version listed the same eleven expressions a second time and claimed that deleting a row from
+    // the theory could not pass silently. It could: a second copy of a list agrees with the first
+    // only until one of them changes, and the only trace was the suite total dropping by one, which
+    // is not something a reviewer sees on a diff.
+    //
+    // A GUARD OVER A DUPLICATED LIST IS ITSELF THE ARGUMENT FOR DERIVING IT. So the rows come from
+    // the theory's own attributes, and each construct is a QUESTION ASKED OF THAT SET. Delete the
+    // 4d6dl1 row and no row answers "drop lowest", so this reddens by name.
     [Fact]
-    public void TheCensusStillCoversEveryConstructAAA22Enumerates()
+    public void EveryConstructAAA22NamesIsStillCoveredByTheTheoryAbove()
     {
-        var covered = new[]
+        var rows = TheoryExpressions().ToList();
+
+        Assert.NotEmpty(rows);
+
+        var required = new (string Construct, Func<string, bool> Covered)[]
         {
-            "3d6", "3d6>3", "3d6>=5", "4d6kh3", "4d6kl3",
-            "4d6dl1", "4d6dh1", "1d6x", "1d6r1", "(1d6+1)*2", "1d6 # attack",
+            ("a pool", e => e.Contains("d6", StringComparison.Ordinal)),
+            ("success counting", e => e.Contains('>') || e.Contains('<')),
+            ("keep highest", e => e.Contains("kh", StringComparison.Ordinal)),
+            ("keep lowest", e => e.Contains("kl", StringComparison.Ordinal)),
+            ("drop lowest", e => e.Contains("dl", StringComparison.Ordinal)),
+            ("drop highest", e => e.Contains("dh", StringComparison.Ordinal)),
+            ("exploding", e => e.Contains('x')),
+            ("rerolls", e => e.Contains('r')),
+            ("nesting", e => e.Contains('(')),
         };
 
-        Assert.Equal(11, covered.Length);
+        var uncovered = required.Where(r => !rows.Any(r.Covered)).Select(r => r.Construct).ToList();
 
-        foreach (var expression in covered)
-        {
-            var outcome = new RollEvaluator(new ScriptedDieRoller(1, 6, 3, 5, 4, 2)).Evaluate(expression);
-            Assert.True(outcome.Evaluated, $"'{expression}' no longer evaluates: {outcome.Message}");
-        }
+        Assert.True(
+            uncovered.Count is 0,
+            $"No row of the theory covers: {string.Join(", ", uncovered)}. A-2.2 makes each construct "
+            + "a separate failure, so a construct losing its row is a construct losing its guard.");
     }
+
+    // The tenth construct, asked of its own theory for the same reason.
+    [Fact]
+    public void LabelledTermsAreStillCoveredByTheirOwnTheory()
+    {
+        var rows = ExpressionsOf(nameof(ALabelledTermCarriesItsLabelThrough)).ToList();
+
+        Assert.Contains(rows, e => e.Contains('#'));
+        Assert.Contains(rows, e => e.Contains('['));
+    }
+
+    // THE PREMISE THIS FILE'S CENSUS RESTS ON. Reflection that silently found nothing would make
+    // every question above vacuously satisfiable -- an empty set has no uncovered constructs only
+    // because it has no rows. Asserting the count separately is what stops "no rows" reading as
+    // "all covered", which is this file's own subject applied to its own instrument.
+    [Fact]
+    public void TheReflectionActuallyReachesTheTheoryData()
+    {
+        Assert.Equal(13, TheoryExpressions().Count());
+        Assert.Equal(2, ExpressionsOf(nameof(ALabelledTermCarriesItsLabelThrough)).Count());
+    }
+
+    private static IEnumerable<string> TheoryExpressions() =>
+        ExpressionsOf(nameof(TheConstructEvaluatesAndHasItsEffect));
+
+    private static IEnumerable<string> ExpressionsOf(string method) =>
+        typeof(EveryGrammarConstructIsReachableFromAStringTests)
+            .GetMethod(method)!
+            .GetCustomAttributes<InlineDataAttribute>()
+            .Select(row => (string)row.GetData(null!).Single()[0]!);
 }
