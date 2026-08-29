@@ -99,7 +99,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// shape as the defect this replaces, moved into the test file.
     /// </remarks>
     private static IReadOnlyList<string> WindowSources() =>
-        Directory.EnumerateFiles(WindowsDirectory(), "*.cs")
+        Directory.EnumerateFiles(WindowsDirectory(), "*.cs", SearchOption.AllDirectories)
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 

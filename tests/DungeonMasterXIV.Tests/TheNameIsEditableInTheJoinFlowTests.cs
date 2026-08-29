@@ -308,7 +308,7 @@ public class TheNameIsEditableInTheJoinFlowTests
     /// read tomorrow, and a list here would be a second place to keep up to date.
     /// </summary>
     private static IReadOnlyList<string> WindowSources() =>
-        Directory.EnumerateFiles(WindowsDirectory(), "*.cs")
+        Directory.EnumerateFiles(WindowsDirectory(), "*.cs", SearchOption.AllDirectories)
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 
