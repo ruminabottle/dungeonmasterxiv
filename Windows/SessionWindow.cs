@@ -167,7 +167,15 @@ public sealed class SessionWindow : Window
         // ABSENT rather than disabled — the requirement is explicit that a greyed control which
         // still occupies the UI fails, because it invites exactly the question the exclusivity
         // exists to remove.
-        if (!InAJoinedSession())
+        //
+        // AND A CLIENT THAT IS ALREADY HOSTING IS NOT OFFERED IT EITHER (BUG-115). This guard read
+        // the JOIN side only, so a live host was one click from starting a second session on top of
+        // the first. Both outcomes of that click are bad and the Product Owner declined to pick
+        // between them: either the audience persists while the host re-keys, leaving the table live
+        // against a key pair it was never admitted under, or one click ejects the table mid-combat
+        // with no confirmation. The mis-click was removable, so it was removed rather than made to
+        // hurt in a chosen direction.
+        if (!InAJoinedSession() && !InAHostedSession())
         {
             // A-1.9j: the resume offer sits BEFORE the button and never gates it. Drawn only when
             // there is something to resume, so a first run stays one action.
@@ -200,6 +208,8 @@ public sealed class SessionWindow : Window
     /// holds a seat. The seat clock is what expires, so Core is what decides.
     /// </remarks>
     private bool InAJoinedSession() => _coordinator.InAJoinedSession;
+
+    private bool InAHostedSession() => _coordinator.InAHostedSession;
 
     private static string DescribeHosting(HostingPhase phase) => phase switch
     {
