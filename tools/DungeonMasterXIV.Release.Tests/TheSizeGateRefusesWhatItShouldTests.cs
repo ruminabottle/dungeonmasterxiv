@@ -184,6 +184,20 @@ public class TheSizeGateRefusesWhatItShouldTests
         Assert.Empty(refusals);
     }
 
+    // THE INTAKE'S FAILURE PATH, EXECUTED RATHER THAN ASSERTED. Every false green tonight was an
+    // error rendered as an empty result and then read as a measurement of zero. If git cannot answer,
+    // the intake must REFUSE -- an empty intake measures nothing while reporting no breaches, which is
+    // the vacuous pass this whole gate exists to stop.
+    [Fact]
+    public void TheIntakeRefusesRatherThanReturningEmptyWhenGitCannotAnswer()
+    {
+        var notARepository = System.IO.Path.GetTempPath();
+
+        var thrown = Assert.ThrowsAny<System.Exception>(() => SizeGateIntake.FilesUnder(notARepository));
+
+        Assert.Contains("git", thrown.Message, System.StringComparison.OrdinalIgnoreCase);
+    }
+
     private const string SevenParameters = """
         namespace F;
         public sealed class Wide

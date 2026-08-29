@@ -19,9 +19,22 @@ namespace DungeonMasterXIV.Release.Tests;
 internal static class SizeGateIntake
 {
     /// <summary>Repository-relative paths of every tracked C# file the gate measures.</summary>
-    public static IReadOnlyList<string> Files()
+    public static IReadOnlyList<string> Files() => FilesUnder(TheBuild.RepositoryRoot().FullName);
+
+    /// <summary>
+    /// The same intake, rooted anywhere — so the FAILURE path can be executed by a test.
+    /// </summary>
+    /// <remarks>
+    /// <b>An error rendered as an empty result and then read as a measurement of zero is the single
+    /// shape behind every false green tonight</b> — a suppressed stderr, a captured-but-filtered
+    /// MSB1009, and a logger whose wording a regex did not match. All three produced an empty
+    /// extraction that compared equal to nothing. **The only thing common to them is a non-zero exit
+    /// status**, which is why this checks that and not a token. Rooting is a parameter purely so
+    /// <c>TheIntakeRefusesRatherThanReturningEmpty</c> can point it somewhere git will refuse and
+    /// prove the throw happens.
+    /// </remarks>
+    internal static IReadOnlyList<string> FilesUnder(string root)
     {
-        var root = TheBuild.RepositoryRoot().FullName;
         var listed = Git("ls-files -z *.cs", root);
 
         return [.. listed
