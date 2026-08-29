@@ -87,17 +87,57 @@ public sealed class ContainsMainFactAttribute : FactAttribute
 
     private static readonly Lazy<(bool Contains, string Detail)> Containment = new(() =>
     {
+        // CURRENCY BEFORE ANCESTRY, AND THE ORDER IS THE FIX (BUG-124). `merge-base` reads
+        // refs/remotes/origin/main, which is a LOCAL CACHE as fresh as this clone's last fetch --
+        // not a fact about the remote. A stale cache is an ancestor of a tree that is itself behind
+        // real main, so the ancestor question answers YES and the gate RUNS AND PASSES against a
+        // tree nobody will merge. Measured: HEAD one commit behind main with a six-commit-old cached
+        // ref reports contained, and the gate returns 15 passed, 0 skipped.
+        //
+        // That is the one sentence the three outcomes exist to make impossible -- "could not
+        // validate" reported as "clean" -- arriving through the check meant to prevent it.
+        var (remoteCode, remote, remoteErrors) = Git("ls-remote origin refs/heads/main");
+        var remoteHead = remote.Split('\t')[0].Trim();
+
+        // ASKING COSTS A NETWORK CALL AND NOT ASKING COSTS THE GUARANTEE. `ls-remote` reads the
+        // remote without fetching, so it changes no ref in this clone -- but it can fail, and a
+        // failure here must SKIP rather than fall through. Degrading to the local answer when the
+        // remote is unreachable is exactly today's behaviour, which is the bug.
+        if (remoteCode != 0 || remoteHead.Length == 0)
+        {
+            return (false, "could not reach origin to establish that the cached origin/main is "
+                + "current, so containment cannot be decided and a pass here would describe a tree "
+                + $"this check has not validated. ({remoteErrors.Trim()})");
+        }
+
+        var (cachedCode, cached, _) = Git("rev-parse refs/remotes/origin/main");
+        var cachedHead = cached.Trim();
+
+        if (cachedCode != 0 || cachedHead.Length == 0)
+        {
+            return (false, "this clone has no refs/remotes/origin/main to compare against origin");
+        }
+
+        if (!string.Equals(cachedHead, remoteHead, StringComparison.Ordinal))
+        {
+            return (false, $"the cached origin/main ({Short(cachedHead)}) is STALE -- origin is at "
+                + $"{Short(remoteHead)}. Containment measured against a stale cache is the defect "
+                + "this reports rather than a result. Fetch and re-run.");
+        }
+
         var (code, output, errors) = Git("merge-base --is-ancestor origin/main HEAD");
 
         // Exit 0 = ancestor, 1 = not. Anything else is git failing, and a git failure must not be
         // read as "contained" -- that would resurrect the green this whole attribute exists to stop.
         return code switch
         {
-            0 => (true, "origin/main is an ancestor of HEAD"),
+            0 => (true, $"origin/main ({Short(remoteHead)}) is current and an ancestor of HEAD"),
             1 => (false, "origin/main is not an ancestor of HEAD"),
             _ => (false, $"git could not answer (exit {code}): {errors.Trim()}{output.Trim()}"),
         };
     });
+
+    private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
 
     private static (int Code, string Output, string Errors) Git(string arguments)
     {
