@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// What arrives from the host, and what it means for this client's own attempt to join.
+/// What arrives from the rest of the session, and what this client does about it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,53 +20,6 @@ namespace DungeonMasterXIV.Net;
 /// tick is an assertion rather than a hope.
 /// </para>
 /// </remarks>
-/// <summary>
-/// What a client does with what arrives, and the key it can open content with.
-/// </summary>
-/// <remarks>
-/// <para>
-/// <b>One parameter because it is one concern</b>, not to shorten a signature.
-/// <see cref="AdmissionInbox.Drain"/> had reached six parameters — the block row in the engineering
-/// standards — and four of them defaulted, which is the readability tell that goes with it: call
-/// sites had begun carrying meaning in argument order rather than in names.
-/// </para>
-/// <para>
-/// The three travel together because they answer one question: <i>this frame arrived, now what?</i>
-/// <see cref="OpenWith"/> belongs with them rather than beside them — it is not configuration, it is
-/// the thing that decides whether <see cref="OnContent"/> can be called at all.
-/// </para>
-/// </remarks>
-/// <param name="OnJoinRequest">
-/// Called with the joiner's public key and self-declared name for each inbound
-/// <see cref="WireMessageType.JoinRequest"/>, when this client is a host. Null when there is nobody
-/// to tell, which is every joiner-only client (BUG-42).
-/// </param>
-/// <param name="OpenWith">
-/// The shared key to open inbound content with, or null before one exists. A key derived during the
-/// same drain takes precedence — see the call site.
-/// </param>
-/// <param name="OnContent">
-/// Called for each payload this client could open (D-11). Payloads sealed for somebody else are
-/// ordinary traffic and pass in silence.
-/// </param>
-/// <param name="OnComparabilityReceipt">
-/// Called with the joiner's public key when that joiner reports it held the host key and could
-/// render the fingerprint (R-1.3a-iv, BUG-75). Null when there is nobody to tell, which is every
-/// joiner-only client — only a host keeps a record this can establish anything on.
-/// <para>
-/// <b>It carries a CAPABILITY, never a comparison.</b> R-1.3a-iii forbids the second: an
-/// acknowledgement of the human act would ride the channel an attacker controls, so it is forgeable
-/// exactly when it matters. Its ABSENCE establishes nothing either — a fast admission (A-1.2p)
-/// decides before any receipt could arrive, which is why
-/// <see cref="ComparabilityEvidence.NotEstablished"/> is a state and not a false.
-/// </para>
-/// </param>
-public readonly record struct InboundHandlers(
-    Action<byte[], DisplayName>? OnJoinRequest = null,
-    byte[]? OpenWith = null,
-    Action<SessionContent>? OnContent = null,
-    Action<byte[]>? OnComparabilityReceipt = null);
-
 public sealed class AdmissionInbox
 {
     /// <summary>
@@ -193,6 +146,18 @@ public sealed class AdmissionInbox
                 // exactly the case that would silently show an empty list if the freshly derived
                 // key were not used until the next frame arrived.
                 ApplyContent(envelope, sessionKey ?? handlers.OpenWith, handlers.OnContent, log);
+
+                // THE HOST'S SIDE OF THE SAME FRAME (R-1.3k, DMXENG-50). Both arms run, and only
+                // one of them can ever fire: the line above opens HOST-authored content with the
+                // key a joiner derived on admission, and this one opens MEMBER-authored content
+                // with the keys a host shares with its peers. A payload is sealed under exactly one
+                // of those, so the other simply finds nothing to do.
+                //
+                // NOT AN `else`, DELIBERATELY. An else would make the arms exclusive by control
+                // flow, and the property that makes them exclusive is the SEAL — one key opens a
+                // payload and the rest cannot. Writing it as an else would hide a real question
+                // (what if a client is both?) behind a branch that answers it by accident.
+                MemberContentReader.Apply(envelope, handlers, log);
                 continue;
             }
 
@@ -376,6 +341,7 @@ public sealed class AdmissionInbox
 
         onContent(content);
     }
+
 
     // Every outcome C6 defines is handled. Match takes a delegate per case, so omitting one is a
     // compile error rather than a branch that silently does nothing.

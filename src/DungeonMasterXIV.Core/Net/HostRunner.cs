@@ -50,30 +50,24 @@ namespace DungeonMasterXIV.Net;
 internal sealed class HostRunner
 {
     private readonly HostSession _host;
-    private readonly AdmissionControl _admissions;
-    private readonly AdmissionInbox _inbox;
+    private readonly SessionResources _resources;
     private readonly OutboundHandshake _handshake;
-    private readonly Func<GraceWindow> _grace;
     private readonly Func<SessionKeyExchange> _newKeys;
     private readonly Action _synchronise;
 
     /// <param name="host">The hosting phase machine this drives. Owned by the coordinator.</param>
-    /// <param name="admissions">Who is admitted and who is waiting; emptied when the session ends.</param>
-    /// <param name="inbox">Queued frames; emptied when the session ends so none crosses into the next.</param>
-    /// <param name="handshake">What puts the code request on the wire, and what remembers it was sent.</param>
-    /// <param name="grace">
-    /// The seat clock, read at use time rather than captured. A <c>Func</c> because it belongs to
-    /// <c>SessionInterruption</c> and is reached through the coordinator, so capturing the value
-    /// would pin whichever window existed at construction.
+    /// <param name="resources">
+    /// What the session holds and must let go of when it ends. <b>One parameter because it is one
+    /// question</b>, and because the four it replaces took this constructor to seven against a
+    /// block of six — see <see cref="SessionResources"/> for why that was invisible.
     /// </param>
+    /// <param name="handshake">What puts the code request on the wire, and what remembers it was sent.</param>
     /// <param name="newKeys">How a key pair is made (BUG-61).</param>
     /// <param name="synchronise">Brings the socket into line once the phase has moved.</param>
     public HostRunner(
         HostSession host,
-        AdmissionControl admissions,
-        AdmissionInbox inbox,
+        SessionResources resources,
         OutboundHandshake handshake,
-        Func<GraceWindow> grace,
         Func<SessionKeyExchange> newKeys,
         Action synchronise)
     {
@@ -82,22 +76,18 @@ internal sealed class HostRunner
         // this type too early passes a null that nothing would refuse -- the assignment succeeds and
         // the failure surfaces later, on a hosting path, or never in a test that does not host.
         //
-        // ALL SEVEN are guarded rather than only those that are order-sensitive today. Which
+        // ALL FIVE are guarded rather than only those that are order-sensitive today. Which
         // arguments come from earlier fields is a fact about SessionCoordinator that can change
         // without anyone editing this file.
         ArgumentNullException.ThrowIfNull(host);
-        ArgumentNullException.ThrowIfNull(admissions);
-        ArgumentNullException.ThrowIfNull(inbox);
+        ArgumentNullException.ThrowIfNull(resources);
         ArgumentNullException.ThrowIfNull(handshake);
-        ArgumentNullException.ThrowIfNull(grace);
         ArgumentNullException.ThrowIfNull(newKeys);
         ArgumentNullException.ThrowIfNull(synchronise);
 
         _host = host;
-        _admissions = admissions;
-        _inbox = inbox;
+        _resources = resources;
         _handshake = handshake;
-        _grace = grace;
         _newKeys = newKeys;
         _synchronise = synchronise;
     }
@@ -145,9 +135,7 @@ internal sealed class HostRunner
         _host.Stop();
         Keys?.Dispose();
         Keys = null;
-        _admissions.Clear();
-        _inbox.Clear();
-        _grace().Reset();
+        _resources.Release();
         _handshake.ForgetHostRegistration();
         _synchronise();
     }
