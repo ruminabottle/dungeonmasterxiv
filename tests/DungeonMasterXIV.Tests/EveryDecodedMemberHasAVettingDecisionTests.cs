@@ -87,6 +87,20 @@ public class EveryDecodedMemberHasAVettingDecisionTests
                 + "that cannot see a rule enforced by the only constructor that can PRODUCE the "
                 + "value).",
 
+            ["SessionContent.Leaving"] =
+                "CARRIED THROUGH UNCHANGED (SessionContentCodec: Leaving = content.Leaving). A "
+                + "bool?, so it cannot carry text and cannot forge a line — the same argument Role "
+                + "and ClosingAtUtcTicks carry. THE VETTING THAT MATTERS FOR THIS MEMBER IS NOT ITS "
+                + "VALUE BUT ITS SUBJECT: it says only that the SENDER is leaving, and the sender is "
+                + "identified by the KEY THE PAYLOAD OPENED UNDER (MemberContentReader), never by "
+                + "anything inside the document. So a true here removes exactly one member — "
+                + "whoever sealed it — and there is no field a caller could add to name somebody "
+                + "else. THE ONLY MEMBER-AUTHORED FIELD IN THIS TYPE: the others travel host to "
+                + "member, and D-3 is not inverted because this asserts the sender's own intent "
+                + "rather than shared state, with the host deciding what follows (DMXENG-60, "
+                + "A-1.16a). A quit is not a vanish — see AdmissionControl.Departed against "
+                + "RecordDrop, which share no code by design (A-1.30).",
+
             ["RosterEntry.PeerCode"] =
                 "The whole entry is DROPPED unless PeerCode.TryParse accepts it. Nothing is "
                 + "repaired: the roster is host-authored and sealed, so a malformed code means our "
