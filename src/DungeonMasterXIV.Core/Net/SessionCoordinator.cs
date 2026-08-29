@@ -109,9 +109,7 @@ public sealed class SessionCoordinator
     private readonly JoinRequester _joiner;
     private readonly HostRunner _hosting;
     private IReadOnlyList<RosterEntry> _receivedRoster = [];
-    private TimeSpan _timeInPhase;
-    private HostingPhase _tickedHostPhase = HostingPhase.NotHosting;
-    private JoinPhase _tickedJoinPhase = JoinPhase.Idle;
+    private readonly PhaseTimeouts _timeouts = new();
 
     /// <summary>
     /// Who this client believes is in the session (R-1.3f).
@@ -345,24 +343,11 @@ public sealed class SessionCoordinator
             return;
         }
 
-
-        if (Host.Phase != _tickedHostPhase || Join.Phase != _tickedJoinPhase)
-        {
-            _tickedHostPhase = Host.Phase;
-            _tickedJoinPhase = Join.Phase;
-            _timeInPhase = TimeSpan.Zero;
-            return;
-        }
-
-        _timeInPhase += sinceLastTick;
-
-        // Whether we ever got to speak, which is the difference between "the relay heard us and
-        // said nothing" and "we never reached the relay" (BUG-38). It lives on the handshake now,
-        // because the handshake is what knows whether the request left.
-        var expired = Host.ExpireIfRegistrationTimedOut(_timeInPhase, _handshake.RegistrationWasSent);
-        expired |= Join.ExpireIfContactTimedOut(_timeInPhase);
-
-        if (expired)
+        // The phase clock and both expiry checks live in PhaseTimeouts. The return above means
+        // "hosting has stopped, abandon the frame"; the one that used to sit below it meant "the
+        // phase just changed, nothing can have expired" -- two returns in one method meaning two
+        // different things, which is most of why that state is its own type now.
+        if (_timeouts.Advance(sinceLastTick, Host, Join, _handshake.RegistrationWasSent))
         {
             SynchroniseTransport();
         }
