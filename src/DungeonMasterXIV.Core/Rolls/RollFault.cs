@@ -35,7 +35,17 @@ public enum RollFault
     /// </summary>
     Malformed,
 
-    /// <summary>A parenthesis was opened and not closed, or closed and never opened.</summary>
+    /// <summary>
+    /// A parenthesis was opened and never closed — <c>(1d6</c>. <b>A stray CLOSING parenthesis is
+    /// reported as <see cref="Malformed"/>, not as this</b>, because at that point the parser is not
+    /// inside a parenthesis and the character is simply unexpected, exactly like <c>&amp;</c>.
+    /// </summary>
+    /// <remarks>
+    /// The second half of that sentence used to be missing and the summary claimed both directions
+    /// (BUG-145). Nothing produced the closed-and-never-opened case, so a caller writing a handler
+    /// from these summaries would put a stray <c>)</c> under this branch and never reach it — and
+    /// would not find out, because the code compiles and the branch is simply never taken.
+    /// </remarks>
     UnbalancedParentheses,
 
     /// <summary>A modifier was attached to something that is not a dice term, such as <c>5kh2</c>.</summary>
@@ -65,4 +75,16 @@ public enum RollFault
     /// a large pool, for instance.
     /// </summary>
     TooMuchWork,
+
+    /// <summary>
+    /// A total, or a step on the way to one, did not fit in a 32-bit integer — <c>1073741824*2</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>A REFUSAL BECAUSE THE ALTERNATIVES ARE BOTH FORBIDDEN (BUG-143).</b> Unchecked, this
+    /// arithmetic either wraps — answering <c>2000000000+2000000000</c> as <c>-294967296</c>,
+    /// confidently and wrongly, which R-2.1 rules out in the words <i>"it never silently rolls
+    /// something else"</i> — or, for <c>int.MinValue / -1</c>, the one case the hardware cannot
+    /// wrap, throws out of a method whose own summary promises it <i>"never throws for bad input"</i>.
+    /// </remarks>
+    ResultOutOfRange,
 }

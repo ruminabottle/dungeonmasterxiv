@@ -47,6 +47,21 @@ public sealed record DiceModifiers
     public RollComparison? Explode { get; init; }
 
     /// <summary>
+    /// Explode on whatever face the die shows as its maximum — a bare <c>x</c>, whose threshold is
+    /// not known until the die size is.
+    /// </summary>
+    /// <remarks>
+    /// <b>A FLAG RATHER THAN A MAGIC COMPARISON, because the magic one was writable (BUG-144).</b>
+    /// This used to be carried as <c>Explode = RollComparison(Equal, 0)</c>, which a user can type:
+    /// <c>1d6x0</c> and <c>1d6x=0</c> both produced that exact value and so exploded on the maximum,
+    /// when they ask to explode on a zero and a die never shows one. That is the collision this
+    /// type's own rule already forbids — <i>"every field is null when absent rather than a sentinel,
+    /// so 'no keep' and 'keep zero' stay distinguishable"</i> — applied to the one field that broke
+    /// it. Setting either of these clears the other, so the last suffix written wins.
+    /// </remarks>
+    public bool ExplodeOnMaximum { get; init; }
+
+    /// <summary>
     /// Count how many dice match, instead of summing them — <c>4d6&gt;3</c>.
     /// </summary>
     /// <remarks>
@@ -59,5 +74,5 @@ public sealed record DiceModifiers
     public bool Any =>
         KeepHighest is not null || KeepLowest is not null || DropHighest is not null
         || DropLowest is not null || Reroll is not null || Explode is not null
-        || CountSuccesses is not null;
+        || ExplodeOnMaximum || CountSuccesses is not null;
 }
