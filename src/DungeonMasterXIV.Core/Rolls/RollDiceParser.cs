@@ -72,6 +72,11 @@ internal static class RollDiceParser
             return Keep(cursor, current);
         }
 
+        if (cursor.TakeLetter('d'))
+        {
+            return Drop(cursor, current);
+        }
+
         if (cursor.TakeLetter('r'))
         {
             return Comparison(cursor, out var reroll)
@@ -81,12 +86,15 @@ internal static class RollDiceParser
 
         if (cursor.TakeLetter('x'))
         {
-            // A bare 'x' explodes on the maximum face; the size is not known here, so the evaluator
-            // resolves it. Represented as a null-value comparison would be ambiguous, so the
-            // evaluator reads Explode with Value 0 and Equal as "on the maximum".
+            // A bare 'x' explodes on the maximum face and the size is not known here, so the
+            // evaluator resolves it -- carried as its OWN flag rather than as a comparison value,
+            // because the comparison that used to stand for it was one a user could type (BUG-144).
+            // Each arm clears the other so the last suffix written wins, as it did before.
             return Comparison(cursor, out var explode)
-                ? new ModifierParse(current with { Explode = explode }, RollFault.None, null)
-                : new ModifierParse(current with { Explode = ExplodeOnMaximum }, RollFault.None, null);
+                ? new ModifierParse(
+                    current with { Explode = explode, ExplodeOnMaximum = false }, RollFault.None, null)
+                : new ModifierParse(
+                    current with { Explode = null, ExplodeOnMaximum = true }, RollFault.None, null);
         }
 
         if (cursor.Peek() is '>' or '<' or '=')
@@ -98,9 +106,6 @@ internal static class RollDiceParser
 
         return new ModifierParse(null, RollFault.None, null);
     }
-
-    /// <summary>The sentinel for a bare <c>x</c>: explode when the die shows its own maximum.</summary>
-    public static RollComparison ExplodeOnMaximum { get; } = new(ComparisonOperator.Equal, 0);
 
     private static ModifierParse Keep(RollCursor cursor, DiceModifiers current)
     {
@@ -117,6 +122,40 @@ internal static class RollDiceParser
 
         return new ModifierParse(
             high ? current with { KeepHighest = howMany } : current with { KeepLowest = howMany },
+            RollFault.None,
+            null);
+    }
+
+    /// <summary>Reads a drop suffix — <c>dl1</c>, <c>dh1</c>, or a bare <c>d1</c>.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>BUG-142: this half was built and unreachable.</b> <see cref="DiceModifiers.DropLowest"/>,
+    /// <see cref="DiceModifiers.DropHighest"/> and the evaluator's handling of both already existed;
+    /// there was simply no arm here, so <c>4d6dl1</c> — the single most common notation in tabletop,
+    /// and the one <c>DropLowest</c> names in its own summary — was refused as <c>Malformed</c>.
+    /// </para>
+    /// <para>
+    /// <b>A bare <c>d</c> drops the LOWEST, where a bare <c>k</c> keeps the HIGHEST.</b> Both default
+    /// to the generous reading — keep the best, drop the worst — which is why the two are mirrored
+    /// rather than parallel. A <c>d</c> here cannot be confused with the die separator: the count and
+    /// size have already been read, so anything further is a modifier.
+    /// </para>
+    /// </remarks>
+    private static ModifierParse Drop(RollCursor cursor, DiceModifiers current)
+    {
+        var low = !cursor.TakeLetter('h');
+        if (low)
+        {
+            cursor.TakeLetter('l');
+        }
+
+        if (!cursor.TryNumber(out var howMany))
+        {
+            return Bad(cursor, "a number of dice to drop");
+        }
+
+        return new ModifierParse(
+            low ? current with { DropLowest = howMany } : current with { DropHighest = howMany },
             RollFault.None,
             null);
     }

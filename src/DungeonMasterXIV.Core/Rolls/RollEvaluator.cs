@@ -66,12 +66,38 @@ public sealed class RollEvaluator
     {
         NumberNode number => number.Value,
         DiceNode dice => DiceTermEvaluator.Evaluate(dice, state),
-        NegateNode negate => Negate(Walk(negate.Operand, state)),
+        NegateNode negate => Negate(Walk(negate.Operand, state), state),
         BinaryNode binary => Binary(binary, state),
         _ => null,
     };
 
-    private static int? Negate(int? value) => value is null ? null : -value.Value;
+    // CHECKED, and it takes the state so it can REFUSE rather than wrap (BUG-143). -int.MinValue is
+    // the one negation that does not fit, and unchecked it answers int.MinValue again -- a negation
+    // that returns its own operand, which is the silent-wrong-answer case rather than a crash.
+    private static int? Negate(int? value, RollEvaluation state)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return checked(-value.Value);
+        }
+        catch (OverflowException)
+        {
+            return OutOfRange(state);
+        }
+    }
+
+    private static int? OutOfRange(RollEvaluation state)
+    {
+        state.Refuse(
+            RollFault.ResultOutOfRange,
+            "The result is too large to work out; totals must fit in a 32-bit integer.");
+        return null;
+    }
 
     private static int? Binary(BinaryNode node, RollEvaluation state)
     {
@@ -93,12 +119,23 @@ public sealed class RollEvaluator
             return null;
         }
 
-        return node.Operator switch
+        // EVERY ARM IS CHECKED, not just the ones that looked risky. Division is in here because
+        // int.MinValue / -1 is the single case the hardware cannot wrap, and it throws WITH OR
+        // WITHOUT this block -- so it was the one operation already escaping, out of a method
+        // documented never to throw. The catch is what converts all of them into a refusal.
+        try
         {
-            RollOperator.Add => left.Value + right.Value,
-            RollOperator.Subtract => left.Value - right.Value,
-            RollOperator.Multiply => left.Value * right.Value,
-            _ => left.Value / right.Value,
-        };
+            return checked(node.Operator switch
+            {
+                RollOperator.Add => left.Value + right.Value,
+                RollOperator.Subtract => left.Value - right.Value,
+                RollOperator.Multiply => left.Value * right.Value,
+                _ => left.Value / right.Value,
+            });
+        }
+        catch (OverflowException)
+        {
+            return OutOfRange(state);
+        }
     }
 }

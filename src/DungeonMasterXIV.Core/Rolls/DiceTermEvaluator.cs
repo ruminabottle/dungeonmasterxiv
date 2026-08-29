@@ -65,7 +65,7 @@ internal static class DiceTermEvaluator
 
     private static bool Explode(DiceNode dice, RollEvaluation state, int first)
     {
-        if (dice.Modifiers.Explode is not { } explode)
+        if (dice.Modifiers.Explode is null && !dice.Modifiers.ExplodeOnMaximum)
         {
             return true;
         }
@@ -75,7 +75,7 @@ internal static class DiceTermEvaluator
         for (var i = first; i < state.RecordedCount; i++)
         {
             var die = state.Dice[i];
-            if (!die.Kept || !Explodes(explode, die))
+            if (!die.Kept || !Explodes(dice.Modifiers, die))
             {
                 continue;
             }
@@ -92,8 +92,12 @@ internal static class DiceTermEvaluator
         return true;
     }
 
-    private static bool Explodes(RollComparison explode, RolledDie die) =>
-        explode == RollDiceParser.ExplodeOnMaximum ? die.Value == die.Sides : explode.Matches(die.Value);
+    // BUG-144: the bare-x case is now asked as a QUESTION ABOUT THE MODIFIER rather than recognised
+    // by comparing against a value, so an identical-looking value the user typed cannot answer yes.
+    private static bool Explodes(DiceModifiers modifiers, RolledDie die) =>
+        modifiers.ExplodeOnMaximum
+            ? die.Value == die.Sides
+            : modifiers.Explode is { } explode && explode.Matches(die.Value);
 
     private static void ApplyKeepAndDrop(DiceModifiers modifiers, RollEvaluation state, int first)
     {
