@@ -112,23 +112,14 @@ public sealed class SessionCoordinator
     private readonly SessionInterruption _interruption;
     private readonly JoinRequester _joiner;
     private readonly HostRunner _hosting;
-    private IReadOnlyList<RosterEntry> _receivedRoster = [];
+    private readonly ReceivedRoster _received = new();
     private readonly PhaseTimeouts _timeouts = new();
 
     /// <summary>
-    /// Who this client believes is in the session (R-1.3f).
+    /// Who this client believes is in the session (R-1.3f). Empty on the host, by design; see
+    /// <see cref="ReceivedRoster"/> for that and for the replacement rule.
     /// </summary>
-    /// <remarks>
-    /// <b>On the HOST this stays empty, and that is not an oversight.</b> The host authors the
-    /// roster from <see cref="Audience"/> and never receives one — D-3 makes it the author, so a
-    /// host reading its own broadcast back would be believing a copy of what it already knows. This
-    /// is what a PLAYER was told, which is the only place the distinction matters.
-    /// <para>
-    /// <b>Replaced, never merged.</b> A participant who left is gone because the next roster does
-    /// not list them, rather than lingering until a removal message that may never arrive.
-    /// </para>
-    /// </remarks>
-    public IReadOnlyList<RosterEntry> Roster => _receivedRoster;
+    public IReadOnlyList<RosterEntry> Roster => _received.Entries;
 
     /// <summary>What this host has heard from its members (R-1.3k, A-1.13c).</summary>
     /// <remarks>
@@ -280,16 +271,18 @@ public sealed class SessionCoordinator
     /// Brings the socket into line with whether a session needs one.
     /// </summary>
     /// <remarks>
-    /// R-1.1's invariant lives here and in <see cref="HostSession.RequiresRelayConnection"/> and
-    /// nowhere else, so there is one answer to "should we be connected" rather than a rule each
-    /// call site is trusted to remember.
+    /// R-1.1's invariant lives here and in <see cref="SessionLiveness.RequiresRelayConnection"/>
+    /// and nowhere else, so there is one answer to "should we be connected" rather than a rule each
+    /// call site is trusted to remember. That claim was previously half true: it named
+    /// <see cref="HostSession.RequiresRelayConnection"/>, and the join half was a private method
+    /// here that this line composed with it.
     /// </remarks>
     public void SynchroniseTransport()
     {
         // The link reports rather than applies, so the mutual recursion between this and Fail still
         // terminates the way it always has: Fail leaves nothing wanting a connection, so the next
         // call through here disconnects and returns None.
-        var failure = _link.Synchronise(Host.RequiresRelayConnection || JoinNeedsConnection());
+        var failure = _link.Synchronise(Liveness.RequiresRelayConnection);
 
         if (failure != SessionFailure.None)
         {
@@ -327,7 +320,7 @@ public sealed class SessionCoordinator
             _joiner.Keys,
             Host,
             new InboundWiring(_admissions, _resources, _resolveRelink)
-                .For(now, SessionKey, content => _receivedRoster = content.Roster ?? _receivedRoster),
+                .For(now, SessionKey, content => _received.Replace(content.Roster)),
             _log)
             ?? SessionKey;
         _handshake.SendWhatIsDue();
@@ -368,25 +361,11 @@ public sealed class SessionCoordinator
     /// Whether this client is hosting a session someone could still be in (R-1.3h, BUG-115).
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// <b>The sibling of <see cref="InAJoinedSession"/>, and it exists because the window's
-    /// exclusivity guard only had the other one.</b> "Start session" was gated on the JOIN side
-    /// alone, so a live host was one click from starting a second session on top of the first.
-    /// </para>
-    /// <para>
-    /// <b>Registering counts, Failed does not.</b> Registering is already a session a DM can lose,
-    /// so the offer must be withdrawn before the code comes back. A FAILED attempt is the opposite
-    /// case: there is nothing to protect and the DM's next action is to try again, so hiding the
-    /// button there would strand them. That distinction is what separates "hosting is live" from
-    /// "hosting was attempted", and it is what stops this predicate becoming always-true.
-    /// </para>
-    /// <para>
-    /// The window asks this rather than reading <see cref="HostSession.Phase"/> itself, for the same
-    /// reason it does not read the join phase: which phases count is Core's decision, and a window
-    /// that enumerates them is a second place to update when one is added.
-    /// </para>
+    /// The sibling of <see cref="InAJoinedSession"/>, and it exists because the window's exclusivity
+    /// guard only had the other one. Which phases count, and why its twin is NOT beside it, are on
+    /// <see cref="SessionLiveness.InAHostedSession"/>.
     /// </remarks>
-    public bool InAHostedSession => Host.Phase is HostingPhase.Registering or HostingPhase.Hosting;
+    public bool InAHostedSession => Liveness.InAHostedSession;
 
     /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
     /// <param name="failure">What the transport reported.</param>
@@ -405,7 +384,6 @@ public sealed class SessionCoordinator
     public void Detach() => _link.Detach();
 
 
-
-    private bool JoinNeedsConnection() =>
-        Join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted;
+    /// <summary>What this client's phases mean. See <see cref="SessionLiveness"/>.</summary>
+    private SessionLiveness Liveness => new(Host, Join);
 }
