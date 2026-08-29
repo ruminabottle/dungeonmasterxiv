@@ -241,7 +241,7 @@ public class AdmissionReceivedTests
         var (coordinator, transport) = Joining();
         using var host = new SessionKeyExchange();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.Membership.Keys!.PublicKey, host.PublicKey));
         coordinator.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Admitted, coordinator.Join.Phase);
@@ -256,12 +256,12 @@ public class AdmissionReceivedTests
         var (coordinator, transport) = Joining();
         using var host = new SessionKeyExchange();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.Membership.Keys!.PublicKey, host.PublicKey));
         coordinator.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(
-            host.DeriveSharedKey(coordinator.JoinerKeys!.PublicKey, Code),
-            coordinator.SessionKey);
+            host.DeriveSharedKey(coordinator.Membership.Keys!.PublicKey, Code),
+            coordinator.Membership.SessionKey);
     }
 
     // A-1.4. Fails if: a denial is dropped, leaving the player on an indefinite spinner — R-1.8's
@@ -272,12 +272,12 @@ public class AdmissionReceivedTests
         var (coordinator, transport) = Joining();
         using var host = new SessionKeyExchange();
 
-        transport.Deliver(WireEnvelope.ForJoinDenied(Code, coordinator.JoinerKeys!.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinDenied(Code, coordinator.Membership.Keys!.PublicKey));
         coordinator.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Denied, coordinator.Join.Phase);
         Assert.False(coordinator.Join.MayReceiveSessionState);
-        Assert.Null(coordinator.SessionKey);
+        Assert.Null(coordinator.Membership.SessionKey);
     }
 
     // A-1.5h across the wire. Fails if: a lapse arrives as a denial, which tells someone they were
@@ -287,7 +287,7 @@ public class AdmissionReceivedTests
     {
         var (coordinator, transport) = Joining();
 
-        transport.Deliver(WireEnvelope.ForJoinLapsed(Code, coordinator.JoinerKeys!.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinLapsed(Code, coordinator.Membership.Keys!.PublicKey));
         coordinator.Tick(TimeSpan.Zero, Now);
 
         Assert.Equal(JoinPhase.Lapsed, coordinator.Join.Phase);
@@ -328,7 +328,7 @@ public class AdmissionReceivedTests
         var (coordinator, transport) = Joining();
         using var host = new SessionKeyExchange();
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.JoinerKeys!.PublicKey, host.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(Code, coordinator.Membership.Keys!.PublicKey, host.PublicKey));
 
         Assert.Equal(JoinPhase.AwaitingDecision, coordinator.Join.Phase);
     }

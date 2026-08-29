@@ -95,7 +95,7 @@ public sealed class TheJoinerIsToldWhichParticipantItIsTests
 
         session.DeliverToFirst(WireEnvelope.ForJoinPending(
             session.Code,
-            session.First.JoinerKeys!.PublicKey,
+            session.First.Membership.Keys!.PublicKey,
             session.HostKey,
             AdmissionDeadline.DecidedByHost(Now)));
 
@@ -354,7 +354,7 @@ public sealed class TheJoinerIsToldWhichParticipantItIsTests
         {
             var (client, _) = Sides(who);
             client.RequestJoin(Code, DisplayName.OrNone(who.ToString()));
-            Host.ReceiveJoinRequest(CodeOf(who), client.JoinerKeys!.PublicKey, Now);
+            Host.ReceiveJoinRequest(CodeOf(who), client.Membership.Keys!.PublicKey, Now);
             Pump();
         }
 

@@ -203,7 +203,7 @@ public class TheRosterTravelsSealedTests
         });
 
         var sealedPayload = SessionCipher.Seal(
-            from.DeriveSharedKey(player.JoinerKeys!.PublicKey, code),
+            from.DeriveSharedKey(player.Membership.Keys!.PublicKey, code),
             plaintext,
             WireEnvelope.AssociatedDataFor(code, WireMessageType.SessionPayload));
 
@@ -224,7 +224,7 @@ public class TheRosterTravelsSealedTests
         player.SynchroniseTransport();
         player.Tick(TimeSpan.Zero, Now);
 
-        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.JoinerKeys!.PublicKey, hostKeys.PublicKey));
+        transport.Deliver(WireEnvelope.ForJoinAccepted(code, player.Membership.Keys!.PublicKey, hostKeys.PublicKey));
         player.Tick(TimeSpan.Zero, Now);
 
         return (player, transport);

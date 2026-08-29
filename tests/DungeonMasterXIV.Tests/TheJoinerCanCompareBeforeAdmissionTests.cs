@@ -112,7 +112,7 @@ public class TheJoinerCanCompareBeforeAdmissionTests
 
         session.DeliverToJoiner(WireEnvelope.ForJoinPending(
             session.Code,
-            session.Joiner.JoinerKeys!.PublicKey,
+            session.Joiner.Membership.Keys!.PublicKey,
             session.Host.HostKeys!.PublicKey,
             AdmissionDeadline.DecidedByHost(Now)));
         session.Joiner.Tick(TimeSpan.Zero, Now);
@@ -164,7 +164,7 @@ public class TheJoinerCanCompareBeforeAdmissionTests
         public void JoinerRequests()
         {
             Joiner.RequestJoin(Code);
-            Host.ReceiveJoinRequest(PeerCodes.Of(PeerCode), Joiner.JoinerKeys!.PublicKey, Now);
+            Host.ReceiveJoinRequest(PeerCodes.Of(PeerCode), Joiner.Membership.Keys!.PublicKey, Now);
             PumpHostToJoiner();
         }
 
@@ -175,7 +175,7 @@ public class TheJoinerCanCompareBeforeAdmissionTests
         public void JoinerRequestsWithoutAPendingNotice()
         {
             Joiner.RequestJoin(Code);
-            Host.ReceiveJoinRequest(PeerCodes.Of(PeerCode), Joiner.JoinerKeys!.PublicKey, Now);
+            Host.ReceiveJoinRequest(PeerCodes.Of(PeerCode), Joiner.Membership.Keys!.PublicKey, Now);
             _hostTransport.Sent.Clear();
             Joiner.Join.AwaitDecision(AdmissionDeadline.DecidedByHost(Now));
         }

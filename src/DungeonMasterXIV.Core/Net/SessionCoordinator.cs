@@ -60,7 +60,6 @@ public sealed class SessionCoordinator
         _resolveRelink = capabilities.RelinkSource;
         _log = log;
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
-        _departure = new MemberDeparture(_link, () => Join.Code, () => SessionKey);
         _admissions = new AdmissionControl(
             new AdmissionAnnouncer(transport),
             () => Host.Code,
@@ -96,6 +95,9 @@ public sealed class SessionCoordinator
             new MemberContentReceipts());
         _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport, window);
         _joiner = new JoinRequester(_handshake, _interruption, Join, _newKeys, SynchroniseTransport);
+        // AFTER _joiner, and that ordering is the point: SessionMembership closes over the joiner
+        // rather than over `this`, which is one fewer escaped reference than the line this replaces.
+        Membership = new SessionMembership(_link, _joiner, () => Join.Code);
         // AFTER _interruption, which owns the Grace window this reads. The Func defers that read to
         // use time, so the ordering hazard DMXENG-45 detected does not extend to it -- but HostRunner
         // guards every argument anyway, which is the point of those guards.
@@ -106,7 +108,6 @@ public sealed class SessionCoordinator
     private readonly Func<string?, RelinkClaim> _resolveRelink;
     private readonly ISessionTransportLog _log;
     private readonly AdmissionControl _admissions;
-    private readonly MemberDeparture _departure;
     private readonly AdmissionInbox _inbox = new();
     private readonly OutboundHandshake _handshake;
     private readonly RosterBroadcast _roster;
@@ -149,15 +150,16 @@ public sealed class SessionCoordinator
     /// </remarks>
     public SessionKeyExchange? HostKeys => _hosting.Keys;
 
-    /// <summary>This client's key pair when joining somebody else's session, or null.</summary>
-    /// <remarks>Owned by <see cref="JoinRequester"/>, which is the only thing that creates it.</remarks>
-    public SessionKeyExchange? JoinerKeys => _joiner.Keys;
-
     /// <summary>
-    /// The key this client derived on being admitted, or null. Present only once the host's key has
-    /// arrived — which is why the acceptance has to carry it.
+    /// What this client is once it is inside somebody else's session — the key it derived on being
+    /// admitted, and its leaving. See <see cref="SessionMembership"/>.
     /// </summary>
-    public byte[]? SessionKey => _joiner.SessionKey;
+    /// <remarks>
+    /// <b>Exposed as one member rather than forwarded piecemeal.</b> Three forwarders would have
+    /// left the concept here while pretending to move it, and the size table cannot tell those
+    /// apart — the same shape <see cref="Host"/> and <see cref="Join"/> already use.
+    /// </remarks>
+    public SessionMembership Membership { get; }
 
     /// <summary>Who may receive session state. See <see cref="SessionAudience"/> for the D-13 levels.</summary>
     public SessionAudience Audience => _admissions.Audience;
@@ -323,14 +325,14 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         _interruption.ApplyReportedFailure();
-        _joiner.SessionKey = _inbox.Drain(
+        Membership.SessionKey = _inbox.Drain(
             Join,
-            _joiner.Keys,
+            Membership.Keys,
             Host,
             new InboundWiring(_admissions, _resources, _resolveRelink)
-                .For(now, SessionKey, content => _received.Replace(content.Roster)),
+                .For(now, Membership.SessionKey, content => _received.Replace(content.Roster)),
             _log)
-            ?? SessionKey;
+            ?? Membership.SessionKey;
         _handshake.SendWhatIsDue();
         _admissions.ExpireLapsed(now);
 
@@ -389,16 +391,6 @@ public sealed class SessionCoordinator
     public void HostReconnectedWithNewCode() => _interruption.HostReconnectedWithNewCode();
 
     /// <summary>Unsubscribes from the transport. Wired into the plugin's teardown.</summary>
-    /// <summary>
-    /// Tells the host this client is leaving, so it is removed at once (R-1.3g, A-1.16a). Returns
-    /// whether anything was sent.
-    /// </summary>
-    /// <remarks>
-    /// <b>False and silent when there is nothing to leave</b> — no code, or no shared key because
-    /// this client was never admitted. Quitting the join screen has nobody to tell.
-    /// </remarks>
-    public bool AnnounceDeparture() => _departure.Announce();
-
     public void Detach() => _link.Detach();
 
 
