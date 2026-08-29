@@ -57,10 +57,66 @@ public sealed class RetainedLogFileArchive(string directory) : IRetainedLogArchi
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// <b>Written to a temporary file and MOVED into place, because a retain rewrites the WHOLE
+    /// log.</b> A direct <c>WriteAllText</c> is not atomic: a crash part-way leaves a truncated file
+    /// and the entire session history is gone, not just the line being added. Replacing by move
+    /// means an interrupted write leaves the previous complete log untouched.
+    /// </remarks>
     public void Write(Guid campaignId, string contents)
     {
         Directory.CreateDirectory(_directory);
-        File.WriteAllText(PathFor(campaignId), contents);
+
+        var path = PathFor(campaignId);
+        var pending = path + ".writing";
+
+        File.WriteAllText(pending, contents);
+        File.Move(pending, path, overwrite: true);
+    }
+
+    /// <summary>
+    /// Files in the log directory that are NOT named for a campaign, so nothing on disk is invisible
+    /// to the delete control.
+    /// </summary>
+    /// <remarks>
+    /// <b><see cref="Campaigns"/> silently skipped these, and that is what made the shipped sentence
+    /// false.</b> <c>ConfigWindow</c> says <i>"nothing to delete anywhere but here"</i> — a file this
+    /// archive cannot name is a file the control cannot list, and a file it cannot list is one it
+    /// cannot delete. Found by the code reviewer. The remedy is the same shape
+    /// <c>CampaignStore</c> already uses for a file that will not parse: surface it separately
+    /// rather than dropping it.
+    /// </remarks>
+    public IReadOnlyList<string> Unnameable()
+    {
+        if (!Directory.Exists(_directory))
+        {
+            return [];
+        }
+
+        return Directory.GetFiles(_directory, $"*{Extension}")
+            .Select(Path.GetFileName)
+            .Where(name => name is not null)
+            .Select(name => name!)
+            .Where(name => !Guid.TryParse(name[..^Extension.Length], out _))
+            .ToList();
+    }
+
+    /// <summary>Deletes a file this archive cannot name. The other half of the sentence.</summary>
+    /// <param name="fileName">A name from <see cref="Unnameable"/>.</param>
+    public bool DeleteUnnameable(string fileName)
+    {
+        ArgumentNullException.ThrowIfNull(fileName);
+
+        // Built from the directory and the bare file name only -- never a caller-supplied path -- so
+        // no separator or traversal sequence can reach outside the log directory.
+        var path = Path.Combine(_directory, Path.GetFileName(fileName));
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        File.Delete(path);
+        return true;
     }
 
     /// <inheritdoc/>

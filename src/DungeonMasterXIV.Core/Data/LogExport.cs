@@ -34,6 +34,18 @@ public static class LogExport
     public const string Header = "# DungeonMasterXIV session log";
 
     /// <summary>
+    /// The format's version, written into every file.
+    /// </summary>
+    /// <remarks>
+    /// <b>A written format without a version cannot be changed safely once a file exists on a
+    /// user's machine</b> — a reader meeting an unfamiliar layout has no way to tell "written by a
+    /// newer build" from "corrupt", and must guess. Costing one line now buys the ability to know
+    /// later, which is the whole reason the Deployment Manager held this PR for the format rather
+    /// than for the wiring.
+    /// </remarks>
+    public const int FormatVersion = 1;
+
+    /// <summary>
     /// Writes <paramref name="log"/> out as text. <b>One log. There is deliberately no overload
     /// taking more than one.</b>
     /// </summary>
@@ -44,6 +56,7 @@ public static class LogExport
 
         var text = new StringBuilder();
         text.AppendLine(Header);
+        text.AppendLine($"version: {FormatVersion}");
         text.AppendLine($"campaign: {log.CampaignId}");
         text.AppendLine($"ended: {log.EndedAtUtcTicks}");
         text.AppendLine();
@@ -51,6 +64,64 @@ public static class LogExport
         foreach (var entry in log.Entries)
         {
             text.AppendLine(LineFor(entry));
+        }
+
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// Makes free text safe to put in a line-and-tab record: <b>one entry stays one line, and no
+    /// typed character can invent a field.</b>
+    /// </summary>
+    /// <remarks>
+    /// <b>WITHOUT THIS, A USER CAN FORGE A LOG ENTRY BY TYPING ONE.</b> The first version of this
+    /// file escaped nothing, so a message containing a newline followed by tab-separated fields
+    /// produced MORE LINES THAN THERE WERE ENTRIES — and anything reading the file back saw an entry
+    /// carrying a sequence number and an author the host never issued. That is the R-2.7
+    /// impersonation surface arriving through the export instead of the panel, and it was found by
+    /// the code reviewer rather than by me.
+    /// <para>
+    /// <b>The backslash is escaped FIRST and unescaped LAST.</b> Any other order lets a typed
+    /// <c>\n</c> survive the round trip as a real newline, which reopens the hole through the escape
+    /// mechanism itself.
+    /// </para>
+    /// </remarks>
+    /// <param name="text">Free text as the user typed it.</param>
+    public static string Escape(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        return text
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\t", "\\t", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+    }
+
+    /// <summary>Reverses <see cref="Escape"/>, so a log's content is not lost to being made safe.</summary>
+    /// <param name="field">One escaped field, as written.</param>
+    public static string Unescape(string field)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+
+        var text = new StringBuilder(field.Length);
+        for (var i = 0; i < field.Length; i++)
+        {
+            if (field[i] != '\\' || i + 1 >= field.Length)
+            {
+                text.Append(field[i]);
+                continue;
+            }
+
+            // Read the pair as one unit, so a literal backslash cannot combine with the character
+            // after it to produce a control character the user never typed.
+            text.Append(field[++i] switch
+            {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                var other => other,
+            });
         }
 
         return text.ToString();
@@ -69,7 +140,7 @@ public static class LogExport
             entry.Stamp.AtUtcTicks,
             entry.Kind,
             entry.Peer,
-            entry.Text);
+            Escape(entry.Text));
 
     /// <summary>How many lines an export of <paramref name="log"/> will carry, for a caller's prompt.</summary>
     public static int LineCount(RetainedLog log)
