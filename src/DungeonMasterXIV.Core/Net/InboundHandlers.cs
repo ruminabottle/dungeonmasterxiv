@@ -41,9 +41,61 @@ namespace DungeonMasterXIV.Net;
 /// <b>The residual, stated rather than left for a reviewer to find.</b>
 /// <see cref="JoinerAdmission"/> and <see cref="MemberAuthoredContent"/> share a nullity condition —
 /// both are host-only — so co-nullity alone would have permitted merging them into one host-side
-/// object and reaching two parameters instead of three. They are kept apart because the D-3 door
-/// boundary is a stronger claim than co-nullity, and a shape that reads better against the parameter
-/// row is not worth blurring the boundary this file exists to hold.
+/// object and reaching two parameters instead of three.
+/// </para>
+/// <para>
+/// They are kept apart <b>because the merge would dissolve <see cref="MemberAuthoredContent"/> from
+/// a DOOR into a HOST-SIDE BAG.</b> The D-3 split is made structural by the two door types existing
+/// AS doors; a type holding the member-content door plus two unrelated admission handlers no longer
+/// names one thing, and the next reader cannot tell from the type what it is for. That is a cohesion
+/// claim about the TARGET of the merge, and it is deliberately weaker than the boundary-crossing
+/// claim this paragraph used to make — it is also the reason that actually reaches the question.
+/// </para>
+/// <para>
+/// <b>Provenance is NOT that reason, and the difference is the whole point (BUG-109).</b> "Both
+/// admission members are supplied from the admission side" answers <i>is admission a coherent group
+/// at all</i> — and it does, which is why it belongs above at the grouping. It does not answer
+/// <i>why not merge that group into another one</i>: TWO GROUPS CAN EACH BE COHERENT AND STILL
+/// BELONG MERGED. Reaching for it here would have replaced one reason that does not reach the
+/// question with another, which is this bug a second time.
+/// </para>
+/// <para>
+/// And where provenance IS cited above, the load-bearing half is the CLAUSE and not the sentence:
+/// that sentence joins it to "both are null on exactly the same clients" with an <i>and</i>, and
+/// co-nullity is the property this residual exists to call too weak to justify a merge. A reason too
+/// weak to justify merging is too weak to be grouping evidence three lines earlier, so treat that
+/// half as corroborating and never load-bearing.
+/// </para>
+/// <para>
+/// <b>This paragraph used to cite the D-3 door boundary, and that was the wrong reason for the
+/// right conclusion (BUG-109).</b> D-3 as stated above is the boundary BETWEEN THE TWO CONTENT
+/// DOORS. <see cref="JoinerAdmission"/> carries <see cref="JoinerAdmission.OnJoinRequest"/> and
+/// <see cref="JoinerAdmission.OnComparabilityReceipt"/>, and neither is content — so it sits on
+/// neither side of that boundary, and merging it into <see cref="MemberAuthoredContent"/> would not
+/// cross D-3 at all. The host-authored/member-authored split would survive such a merge untouched.
+/// A reader who tested the old reason would find it did not apply, and the natural next move is to
+/// conclude the merge is fine after all: <b>a wrong justification where a change is meant to be
+/// prevented is worse than none, because it invites the review that overturns it.</b>
+/// </para>
+/// <para>
+/// <b>WHAT THIS RETRACTION DOES NOT CLAIM, because a reader who believed the old reason needs to
+/// know exactly which part failed.</b> The D-3 boundary between the two content doors is UNTOUCHED
+/// by any of this and the doors are not in question: what was wrong is that the boundary was cited
+/// for a merge it does not reach, not that the boundary is weak. Only the third party to the
+/// question moved. Without this sentence the next reader re-derives the finding and concludes the
+/// doors themselves are in danger, which they are not.
+/// <para>
+/// The co-nullity clause is deliberately not load-bearing here. It is the property this paragraph
+/// exists to call weaker, so resting the replacement on it would inherit the weakness the original
+/// was written to escape.
+/// </para>
+/// <para>
+/// <b>And the protection D-3 does give is NOMINAL rather than structural.</b> The two doors are
+/// distinct named record structs, so passing one where the other belongs fails on TYPE IDENTITY —
+/// measured with two record structs whose member shapes were made IDENTICAL, which still refused
+/// with <c>CS1503, cannot convert</c>. It would therefore still fire if a future change aligned the
+/// two doors' shapes. Worth stating because a swap probe on the real types emits <c>CS1593</c> from
+/// the differing delegate arities, which reads as though the shapes were the protection.
 /// </para>
 /// </remarks>
 /// <param name="Admission">
