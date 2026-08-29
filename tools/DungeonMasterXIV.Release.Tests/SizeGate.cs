@@ -56,18 +56,56 @@ internal sealed record Breach(string File, string Row, string Unit, int Value, i
 /// </remarks>
 internal sealed record Measured(IReadOnlyList<Breach> Breaches, IReadOnlyList<string> Unmeasured);
 
+/// <summary>One capacity per row — the block set or the flag set.</summary>
+/// <remarks>
+/// <b>Init-only rather than positional, and the reason is this ticket's own subject.</b> Five
+/// positional parameters would sit at the PARAMETER FLAG of 4 that DMXENG-107 teaches the gate to
+/// report. A type introduced to measure the flag row should not cross it.
+/// </remarks>
+internal sealed record Thresholds
+{
+    /// <summary>Class span.</summary>
+    internal required int Class { get; init; }
+
+    /// <summary>File length.</summary>
+    internal required int File { get; init; }
+
+    /// <summary>Method length.</summary>
+    internal required int Method { get; init; }
+
+    /// <summary>Parameter count.</summary>
+    internal required int Parameter { get; init; }
+
+    /// <summary>Nesting depth.</summary>
+    internal required int Nesting { get; init; }
+}
+
 internal static class SizeGate
 {
     // THE LIMITS ARE DUPLICATED FROM Program.cs AND THAT DUPLICATION IS POLICED, NOT TOLERATED.
     // They are top-level `const`s in a Program.cs that compiles to an entry point, so nothing outside
     // that file can reference them, and the ticket's boundary is to use the sizes tool AS-IS rather
-    // than restructure it. TheGateHoldsTheSameLimitsTheToolDoes reads Program.cs and fails if these
+    // than restructure it. TheGateHoldsTheSameLimitTheToolDoes reads Program.cs and fails if these
     // ever disagree, which turns a silent drift into a red test.
     internal const int ClassBlock = 400;
     internal const int FileBlock = 450;
     internal const int MethodBlock = 60;
     internal const int ParameterBlock = 6;
     internal const int NestingBlock = 4;
+
+    // THE FLAG ROW, ADDED BY DMXENG-107, AND IT IS NOT A SECOND SET OF BLOCKS.
+    // engineering-standards.md:1140 -- "Blocking limits are a denial on their own. FLAGS ARE A
+    // CONVERSATION" -- and the DM has confirmed that sentence governs the GATE as well as the
+    // standard. A gate that refused here would not be stricter; it would implement a different rule.
+    // Nothing in Refusals reads these, and TheFlagReportCannotMakeTheGateRefuse pins that.
+    //
+    // Duplicated from Program.cs for the same reason the blocks are -- top-level consts in an
+    // entry-point file cannot be referenced -- and policed by the same guard.
+    internal const int ClassFlag = 250;
+    internal const int FileFlag = 300;
+    internal const int MethodFlag = 40;
+    internal const int ParameterFlag = 4;
+    internal const int NestingFlag = 3;
 
     internal const string FileRow = "file";
     internal const string ClassRow = "class";
@@ -85,17 +123,53 @@ internal static class SizeGate
     /// emits a BARE "OVER THE BLOCK" as the true arm of three separate ternaries — method length,
     /// parameters and nesting — so a grep for that string cannot tell which row it came from.
     /// </remarks>
-    internal static Measured BreachesIn(string path, string source)
+    internal static Measured BreachesIn(string path, string source) =>
+        MeasureAgainst(path, source, Blocks);
+
+    /// <summary>
+    /// Every FLAG crossing in one file's source. <b>Not refusals — see <see cref="ClassFlag"/>.</b>
+    /// </summary>
+    /// <remarks>
+    /// Same measurement, different capacities. <b>The measurement is shared rather than copied</b>,
+    /// because two readers of the same source that could disagree are the drift this file already
+    /// polices between the gate and the tool — rebuilding it one scope down would be the same defect
+    /// with a shorter travel time.
+    /// </remarks>
+    internal static Measured FlagCrossingsIn(string path, string source) =>
+        MeasureAgainst(path, source, Flags);
+
+    /// <summary>The five block capacities.</summary>
+    internal static readonly Thresholds Blocks = new()
+    {
+        Class = ClassBlock,
+        File = FileBlock,
+        Method = MethodBlock,
+        Parameter = ParameterBlock,
+        Nesting = NestingBlock,
+    };
+
+    /// <summary>The five flag capacities.</summary>
+    internal static readonly Thresholds Flags = new()
+    {
+        Class = ClassFlag,
+        File = FileFlag,
+        Method = MethodFlag,
+        Parameter = ParameterFlag,
+        Nesting = NestingFlag,
+    };
+
+    private static Measured MeasureAgainst(string path, string source, Thresholds capacities)
     {
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(capacities);
 
         var found = new List<Breach>();
         var unmeasured = new List<string>();
         var lines = source.Split('\n');
 
-        if (lines.Length > FileBlock)
+        if (lines.Length > capacities.File)
         {
-            found.Add(new Breach(path, FileRow, string.Empty, lines.Length, FileBlock));
+            found.Add(new Breach(path, FileRow, string.Empty, lines.Length, capacities.File));
         }
 
         foreach (var type in ClassSpanReader.Read(lines))
@@ -107,9 +181,9 @@ internal static class SizeGate
             }
 
             var span = type.ClosingBraceLine - type.DeclarationLine + 1;
-            if (span > ClassBlock)
+            if (span > capacities.Class)
             {
-                found.Add(new Breach(path, ClassRow, type.Name, span, ClassBlock));
+                found.Add(new Breach(path, ClassRow, type.Name, span, capacities.Class));
             }
         }
 
@@ -121,19 +195,19 @@ internal static class SizeGate
                 continue;
             }
 
-            if (member.Lines > MethodBlock)
+            if (member.Lines > capacities.Method)
             {
-                found.Add(new Breach(path, MethodRow, member.Name, member.Lines, MethodBlock));
+                found.Add(new Breach(path, MethodRow, member.Name, member.Lines, capacities.Method));
             }
 
-            if (member.Parameters > ParameterBlock)
+            if (member.Parameters > capacities.Parameter)
             {
-                found.Add(new Breach(path, ParameterRow, member.Name, member.Parameters, ParameterBlock));
+                found.Add(new Breach(path, ParameterRow, member.Name, member.Parameters, capacities.Parameter));
             }
 
-            if (member.Depth > NestingBlock)
+            if (member.Depth > capacities.Nesting)
             {
-                found.Add(new Breach(path, NestingRow, member.Name, member.Depth, NestingBlock));
+                found.Add(new Breach(path, NestingRow, member.Name, member.Depth, capacities.Nesting));
             }
         }
 
