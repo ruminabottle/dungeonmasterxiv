@@ -82,6 +82,16 @@ public static class StreamLogProjection
         StreamEventKind.Dropped => "dropped",
         StreamEventKind.Reconnected => "reconnected",
 
+        // ADDED WHEN #210 MERGED, WHICH IS THE TRIPWIRE ABOVE DOING ITS JOB: the moment Gap reached
+        // main, EveryKindTheStreamHasTodayIsMapped went red on this branch. In CI, at merge time,
+        // on a developer -- not at export time on a DM's real log.
+        //
+        // R-2.12 rulings, mine: retention COUNTS a gap, because a retained log that omitted it would
+        // assert a continuity the session did not have; and an export RENDERS it, never drops it,
+        // because a stream with a hole must not look identical to a stream with nothing in the hole.
+        // That is the same trade #210 makes one layer in.
+        StreamEventKind.Gap => "gap",
+
         // NOT a catch-all for convenience. A kind that reaches here is one the stream gained after
         // this file was written -- Gap is already queued on PR #210 -- and both silent options are
         // wrong: naming it "unknown" writes a falsehood into an archive, dropping it loses a line

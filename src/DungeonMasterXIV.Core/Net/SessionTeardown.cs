@@ -1,5 +1,7 @@
 using System;
 
+using DungeonMasterXIV.Data;
+
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
@@ -56,9 +58,37 @@ public static class SessionTeardown
     /// </remarks>
     /// <param name="coordinator">The client being torn down.</param>
     /// <param name="now">When the session ended.</param>
-    public static void EndSessionForTeardown(this SessionCoordinator coordinator, DateTimeOffset now)
+    /// <param name="retention">
+    /// R-2.12's retention step, or null where nothing retains. <b>Runs FIRST, and that position is
+    /// the point</b> — see the remarks.
+    /// </param>
+    /// <remarks>
+    /// <b>RETENTION RUNS BEFORE THE TEARDOWN AND NOT MERELY WITH IT.</b> After <c>Detach</c> there
+    /// is no session left to record, so a retention step placed anywhere below would keep nothing
+    /// and still look correct — the log would simply be empty. That is exactly the failure this
+    /// file's own history warns about: with the announcement moved after the detach, <i>the test
+    /// asserting a departure is sent still passed, and only the test asserting the ORDER caught
+    /// it.</i> So this position is pinned by an order assertion rather than a happened one.
+    /// <para>
+    /// <b>The existing three calls are NOT reordered.</b> Their order is the BUG-154 fix; retention
+    /// is added above them and touches none of it.
+    /// </para>
+    /// <para>
+    /// <b>Optional because nothing supplies it yet.</b> The composition root is outside this
+    /// ticket's boundary, so the parameter exists and is unwired — which is the safe partial: with
+    /// no retention supplied, nothing is retained, and <c>ConfigWindow</c>'s shipped sentence
+    /// <i>"nothing to delete anywhere but here"</i> stays exactly as true as it is today.
+    /// </para>
+    /// </remarks>
+    public static void EndSessionForTeardown(
+        this SessionCoordinator coordinator,
+        DateTimeOffset now,
+        SessionLogRetention? retention = null)
     {
         ArgumentNullException.ThrowIfNull(coordinator);
+
+        // FIRST. The session still exists here and does not below.
+        retention?.Retain(coordinator.InAHostedSession, now.UtcTicks);
 
         coordinator.Membership.Leave();
         coordinator.StopHosting(now);
