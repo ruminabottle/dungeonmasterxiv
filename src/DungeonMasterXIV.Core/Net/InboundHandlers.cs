@@ -85,6 +85,7 @@ namespace DungeonMasterXIV.Net;
 /// for a merge it does not reach, not that the boundary is weak. Only the third party to the
 /// question moved. Without this sentence the next reader re-derives the finding and concludes the
 /// doors themselves are in danger, which they are not.
+/// </para>
 /// <para>
 /// The co-nullity clause is deliberately not load-bearing here. It is the property this paragraph
 /// exists to call weaker, so resting the replacement on it would inherit the weakness the original
