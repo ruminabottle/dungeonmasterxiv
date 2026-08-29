@@ -61,6 +61,52 @@ public sealed class ASkippedParticipantIsReportedTests
         Assert.All(lines, line => Assert.Contains("hear nothing", line, StringComparison.OrdinalIgnoreCase));
     }
 
+    // BUG-76. THE SIBLING OF THE TEST ABOVE, AND IT DID NOT EXIST. Every test in this file gave the
+    // unreachable peer the key [1, 2, 3] -- MALFORMED BUT PRESENT -- so `peer.PublicKey is not { }`
+    // was false in all of them and the no-public-key branch was never entered; the failure always
+    // landed one branch later, at DeriveSharedKey. The measured contrast: deleting the no-public-key
+    // warning left all 849 tests green, while deleting its sibling reddened two of them by name.
+    //
+    // A peer with an ABSENT key is produced by answering a peer code with NO PENDING REQUEST:
+    // Desk.Decide returns null, so AdmissionControl.Admit passes `request?.JoinerPublicKey` as null.
+    // That is the public API and not a constructor -- AdmittedPeer's constructor is internal and
+    // unreachable from this project, which is precisely why the case had to be reached this way.
+    //
+    // ON REACHABILITY, and it is stated rather than assumed: qa-1 recorded it as UNKNOWN and I did
+    // not resolve it either. The only production caller is AdmissionPromptView, which admits a code
+    // taken from a live pending request, so the case looks closed from the UI today -- but that is an
+    // argument about one call site, not a proof, and both Admit overloads are PUBLIC. The branch's
+    // own comment already calls it "the guard that keeps a FUTURE CALLER from creating a participant
+    // who is addressable and unreachable without anyone noticing". This test is what makes that guard
+    // provable rather than asserted, which is the same standing PR #86's local guard has.
+    [Fact]
+    public void AParticipantWithNoPublicKeyAtAllIsNamedInTheLog()
+    {
+        var (coordinator, log) = Hosting();
+        using var good = new SessionKeyExchange();
+
+        coordinator.ReceiveJoinRequest(PeerCodes.Of(Reachable), good.PublicKey, Now);
+
+        // No ReceiveJoinRequest for this one: nothing is pending under it, so it is admitted with no
+        // key at all rather than with an unusable one.
+        coordinator.Admit(PeerCodes.Of(Unreachable));
+        coordinator.Admit(PeerCodes.Of(Reachable));
+
+        // THE PREMISE, ASSERTED. If Admit ever starts supplying a key here, this test would otherwise
+        // go on passing while silently exercising the sibling branch again -- which is exactly how the
+        // gap this closes was created.
+        Assert.Null(coordinator.Audience.Find(PeerCodes.Of(Unreachable))!.PublicKey);
+
+        var lines = log.Warnings.Where(w => w.Contains(Unreachable, StringComparison.Ordinal)).ToList();
+
+        Assert.NotEmpty(lines);
+
+        // "no public key" rather than merely "skipped": it is what distinguishes this line from its
+        // sibling, and a test that accepted either would pass with the wrong branch reporting.
+        Assert.All(lines, line => Assert.Contains("no public key", line, StringComparison.OrdinalIgnoreCase));
+        Assert.All(lines, line => Assert.Contains("hear nothing", line, StringComparison.OrdinalIgnoreCase));
+    }
+
     // ONE LINE PER BROADCAST, NOT ONE PER PARTICIPANT, AND THAT IS THE DECISION RATHER THAN AN
     // ACCIDENT. My first version of the test above asserted a single line and FAILED against two:
     // admitting each participant publishes, so an unreachable peer is skipped by every publish. The
