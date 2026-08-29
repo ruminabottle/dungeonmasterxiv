@@ -42,6 +42,32 @@ internal sealed class HostCampaignPicker
     /// </remarks>
     public const string NewCampaignLabel = "Start a new campaign";
 
+    /// <summary>
+    /// What resuming does and does not restore (A-1.9l). Literal product copy from R-1.5d.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Substitute nothing and do not "improve" it (R-1.7a).</b> Three claims, one per sentence,
+    /// each ruled by the Product Owner: resumption will not restore participants; the state is empty
+    /// AND temporary; the campaign is intact — a missing feature, not lost data. Punctuation is not
+    /// load-bearing; the claims are, and all three must survive any re-wrapping.
+    /// </para>
+    /// <para>
+    /// <b>It is here rather than in a release note because THIS IS WHERE THE FALSE BELIEF FORMS.</b>
+    /// A note was ruled sufficient for BUG-41 only because nothing in the product claimed the missing
+    /// thing. The picker claims it, so the disclosure goes on the control.
+    /// </para>
+    /// <para>
+    /// <b>One phrasing was rejected and is recorded so nobody re-adds it: "...and you will admit them
+    /// again."</b> True, and not the difference — the DM admits every joiner every session with or
+    /// without relink, so naming an unchanged thing as the consequence misdescribes what is missing
+    /// and reads as though relink were about saving the DM a click.
+    /// </para>
+    /// </remarks>
+    public const string ResumeDisclosure =
+        "Resuming keeps this campaign, but not its players. Everyone arrives as someone new, and the "
+        + "roster stays empty until recognising returning players is built. Nothing has been lost.";
+
     private readonly HostingCampaign _hosting;
 
     /// <param name="hosting">The campaign association this picker sets.</param>
@@ -55,6 +81,11 @@ internal sealed class HostCampaignPicker
         {
             return;
         }
+
+        // A-1.9l. Drawn WHENEVER THE PICKER IS, not only once something is chosen — the belief forms
+        // when the DM sees that resuming is possible, which is before they pick anything. A
+        // disclosure that waited for a selection would arrive after the thing it corrects.
+        ImGui.TextWrapped(ResumeDisclosure);
 
         var chosen = _hosting.Chosen is { } id ? _hosting.Resumable.FirstOrDefaultById(id) : null;
 

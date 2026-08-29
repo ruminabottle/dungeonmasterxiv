@@ -101,6 +101,20 @@ public sealed class CampaignStore
     /// </summary>
     /// <param name="campaignId">The campaign they played in.</param>
     /// <param name="label">What the DM calls them locally. May be a character name; never logged.</param>
+    /// <remarks>
+    /// <b>UNCALLED IN PRODUCTION ON PURPOSE, and that is A-1.9m rather than an oversight.</b> An
+    /// empty roster is the CORRECT state today: this appends unconditionally with a fresh id, and
+    /// there is no durable joiner identity to de-duplicate on — the joiner is never told its
+    /// <see cref="CampaignParticipant.ParticipantId"/>, its keys are regenerated every join, and its
+    /// peer code is derived from two per-session inputs. So wiring this to admission would record
+    /// one person once per session and <see cref="Save"/> the result, putting phantom participants
+    /// on the DM's disk that no later migration can disentangle.
+    /// <para>
+    /// It becomes callable when a returning client can present a claim — R-1.5c's conveyance, then
+    /// the joiner storing it. <b>Until then this looks exactly like an oversight, which is why the
+    /// prohibition is a criterion and this remark exists.</b>
+    /// </para>
+    /// </remarks>
     public CampaignParticipant? AddParticipant(Guid campaignId, string label)
     {
         var campaign = Find(campaignId);
