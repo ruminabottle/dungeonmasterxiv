@@ -198,7 +198,7 @@ public sealed class TheHostActsOnMemberAuthoredContentTests
         Admitted(host, Speaker, member);
         var fromTheOldSession = SealedBy(member, host);
 
-        host.StopHosting();
+        host.StopHosting(Now);
         host.StartHosting();
         host.Host.Registered();
         host.SynchroniseTransport();
@@ -259,7 +259,7 @@ public sealed class TheHostActsOnMemberAuthoredContentTests
         host.Tick(TimeSpan.Zero, Now);
         Assert.Equal(1, host.MemberContent.Received);
 
-        host.StopHosting();
+        host.StopHosting(Now);
 
         Assert.Equal(0, host.MemberContent.Received);
         Assert.Empty(host.MemberContent.Latest);
