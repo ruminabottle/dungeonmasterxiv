@@ -22,10 +22,24 @@ public class TheSizeGateMeasuresTheRealTreeTests(ITestOutputHelper output)
     {
         var files = SizeGateIntake.Files();
         var breaches = new List<Breach>();
+        var unmeasured = new List<string>();
         foreach (var path in files)
         {
-            breaches.AddRange(SizeGate.BreachesIn(path, SizeGateIntake.Read(path)));
+            var measured = SizeGate.BreachesIn(path, SizeGateIntake.Read(path));
+            breaches.AddRange(measured.Breaches);
+            unmeasured.AddRange(measured.Unmeasured);
         }
+
+        // COVERAGE IS PART OF THE RESULT. A refusal is not a pass -- a span the reader could not
+        // measure has not been found compliant, and a gate that drops refusals reports "no breaches"
+        // for a file it never read.
+        output.WriteLine($"unmeasured spans: {unmeasured.Count}");
+        foreach (var refusal in unmeasured)
+        {
+            output.WriteLine($"    {refusal}");
+        }
+
+        Assert.Empty(unmeasured);
 
         output.WriteLine($"files: {files.Count}");
         foreach (var row in breaches.GroupBy(b => b.Row))

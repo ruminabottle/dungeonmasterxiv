@@ -43,6 +43,19 @@ internal sealed record Breach(string File, string Row, string Unit, int Value, i
 /// on an existing one getting WORSE, and the seven pass at their recorded margins.
 /// </para>
 /// </remarks>
+/// <summary>
+/// What one file yielded: the breaches found, and anything the readers could not measure.
+/// </summary>
+/// <remarks>
+/// <b>REFUSALS ARE CARRIED, NOT FILTERED, AND THIS TYPE EXISTS BECAUSE THE FIRST DRAFT FILTERED
+/// THEM.</b> A span the reader refuses has not been measured, so it has not been found compliant —
+/// and dropping it leaves a gate that reports no breaches for a file it never read. That is
+/// <i>could-not-evaluate</i> collapsing into <i>pass</i>, which is BUG-121's shape one layer down:
+/// <c>dotnet test</c> printing "Passed!" with a truncated total when the host aborts. Three outcomes,
+/// and the third must not wear the first one's face.
+/// </remarks>
+internal sealed record Measured(IReadOnlyList<Breach> Breaches, IReadOnlyList<string> Unmeasured);
+
 internal static class SizeGate
 {
     // THE LIMITS ARE DUPLICATED FROM Program.cs AND THAT DUPLICATION IS POLICED, NOT TOLERATED.
@@ -72,11 +85,12 @@ internal static class SizeGate
     /// emits a BARE "OVER THE BLOCK" as the true arm of three separate ternaries — method length,
     /// parameters and nesting — so a grep for that string cannot tell which row it came from.
     /// </remarks>
-    internal static IReadOnlyList<Breach> BreachesIn(string path, string source)
+    internal static Measured BreachesIn(string path, string source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         var found = new List<Breach>();
+        var unmeasured = new List<string>();
         var lines = source.Split('\n');
 
         if (lines.Length > FileBlock)
@@ -84,8 +98,14 @@ internal static class SizeGate
             found.Add(new Breach(path, FileRow, string.Empty, lines.Length, FileBlock));
         }
 
-        foreach (var type in ClassSpanReader.Read(lines).Where(span => span.Refusal is null))
+        foreach (var type in ClassSpanReader.Read(lines))
         {
+            if (type.Refusal is not null)
+            {
+                unmeasured.Add($"{path}: type {type.Name} REFUSED — {type.Refusal}");
+                continue;
+            }
+
             var span = type.ClosingBraceLine - type.DeclarationLine + 1;
             if (span > ClassBlock)
             {
@@ -93,8 +113,14 @@ internal static class SizeGate
             }
         }
 
-        foreach (var member in MemberReader.Read(source).Where(span => span.IsMeasured))
+        foreach (var member in MemberReader.Read(source))
         {
+            if (!member.IsMeasured)
+            {
+                unmeasured.Add($"{path}: member {member.Name} REFUSED — {member.Refusal}");
+                continue;
+            }
+
             if (member.Lines > MethodBlock)
             {
                 found.Add(new Breach(path, MethodRow, member.Name, member.Lines, MethodBlock));
@@ -111,7 +137,7 @@ internal static class SizeGate
             }
         }
 
-        return found;
+        return new Measured(found, unmeasured);
     }
 
     /// <summary>Why the gate refuses, or empty if it does not.</summary>
