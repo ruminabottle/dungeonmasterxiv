@@ -174,6 +174,12 @@ public readonly struct DisplayName : IEquatable<DisplayName>
             return false;
         }
 
+        // R-1.3j.6, A-1.2w. Four role words belong to the host.
+        if (IsReservedToTheHost(trimmed))
+        {
+            return false;
+        }
+
         var rendersSomething = false;
 
         // RUNES, not chars. Iterating UTF-16 units gives a lone surrogate for every astral-plane
@@ -212,6 +218,70 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     /// </remarks>
     public static DisplayName OrNone(string? candidate) =>
         TryParse(candidate, out var name) ? name : None;
+
+    /// <summary>The four role words reserved to the host (R-1.3j.6, ruled by the human, SQ-80).</summary>
+    private static readonly string[] ReservedToTheHost = ["DM", "GM", "Dungeon Master", "Game Master"];
+
+    /// <summary>Whether a candidate is one of the reserved role words.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>CASE-INSENSITIVE AND WHITESPACE-NORMALISED, OR THE RULE IS DECORATIVE (A-1.2w).</b> A build
+    /// matching only the four exact literals fails that criterion: <c>dm</c> and
+    /// <c>  Dungeon Master  </c> would both walk past it. Ordinal case folding rather than the
+    /// current culture's, so the answer does not depend on where the player lives.
+    /// </para>
+    /// <para>
+    /// <b>WHITESPACE RUNS COLLAPSE; THEY ARE NOT REMOVED — AND THE DIFFERENCE IS LOAD-BEARING.</b>
+    /// R-1.3j.6 names <c>D M</c> among the leaks this rule does NOT catch, so stripping whitespace
+    /// instead of collapsing it would refuse a name the PRD says must pass. That is not a stricter
+    /// reading of the same rule, it is a different rule — and it would <b>disarm A-2.24a a second
+    /// time</b>: that criterion's re-derived demonstration requires an imitation using a name this
+    /// list PERMITS, and removal would refuse the imitation and let a build with no structural
+    /// marker pass by default. <c>Dungeon  Master</c> collapses and is refused; <c>D M</c> collapses
+    /// to itself and is allowed.
+    /// </para>
+    /// <para>
+    /// <b>THIS IS NOT THE GUARANTEE, AND MUST NOT BE REPORTED AS ONE (A-1.2w-note).</b> A blocklist
+    /// leaks and this one does: <c>D.M.</c>, <c>D M</c>, <c>the DM</c>, small-caps and Cyrillic
+    /// homoglyphs all read as "DM" to a human and none are the four strings. <b>The guarantee is
+    /// <see cref="SessionRole"/> (PRD-2 R-2.7a)</b>, which is not a string and cannot be
+    /// approximated. This row closes the obvious case cheaply and nothing more.
+    /// </para>
+    /// </remarks>
+    private static bool IsReservedToTheHost(string trimmed)
+    {
+        var collapsed = new StringBuilder(trimmed.Length);
+        var lastWasSpace = false;
+
+        foreach (var character in trimmed)
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                if (!lastWasSpace)
+                {
+                    collapsed.Append(' ');
+                }
+
+                lastWasSpace = true;
+                continue;
+            }
+
+            collapsed.Append(character);
+            lastWasSpace = false;
+        }
+
+        var normalised = collapsed.ToString();
+
+        foreach (var reserved in ReservedToTheHost)
+        {
+            if (string.Equals(normalised, reserved, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Whether <paramref name="rune"/> is one a display name may contain (R-1.3j).
