@@ -93,29 +93,99 @@ public class TheResumeOfferDisclosesWhatItCannotDoTests
         Assert.True(disclosure < combo, "The disclosure must precede the control, not sit inside it — the belief forms on seeing the offer.");
     }
 
-    // THE ASSERTION THAT MATTERS (BUG-82). The failure guarded is the disclosure surviving inside a
-    // branch that stops running -- present in the file, absent from the screen -- and it is asserted
-    // as NESTING because ordering cannot see it.
+    // THE ASSERTION THAT MATTERS. The failure guarded is the disclosure surviving inside something
+    // that stops running -- present in the file, absent from the screen.
     //
-    // WHY A TEXT SCAN IS ALLOWED TO DECIDE THIS AT ALL, since a scan sees text and reachability is
-    // about execution. The property here is narrower than reachability, and the narrowing is what
-    // makes it decidable: AN EARLY RETURN CANNOT VIOLATE IT. A `return` skips the control as well as
-    // the disclosure, so "if the picker draws, the disclosure drew" still holds. The only way to
-    // have the control draw while the disclosure does not is to put the disclosure inside a block
-    // the control is not inside -- and that is nesting, which is lexical and exact.
+    // WHAT IT DECIDES, and this is the whole claim: THE STATEMENT IS NOT LEXICALLY GOVERNED BY A
+    // CONDITION INSIDE Draw. Not "the disclosure always reaches the screen". A scan can see the
+    // CALL SITE; it cannot see the EFFECT, and C# lets those come apart. That distinction is
+    // qa-2's and it is why this comment states a smaller thing than its predecessor did.
     //
-    // So this asserts the disclosure sits at the TOP STATEMENT LEVEL of Draw(), where every path
-    // reaching the control has already passed it. Not "at the same depth as the combo": two
-    // different branches can share a depth.
+    // WRITTEN AS A WHITELIST, WHICH IS THE DESIGN (BUG-86). The previous version asked "is it
+    // inside a block" -- a DENYLIST of one way to be conditional. C# has others: `if (c) stmt;`
+    // needs no braces, and `#if` is resolved before a block is ever involved. Adding a case per
+    // shape makes the list longer, not complete, which is an enumeration standing in for a
+    // universal -- the defect this file has now had twice. So this asserts what an UNGOVERNED
+    // STATEMENT LOOKS LIKE, and a shape nobody anticipated fails a positive test rather than
+    // slipping past a missing negative:
+    //
+    //   1. at Draw's top statement level, so no block encloses it;
+    //   2. the statement is the ENTIRE line, so no `if (c)`, ternary, `&&`, lambda or local
+    //      function holds it;
+    //   3. the line above completes a statement or opens a block, so no braceless
+    //      `if`/`else`/`while`/`for`/`foreach`/`using`/`lock`/`do` governs it -- every such header
+    //      ends in `)` or a keyword and never in `;`, `{` or `}`;
+    //   4. preprocessor depth is zero, counted like brace depth: `#if` opens, `#endif` closes,
+    //      `#else`/`#elif` change nothing because either arm is equally conditional.
+    //
+    // AN EARLY RETURN IS STILL NOT A VIOLATION, and rule 3 admits a line ending in `;` for that
+    // reason: a `return` skips the CONTROL too, so "if the picker draws, the disclosure drew"
+    // holds.
+    //
+    // WHAT IT CANNOT SEE, named rather than left to be discovered:
+    //
+    //   * WHETHER THE EFFECT HAPPENS. Nothing here proves Draw is CALLED, or that ImGui puts the
+    //     result on screen. The in-game check is the end-to-end coverage and stays load-bearing.
+    //   * A BUILD-TIME REMOVAL BEYOND THIS FILE. Rule 4 sees directives inside Draw; the artefact
+    //     check is what asks the compiled output whether the sentence shipped, and that is the
+    //     honest instrument for that question rather than more text matching.
+    //   * INDIRECTION, IN PRINCIPLE. Every shape measured is caught -- a local function, an
+    //     expression-bodied lambda, a block-bodied lambda with the call alone on its line, and a
+    //     [Conditional] local function, by rules 2 and 1 -- but CAUGHT IN EVERY SHAPE TRIED IS NOT
+    //     PROVEN IMPOSSIBLE, and this comment will not make that upgrade. The class this defends
+    //     is the ACCIDENTAL edit: someone wrapping the disclosure in a condition, or dropping it
+    //     through build configuration. A determined hostile edit wins eventually and a guard that
+    //     claimed otherwise would be the same defect a fourth time.
     [Fact]
-    public void TheDisclosureIsNotNestedInsideACondition()
+    public void NothingGovernsTheDisclosure()
     {
+        const string Statement = "ImGui.TextWrapped(ResumeDisclosure);";
+
         var drawing = Drawing();
+        var at = drawing.IndexOf(Statement, StringComparison.Ordinal);
+        Assert.True(at >= 0, "The picker no longer has the shape this reads.");
 
-        var disclosure = drawing.IndexOf("ImGui.TextWrapped(ResumeDisclosure)", StringComparison.Ordinal);
-        Assert.True(disclosure >= 0, "The picker no longer has the shape this reads.");
+        // 1. No block encloses it.
+        Assert.Equal(TopLevelOfDraw, DepthInDraw(drawing, at));
 
-        Assert.Equal(TopLevelOfDraw, DepthInDraw(drawing, disclosure));
+        var lines = drawing.Split('\n');
+        var line = drawing.Take(at).Count(c => c == '\n');
+
+        // 2. The statement is the whole line: nothing shares it and nothing wraps it.
+        Assert.Equal(Statement, lines[line].Trim());
+
+        // 3. Nothing single-statement governs it from the line above.
+        // Blank lines and PREPROCESSOR lines are skipped: a directive never governs the next
+        // statement the way an `if` header does, and rule 4 is what judges directives. Without this
+        // a bare #region above the disclosure reddens a disclosure that ships -- a false positive on
+        // an organising edit, which is worse than the hole being closed.
+        var above = Enumerable.Range(0, line).Reverse()
+            .Select(i => lines[i].Trim())
+            .FirstOrDefault(l => l.Length > 0 && !l.StartsWith('#')) ?? "{";
+
+        Assert.True(
+            above.EndsWith(';') || above.EndsWith('{') || above.EndsWith('}'),
+            $"The line above the disclosure is '{above}', which does not complete a statement or "
+            + "open a block -- so a braceless conditional may govern the disclosure (BUG-86).");
+
+        // 4. It is not inside a region the compiler can drop. DIRECTIVE DEPTH, counted the same way
+        //    as brace depth: #if opens, #endif closes, and #else/#elif change nothing because a
+        //    statement in EITHER arm is equally conditional. One uniform mechanism rather than a
+        //    case per directive -- and #region and #pragma are ignored rather than refused, so
+        //    organising the file does not redden a disclosure that still ships.
+        var body = drawing.Take(drawing.IndexOf('{', drawing.IndexOf("public void Draw()", StringComparison.Ordinal)))
+            .Count(c => c == '\n');
+
+        var open = lines.Skip(body).Take(line - body)
+            .Select(l => l.TrimStart())
+            .Sum(l => l.StartsWith("#if", StringComparison.Ordinal) ? 1
+                    : l.StartsWith("#endif", StringComparison.Ordinal) ? -1 : 0);
+
+        Assert.True(
+            open == 0,
+            $"The disclosure sits inside {open} unclosed preprocessor conditional(s). The compiler "
+            + "may drop the statement while this file still contains it, which is a green guard over "
+            + "a binary with no sentence in it (BUG-86).");
     }
 
     // Directly inside Draw's body: one unclosed brace since the body opened.
