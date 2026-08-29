@@ -186,7 +186,14 @@ public sealed class AdmissionInbox
                     // Validated HERE rather than trusted, and a bad name does not drop the request:
                     // the person behind it is still waiting, and the prompt they need carries the
                     // fingerprint whatever the name turns out to be. See DisplayName.OrNone.
-                    onJoinRequest(joinerPublicKey, DisplayName.OrNone(envelope.DisplayName));
+                    // The claim travels as the RAW STRING it arrived as and is resolved by the
+                    // host (T-37) -- unvalidated here on purpose, because nothing is granted on it
+                    // and CampaignRelink.Resolve is where it meets a parse and a roster. See
+                    // InboundHandlers.OnJoinRequest.
+                    onJoinRequest(
+                        joinerPublicKey,
+                        DisplayName.OrNone(envelope.DisplayName),
+                        envelope.ClaimedParticipantId);
                 }
 
                 continue;

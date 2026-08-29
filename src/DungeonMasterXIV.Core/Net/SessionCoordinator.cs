@@ -57,6 +57,7 @@ public sealed class SessionCoordinator
         ArgumentNullException.ThrowIfNull(capabilities);
 
         _newKeys = capabilities.KeySource;
+        _resolveRelink = capabilities.RelinkSource;
         _log = log;
         _link = new RelayLink(transport, relayAddress, _inbox.Receive);
         _admissions = new AdmissionControl(
@@ -97,6 +98,7 @@ public sealed class SessionCoordinator
     }
 
     private readonly Func<SessionKeyExchange> _newKeys;
+    private readonly Func<string?, RelinkClaim> _resolveRelink;
     private readonly ISessionTransportLog _log;
     private readonly AdmissionControl _admissions;
     private readonly AdmissionInbox _inbox = new();
@@ -321,7 +323,12 @@ public sealed class SessionCoordinator
             _joiner.Keys,
             Host,
             new InboundHandlers(
-                OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
+                // T-37: the claim is RESOLVED HERE, at the one place that has both the wire and
+                // the campaign. Until now it arrived on the envelope and was dropped -- the joiner
+                // sent it, the relay routed it, and every relink branch took the not-a-relink path
+                // because Receive was only ever reached with RelinkClaim.None.
+                OnJoinRequest: (key, name, claimed) =>
+                    _admissions.AdmitToTheQueue(key, now, name, _resolveRelink(claimed)),
                 OpenWith: SessionKey,
                 OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster,
                 OnComparabilityReceipt: _admissions.RecordComparabilityReceipt,

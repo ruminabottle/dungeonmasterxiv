@@ -34,9 +34,15 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// </remarks>
 /// <param name="OnJoinRequest">
-/// Called with the joiner's public key and self-declared name for each inbound
-/// <see cref="WireMessageType.JoinRequest"/>, when this client is a host. Null when there is nobody
-/// to tell, which is every joiner-only client (BUG-42).
+/// Called with the joiner's public key, self-declared name, and the participant id it CLAIMS, for
+/// each inbound <see cref="WireMessageType.JoinRequest"/>, when this client is a host. Null when
+/// there is nobody to tell, which is every joiner-only client (BUG-42).
+/// <para>
+/// <b>The claim travels as the raw string it arrived as (R-1.5, T-37).</b> This layer decodes and
+/// routes; deciding whether a claimed participant is one this campaign knows needs the campaign,
+/// which is not Core's to look up — see <see cref="SessionCapabilities.RelinkSource"/>. Null means
+/// no claim was made, which is every first-time join.
+/// </para>
 /// </param>
 /// <param name="OpenWith">
 /// The shared key to open inbound <b>host-authored</b> content with, or null before one exists. A
@@ -89,7 +95,7 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// </param>
 public readonly record struct InboundHandlers(
-    Action<byte[], DisplayName>? OnJoinRequest = null,
+    Action<byte[], DisplayName, string?>? OnJoinRequest = null,
     byte[]? OpenWith = null,
     Action<SessionContent>? OnContent = null,
     Action<byte[]>? OnComparabilityReceipt = null,

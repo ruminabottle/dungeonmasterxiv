@@ -120,8 +120,12 @@ public sealed class AdmissionControl
     /// exist yet (BUG-41). Passing the default is leaving that alone rather than half-building it.
     /// </para>
     /// </remarks>
-    public void AdmitToTheQueue(byte[] joinerPublicKey, DateTimeOffset now, DisplayName displayName = default) =>
-        Receive(PeerCodeFor(joinerPublicKey), joinerPublicKey, now, displayName: displayName);
+    public void AdmitToTheQueue(
+        byte[] joinerPublicKey,
+        DateTimeOffset now,
+        DisplayName displayName = default,
+        RelinkClaim relink = default) =>
+        Receive(PeerCodeFor(joinerPublicKey), joinerPublicKey, now, relink, displayName);
 
     /// <summary>
     /// The session-scoped code the DM's prompt names this requester by (R-1.3, D-8).
