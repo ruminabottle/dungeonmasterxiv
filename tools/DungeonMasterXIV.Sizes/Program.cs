@@ -65,11 +65,17 @@ foreach (var path in args)
     var lines = File.ReadAllLines(path);
 
     // RULED: a file is every line in it, first to last, including a licence header.
-    var fileStanding = lines.Length > FileBlock ? "OVER THE BLOCK"
-        : lines.Length > FileFlag ? "over the flag"
-        : "under the flag";
+    var fileStanding = lines.Length > FileBlock ? "OVER THE FILE BLOCK"
+        : lines.Length > FileFlag ? "over the file flag"
+        : "under the file flag";
 
-    Console.WriteLine($"{path}  —  {lines.Length} lines, {fileStanding}, margin {FileBlock - lines.Length}");
+    // BUG-111: THE STANDING AND THE MARGIN BOTH NAME THEIR OWN ROW. A bare "margin 334" says nothing
+    // about WHICH limit it is 334 away from, and an absent row is not read as absent -- the reader
+    // fills the gap with whichever row they arrived asking about. That is not hypothetical: a
+    // compliant type printed `4 lines ... margin 396` and was read as "4 members, margin 396" by
+    // somebody reasoning about where parameters could be added.
+    Console.WriteLine(
+        $"{path}  —  {lines.Length} lines, {fileStanding}, margin {FileBlock - lines.Length} lines");
 
     var spans = ClassSpanReader.Read(lines);
 
@@ -91,13 +97,16 @@ foreach (var path in args)
         measured++;
 
         var margin = ClassBlock - span.Lines;
-        var standing = span.Lines > ClassBlock ? "OVER THE BLOCK"
-            : span.Lines > ClassFlag ? "over the flag"
-            : "under the flag";
+        var standing = span.Lines > ClassBlock ? "OVER THE CLASS BLOCK"
+            : span.Lines > ClassFlag ? "over the class flag"
+            : "under the class flag";
 
+        // BUG-111. This line is about the TYPE SPAN and nothing else, and it now says so twice --
+        // in the standing and in the margin's unit. It carries no parameter or nesting information,
+        // because those rows belong to members and print only when they have something to say.
         Console.WriteLine(
             $"  {span.Name,-34} {span.Lines,4} lines  ({span.DeclarationLine}-{span.ClosingBraceLine})"
-            + $"  {standing}, margin {margin}");
+            + $"  {standing}, margin {margin} lines");
     }
 
     foreach (var member in MemberReader.Read(File.ReadAllText(path)))
