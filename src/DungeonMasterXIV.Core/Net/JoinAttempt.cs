@@ -82,7 +82,10 @@ public sealed class JoinAttempt
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>IN MEMORY ONLY, AND THAT IS A RULING RATHER THAN AN OMISSION (SQ-53).</b> R-1.5b's
+    /// <b>IN MEMORY ONLY, AND THAT IS A RULING RATHER THAN AN OMISSION.</b> SQ-53 ruled an
+    /// in-memory receipt <b>CONFORMING</b> and left the split to the Engineering Lead, <b>which
+    /// chose this cut</b> — SQ-53 does not forbid persistence, and saying it does would put somebody
+    /// else's name on the Lead's decision. R-1.5b's
     /// obligations — the player can SEE what is stored and DELETE it per campaign, without the DM's
     /// involvement — attach to <b>persistence</b>, not to conveyance, because retention and deletion
     /// are meaningless for a value that dies with the process. So a receipt that lives only in this
