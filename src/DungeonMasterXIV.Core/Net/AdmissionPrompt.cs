@@ -71,4 +71,72 @@ public static class AdmissionPrompt
         request.Relink is { Matched: true, Label: { Length: > 0 } label }
             ? $"{request.DisplayName} ({request.PeerCode}) is asking to relink as {label}"
             : $"{request.DisplayName} ({request.PeerCode}) is asking to join";
+
+    /// <summary>
+    /// Whether the DM is offered the confirmation control at all (A-1.2f).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Suppressed ONLY on positive evidence the joiner could not compare</b>, because there is
+    /// nothing for them to read back and a tick would record a comparison that could not have
+    /// happened. Never on <see cref="ComparabilityEvidence.NotEstablished"/> — A-1.2o fails a build
+    /// that suppresses on silence, and silence is the ORDINARY case: a fast admission (A-1.2p)
+    /// decides before the receipt could arrive.
+    /// </para>
+    /// <para>
+    /// <b>NOTHING RETURNS FALSE TODAY, and that is recorded rather than overlooked.</b>
+    /// <see cref="ComparabilityEvidence.EstablishedIncapable"/> has no producer — D-14 makes the
+    /// pending notice additive, so a client that ignores it carries the same version and is refused
+    /// by nothing. <b>A-1.2f's suppression is therefore unreachable and its QUALIFIED branch is the
+    /// live one</b>; see <see cref="ComparabilityNote"/>, which is where this actually shows up on a
+    /// DM's screen today.
+    /// </para>
+    /// </remarks>
+    /// <param name="request">The pending request.</param>
+    public static bool OffersConfirmation(PendingAdmission request) =>
+        request is not null
+        && request.Comparability != ComparabilityEvidence.EstablishedIncapable;
+
+    /// <summary>
+    /// What the prompt tells the DM about whether the joiner can compare at all (A-1.2o), or an
+    /// empty string when there is nothing to qualify.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The "not established" sentence asserts NEITHER direction, and that is the whole
+    /// criterion.</b> A-1.2o: <i>where the host has not established whether the joiner could
+    /// compare, the UI says so</i>. Saying nothing fails it as surely as saying "they cannot" does —
+    /// a DM shown a bare tickbox reads it as an ordinary comparison, which is the false record
+    /// BUG-33 produced.
+    /// </para>
+    /// <para>
+    /// <b>It must not read as suspicion.</b> qa-2 measured a 171ms admission producing zero receipts
+    /// from a joiner that could compare perfectly well, so the common reason for this sentence is
+    /// that the DM was quick — not that anything is wrong. Wording that implied an attack would
+    /// train DMs to ignore it, and then it is not a signal on the day it means something.
+    /// </para>
+    /// <para>
+    /// <b>Empty for <see cref="ComparabilityEvidence.EstablishedCapable"/>, deliberately.</b> The
+    /// ordinary prompt already tells the DM to compare out of band; adding "and they can see it"
+    /// beside every capable joiner is noise that would bury the sentence above.
+    /// </para>
+    /// </remarks>
+    /// <param name="request">The pending request.</param>
+    public static string ComparabilityNote(PendingAdmission request) =>
+        request?.Comparability switch
+        {
+            ComparabilityEvidence.NotEstablished => NotEstablished,
+            ComparabilityEvidence.EstablishedIncapable => Incapable,
+            _ => string.Empty,
+        };
+
+    private const string NotEstablished =
+        "We have not heard whether this player's client can show them a code to read back. That is "
+        + "neither a yes nor a no - a quick decision usually beats the message. Compare out of band "
+        + "as usual, and only tick the box if they actually read the code back to you.";
+
+    private const string Incapable =
+        "This player's client reported that it cannot show them a code, so there is nothing for them "
+        + "to read back and nothing to confirm. Admitting them leaves this session unprotected "
+        + "against someone sitting in the middle of it.";
 }

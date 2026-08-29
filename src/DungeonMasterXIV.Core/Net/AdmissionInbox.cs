@@ -49,10 +49,23 @@ namespace DungeonMasterXIV.Net;
 /// Called for each payload this client could open (D-11). Payloads sealed for somebody else are
 /// ordinary traffic and pass in silence.
 /// </param>
+/// <param name="OnComparabilityReceipt">
+/// Called with the joiner's public key when that joiner reports it held the host key and could
+/// render the fingerprint (R-1.3a-iv, BUG-75). Null when there is nobody to tell, which is every
+/// joiner-only client — only a host keeps a record this can establish anything on.
+/// <para>
+/// <b>It carries a CAPABILITY, never a comparison.</b> R-1.3a-iii forbids the second: an
+/// acknowledgement of the human act would ride the channel an attacker controls, so it is forgeable
+/// exactly when it matters. Its ABSENCE establishes nothing either — a fast admission (A-1.2p)
+/// decides before any receipt could arrive, which is why
+/// <see cref="ComparabilityEvidence.NotEstablished"/> is a state and not a false.
+/// </para>
+/// </param>
 public readonly record struct InboundHandlers(
     Action<byte[], DisplayName>? OnJoinRequest = null,
     byte[]? OpenWith = null,
-    Action<SessionContent>? OnContent = null);
+    Action<SessionContent>? OnContent = null,
+    Action<byte[]>? OnComparabilityReceipt = null);
 
 public sealed class AdmissionInbox
 {
@@ -209,6 +222,29 @@ public sealed class AdmissionInbox
                     // the person behind it is still waiting, and the prompt they need carries the
                     // fingerprint whatever the name turns out to be. See DisplayName.OrNone.
                     onJoinRequest(joinerPublicKey, DisplayName.OrNone(envelope.DisplayName));
+                }
+
+                continue;
+            }
+
+            // THE HOP THAT DID NOT EXIST (BUG-75). The joiner SENDS this (OutboundHandshake), the
+            // relay ROUTES it to the host (RelayRouter), and until now nothing here consumed it --
+            // so it reached the host and fell through to nothing. Sent, routed, silently dropped:
+            // the same shape as BUG-42's consumer nothing routed to, arriving from the other side.
+            //
+            // Handled BEFORE the outcome arms for the same reason JoinRequest is: a receipt is not
+            // an outcome and matches none of them, which is exactly how it fell through.
+            //
+            // ESTABLISHES STATE 1 ONLY (R-1.3a-iv). It reports that the joiner HELD THE HOST KEY and
+            // could render a fingerprint -- a CAPABILITY, never a claim that a human compared
+            // anything. R-1.3a-iii forbids the second: an acknowledgement of the human act rides the
+            // channel an attacker controls, so it is forgeable exactly when it matters.
+            if (envelope.Type == WireMessageType.JoinerHoldsFingerprint)
+            {
+                if (handlers.OnComparabilityReceipt is { } onReceipt
+                    && envelope.TryGetFingerprintReceiptKey() is { } receiptKey)
+                {
+                    onReceipt(receiptKey);
                 }
 
                 continue;

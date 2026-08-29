@@ -205,9 +205,33 @@ public sealed class AdmissionControl
     }
 
     /// <summary>
-    /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
-    /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).
+    /// Records that a joining client reported it holds the host key and can render a fingerprint
+    /// (R-1.3a-iii), establishing <see cref="ComparabilityEvidence.EstablishedCapable"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The receipt names its sender by KEY, and the peer code is derived from it</b> — the same
+    /// derivation the prompt was built with, so a receipt and the request it belongs to arrive at
+    /// the same code without the wire ever carrying one. Nothing on the wire carries a peer code;
+    /// see <see cref="PeerCodeFor"/>.
+    /// </para>
+    /// <para>
+    /// <b>A receipt for a request that is not pending is IGNORED, not an error.</b> It is the
+    /// ordinary consequence of a fast admission — the DM answers, the request leaves the desk, and
+    /// the receipt arrives addressed to nobody. qa-2 measured a 171ms gap doing exactly that, so
+    /// treating a late receipt as a fault would make the common case look broken.
+    /// </para>
+    /// <para>
+    /// <b>This establishes state 1 and NOTHING ELSE (R-1.3a-iv).</b> It creates no producer for
+    /// <see cref="ComparabilityEvidence.EstablishedIncapable"/> and therefore cannot make A-1.2f's
+    /// suppression fire. <b>If anyone frames this arm as "fixing A-1.2f", that is the misreading to
+    /// refuse</b> — it is incomplete rather than wrong, and the Spec Owner said so in those words.
+    /// </para>
+    /// </remarks>
+    /// <param name="joinerPublicKey">The key the receipt was sent under.</param>
+    public void RecordComparabilityReceipt(byte[] joinerPublicKey) =>
+        Desk.Find(PeerCodeFor(joinerPublicKey))?.JoinerReportedItCanCompare();
+
     /// <summary>
     /// Declines the pending participant. Nothing was ever addressable to them, so there is nothing
     /// to withdraw — which is the point of admitting rather than filtering (R-1.3, D-13).

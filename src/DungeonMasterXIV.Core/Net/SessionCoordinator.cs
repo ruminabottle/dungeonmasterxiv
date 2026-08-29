@@ -310,7 +310,8 @@ public sealed class SessionCoordinator
             new InboundHandlers(
                 OnJoinRequest: (key, name) => _admissions.AdmitToTheQueue(key, now, name),
                 OpenWith: SessionKey,
-                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster),
+                OnContent: content => _receivedRoster = content.Roster ?? _receivedRoster,
+                OnComparabilityReceipt: _admissions.RecordComparabilityReceipt),
             _log)
             ?? SessionKey;
         _handshake.SendWhatIsDue();
