@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using DungeonMasterXIV.Relay.Diagnostics;
+using Microsoft.Extensions.Hosting;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
@@ -11,12 +12,24 @@ namespace DungeonMasterXIV.Relay.Transport;
 /// happens behind <see cref="RelayHub"/> against <see cref="IRelayConnection"/>, so a change of
 /// framing lands here and nowhere else.
 /// </remarks>
-public sealed class WebSocketRelayEndpoint(RelayHub hub, ConnectionDirectory directory, RelayLog log, RelayOptions options)
+public sealed class WebSocketRelayEndpoint(
+    RelayHub hub,
+    ConnectionDirectory directory,
+    RelayLog log,
+    RelayOptions options,
+    IHostApplicationLifetime lifetime)
 {
     private readonly RelayHub _hub = hub;
     private readonly ConnectionDirectory _directory = directory;
     private readonly RelayLog _log = log;
     private readonly RelayOptions _options = options;
+
+    /// <summary>
+    /// Whether the RELAY is stopping, which is the only thing that tells two causes of one exception
+    /// apart (BUG-78). The token passed to <see cref="ServeAsync"/> is the request's, and it fires
+    /// when the CLIENT goes away; this one fires when the process is going down.
+    /// </summary>
+    private readonly IHostApplicationLifetime _lifetime = lifetime;
 
     /// <summary>Serves one accepted WebSocket for its lifetime.</summary>
     public async Task ServeAsync(WebSocket socket, CancellationToken cancellationToken)
@@ -36,7 +49,17 @@ public sealed class WebSocketRelayEndpoint(RelayHub hub, ConnectionDirectory dir
         }
         catch (OperationCanceledException)
         {
-            reason = "relay shutting down";
+            // BUG-78. ONE EXCEPTION TYPE, TWO CAUSES, and the handler used to name only the rarer.
+            // RelayApp passes context.RequestAborted, which fires when the CLIENT vanishes without a
+            // close frame — a dropped network, a crashed game client, a force-quit. Measured against
+            // a running image, that is what this arm catches in practice; a genuine shutdown reaches
+            // it too, but only while the process is actually stopping.
+            //
+            // So ask the thing that can tell them apart. Nothing else can: the token is the same
+            // object either way and the exception carries no cause.
+            reason = _lifetime.ApplicationStopping.IsCancellationRequested
+                ? "relay shutting down"
+                : "closed by peer without a close frame";
         }
         catch (WebSocketException exception)
         {
