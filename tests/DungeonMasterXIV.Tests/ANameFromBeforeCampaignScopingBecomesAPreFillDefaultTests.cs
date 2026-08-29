@@ -133,12 +133,47 @@ public class ANameFromBeforeCampaignScopingBecomesAPreFillDefaultTests
     public void WhatIsSentIsWhatThePlayerAcceptedHereAndNotTheStoredDefault()
     {
         var campaign = new Campaign();
+
+        // THE OFFER HAPPENS FIRST, BECAUSE THAT IS THE ORDER THE WINDOW USES. Without this line the
+        // test never touches the pre-fill path at all, and a build that recorded the carried-over
+        // value into the campaign while offering it would leave this GREEN -- which is precisely the
+        // shape A-2.32 exists to fail. Measured: with the offer removed, this test passes against
+        // that mutation.
+        CampaignDisplayName.ToEdit(campaign, CarriedOver, CharacterName);
         CampaignDisplayName.RecordChosen(campaign, AcceptedHere, CharacterName);
 
         var sent = CampaignDisplayName.Or(campaign, CharacterName).Value;
 
         Assert.Equal(AcceptedHere, sent);
+
+        // MEASURED, AND SAID PLAINLY BECAUSE THE ASSERTION LOOKS STRONGER THAN IT IS: nothing
+        // currently reachable can make this second assertion fire. Acceptance overwrites the
+        // campaign alias, so even a build that wrote the carried-over value while offering it ends
+        // up sending the accepted one. It is a guard against a shape that does not exist today, not
+        // coverage. The provenance failure that HAS a live killer is pinned by
+        // OfferingTheCarriedOverNameStoresNothing and by the two-campaign case below.
         Assert.NotEqual(CarriedOver, sent);
+    }
+
+    /// <summary>
+    /// A-2.31's exception permits the carried-over value <b>one reader, the pre-fill path</b> — and a
+    /// pre-fill path that WRITES is not a reader. Offering the name must leave the campaign untouched.
+    /// </summary>
+    /// <remarks>
+    /// <b>This is the assertion that kills the simplest wrong shape.</b> Recording the recovered alias
+    /// against the campaign while offering it is the obvious implementation, it makes
+    /// <see cref="CampaignDisplayName.Stored"/> return it, and <see cref="CampaignDisplayName.Or"/>
+    /// then sends a name the player never accepted (A-2.32). Verified by mutation: with the write put
+    /// back, this test fails.
+    /// </remarks>
+    [Fact]
+    public void OfferingTheCarriedOverNameStoresNothing()
+    {
+        var campaign = new Campaign();
+
+        CampaignDisplayName.ToEdit(campaign, CarriedOver, CharacterName);
+
+        Assert.Equal(string.Empty, CampaignDisplayName.Stored(campaign));
     }
 
     /// <summary>
@@ -151,8 +186,10 @@ public class ANameFromBeforeCampaignScopingBecomesAPreFillDefaultTests
         var a = new Campaign();
         CampaignDisplayName.RecordChosen(a, AcceptedHere, CharacterName);
 
-        // B is joined without the player accepting anything, so B sends the character name.
+        // B is joined without the player accepting anything -- but the box IS opened there, so the
+        // carried-over name is offered. Offering is the whole risk: the send must be unmoved by it.
         var b = new Campaign();
+        CampaignDisplayName.ToEdit(b, CarriedOver, CharacterName);
 
         Assert.Equal(AcceptedHere, CampaignDisplayName.Or(a, CharacterName).Value);
         Assert.Equal(CharacterName.Value, CampaignDisplayName.Or(b, CharacterName).Value);
