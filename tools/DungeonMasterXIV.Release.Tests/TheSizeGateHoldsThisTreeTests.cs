@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -120,6 +122,11 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
     [InlineData("MethodBlock", SizeGate.MethodBlock)]
     [InlineData("ParameterBlock", SizeGate.ParameterBlock)]
     [InlineData("NestingBlock", SizeGate.NestingBlock)]
+    [InlineData("ClassFlag", SizeGate.ClassFlag)]
+    [InlineData("FileFlag", SizeGate.FileFlag)]
+    [InlineData("MethodFlag", SizeGate.MethodFlag)]
+    [InlineData("ParameterFlag", SizeGate.ParameterFlag)]
+    [InlineData("NestingFlag", SizeGate.NestingFlag)]
     public void TheGateHoldsTheSameLimitTheToolDoes(string name, int mine)
     {
         var program = SizeGateIntake.Read("tools/DungeonMasterXIV.Sizes/Program.cs");
@@ -129,5 +136,41 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
         Assert.True(match.Success, $"Program.cs no longer declares `const int {name}` — the gate "
             + "cannot confirm it holds the tool's limit, which is worse than holding a stale one.");
         Assert.Equal(int.Parse(match.Groups[1].Value), mine);
+    }
+
+    // >>> THE GUARD ABOVE COULD NOT DETECT ITS OWN UNDER-POPULATION, AND THAT IS WHAT THIS FIXES <<<
+    //
+    // Its [InlineData] rows ARE its population. Nothing asserted the row count matched the number of
+    // constants, so a new `internal const int ClassFlag = 250;` with no matching row was INVISIBLE:
+    // no test failed, nothing reported, and the copy silently became unpoliced. The drift guard would
+    // have gone on passing while guarding four fifths of what it claimed to.
+    //
+    // DMXENG-107's brief warned me about exactly this and said the guard cannot tell you if you
+    // forget. So the guard is given the ability to tell: the population is DERIVED from the type by
+    // reflection rather than restated by hand, and a constant added without a row reds HERE.
+    //
+    // It cannot protect itself the same way -- something has to be the bottom -- but it moves the
+    // unguarded edge from "every future limit" to "this one assertion".
+    [Fact]
+    public void EveryLimitConstantTheGateHoldsHasARowInTheDriftGuard()
+    {
+        var constants = typeof(SizeGate)
+            .GetFields(BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(int))
+            .Select(field => field.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        var guard = typeof(TheSizeGateHoldsThisTreeTests)
+            .GetMethod(nameof(TheGateHoldsTheSameLimitTheToolDoes))!;
+        var rows = guard.GetCustomAttributes<InlineDataAttribute>()
+            .SelectMany(row => row.GetData(guard))
+            .Select(row => (string)row[0]!)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(constants.Count > 0, "Reflection found no int constants on SizeGate at all — "
+            + "the comparison below would pass by agreeing with an empty population.");
+        Assert.Equal(constants, rows);
     }
 }
