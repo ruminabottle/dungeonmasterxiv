@@ -24,15 +24,29 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>A SIBLING RATHER THAN A REUSE.</b> <see cref="AdmissionDeadline"/> has the same shape and a
 /// different meaning — it bounds how long a DM has to ANSWER, this bounds how long a session has
-/// left to LIVE. Reusing that type here would put one name on two requirements, and R-1.3a's window
+/// left to LIVE. Reusing that type here would put one name on two requirements, and R-1.3l's window
 /// could then not be changed without silently changing R-1.3g's.
 /// </para>
     /// <para>
     /// <b>IT CARRIES R-1.3g's SIXTY SECONDS BECAUSE R-1.3g NOW NAMES THEM.</b> It did not, and this
     /// type deliberately held no duration while the question was open — a literal would have answered
     /// a product question silently. The Product Owner has since ruled the window, so the number
-    /// belongs here for the same reason <see cref="AdmissionDeadline"/> carries R-1.3a's fifteen
-    /// minutes: the requirement names it, so the type expressing the requirement holds it.
+    /// belongs here on its own authority: R-1.3g names it, so the type expressing R-1.3g holds it.
+    /// </para>
+    /// <para>
+    /// <b>A CITATION CORRECTED RATHER THAN RENAMED.</b> This paragraph used to justify itself by
+    /// saying <see cref="AdmissionDeadline"/> carries "R-1.3a's fifteen minutes". <b>R-1.3a is about
+    /// comparing a fingerprint and has never mentioned time at all.</b> The fifteen minutes has a home
+    /// at <b>R-1.3l</b> as of 2026-08-29 — and that is not where it moved to, it is where it was
+    /// FIRST WRITTEN DOWN. The old reference was not a stale pointer; it pointed at a requirement that
+    /// never said it, and three places in the PRD cited it that way, each anchored and none followed
+    /// back. <b>Three citations of one requirement is not corroboration — it is one unchecked claim
+    /// with copies.</b>
+    /// </para>
+    /// <para>
+    /// <b>DO NOT DERIVE ARITHMETIC FROM THE FIFTEEN MINUTES.</b> R-1.3l says in terms that it gives an
+    /// already-decided value an OWNER rather than ruling it, and whether it was ever ruled is an open
+    /// question. Sixty seconds here is ruled and safe to build on; that number is not.
     /// </para>
     /// <para>
     /// <b>NOT CONFIGURABLE, and that is the ruling rather than an omission.</b> The window's job is
