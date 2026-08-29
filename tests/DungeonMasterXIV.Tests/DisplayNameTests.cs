@@ -266,4 +266,61 @@ public class DisplayNameTests
         Assert.Equal(DisplayName.OrNone("Bob"), DisplayName.OrNone("Bob"));
         Assert.NotEqual(DisplayName.OrNone("Bob"), DisplayName.OrNone("Rob"));
     }
+
+    // A-1.2w (R-1.3j.6, ruled by the HUMAN, SQ-80). The four role words belong to the host.
+    [Theory]
+    [InlineData("DM")]
+    [InlineData("GM")]
+    [InlineData("Dungeon Master")]
+    [InlineData("Game Master")]
+    public void TheFourReservedRoleWordsAreRefused(string reserved) =>
+        Assert.False(DisplayName.TryParse(reserved, out _));
+
+    // A-1.2w, THE CASE HALF, AND IT MUST FAIL SEPARATELY FROM THE WHITESPACE HALF. A build that
+    // only trims passes TheFourReservedRoleWordsAreRefused perfectly and lets every one of these
+    // through -- which is the "matching only the exact four literal strings" build the criterion
+    // names as failing.
+    [Theory]
+    [InlineData("dm")]
+    [InlineData("gM")]
+    [InlineData("dungeon master")]
+    [InlineData("GAME MASTER")]
+    public void AReservedWordInAnyCaseIsRefused(string reserved) =>
+        Assert.False(DisplayName.TryParse(reserved, out _));
+
+    // A-1.2w, THE WHITESPACE HALF, which fails separately from the case half: a build that only
+    // lowercases refuses every row above and admits every row here.
+    [Theory]
+    [InlineData("  Dungeon Master  ")]
+    [InlineData("Dungeon  Master")]
+    [InlineData("\tGM")]
+    [InlineData("Game\u00A0Master")]
+    public void AReservedWordSurvivingWhitespaceNormalisationIsRefused(string reserved) =>
+        Assert.False(DisplayName.TryParse(reserved, out _));
+
+    // >>> THE ACCEPT SIDE, AND WITHOUT IT A RULE THAT REFUSES TOO MUCH GOES UNNOTICED. <<<
+    //
+    // R-1.3j.6 names these as the leaks the rule does NOT catch, so each must PARSE. That is not a
+    // concession -- it is load-bearing. A-2.24a's re-derived demonstration requires an imitation
+    // using a name this list PERMITS, so a rule that refused these would DISARM that criterion a
+    // second time and let a build with no structural marker pass by default.
+    //
+    // In particular `D M` distinguishes COLLAPSING whitespace runs from REMOVING whitespace. An
+    // implementation that strips instead of collapses turns it into "DM" and refuses it, passing
+    // every refusal row above while breaking the PRD's own statement about what this rule permits.
+    [Theory]
+    [InlineData("D.M.")]
+    [InlineData("D M")]
+    [InlineData("the DM")]
+    [InlineData("\u1D05\u1D0D")]
+    [InlineData("D\u041C")]
+    public void ANameTheReservationDoesNotCoverIsStillAccepted(string permitted)
+    {
+        Assert.True(
+            DisplayName.TryParse(permitted, out var name),
+            $"'{permitted}' is named in R-1.3j.6 as a leak this rule does NOT catch, so it must "
+            + "parse. Refusing it would disarm A-2.24a, whose demonstration needs an imitation the "
+            + "reservation permits.");
+        Assert.True(name.WasStated);
+    }
 }
