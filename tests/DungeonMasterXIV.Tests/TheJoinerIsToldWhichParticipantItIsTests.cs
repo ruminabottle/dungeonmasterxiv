@@ -165,7 +165,7 @@ public sealed class TheJoinerIsToldWhichParticipantItIsTests
     {
         var log = new RecordingLog();
         var host = new SessionCoordinator(
-            new CollectingTransport(), () => RelayEndpoint.Default, GraceWindow.Default, log: log);
+            new CollectingTransport(), () => RelayEndpoint.Default, GraceWindow.Default, log: log, capabilities: SessionCapabilities.Default);
         host.StartHosting();
         host.Host.Registered();
 
@@ -316,21 +316,21 @@ public sealed class TheJoinerIsToldWhichParticipantItIsTests
                 () => RelayEndpoint.Default,
                 GraceWindow.Default,
                 log: _hostLog,
-                mintParticipant: _ =>
+                capabilities: new SessionCapabilities(MintParticipant: _ =>
                 {
                     var id = Guid.NewGuid();
                     Minted.Add(id);
                     return id;
-                });
+                }));
 
             Host.StartHosting();
             Host.Host.Registered();
             _hostTransport.Sent.Clear();
 
             First = new SessionCoordinator(
-                _firstTransport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+                _firstTransport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
             Second = new SessionCoordinator(
-                _secondTransport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+                _secondTransport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
 
             Code = Host.Host.Code!.Value;
             HostKey = Host.HostKeys!.PublicKey;

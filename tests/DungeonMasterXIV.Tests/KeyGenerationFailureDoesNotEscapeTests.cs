@@ -93,7 +93,7 @@ public class KeyGenerationFailureDoesNotEscapeTests
     public void KeysThatCanBeCreatedStillStartASession()
     {
         var transport = new SilentTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
 
         coordinator.StartHosting();
 
@@ -162,7 +162,7 @@ public class KeyGenerationFailureDoesNotEscapeTests
             () => RelayEndpoint.Default,
             GraceWindow.Default,
             SilentLog.Instance,
-            newKeys: () => throw failure());
+            new SessionCapabilities(NewKeys: () => throw failure()));
 
     private static SessionCoordinator WithKeysThatCannotBeCreated() =>
         WithKeysThatCannotBeCreated(out _);
@@ -179,11 +179,11 @@ public class KeyGenerationFailureDoesNotEscapeTests
             () => RelayEndpoint.Default,
             GraceWindow.Default,
             SilentLog.Instance,
-            newKeys: () =>
+            new SessionCapabilities(NewKeys: () =>
             {
                 seen.Add(seen.Count);
                 throw new CryptographicException(unchecked((int)0x80090029));
-            });
+            }));
     }
 
     private sealed class SilentTransport : ISessionTransport

@@ -217,7 +217,7 @@ public sealed class ASkippedParticipantIsReportedTests
         var log = new RecordingLog();
         var transport = new DeliveringTransport();
         var player = new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: log);
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: log, capabilities: SessionCapabilities.Default);
 
         code = SessionCode.FromValid("BCDFGH");
         hostKeys = new SessionKeyExchange();
@@ -261,7 +261,7 @@ public sealed class ASkippedParticipantIsReportedTests
             () => RelayEndpoint.Default,
             GraceWindow.Default,
             log: log,
-            mintParticipant: static _ => Guid.NewGuid());
+            capabilities: new SessionCapabilities(MintParticipant: static _ => Guid.NewGuid()));
 
         coordinator.StartHosting();
         coordinator.Host.Registered();

@@ -261,7 +261,7 @@ public class DisplayNameAliasTests
     private static string? JoinAndReadTheWire(PluginSettings settings)
     {
         var transport = new RecordingTransport();
-        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+        var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
 
         coordinator.RequestJoin(
             SessionCode.FromValid("BCDFGH"),

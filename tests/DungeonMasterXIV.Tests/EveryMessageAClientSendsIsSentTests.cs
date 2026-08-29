@@ -370,7 +370,7 @@ public class EveryMessageAClientSendsIsSentTests
         private readonly RecordingTransport _transport = new();
 
         public Session() =>
-            Coordinator = new SessionCoordinator(_transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance);
+            Coordinator = new SessionCoordinator(_transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
 
         public SessionCoordinator Coordinator { get; }
 

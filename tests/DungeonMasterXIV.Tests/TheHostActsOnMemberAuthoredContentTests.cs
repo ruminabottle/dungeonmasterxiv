@@ -323,7 +323,7 @@ public sealed class TheHostActsOnMemberAuthoredContentTests
     {
         transport = new DeliveringTransport();
         var host = new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new RecordingLog());
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new RecordingLog(), capabilities: SessionCapabilities.Default);
 
         host.StartHosting();
         host.Host.Registered();
@@ -338,7 +338,7 @@ public sealed class TheHostActsOnMemberAuthoredContentTests
     {
         transport = new DeliveringTransport();
         var player = new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new RecordingLog());
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new RecordingLog(), capabilities: SessionCapabilities.Default);
 
         code = SessionCode.FromValid("BCDFGH");
         hostKeys = new SessionKeyExchange();

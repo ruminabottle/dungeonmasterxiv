@@ -164,7 +164,7 @@ public sealed class EndingASessionReleasesWhatItHeldTests
     {
         transport = new ConnectableTransport();
         var host = new SessionCoordinator(
-            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new SilentLog());
+            transport, () => RelayEndpoint.Default, GraceWindow.Default, log: new SilentLog(), capabilities: SessionCapabilities.Default);
 
         host.StartHosting();
         host.SynchroniseTransport();
