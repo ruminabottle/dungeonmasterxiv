@@ -10,12 +10,12 @@ namespace DungeonMasterXIV.Net;
 /// drift would be a disclosure. This is the function they must all consult.
 /// </para>
 /// <para>
-/// <b>AN EARLIER VERSION OF THIS PARAGRAPH CITED A PREMISE THAT HAS SINCE BEEN RETRACTED, AND SAYING
-/// SO IS CHEAPER THAN LEAVING IT.</b> It read that <c>MissedMessages</c> is <i>structurally incapable
-/// of widening an audience</i>. The true version, from its author: <c>Replay</c> cannot return entries
-/// stored under a different KEY, and distinct members are distinct keys <b>only when their codes are
-/// present</b> — <c>default(PeerCode)</c> equals every other default, so two absent-code members share
-/// one hold (DMXENG-105). <b>So consulting this function is NECESSARY and not, today, SUFFICIENT.</b>
+/// <b>DEFAULT PEER CODES COLLIDE, AND THAT IS AN ACTIVE HAZARD IN ANYTHING KEYED OR COMPARED.</b>
+/// <c>default(PeerCode)</c> equals every other default and hashes to 0 — DMXENG-105.
+/// <b>No claim is made here about what any other type can or cannot do.</b> An earlier version of this
+/// paragraph carried an argument — a premise, a <i>so</i>, and a conclusion — built on a premise that
+/// was later withdrawn. Marking it retracted was not enough: <b>a dead citation is inert, but an
+/// argument keeps producing conclusions after its premise dies</b>, so it is cut rather than annotated.
 /// </para>
 /// <para>
 /// <b>AND THE SAME ROOT CAUSE WAS LIVE HERE.</b> <c>reader.Equals(sender)</c> is TRUE for two absent
