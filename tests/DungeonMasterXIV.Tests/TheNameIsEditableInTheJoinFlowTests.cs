@@ -69,6 +69,23 @@ public class TheNameIsEditableInTheJoinFlowTests
     // ImGui.Text* call, so it is never scanned at all. Found by qa-1 (BUG-65); reproduced here
     // before this comment was written.
     //
+    // THE TWO ASSERTIONS ARE INDEPENDENT, AND THAT WAS MEASURED RATHER THAN ASSUMED (BUG-65). The
+    // natural reading of the alias defeat is that one local beats both halves at once, so the halves
+    // must be one property wearing two names. THEY ARE NOT. Each fails alone:
+    //
+    //     render nothing in a value position, raw field absent   -> ASSERTION A alone fails
+    //     render the raw field directly, value position intact   -> ASSERTION B alone fails
+    //     the alias above                                        -> NEITHER fails
+    //
+    // So the alias is not exploiting a dependency between them. It is exploiting the fact that both
+    // are about STATEMENTS THAT EXIST -- one required, one forbidden by its text -- while the alias
+    // ADDS a third statement that is neither. Addition is the gap, which is the same shape as the
+    // heading proxy (BUG-66) and the disclosure guard (BUG-82) on this board.
+    //
+    // That matters for what a fix would have to be: making the halves "more independent" closes
+    // nothing, because they are already independent. Closing it needs the ALIAS resolved, and that
+    // is dataflow -- one step of it is a denylist that two steps walk past.
+    //
     // THREE GUARDS SO FAR, AND EACH KEPT THE SAME VERB:
     //     line match      -> defeated by a wrapped ternary whose CONDITION named the local (BUG-64)
     //     statement match -> defeated by rendering a second, correct statement (BUG-65)
