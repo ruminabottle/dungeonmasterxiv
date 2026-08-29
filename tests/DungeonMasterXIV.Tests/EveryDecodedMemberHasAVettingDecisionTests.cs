@@ -72,12 +72,20 @@ public class EveryDecodedMemberHasAVettingDecisionTests
             ["SessionContent.ClosingAtUtcTicks"] =
                 "CARRIED THROUGH UNCHANGED (SessionContentCodec: "
                 + "ClosingAtUtcTicks = content.ClosingAtUtcTicks). A long?, so it cannot carry text "
-                + "and cannot forge a line — the same argument Role carries. NOTHING CONSUMES IT "
-                + "YET: the only other reference in the tree is the producer in RosterBroadcast, so "
-                + "no consumer can be handed an out-of-range tick count today. WHEN THE JOINER-SIDE "
-                + "HANDLING LANDS, whoever turns these ticks into a DateTimeOffset has to decide "
-                + "what an out-of-range value does, and THIS ENTRY IS WHERE THAT DECISION BELONGS. "
-                + "Recorded as pending rather than ticked off (DMXENG-11, #143).",
+                + "and cannot forge a line — the same argument Role carries. RANGE IS VETTED AT THE "
+                + "ONLY DOOR: SessionClosing.TryFromWire returns null outside "
+                + "[0, DateTime.MaxValue.Ticks], and SessionClosing's sole constructor is PRIVATE, "
+                + "so there is no path by which a consumer obtains an out-of-range instant. The "
+                + "reason is in that type's own remark — Instant throws outside the range and "
+                + "RemainingAt is read in front of a participant watching a countdown, so an "
+                + "out-of-range value from another client is not a bad number, it is a crash in a "
+                + "draw path. JOINER-SIDE HANDLING MUST GO THROUGH TryFromWire; it is not a fresh "
+                + "decision and constructing a DateTimeOffset from these ticks directly is the "
+                + "defect the private constructor exists to prevent. SessionContent's own doc on "
+                + "this member says the same (DMXENG-11, #143; corrected #150's entry, which "
+                + "recorded the decision as pending because it searched for CONSUMERS — a search "
+                + "that cannot see a rule enforced by the only constructor that can PRODUCE the "
+                + "value).",
 
             ["RosterEntry.PeerCode"] =
                 "The whole entry is DROPPED unless PeerCode.TryParse accepts it. Nothing is "
