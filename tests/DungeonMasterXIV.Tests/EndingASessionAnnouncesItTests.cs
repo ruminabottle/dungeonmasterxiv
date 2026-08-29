@@ -195,7 +195,7 @@ public class EndingASessionAnnouncesItTests
         {
             if (EnvelopeCodec.TryDecode(sent, out var envelope) && envelope!.TryGetSealedPayload() is not null)
             {
-                yield return envelope;
+                yield return envelope!;
             }
         }
     }

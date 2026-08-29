@@ -54,7 +54,7 @@ public class TheClosingNoticeReachesParticipantsTests
         var plaintext = SessionCipher.Open(
             peer.DeriveSharedKey(hostKeys.PublicKey, Code),
             envelope!.TryGetSealedPayload()!,
-            envelope.AssociatedData());
+            envelope!.AssociatedData());
 
         Assert.True(SessionContentCodec.TryDecode(plaintext, out var content));
         return content!;
@@ -180,7 +180,7 @@ public class TheClosingNoticeReachesParticipantsTests
         var plaintext = SessionCipher.Open(
             peer.DeriveSharedKey(hostKeys.PublicKey, Code),
             envelope!.TryGetSealedPayload()!,
-            envelope.AssociatedData());
+            envelope!.AssociatedData());
 
         Assert.True(SessionContentCodec.TryDecode(plaintext, out var content));
 
