@@ -56,9 +56,18 @@ internal static class RollDiceParser
             // Without this, `2d6 d20` reads as 2d6 with a drop-lowest-20, silently rolling something
             // other than what was typed.
             //
-            // Foundry's own MODIFIERS_REGEXP_STRING is "anything until a space, group symbol, or
-            // arithmetic operator", so this holds for EVERY modifier -- k, d, r, x and a bare
-            // comparison alike -- not only for the drop that exposed it.
+            // Foundry's own MODIFIERS_REGEXP_STRING is a NEGATED CHARACTER CLASS -- "anything until
+            // a space, group symbol, or arithmetic operator" -- so a space cannot be a MEMBER of a
+            // modifier match, not merely a terminator of one. That holds for EVERY modifier: k, d,
+            // r, x and a bare comparison alike, not only the drop that exposed it.
+            //
+            // THIS BREAKS ON ANY WHITESPACE AND THE EVIDENCE ONLY REACHES U+0020. Verified by
+            // execution: the class excludes the space and does NOT exclude tab, newline, CR or NBSP,
+            // so 'd\t20' matches as one modifier in Foundry's pattern. A-2.3c says "across
+            // whitespace" and the PRD is authoritative, so that is what is implemented -- but the
+            // criterion's wording is wider than its own evidence and the gap is with the Spec Owner.
+            // Deliberately not narrowed here: choosing space-only would settle that question by
+            // implementing it.
             //
             // Deliberately silent about what `2d6 d20` DOES evaluate as: the criterion permits a
             // refusal or a two-term reading, and only the modifier-binding reading is ruled out.

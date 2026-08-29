@@ -16,10 +16,13 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// <b>THE ROW GOVERNS EVERY MODIFIER, NOT ONLY THE DROP THAT EXPOSED IT.</b> The evidence is
-/// Foundry's <c>MODIFIERS_REGEXP_STRING</c>, which is a NEGATED CHARACTER CLASS excluding the space
-/// — so no modifier can contain one: <c>k</c>, <c>d</c>, <c>r</c>, <c>x</c> and a bare comparison
-/// alike. The population below is the parser's whole modifier set, taken from
-/// <c>RollDiceParser.ParseOne</c> rather than from the one case in the bug report.
+/// Foundry's <c>MODIFIERS_REGEXP_STRING</c>, a NEGATED CHARACTER CLASS excluding <b>U+0020
+/// specifically</b> — so no modifier can <i>contain</i> one, which is stronger than the prose's
+/// "anything until a space": not a terminator but a non-member. That covers <c>k</c>, <c>d</c>,
+/// <c>r</c>, <c>x</c> and a bare comparison alike. The population below is the parser's whole
+/// modifier set, taken from <c>RollDiceParser.ParseOne</c> rather than from the one case in the bug
+/// report. <b>It reaches U+0020 and no other whitespace</b> — see the note where a tab row would
+/// otherwise be.
 /// </para>
 /// <para>
 /// <b>Each row is paired with its adjacent twin, and that pairing is the test.</b> A guard that only
@@ -76,15 +79,28 @@ public class AModifierDoesNotBindAcrossWhitespaceTests
             + "rather than scoping it.");
     }
 
-    // Whitespace is whitespace: a tab separates a term from a suffix exactly as a space does. Foundry's
-    // class excludes the space character specifically, so this is the one row where our rule is WIDER
-    // than the established evidence -- stated rather than hidden, and safe in the direction it errs,
-    // because binding across a tab is the reading A-2.3c exists to prevent.
-    [Fact]
-    public void ATabSeparatesATermFromASuffixToo()
-    {
-        Assert.False(AnyTermCarriesAModifier(RollParser.Parse("2d6\td1", RollLimits.Default)));
-    }
+    // THERE IS DELIBERATELY NO TAB ROW HERE, AND ITS ABSENCE IS THE POINT.
+    //
+    // An earlier version of this file asserted that a tab separates a term from its suffix too, with
+    // a comment admitting the rule was wider than the evidence. THAT COMMENT WAS THE ERROR SHOWING
+    // AND THE ASSERTION WENT IN ANYWAY -- noticing a gap in prose and then pinning it in a test is
+    // worse than not noticing, because the comment reads as diligence while the assertion closes the
+    // question.
+    //
+    // Foundry's class excludes U+0020 SPECIFICALLY. Verified by execution, with a control:
+    //     source ([^ (){}[\]+\-*/]+)   accepts a letter, a digit and '>'; rejects ' ', '+' and '('
+    //     space  U+0020  excluded: TRUE
+    //     tab    U+0009  excluded: FALSE      newline, CR, NBSP: also FALSE
+    //     'd 20'  -> modifier match 'd'       'd\t20' -> modifier match 'd\t20'
+    //
+    // So BINDING ACROSS A TAB MAY BE CORRECT FOUNDRY BEHAVIOUR. The evidence does not condemn it; it
+    // does not reach it. (Found by feature-engineer-2, who established the pattern and then narrowed
+    // its own claim when re-checking it by execution.)
+    //
+    // The implementation below breaks binding on ANY whitespace, because A-2.3c says "across
+    // whitespace" and the PRD is authoritative. THAT WORDING IS WIDER THAN ITS OWN EVIDENCE, which is
+    // with the Spec Owner. Whichever way it is ruled, no test here pins the tab -- so this file stays
+    // silent about a case nobody has established, which is the whole reason A-2.3c was written narrow.
 
     // Whitespace elsewhere is untouched, and this is the regression the change could most easily
     // cause: the cursor skips whitespace before EVERY read, and only the modifier loop was narrowed.
