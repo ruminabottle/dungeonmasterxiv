@@ -21,11 +21,33 @@ namespace DungeonMasterXIV.Net;
 /// distinction stated once, where it is chosen.
 /// </para>
 /// <para>
-/// <b>And the wrong door will not compile.</b> The two types' members share names and share no
-/// types: a key here is a single <c>byte[]</c>, there a function returning many; a handler here takes
-/// content alone, there content and the peer that decrypted it. Supplying one where the other was
-/// meant is a compile error rather than a D-3 inversion found in review — which is a stronger
-/// guarantee than the two-delegates argument this pair was split on, and it comes free.
+/// <b>And the wrong door will not compile.</b> Supplying one where the other was meant is a compile
+/// error rather than a D-3 inversion found in review — a stronger guarantee than the two-delegates
+/// argument this pair was split on, and it comes free.
+/// </para>
+/// <para>
+/// <b>THE MECHANISM IS TYPE IDENTITY, NOT MEMBER SHAPE (BUG-109).</b> This paragraph used to say the
+/// guarantee holds because the two types "share names and share no types", naming the differing
+/// <c>byte[]</c> versus function and the differing handler arities as the reason. That was the wrong
+/// mechanism for a right conclusion. These are record structs, so they are NOMINALLY typed and never
+/// interconvert whatever their members look like — measured, with two record structs whose shapes
+/// were made IDENTICAL, which still refused the swap in both directions with
+/// <c>CS1503, cannot convert</c>.
+/// </para>
+/// <para>
+/// <b>What that retraction does NOT claim.</b> The guarantee itself is untouched and is if anything
+/// stronger than the old wording allowed: it does not depend on the shapes staying different. The
+/// shapes ARE different, and that remains true — it is simply not what refuses the swap.
+/// </para>
+/// <para>
+/// <b>Why the wrong mechanism reads convincingly, which is the part worth keeping.</b> Swap the two
+/// doors for real and the compiler emits a MIX of <c>CS1503</c> and <c>CS1593</c>, and the
+/// <c>CS1593</c>s come from the delegate arity. So the evidence at the call site genuinely does look
+/// like shape is doing the work, and a careful person reading their own probe output would write
+/// exactly what was written here. The harmful direction is the other one: a future change that
+/// ALIGNED the two shapes would not weaken this guarantee at all, while the old sentence implied it
+/// would — inviting someone to preserve a difference they do not need, or to add a defensive test
+/// for a case the compiler already refuses.
 /// </para>
 /// </remarks>
 /// <param name="OpenWith">
