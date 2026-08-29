@@ -44,9 +44,10 @@ namespace DungeonMasterXIV.Net;
     /// with copies.</b>
     /// </para>
     /// <para>
-    /// <b>DO NOT DERIVE ARITHMETIC FROM THE FIFTEEN MINUTES.</b> R-1.3l says in terms that it gives an
-    /// already-decided value an OWNER rather than ruling it, and whether it was ever ruled is an open
-    /// question. Sixty seconds here is ruled and safe to build on; that number is not.
+    /// <b>THE FIFTEEN MINUTES IS NOW RULED TOO</b> — R-1.3l was REPLACED on 2026-08-29, not amended:
+    /// it used to record a value it explicitly did not decide, and the Product Owner has since ruled
+    /// it. Worth knowing how close that was: a grep of every directive returned ZERO hits for it. The
+    /// value was in force, cited in three places and shipped, and <b>nobody had ever chosen it</b>.
     /// </para>
     /// <para>
     /// <b>NOT CONFIGURABLE, and that is the ruling rather than an omission.</b> The window's job is
