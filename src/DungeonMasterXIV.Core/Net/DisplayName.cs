@@ -219,31 +219,6 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     public static DisplayName OrNone(string? candidate) =>
         TryParse(candidate, out var name) ? name : None;
 
-    /// <summary>
-    /// Whether <paramref name="rune"/> is one a display name may contain (R-1.3j).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>An ALLOWLIST, and that shape is the fix rather than a detail.</b> This was
-    /// <c>char.IsControl</c>, then <c>+ UnicodeCategory.Format</c>, and BUG-50 was a request for a
-    /// third category. <c>U+2028 LINE SEPARATOR</c> is <c>Zl</c> and <c>U+2029</c> is <c>Zp</c> —
-    /// neither Control nor Format — so the validator refused the ASCII line break and accepted the
-    /// Unicode one, which is the attack the ASCII rule exists to stop. <b>A denylist over Unicode
-    /// cannot be completed</b>; the categories nobody has thought of are refused here by default.
-    /// </para>
-    /// <para>
-    /// This is C18's argument, already made in this repository for the TLS fence:
-    /// <i>"naming what is forbidden goes stale the first time somebody adds a project … naming what
-    /// is permitted means a project added tomorrow is scanned by default."</i> It transfers exactly.
-    /// </para>
-    /// <para>
-    /// <b>Every script, deliberately (R-1.3j.5, D-8 clause of 2026-08-28).</b> The allowed letter
-    /// categories are script-blind, so Japanese, Korean, Cyrillic and Arabic pass. Restricting
-    /// script would make the DEFAULT invalid for the players it excluded — the default is the
-    /// character name — and the organising line is
-    /// <i>restrict what can attack the display; never restrict what language a person speaks.</i>
-    /// </para>
-    /// </remarks>
     /// <summary>The four role words reserved to the host (R-1.3j.6, ruled by the human, SQ-80).</summary>
     private static readonly string[] ReservedToTheHost = ["DM", "GM", "Dungeon Master", "Game Master"];
 
@@ -308,6 +283,31 @@ public readonly struct DisplayName : IEquatable<DisplayName>
         return false;
     }
 
+    /// <summary>
+    /// Whether <paramref name="rune"/> is one a display name may contain (R-1.3j).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>An ALLOWLIST, and that shape is the fix rather than a detail.</b> This was
+    /// <c>char.IsControl</c>, then <c>+ UnicodeCategory.Format</c>, and BUG-50 was a request for a
+    /// third category. <c>U+2028 LINE SEPARATOR</c> is <c>Zl</c> and <c>U+2029</c> is <c>Zp</c> —
+    /// neither Control nor Format — so the validator refused the ASCII line break and accepted the
+    /// Unicode one, which is the attack the ASCII rule exists to stop. <b>A denylist over Unicode
+    /// cannot be completed</b>; the categories nobody has thought of are refused here by default.
+    /// </para>
+    /// <para>
+    /// This is C18's argument, already made in this repository for the TLS fence:
+    /// <i>"naming what is forbidden goes stale the first time somebody adds a project … naming what
+    /// is permitted means a project added tomorrow is scanned by default."</i> It transfers exactly.
+    /// </para>
+    /// <para>
+    /// <b>Every script, deliberately (R-1.3j.5, D-8 clause of 2026-08-28).</b> The allowed letter
+    /// categories are script-blind, so Japanese, Korean, Cyrillic and Arabic pass. Restricting
+    /// script would make the DEFAULT invalid for the players it excluded — the default is the
+    /// character name — and the organising line is
+    /// <i>restrict what can attack the display; never restrict what language a person speaks.</i>
+    /// </para>
+    /// </remarks>
     private static bool IsPermitted(Rune rune) => Rune.GetUnicodeCategory(rune) switch
     {
         // Letters of any script, and the marks that compose them. Decomposed forms are ordinary in
