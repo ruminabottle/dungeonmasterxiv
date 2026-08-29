@@ -1,0 +1,16 @@
+Every clock form TwoClientsSeeOneOrderAndOneClockTests forbids in the receiving path, one per line.
+
+THIS FILE EXISTS SO THE POSITIVE-CASE TEST CAN FAIL (BUG-160). The first attempt asserted that
+"var t = {clock};" contains {clock} -- a haystack built from the needle, true for any content
+whatsoever, including gibberish and the empty string. It demonstrated that string interpolation
+works. This file is independent of the list, so a misspelt or renamed form reddens.
+
+DateTime.Now
+DateTime.UtcNow
+DateTimeOffset.Now
+DateTimeOffset.UtcNow
+Environment.TickCount
+Stopwatch
+TimeProvider
+Func<DateTime>
+Func<DateTimeOffset>

@@ -62,6 +62,19 @@ public sealed class SessionStream
     /// <param name="entry">A stamped entry, from the host or decoded from the wire.</param>
     public bool Record(StreamEntry entry)
     {
+        // BUG-161. AN UNMINTED STAMP IS REFUSED HERE, BECAUSE THE TYPE SYSTEM DOES NOT REFUSE IT.
+        // StreamStamp is a readonly record struct, so new StreamEntry(default, ...) compiles and
+        // carries Sequence 0 -- and 0 sorts to the FRONT of a populated log, which is the original
+        // hazard. HostSequencer issues from 1, so Sequence < 1 is definitionally not host-issued.
+        //
+        // A refusal rather than a throw: Record already reports whether the log changed, and a
+        // caller that cannot distinguish "duplicate" from "never stamped" is not made safer by an
+        // exception it will not catch on a draw path.
+        if (entry.Stamp.Sequence < 1)
+        {
+            return false;
+        }
+
         var at = _entries.Count;
         while (at > 0 && _entries[at - 1].Stamp.Sequence > entry.Stamp.Sequence)
         {

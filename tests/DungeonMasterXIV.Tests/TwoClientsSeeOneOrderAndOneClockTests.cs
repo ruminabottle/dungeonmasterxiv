@@ -103,6 +103,31 @@ public class TwoClientsSeeOneOrderAndOneClockTests
         Assert.Equal(authored.Select(e => e.Stamp.Sequence), stream.Entries.Select(e => e.Stamp.Sequence));
     }
 
+    // BUG-161: THE VIOLATING EXPRESSION, WRITTEN DOWN AND SHOWN BEING REFUSED.
+    //
+    // new StreamEntry(default, ...) COMPILES -- StreamStamp is a readonly record struct, so a
+    // defaulted stamp is representable and carries Sequence 0, which sorts to the FRONT of a
+    // populated log. The record-class fix removed new StreamEntry() and moved the hazard here.
+    //
+    // The prose used to call the entry "genuinely unconstructable". It is not. What is true is that
+    // the STREAM refuses it, and this is that refusal being demonstrated rather than asserted.
+    [Fact]
+    public void AnEntryWhoseStampWasNeverMintedIsRefused()
+    {
+        var stream = new SessionStream();
+        foreach (var entry in HostAuthored())
+        {
+            stream.Record(entry);
+        }
+
+        Assert.True(PeerCode.TryParse("BCDFGH", out var peer));
+        var unminted = new StreamEntry(default, StreamEventKind.Message, peer, "never stamped");
+
+        Assert.False(stream.Record(unminted), "an unminted stamp must not enter the log");
+        Assert.DoesNotContain(stream.Entries, e => e.Stamp.Sequence < 1);
+        Assert.Equal(1, stream.Entries[0].Stamp.Sequence);
+    }
+
     // A-2.5, THE STRUCTURAL HALF: NO CLOCK EXISTS IN THE RECEIVING PATH TO LEAK.
     //
     // The behavioural test shows today's build does not leak one. This shows a future one cannot
@@ -140,7 +165,18 @@ public class TwoClientsSeeOneOrderAndOneClockTests
         }
     }
 
-    // THE POSITIVE CASE THE SEARCH HAD NOWHERE, AND ITS ABSENCE WAS THE DEFECT.
+    // THE POSITIVE CASE, AND ITS FIRST TWO VERSIONS WERE BOTH WRONG -- BUG-160.
+    //
+    // v1: no positive case anywhere. The control asserted Func<DateTimeOffset>, which was not on the
+    //     forbidden list, and none of the six listed forms appeared in this repository at all.
+    // v2: Assert.Contains(clock, $"var t = {clock};") -- A HAYSTACK BUILT FROM THE NEEDLE. It passes
+    //     for "DateTime.Now", for "TOTAL_GIBBERISH", and for the empty string. It cannot fail, so it
+    //     demonstrated that string interpolation works. I WROTE THAT WHILE FIXING v1: the correction
+    //     contained a stronger instance of the defect it corrected.
+    //
+    // v3, below: the haystack is a FILE ON DISK, written independently of the list. A misspelt or
+    // renamed form is absent from it and reddens. Demonstrated by mutation in the PR rather than
+    // asserted here.
     //
     // The forbidden list held six literals and the control asserted "Func<DateTimeOffset>" -- WHICH WAS
     // NOT ONE OF THEM. So the control demonstrated that a DIFFERENT string is findable, and none of the
@@ -151,11 +187,14 @@ public class TwoClientsSeeOneOrderAndOneClockTests
     // Every entry is now checked against a sample that CONTAINS it. If a form stops matching -- an
     // escaping slip, a renamed API -- this reddens instead of going quietly green.
     [Fact]
-    public void EveryClockFormTheSearchForbidsIsOneItCanActuallyFind()
+    public void EveryClockFormTheSearchForbidsIsFoundInAFileThatContainsThem()
     {
+        var fixture = File.ReadAllText(
+            Path.Combine(ShippedCopyCorpus.RepositoryRoot(), "tests", "DungeonMasterXIV.Tests", "ClockFormsFixture.txt"));
+
         foreach (var clock in ClockSources)
         {
-            Assert.Contains(clock, $"var t = {clock};", StringComparison.Ordinal);
+            Assert.Contains(clock, fixture, StringComparison.Ordinal);
         }
     }
 
