@@ -63,7 +63,7 @@ internal static class RollDiceParser
             // Deliberately silent about what `2d6 d20` DOES evaluate as: the criterion permits a
             // refusal or a two-term reading, and only the modifier-binding reading is ruled out.
             // Pinning either here would settle something nobody established.
-            if (cursor.NextIsSpace)
+            if (cursor.AtWhitespace)
             {
                 return RollParse.Parsed(dice with { Modifiers = modifiers }, null);
             }
