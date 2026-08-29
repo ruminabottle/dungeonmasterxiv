@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 using Xunit;
@@ -12,7 +13,7 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 /// <remarks>
 /// The rule lives on <see cref="PluginSettings"/> rather than at the plugin's composition root so
-/// it can be tested without Dalamud, and so the settings window's "You will join as" preview and
+/// it can be tested without Dalamud, and so the campaign window's "You will join as" preview and
 /// the join itself call the same method. Two expressions meant to agree drift; one cannot disagree
 /// with itself.
 /// </remarks>
@@ -25,9 +26,9 @@ public class DisplayNameAliasTests
     [Fact]
     public void WithNoAliasThePlayerJoinsUnderTheirCharacterName()
     {
-        var settings = new PluginSettings();
+        var campaign = new Campaign();
 
-        Assert.Equal(CharacterName, settings.DisplayNameOr(CharacterName));
+        Assert.Equal(CharacterName, CampaignDisplayName.Or(campaign, CharacterName));
     }
 
     // The change half. Fails if: the alias is stored and then not used, which is the inert-setting
@@ -35,10 +36,10 @@ public class DisplayNameAliasTests
     [Fact]
     public void AUsableAliasIsWhatGetsSent()
     {
-        var settings = new PluginSettings();
-        settings.RecordDisplayNameAlias("The Cartographer");
+        var campaign = new Campaign();
+        CampaignDisplayName.Record(campaign, "The Cartographer");
 
-        var sent = settings.DisplayNameOr(CharacterName);
+        var sent = CampaignDisplayName.Or(campaign, CharacterName);
 
         Assert.True(sent.WasStated);
         Assert.Equal("The Cartographer", sent.Value);
@@ -55,10 +56,10 @@ public class DisplayNameAliasTests
     [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
     public void AnUnusableAliasFallsBackToTheCharacterNameRatherThanToNothing(string unusable)
     {
-        var settings = new PluginSettings();
-        settings.RecordDisplayNameAlias(unusable);
+        var campaign = new Campaign();
+        CampaignDisplayName.Record(campaign, unusable);
 
-        var sent = settings.DisplayNameOr(CharacterName);
+        var sent = CampaignDisplayName.Or(campaign, CharacterName);
 
         Assert.Equal(CharacterName, sent);
         Assert.NotEqual(DisplayName.None, sent);
@@ -74,11 +75,11 @@ public class DisplayNameAliasTests
     [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
     public void ThoseInputsAreGenuinelyStoredAndGenuinelyRefused(string unusable)
     {
-        var settings = new PluginSettings();
-        settings.RecordDisplayNameAlias(unusable);
+        var campaign = new Campaign();
+        CampaignDisplayName.Record(campaign, unusable);
 
-        Assert.NotEmpty(settings.DisplayNameAlias);
-        Assert.False(DisplayName.TryParse(settings.DisplayNameAlias, out _));
+        Assert.NotEmpty(CampaignDisplayName.Stored(campaign));
+        Assert.False(DisplayName.TryParse(CampaignDisplayName.Stored(campaign), out _));
     }
 
     // Fails if: clearing the box leaves the old alias in force, so a user cannot get back to their
@@ -89,13 +90,13 @@ public class DisplayNameAliasTests
     [InlineData(null)]
     public void ClearingTheAliasReturnsToTheCharacterName(string? cleared)
     {
-        var settings = new PluginSettings();
-        settings.RecordDisplayNameAlias("The Cartographer");
+        var campaign = new Campaign();
+        CampaignDisplayName.Record(campaign, "The Cartographer");
 
-        settings.RecordDisplayNameAlias(cleared);
+        CampaignDisplayName.Record(campaign, cleared);
 
-        Assert.Equal(string.Empty, settings.DisplayNameAlias);
-        Assert.Equal(CharacterName, settings.DisplayNameOr(CharacterName));
+        Assert.Equal(string.Empty, CampaignDisplayName.Stored(campaign));
+        Assert.Equal(CharacterName, CampaignDisplayName.Or(campaign, CharacterName));
     }
 
     // The house pattern for every Record* on this type: report whether anything changed, so the
@@ -103,10 +104,10 @@ public class DisplayNameAliasTests
     [Fact]
     public void RecordingTheSameAliasTwiceReportsNoChange()
     {
-        var settings = new PluginSettings();
+        var campaign = new Campaign();
 
-        Assert.True(settings.RecordDisplayNameAlias("The Cartographer"));
-        Assert.False(settings.RecordDisplayNameAlias("The Cartographer"));
+        Assert.True(CampaignDisplayName.Record(campaign, "The Cartographer"));
+        Assert.False(CampaignDisplayName.Record(campaign, "The Cartographer"));
     }
 
     // Surrounding whitespace is not a different name, and a name that is only whitespace is no name
@@ -114,11 +115,11 @@ public class DisplayNameAliasTests
     [Fact]
     public void SurroundingWhitespaceIsNotADifferentName()
     {
-        var settings = new PluginSettings();
-        settings.RecordDisplayNameAlias("The Cartographer");
+        var campaign = new Campaign();
+        CampaignDisplayName.Record(campaign, "The Cartographer");
 
-        Assert.False(settings.RecordDisplayNameAlias("  The Cartographer  "));
-        Assert.Equal("The Cartographer", settings.DisplayNameAlias);
+        Assert.False(CampaignDisplayName.Record(campaign, "  The Cartographer  "));
+        Assert.Equal("The Cartographer", CampaignDisplayName.Stored(campaign));
     }
 
     // The alias is persisted (this is the Tier 1 half the ticket carries), so it must survive the
@@ -127,14 +128,14 @@ public class DisplayNameAliasTests
     [Fact]
     public void TheAliasSurvivesBeingSavedAndLoaded()
     {
-        var saved = new PluginSettings();
-        saved.RecordDisplayNameAlias("The Cartographer");
+        var saved = new Campaign();
+        CampaignDisplayName.Record(saved, "The Cartographer");
 
-        var json = Newtonsoft.Json.JsonConvert.SerializeObject(saved);
-        var loaded = Newtonsoft.Json.JsonConvert.DeserializeObject<PluginSettings>(json)!;
+        var json = System.Text.Json.JsonSerializer.Serialize(saved);
+        var loaded = System.Text.Json.JsonSerializer.Deserialize<Campaign>(json)!;
 
-        Assert.Equal("The Cartographer", loaded.DisplayNameAlias);
-        Assert.Equal("The Cartographer", loaded.DisplayNameOr(CharacterName).Value);
+        Assert.Equal("The Cartographer", CampaignDisplayName.Stored(loaded));
+        Assert.Equal("The Cartographer", CampaignDisplayName.Or(loaded, CharacterName).Value);
     }
 
     // R-1.3e "PRE-FILLED with their character name". The Spec Owner ruled this a citation that
@@ -143,9 +144,9 @@ public class DisplayNameAliasTests
     [Fact]
     public void TheBoxStartsPreFilledWithTheCharacterName()
     {
-        var settings = new PluginSettings();
+        var campaign = new Campaign();
 
-        Assert.Equal(CharacterName.Value, settings.NameToEdit(CharacterName));
+        Assert.Equal(CharacterName.Value, CampaignDisplayName.ToEdit(campaign, CharacterName));
     }
 
     // Fails if: the box shows the EFFECTIVE name rather than what was typed. With an unusable alias
@@ -155,11 +156,11 @@ public class DisplayNameAliasTests
     [Fact]
     public void AnUnusableAliasStaysVisibleSoItCanBeCorrected()
     {
-        var settings = new PluginSettings();
-        settings.RecordDisplayNameAlias("with\na newline");
+        var campaign = new Campaign();
+        CampaignDisplayName.Record(campaign, "with\na newline");
 
-        Assert.Equal("with\na newline", settings.NameToEdit(CharacterName));
-        Assert.Equal(CharacterName, settings.DisplayNameOr(CharacterName));
+        Assert.Equal("with\na newline", CampaignDisplayName.ToEdit(campaign, CharacterName));
+        Assert.Equal(CharacterName, CampaignDisplayName.Or(campaign, CharacterName));
     }
 
     // The box is pre-filled, so the commonest edit is no edit. Fails if: leaving it alone stores the
@@ -168,12 +169,12 @@ public class DisplayNameAliasTests
     [Fact]
     public void LeavingThePreFilledNameAloneStoresNoAlias()
     {
-        var settings = new PluginSettings();
+        var campaign = new Campaign();
 
-        var changed = settings.RecordChosenName(settings.NameToEdit(CharacterName), CharacterName);
+        var changed = CampaignDisplayName.RecordChosen(campaign, CampaignDisplayName.ToEdit(campaign, CharacterName), CharacterName);
 
         Assert.False(changed);
-        Assert.Equal(string.Empty, settings.DisplayNameAlias);
+        Assert.Equal(string.Empty, CampaignDisplayName.Stored(campaign));
     }
 
     // The same rule after an alias was set: typing your character name back means "go back to
@@ -181,13 +182,13 @@ public class DisplayNameAliasTests
     [Fact]
     public void TypingTheCharacterNameBackClearsTheAlias()
     {
-        var settings = new PluginSettings();
-        settings.RecordChosenName("The Cartographer", CharacterName);
+        var campaign = new Campaign();
+        CampaignDisplayName.RecordChosen(campaign, "The Cartographer", CharacterName);
 
-        settings.RecordChosenName(CharacterName.Value, CharacterName);
+        CampaignDisplayName.RecordChosen(campaign, CharacterName.Value, CharacterName);
 
-        Assert.Equal(string.Empty, settings.DisplayNameAlias);
-        Assert.Equal(CharacterName, settings.DisplayNameOr(CharacterName));
+        Assert.Equal(string.Empty, CampaignDisplayName.Stored(campaign));
+        Assert.Equal(CharacterName, CampaignDisplayName.Or(campaign, CharacterName));
     }
 
     // Fails if: a stored alias that equals the character name survives a rename. This is the harm
@@ -195,28 +196,32 @@ public class DisplayNameAliasTests
     [Fact]
     public void AfterARenameTheDefaultFollowsTheNewCharacterName()
     {
-        var settings = new PluginSettings();
-        settings.RecordChosenName(CharacterName.Value, CharacterName);
+        var campaign = new Campaign();
+        CampaignDisplayName.RecordChosen(campaign, CharacterName.Value, CharacterName);
 
         var renamed = DisplayName.OrNone("Rum Bottle II");
 
-        Assert.Equal(renamed, settings.DisplayNameOr(renamed));
+        Assert.Equal(renamed, CampaignDisplayName.Or(campaign, renamed));
     }
 
-    // Settings written before this field existed must load, and must behave as "no alias" rather
+    // Campaigns written before this field existed must load, and must behave as "no alias" rather
     // than as an empty name. Fails if: the field is made required, or null from an older file
     // reaches DisplayName and is treated as a stated-but-empty name.
+    //
+    // MOVED FROM SETTINGS TO THE CAMPAIGN WITH THE FIELD (R-2.17). The property it guards is the
+    // same one -- additive, null-defaulted, no schema bump -- so the guard follows the field rather
+    // than staying pointed at a file that no longer carries a name.
     [Fact]
-    public void SettingsWrittenBeforeThisFieldExistedStillLoad()
+    public void CampaignsWrittenBeforeThisFieldExistedStillLoad()
     {
-        var older = Newtonsoft.Json.JsonConvert.DeserializeObject<PluginSettings>(
-            "{\"MainWindowOpen\":true,\"RestoreWindowState\":true}")!;
+        var older = System.Text.Json.JsonSerializer.Deserialize<Campaign>(
+            "{\"CampaignId\":\"00000000-0000-0000-0000-000000000001\"}")!;
 
-        Assert.Equal(CharacterName, older.DisplayNameOr(CharacterName));
+        Assert.Equal(CharacterName, CampaignDisplayName.Or(older, CharacterName));
     }
 
     // A-1.2g, and it is the criterion that says how to test it: "assert on what LEAVES THE CLIENT,
-    // not on what a settings screen shows". A settings field whose value never reaches the wire
+    // not on what a campaign screen shows". A campaign field whose value never reaches the wire
     // passes every obvious test -- the field exists, it saves, the UI looks right -- while the wire
     // still carries the character name. So this drives a join and reads the envelope.
     //
@@ -225,10 +230,10 @@ public class DisplayNameAliasTests
     [Fact]
     public void WhatLeavesTheClientIsWhatTheUserSet()
     {
-        var settings = new PluginSettings();
-        settings.RecordChosenName("The Cartographer", CharacterName);
+        var campaign = new Campaign();
+        CampaignDisplayName.RecordChosen(campaign, "The Cartographer", CharacterName);
 
-        var sent = JoinAndReadTheWire(settings);
+        var sent = JoinAndReadTheWire(campaign);
 
         Assert.Equal("The Cartographer", sent);
     }
@@ -238,7 +243,7 @@ public class DisplayNameAliasTests
     [Fact]
     public void WithNoAliasTheCharacterNameLeavesTheClient()
     {
-        var sent = JoinAndReadTheWire(new PluginSettings());
+        var sent = JoinAndReadTheWire(new Campaign());
 
         Assert.Equal(CharacterName.Value, sent);
     }
@@ -248,24 +253,24 @@ public class DisplayNameAliasTests
     [Fact]
     public void AnUnusableAliasSendsTheCharacterNameRatherThanNothing()
     {
-        var settings = new PluginSettings();
-        settings.RecordDisplayNameAlias("with\na newline");
+        var campaign = new Campaign();
+        CampaignDisplayName.Record(campaign, "with\na newline");
 
-        var sent = JoinAndReadTheWire(settings);
+        var sent = JoinAndReadTheWire(campaign);
 
         Assert.Equal(CharacterName.Value, sent);
     }
 
     // Composes the supplier exactly as Plugin.cs does, then joins and reads the join request off the
     // transport.
-    private static string? JoinAndReadTheWire(PluginSettings settings)
+    private static string? JoinAndReadTheWire(Campaign campaign)
     {
         var transport = new RecordingTransport();
         var coordinator = new SessionCoordinator(transport, () => RelayEndpoint.Default, GraceWindow.Default, log: SilentLog.Instance, capabilities: SessionCapabilities.Default);
 
         coordinator.RequestJoin(
             SessionCode.FromValid("BCDFGH"),
-            settings.DisplayNameOr(CharacterName));
+            CampaignDisplayName.Or(campaign, CharacterName));
         transport.OpenTheSocket = true;
         coordinator.Tick(TimeSpan.Zero, new DateTimeOffset(2026, 8, 28, 4, 0, 0, TimeSpan.Zero));
 
