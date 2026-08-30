@@ -6,29 +6,42 @@ using System.Text;
 namespace DungeonMasterXIV.Data;
 
 /// <summary>
-/// A log written out for the person who owns it (R-2.12).
+/// The retained log's on-disk text format (R-2.12). <b>THIS IS NOT THE EXPORT.</b>
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>AN EXPORT IS A FUNCTION OF EXACTLY ONE LOG, AND THAT IS THE WHOLE OF A-2.16.</b> There is no
-/// overload, no collection parameter and no merge here, and the absence is deliberate rather than
-/// unfinished: the criterion fails a build that merges logs, and a merge is not something to be
-/// prevented by a check — it is something that must have no way to be expressed.
+/// <b>IT WAS CALLED <c>LogExport</c> UNTIL SQ-114, AND THE NAME WAS THE HAZARD.</b> An export is
+/// <b>AN ACT</b> — something a person asks for — not a path; a retained log is written
+/// automatically, so it is not one. The old name would have led whoever builds R-2.11's real export
+/// straight here, to a type whose <see cref="Write"/> already produces the right-looking output.
+/// <b>Reusing it there would put a peer code into a genuine export, and nothing would complain:</b>
+/// every test here is about the retained log, where the peer code is permitted (A-1.11b), and the
+/// bytes are identical. Renamed rather than annotated, because a comment saying <i>"this name is
+/// wrong"</i> leaves the attractor in place.
 /// </para>
 /// <para>
-/// <b>The Spec Owner's ruling is why there is no filter either.</b> A client's log holds only what
-/// that client received, so <i>"contains only what its owner could see"</i> holds by construction —
-/// and a filtering exporter would have to be given a view wider than its owner's in order to narrow
-/// it, which is <b>building the very shape D-13 forbids</b>. The safe design is the one that never
-/// has the wider view in its hands.
+/// <b>ONE LOG. THERE IS NO OVERLOAD, NO COLLECTION PARAMETER AND NO MERGE</b>, and the absence is
+/// deliberate rather than unfinished: A-2.16 fails a build that merges logs, and <b>a merge is not
+/// something to be prevented by a check — it is something that must have no way to be expressed.</b>
+/// That prohibition survives SQ-109 unchanged and is the live half of A-2.16.
 /// </para>
 /// <para>
-/// <b>Export is never automatic</b> (A-2.17). Nothing here is called by a session ending; producing
-/// text is a deliberate act by a caller, and this type has no clock, no file access and no
-/// subscription.
+/// <b>There is no owner filter, and SQ-109 ruled that is correct rather than missing.</b> A
+/// participant who may not see a result never RECEIVES one under D-13 (A-2.15), so it was never in
+/// this client's log to be removed — <i>"the old row implied a FILTER and there is nothing to
+/// filter."</i> A filtering writer would have to be handed a view wider than its owner's in order to
+/// narrow it, which is building the very shape D-13 forbids.
+/// </para>
+/// <para>
+/// <b>THIS PARAGRAPH USED TO SAY "EXPORT IS NEVER AUTOMATIC. NOTHING HERE IS CALLED BY A SESSION
+/// ENDING", AND THE RENAME IS WHAT EXPOSED IT AS FALSE.</b> This type is reached from
+/// <c>RetainedLogStore.Retain</c>, which the session teardown drives — <b>the automatic path is the
+/// only caller it has.</b> A-2.17's "never automatic" governs the EXPORT, which does not exist yet;
+/// it never governed this. The sentence was true of the concept the old name named and false of the
+/// code it sat on.
 /// </para>
 /// </remarks>
-public static class LogExport
+public static class RetainedLogFormat
 {
     /// <summary>The header line, so an exported file is identifiable as one.</summary>
     public const string Header = "# DungeonMasterXIV session log";

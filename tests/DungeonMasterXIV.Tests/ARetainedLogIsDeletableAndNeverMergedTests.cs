@@ -9,8 +9,15 @@ namespace DungeonMasterXIV.Tests;
 
 /// <summary>
 /// R-2.12: a retained log is deletable from the place the product says everything is deletable
-/// (A-2.21); a player's log does not survive and the DM's does (A-2.22); an export is a function of
-/// exactly one log (A-2.16) and is never automatic (A-2.17).
+/// (A-2.21); a player's log does not survive and the DM's does (A-2.22); and <b>the writer takes
+/// exactly one log</b> (A-2.16's merge prohibition, the half SQ-109 left live).
+/// <para>
+/// <b>This summary used to end "and is never automatic (A-2.17)", which was false of its own
+/// subject.</b> A-2.17 governs the EXPORT; a retained log is written automatically at session end,
+/// and that is the only path this file tests. Same correction as the one in
+/// <see cref="Data.RetainedLogFormat"/>'s own remarks — true of the concept the old name named,
+/// false of the code it sat on.
+/// </para>
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,7 +31,7 @@ namespace DungeonMasterXIV.Tests;
 /// <b>A-2.16 is tested by ABSENCE and it is the only way it can be.</b> The Spec Owner ruled the
 /// structural reading: a filtering exporter would have to be handed a view wider than its owner's
 /// in order to narrow it, which builds the shape D-13 forbids. So there is nothing to assert about
-/// filtering — the guarantee is that <see cref="LogExport.Write"/> takes one log and that no
+/// filtering — the guarantee is that <see cref="RetainedLogFormat.Write"/> takes one log and that no
 /// overload, collection parameter or merge exists. That is checked here by reflection, because a
 /// future overload would otherwise pass every behavioural test in this file.
 /// </para>
@@ -105,11 +112,11 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     // ---- A-2.16: exactly one log, structurally.
 
     [Fact]
-    public void ExportTakesExactlyOneLogAndNoOverloadTakesMore()
+    public void WriteTakesExactlyOneLogAndNoOverloadTakesMore()
     {
-        var writes = typeof(LogExport)
+        var writes = typeof(RetainedLogFormat)
             .GetMethods()
-            .Where(method => method.Name == nameof(LogExport.Write))
+            .Where(method => method.Name == nameof(RetainedLogFormat.Write))
             .ToList();
 
         // A merge would arrive as an overload or a collection parameter. Asserting on the SHAPE is
@@ -120,14 +127,14 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     }
 
     [Fact]
-    public void AnExportContainsOnlyTheLogItWasGiven()
+    public void TheWrittenTextContainsOnlyTheLogItWasGiven()
     {
         var mine = new RetainedLog(
             Campaign, 1, [new LoggedEntry(new LoggedStamp(1, 1), "message", "BCDFGH", "mine")]);
         var theirs = new RetainedLog(
             Other, 1, [new LoggedEntry(new LoggedStamp(1, 1), "roll", "JKMNPR", "theirs")]);
 
-        var exported = LogExport.Write(mine);
+        var exported = RetainedLogFormat.Write(mine);
 
         Assert.Contains("mine", exported, StringComparison.Ordinal);
         Assert.DoesNotContain("theirs", exported, StringComparison.Ordinal);
@@ -137,7 +144,7 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     // ---- A-2.17: never automatic.
 
     [Fact]
-    public void RetainingDoesNotProduceAnExportedFile()
+    public void RetainingWritesOnlyToTheArchive()
     {
         var archive = new FakeRetainedLogArchive();
         var store = new RetainedLogStore(archive);
@@ -153,12 +160,12 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     // ---- A-2.31: no display name leaves the campaign.
 
     [Fact]
-    public void AnExportCarriesPeerCodesAndNeverADisplayName()
+    public void TheRetainedLogCarriesPeerCodesAndNeverADisplayName()
     {
         var log = new RetainedLog(
             Campaign, 1, [new LoggedEntry(new LoggedStamp(1, 1), "message", "BCDFGH", "hello")]);
 
-        var exported = LogExport.Write(log);
+        var exported = RetainedLogFormat.Write(log);
 
         Assert.Contains("BCDFGH", exported, StringComparison.Ordinal);
 

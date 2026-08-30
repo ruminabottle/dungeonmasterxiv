@@ -55,7 +55,7 @@ public sealed class RetainedLogStore(IRetainedLogArchive archive)
             return false;
         }
 
-        _archive.Write(log.CampaignId, LogExport.Write(log));
+        _archive.Write(log.CampaignId, RetainedLogFormat.Write(log));
         return true;
     }
 

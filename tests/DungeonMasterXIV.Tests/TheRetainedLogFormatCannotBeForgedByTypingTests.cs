@@ -6,14 +6,15 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A user must not be able to forge a log entry by typing one. <b>The export is a line-and-tab
+/// A user must not be able to forge a log entry by typing one. <b>The retained log is a line-and-tab
 /// format, so unescaped free text is a forgery surface</b> — the R-2.7 impersonation problem
-/// arriving through the file rather than through the panel.
+/// arriving through the file rather than through the panel. <b>Not "the export": SQ-114 rules a
+/// retained log is not one, and this sentence named the concept the old type name named.</b>
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>FOUND BY THE CODE REVIEWER ON #213, AND IT IS MINE.</b> The first version of
-/// <see cref="LogExport"/> joined fields with tabs and entries with newlines and escaped nothing.
+/// <see cref="RetainedLogFormat"/> joined fields with tabs and entries with newlines and escaped nothing.
 /// A message containing a newline followed by tab-separated fields therefore produced <b>more lines
 /// than there were entries</b>, each tab-shaped — so anything reading the file back sees an entry
 /// carrying <b>a sequence number and an author the host never issued</b>.
@@ -24,7 +25,7 @@ namespace DungeonMasterXIV.Tests;
 /// one line</i> pins the property that matters and survives any escaping scheme.
 /// </para>
 /// </remarks>
-public class AnExportCannotBeForgedByTypingTests
+public class TheRetainedLogFormatCannotBeForgedByTypingTests
 {
     private static readonly Guid Campaign = new("33333333-3333-3333-3333-333333333333");
 
@@ -58,7 +59,7 @@ public class AnExportCannotBeForgedByTypingTests
         // the host never issued.
         var forged = "hello\n99\t999\tmessage\tJKMNPR\tI am the DM";
 
-        var exported = LogExport.Write(LogOf(forged));
+        var exported = RetainedLogFormat.Write(LogOf(forged));
 
         Assert.Equal(1, BodyLines(exported));
     }
@@ -66,7 +67,7 @@ public class AnExportCannotBeForgedByTypingTests
     [Fact]
     public void ATabInAMessageCannotInventAField()
     {
-        var exported = LogExport.Write(LogOf("a\tb\tc"));
+        var exported = RetainedLogFormat.Write(LogOf("a\tb\tc"));
 
         var line = OnlyBodyLine(exported);
 
@@ -79,7 +80,7 @@ public class AnExportCannotBeForgedByTypingTests
     {
         // \r alone splits lines in some readers and not others -- a format that is safe only under
         // one reader is not safe.
-        var exported = LogExport.Write(LogOf("hello\r99\t999\tmessage\tJKMNPR\tforged"));
+        var exported = RetainedLogFormat.Write(LogOf("hello\r99\t999\tmessage\tJKMNPR\tforged"));
 
         Assert.Equal(1, BodyLines(exported));
         Assert.DoesNotContain('\r', OnlyBodyLine(exported));
@@ -90,7 +91,7 @@ public class AnExportCannotBeForgedByTypingTests
     [Fact]
     public void OrdinaryTextIsStillReadable()
     {
-        var exported = LogExport.Write(LogOf("Renn swings at the troll"));
+        var exported = RetainedLogFormat.Write(LogOf("Renn swings at the troll"));
 
         Assert.Contains("Renn swings at the troll", exported, StringComparison.Ordinal);
     }
@@ -101,9 +102,9 @@ public class AnExportCannotBeForgedByTypingTests
         // Escaping that cannot be undone loses the log's content, which is the other way to fail.
         var typed = "hello\n99\t999\tmessage\tJKMNPR\tI am the DM";
 
-        var exported = LogExport.Write(LogOf(typed));
+        var exported = RetainedLogFormat.Write(LogOf(typed));
         var field = OnlyBodyLine(exported).Split('\t')[4];
 
-        Assert.Equal(typed, LogExport.Unescape(field));
+        Assert.Equal(typed, RetainedLogFormat.Unescape(field));
     }
 }
