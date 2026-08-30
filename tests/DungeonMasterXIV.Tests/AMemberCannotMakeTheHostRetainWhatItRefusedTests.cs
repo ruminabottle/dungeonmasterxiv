@@ -165,6 +165,30 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
         Assert.Equal(500, resources.MemberContent.RefusedSayings);
     }
 
+    // >>> THE DISCRIMINATOR THAT SEPARATES A REFUSAL RECORD FROM AN ARRIVAL COUNTER.
+    //
+    // An ACCEPTED message and a REFUSED one must leave DIFFERENT records. If both produce the same
+    // artefact then the "record" counts arrivals, and asserting on it is a check that cannot fail --
+    // which is the exact failure A-2.36 exists to prevent. <c>Received</c> is precisely that:
+    // <c>_received++</c> is the first statement of <c>Record</c>, which <c>:98</c> calls
+    // unconditionally, so it is identical in a refusing and a non-refusing build.
+    [Fact]
+    public void AnAcceptedMessageLeavesTheRefusalRecordUntouched()
+    {
+        var (handlers, resources, peer, _) = Wired();
+
+        handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = "hello table" });
+
+        Assert.Equal(0, resources.MemberContent.RefusedSayings);
+        Assert.Equal(0, resources.MemberContent.RefusedRosters);
+        Assert.Equal(0, resources.MemberContent.RefusedEntries);
+
+        // THE PREMISE, and without it the three zeros above are satisfied by a build where nothing
+        // arrived at all: the arrival WAS counted. So the two records genuinely DIFFER -- one moved
+        // and the other did not, on the same call.
+        Assert.Equal(1, resources.MemberContent.Received);
+    }
+
     // >>> A-2.38: NOTHING REACHES A SESSION SURFACE -- ASSERTED TOGETHER WITH A-2.36's RECORD.
     //
     // The criterion is explicit that BOTH HALVES are needed: an unchanged stream is satisfied
