@@ -1,5 +1,6 @@
 using System;
 using Dalamud.Bindings.ImGui;
+using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
@@ -30,13 +31,51 @@ namespace DungeonMasterXIV.Windows;
 /// the treatment R-1.3h states for the exclusivity affordances: a greyed control that still occupies
 /// the window invites the question its absence answers.
 /// </para>
+/// <para>
+/// <b>THE KEEP-OR-LOSE OFFER IS RAISED HERE BECAUSE THIS IS THE JOINER'S SIDE</b> (R-2.12, A-2.23).
+/// A player's log dies with the session unless it is kept; the DM's retains without being asked, so
+/// the host's half of the window raises nothing. <b>A-2.23 fails a build whose only route is a
+/// settings menu</b> — <i>"a keep-or-lose choice presented after the thing is gone is not a
+/// choice"</i> — which is why the offer is taken at the moment the player leaves rather than left
+/// for them to find later.
+/// </para>
+/// <para>
+/// <b>THE OFFER IS TAKEN BEFORE THE DEPARTURE — AND THAT ORDER IS DEFENSIVE TODAY, NOT
+/// LOAD-BEARING. Measured rather than assumed, because the obvious claim here is false.</b>
+/// <c>SessionMembership.Leave</c> is an announcement, a cleared closing notice and
+/// <c>_joiner.Left()</c>; <b>it does not release the recording</b>, so taking the offer after it
+/// would still see the entries and this ordering is currently pinned by no test.
+/// <para>
+/// It is still the right order, and the reason is the OTHER path: the host's
+/// <c>HostRunner.Stop</c> calls <c>SessionResources.Release</c>, which calls
+/// <c>Recording.Release</c> — <i>"R-2.12: a log dies with the session."</i> So a release on
+/// departure already exists in this codebase, on the half of it that does not raise an offer.
+/// <b>Writing the fragile order would be correct only until the joiner's leave grew the same
+/// call</b>, and it would then fail exactly as the retention-ordering defect in
+/// <c>SessionTeardown</c> did: still running, still looking finished, describing an empty log.
+/// </para>
+/// </para>
 /// </remarks>
 internal sealed class SessionEndingView
 {
     private readonly SessionCoordinator _coordinator;
 
+    private readonly Func<SessionLogOffer> _keepOrLose;
+
+    /// <summary>The open offer, or null when there is no choice outstanding.</summary>
+    private SessionLogOffer? _offer;
+
     /// <param name="coordinator">The session layer this surface reflects and acts on.</param>
-    public SessionEndingView(SessionCoordinator coordinator) => _coordinator = coordinator;
+    /// <param name="keepOrLose">
+    /// Takes the session's log and opens the keep-or-lose choice over it (R-2.12). Supplied rather
+    /// than built here: the campaign, the clock and the length of the window are the composition
+    /// root's, and a window class that decided any of them would be deciding product.
+    /// </param>
+    public SessionEndingView(SessionCoordinator coordinator, Func<SessionLogOffer> keepOrLose)
+    {
+        _coordinator = coordinator;
+        _keepOrLose = keepOrLose;
+    }
 
     /// <summary>Draws the closing notice, and the way out.</summary>
     /// <param name="join">The attempt being rendered.</param>
@@ -52,6 +91,11 @@ internal sealed class SessionEndingView
                 $"The DM has ended this session. It closes in {closing.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss}");
         }
 
+        if (DrawTheOffer())
+        {
+            return;
+        }
+
         if (join.Phase != JoinPhase.Admitted)
         {
             return;
@@ -61,7 +105,49 @@ internal sealed class SessionEndingView
         // effort and the departure is not -- see SessionMembership.Leave, where that is decided.
         if (ImGui.Button("Leave session"))
         {
+            // Taken FIRST, while the session still holds the entries. See the remarks.
+            _offer = _keepOrLose();
             _coordinator.Membership.Leave();
         }
+    }
+
+    /// <summary>Draws the keep-or-lose choice, and says whether it is holding the window.</summary>
+    /// <returns>True while a choice is outstanding, so the caller draws nothing else.</returns>
+    private bool DrawTheOffer()
+    {
+        if (_offer is not { IsOpen: true } offer)
+        {
+            return false;
+        }
+
+        // R-1.3c: the bound is shown WHILE the wait happens. An offer that expired silently would
+        // be the indefinite wait the requirement forbids, wearing a countdown's clothes.
+        var remaining = offer.RemainingAt(DateTimeOffset.UtcNow.UtcTicks);
+        if (offer.ElapseTo(DateTimeOffset.UtcNow.UtcTicks))
+        {
+            return false;
+        }
+
+        ImGui.TextUnformatted(
+            offer.HasAnything
+                ? $"Keep this session's log? {offer.LineCount} lines, {offer.Participants.Count} people. {remaining:mm\\:ss}"
+                : $"This session recorded nothing to keep. {remaining:mm\\:ss}");
+
+        // A-2.23a: the offer must say, HERE, that accepting cannot write a file yet. The log is gone
+        // a second after the click, so a player told nothing would believe it had been kept and
+        // nothing afterwards could correct them.
+        ImGui.TextUnformatted(SessionLogOffer.NothingCanBeWrittenYet);
+
+        if (ImGui.Button("Keep"))
+        {
+            offer.Keep();
+        }
+
+        if (ImGui.Button("Discard"))
+        {
+            offer.Decline();
+        }
+
+        return true;
     }
 }
