@@ -114,7 +114,10 @@ public class APersonCanActuallySendAMessageTests
         var text = File.ReadAllText(Path.Combine(RepositoryRoot(), Path.Combine(parts)));
         var withoutBlocks = Regex.Replace(text, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
 
-        return Regex.Replace(withoutBlocks, @"^\s*//.*$", string.Empty, RegexOptions.Multiline);
+        // TRAILING comments too, not only comment-ONLY lines. A narrower `^\s*//` leaves
+        // `Foo(); // Membership.Say(` standing and the assertion is satisfied by the comment --
+        // MEASURED, two arms, same mutation: narrow GREEN, wide RED.
+        return Regex.Replace(withoutBlocks, @"//[^\n]*", string.Empty);
     }
 
     private static string RepositoryRoot()
