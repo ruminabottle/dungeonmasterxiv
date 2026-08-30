@@ -163,24 +163,44 @@ internal static class SizeGate
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(capacities);
 
+        var lines = LinesOf(source);
         var found = new List<Breach>();
         var unmeasured = new List<string>();
-        // BUG-183: Split('\n') yields a trailing EMPTY element for a newline-terminated file, and
-        // that element is NOT a line. RULED in Program.cs:67 -- "a file is every line in it, first to
-        // last" -- with the operational half in engineering-standards.md: a trailing newline
-        // TERMINATES the last line, it does not BEGIN a new one. Dropping it makes this count what
-        // File.ReadAllLines counts, which is the Sizes CLI's reader and what `wc -l` agrees with.
-        // Unconditional rather than guarded on Length > 1, so an empty source reads 0 lines and not 1.
-        var lines = source.Split('\n');
-        if (lines.Length > 0 && lines[^1].Length == 0)
-        {
-            lines = lines[..^1];
-        }
 
         if (lines.Length > capacities.File)
         {
             found.Add(new Breach(path, FileRow, string.Empty, lines.Length, capacities.File));
         }
+
+        // BUG-186 split the two loops out to bring this body under the method block. ORDER IS PART
+        // OF THE CONTRACT and the split must not reorder: file row, then types, then members.
+        var types = MeasureTypes(path, lines, capacities);
+        var members = MeasureMembers(path, source, capacities);
+        found.AddRange(types.Breaches);
+        found.AddRange(members.Breaches);
+        unmeasured.AddRange(types.Unmeasured);
+        unmeasured.AddRange(members.Unmeasured);
+
+        return new Measured(found, unmeasured);
+    }
+
+    /// <summary>
+    /// The file's lines. BUG-183: <c>Split('\n')</c> leaves a trailing EMPTY element for a
+    /// newline-terminated file and that element is not a line — RULED in <c>Program.cs:67</c>, "a
+    /// file is every line in it, first to last". Dropping it counts what <c>File.ReadAllLines</c>
+    /// counts. Unconditional, not guarded on length, so an empty source reads 0 lines and not 1.
+    /// </summary>
+    private static string[] LinesOf(string source)
+    {
+        var lines = source.Split('\n');
+        return lines.Length > 0 && lines[^1].Length == 0 ? lines[..^1] : lines;
+    }
+
+    /// <summary>The class row. A type span is its declaration line to its closing brace.</summary>
+    private static Measured MeasureTypes(string path, IReadOnlyList<string> lines, Thresholds capacities)
+    {
+        var found = new List<Breach>();
+        var unmeasured = new List<string>();
 
         foreach (var type in ClassSpanReader.Read(lines))
         {
@@ -196,6 +216,15 @@ internal static class SizeGate
                 found.Add(new Breach(path, ClassRow, type.Name, span, capacities.Class));
             }
         }
+
+        return new Measured(found, unmeasured);
+    }
+
+    /// <summary>The three member rows — length, parameters and nesting — from one pass.</summary>
+    private static Measured MeasureMembers(string path, string source, Thresholds capacities)
+    {
+        var found = new List<Breach>();
+        var unmeasured = new List<string>();
 
         foreach (var member in MemberReader.Read(source))
         {
