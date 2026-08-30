@@ -14,11 +14,20 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>THREE OUTCOMES AND ONLY ONE PASSES.</b> Silent truncation fails, because the sender believes
 /// they said something they did not. A silent drop fails for the same reason one layer along.
-/// <b>And a freeze or an out-of-memory is a failure of THIS requirement rather than a performance
-/// issue</b> — which is why the bound is not only on characters: see
-/// <see cref="AMessageInsideTheCharacterBoundCanStillBeTooLarge"/>, the test that discharges that
-/// clause, because a character bound alone leaves what the wire carries unbounded and an unbounded
-/// arrival is the thing that exhausts memory.
+/// <b>AND A FREEZE OR AN OUT-OF-MEMORY IS A FAILURE OF THIS REQUIREMENT RATHER THAN A PERFORMANCE
+/// ISSUE — AND NOTHING HERE TESTS IT. Stated rather than implied, because the nearest test looks
+/// like it does.</b> <see cref="AMessageInsideTheCharacterBoundCanStillBeTooLarge"/> proves the byte
+/// bound REFUSES; it asserts nothing about termination, and it would stay green against a build that
+/// refused correctly after doing unbounded work. <b>No test in this file would catch a hang.</b>
+/// </para>
+/// <para>
+/// <b>The exposure that makes this worth naming rather than filing as pedantry:</b>
+/// <c>MessageDraft.Compose</c> runs <c>Trim()</c> — a full copy — and then walks every grapheme via
+/// <c>StringInfo.LengthInTextElements</c> <b>BEFORE either bound is applied</b>, so the work is
+/// proportional to what a hostile peer sent rather than to <c>MaxLength</c>. That is linear and not
+/// a hang, and it is <b>not</b> what this criterion's freeze clause is aimed at, but it does mean
+/// the bound is enforced after the expensive part rather than before it. Reported under DMXENG-133
+/// rather than fixed here: that is production code and this ticket is a test move.
 /// </para>
 /// <para>
 /// <b>THE CRITERION ASSERTS NO NUMBER AND NEITHER DOES ANY TEST HERE.</b> The bound value is
