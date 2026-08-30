@@ -256,21 +256,60 @@ public class TheSessionEndOfferHoldsOneLogUntilItResolvesTests
         // reach with -- no store, no archive, no formatter, in a parameter or a field.
         var offer = typeof(SessionLogOffer);
 
-        var writers = offer.GetConstructors()
+        var surface = offer.GetConstructors()
             .SelectMany(c => c.GetParameters().Select(p => p.ParameterType))
             .Concat(offer
                 .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                 .Select(field => field.FieldType))
-            .Where(CouldWrite)
             .ToList();
 
-        Assert.Empty(writers);
+        // VACUITY CONTROL: the offer really does hold a RetainedLog, so an empty list below is a
+        // fact about the TYPES and not about the reflection having read nothing. Without it, wrong
+        // BindingFlags or a renamed type would empty the surface and pass.
+        Assert.Contains(typeof(RetainedLog), surface);
+
+        var unrecognised = surface.Where(type => !MayBeHeld(type)).Select(type => type.Name).Distinct().ToList();
+
+        Assert.Empty(unrecognised);
     }
 
-    private static bool CouldWrite(Type type) =>
-        type == typeof(RetainedLogStore)
-        || type == typeof(IRetainedLogArchive)
-        || type == typeof(SessionLogRetention);
+    /// <summary>What the offer is ALLOWED to hold. Anything else fails, including a type nobody has
+    /// written yet.</summary>
+    /// <remarks>
+    /// <para>
+    /// DMXENG-146. This was <c>CouldWrite</c>, a hand-list of THREE write-capable types, and it was
+    /// written before an export writer existed. PR #237 added four — <c>ISessionExportDestination</c>,
+    /// <c>SessionExportFileDestination</c>, <c>SessionExport</c>, <c>SessionExportFormat</c> — and
+    /// none were added here, so the guard <b>failed open on exactly the types the PR that needed it
+    /// introduced</b>.
+    /// </para>
+    /// <para>
+    /// <b>INVERTED RATHER THAN EXTENDED, because the two populations grow differently.</b> The
+    /// write-capable set grows whenever anyone anywhere adds a writer, and an omission there is
+    /// silent and passes. The set this offer may HOLD is small, stable, and can only change by
+    /// editing <c>SessionLogOffer</c> itself — and an omission HERE fails, loudly, naming the type.
+    /// Adding the four names would have closed today's gap, kept the mechanism, and made the next
+    /// omission look like it had been considered.
+    /// </para>
+    /// <para>
+    /// <b>A positive derivation of "can write" is not available, measured rather than assumed.</b>
+    /// Namespace cannot discriminate: <c>RetainedLog</c>, which the offer legitimately holds, shares
+    /// <c>DungeonMasterXIV.Data</c> with <c>SessionExport</c> and <c>RetainedLogStore</c>. Nor can a
+    /// System.IO reference: of the four types #237 added, only
+    /// <c>SessionExportFileDestination</c> mentions System.IO at all, so that rule would have missed
+    /// three of the four — under-covering silently, which is this defect exactly. Reflection cannot
+    /// read method bodies, so transitive reachability is not observable here either.
+    /// </para>
+    /// <para>
+    /// <b>To extend it:</b> when the offer legitimately gains a field, add that type here as a
+    /// deliberate decision. That edit is the point — it is a person saying "the offer may hold this",
+    /// in the same commit that makes it true.
+    /// </para>
+    /// </remarks>
+    private static bool MayBeHeld(Type type) =>
+        type.IsPrimitive
+        || type == typeof(RetainedLog)
+        || type == typeof(SessionLogOfferOutcome);
 
     /// <summary>Inert wire: the session's own state is what these cases observe.</summary>
     private sealed class QuietTransport : ISessionTransport
