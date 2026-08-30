@@ -50,48 +50,22 @@ public enum SessionLogOfferOutcome
 /// passes every behavioural test written against the single-log one.</b>
 /// </para>
 /// <para>
-/// <b>WHAT KEEPING DOES NOT DO, AND THE OFFER HAS TO SAY SO OUT LOUD</b> (A-2.23a).
+/// <b>WHAT KEEPING DOES NOT DO, AND IT STILL DOES NOT DO IT</b> (A-2.23a).
 /// <see cref="Keep"/> resolves the choice and hands back the log; <b>it writes nothing.</b>
-/// <b>A build where a player accepts and no export is produced FAILS unless the offer states, AT
-/// THE OFFER, that the export cannot yet be written</b> — so <see cref="NothingCanBeWrittenYet"/>
-/// is not a courtesy and belongs on screen beside the choice, not in a release note. The log is
-/// gone a second after the click; <b>a player who clicks yes and is told nothing believes it was
-/// kept, and nothing afterwards can correct them because nothing is left to correct it with.</b>
+/// A-2.23a is now satisfied by the FIRST of its dispositions rather than the third — DMXENG-123
+/// shipped the writer, so the disclosure that stood in for it is gone and the caller performs the
+/// act at the moment of the click.
 /// <b>Both halves of A-2.23a fail separately:</b> silently writing nothing fails, and writing a
-/// file carrying a participant identifier fails A-1.11a — which is why this type holds no store,
-/// no archive and no formatter, and a test asserts that it cannot acquire one. A player's kept log has no
-/// destination yet: A-2.17 records that the export "does not exist yet",
-/// <see cref="RetainedLogStore.Retain"/> writes only for a hosting client (A-2.22), and
-/// <see cref="RetainedLogFormat"/> is not an export and says so — reusing its bytes here would put a
-/// peer code into a genuine export, which is the hazard the SQ-114 rename exists to prevent. So the
-/// consumer of a kept log is owed by R-2.12's other half and is deliberately absent rather than
-/// stubbed.
+/// file carrying a participant identifier fails A-1.11a — <b>which is why this type still holds no
+/// store, no archive and no formatter, and a test asserts that it cannot acquire one.</b> That
+/// remains true with a writer in the tree and is MORE load-bearing now, not less: the export is
+/// composed by the caller from <see cref="SessionExportFormat"/> and written through
+/// <see cref="ISessionExportDestination"/>, so nothing here can reach
+/// <see cref="RetainedLogFormat"/> and put a peer code into a genuine export.
 /// </para>
 /// </remarks>
 public sealed class SessionLogOffer
 {
-    /// <summary>
-    /// What the offer must say beside the choice, because keeping cannot write anything yet
-    /// (A-2.23a). This is the third of A-2.23a's dispositions: say so at the point of the claim,
-    /// rather than offer a button that quietly does nothing.
-    /// </summary>
-    /// <remarks>
-    /// <b>DELETE THIS STRING AND ITS USE WHEN THE EXPORT WRITER LANDS. IT BECOMES FALSE THE MOMENT
-    /// A WRITER EXISTS</b>, and a user-facing sentence that silently stops being true is worse than
-    /// one that was never written. <b>The removal is an explicit precondition on the export
-    /// writer's own ticket, <b>DMXENG-123</b></b> (SQ-124 ruled option B on 2026-08-30, so the
-    /// writer is no longer blocked — it is simply not DMXENG-115's, and was deliberately not folded
-    /// into it).
-    /// <para>
-    /// <b>BOTH KEYS, so the expiry is discoverable from here rather than only from the board:</b>
-    /// <b>DMXENG-115</b> is where this sentence lives, <b>DMXENG-123</b> is the ticket that deletes
-    /// it and carries that deletion as an explicit obligation. Named in the code because a PR body
-    /// is not where the next engineer is standing when they make this false.
-    /// </para>
-    /// </remarks>
-    public const string NothingCanBeWrittenYet =
-        "This choice is recorded, but no file can be written yet: the export format is not decided.";
-
     private readonly long _closesAtUtcTicks;
 
     /// <summary>Null once the choice has resolved against keeping — the log dying, in one field.</summary>

@@ -60,18 +60,19 @@ internal sealed class SessionEndingView
 {
     private readonly SessionCoordinator _coordinator;
 
-    private readonly Func<SessionLogOffer> _keepOrLose;
+    private readonly KeepOrLose _keepOrLose;
 
     /// <summary>The open offer, or null when there is no choice outstanding.</summary>
     private SessionLogOffer? _offer;
 
     /// <param name="coordinator">The session layer this surface reflects and acts on.</param>
     /// <param name="keepOrLose">
-    /// Takes the session's log and opens the keep-or-lose choice over it (R-2.12). Supplied rather
-    /// than built here: the campaign, the clock and the length of the window are the composition
-    /// root's, and a window class that decided any of them would be deciding product.
+    /// Opens the keep-or-lose choice over the session's log, and says where an accepted export goes
+    /// (R-2.12, A-2.23a). Supplied rather than built here: the campaign, the clock, the length of
+    /// the window and the export directory are the composition root's, and a window class that
+    /// decided any of them would be deciding product.
     /// </param>
-    public SessionEndingView(SessionCoordinator coordinator, Func<SessionLogOffer> keepOrLose)
+    public SessionEndingView(SessionCoordinator coordinator, KeepOrLose keepOrLose)
     {
         _coordinator = coordinator;
         _keepOrLose = keepOrLose;
@@ -106,7 +107,7 @@ internal sealed class SessionEndingView
         if (ImGui.Button("Leave session"))
         {
             // Taken FIRST, while the session still holds the entries. See the remarks.
-            _offer = _keepOrLose();
+            _offer = _keepOrLose.Open();
             _coordinator.Membership.Leave();
         }
     }
@@ -133,14 +134,13 @@ internal sealed class SessionEndingView
                 ? $"Keep this session's log? {offer.LineCount} lines, {offer.Participants.Count} people. {remaining:mm\\:ss}"
                 : $"This session recorded nothing to keep. {remaining:mm\\:ss}");
 
-        // A-2.23a: the offer must say, HERE, that accepting cannot write a file yet. The log is gone
-        // a second after the click, so a player told nothing would believe it had been kept and
-        // nothing afterwards could correct them.
-        ImGui.TextUnformatted(SessionLogOffer.NothingCanBeWrittenYet);
-
+        // A-2.23a: accepting must not present an act the build does not perform. It performs one
+        // now -- DMXENG-123 shipped the writer, so the disclosure that stood in for it is gone
+        // rather than left to age into a lie. The log is gone a second after the click, so this is
+        // the only moment the write can happen.
         if (ImGui.Button("Keep"))
         {
-            offer.Keep();
+            SessionExport.Produce(offer, _keepOrLose.Export);
         }
 
         if (ImGui.Button("Discard"))
