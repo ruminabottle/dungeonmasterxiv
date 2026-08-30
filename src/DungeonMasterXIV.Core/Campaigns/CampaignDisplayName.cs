@@ -183,6 +183,45 @@ public static class CampaignDisplayName
                 : characterName.Value;
 
     /// <summary>
+    /// What the settings box starts out showing, <b>with the carried-over default withheld where it
+    /// could not be kept</b> (A-1.2z, DMXENG-120).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE OFFER IS ONLY MADE WHERE IT CAN BE ACCEPTED.</b> With no campaign there is nowhere to
+    /// store a name, so offering the carried-over value puts a name in the box that the preview below
+    /// it does not show — <b>the two lines of BUG-141 disagreeing again, in a box the user cannot
+    /// correct.</b> Withholding it is what keeps them equal.
+    /// </para>
+    /// <para>
+    /// <b>THIS EXISTS BECAUSE THE DECISION WAS A TERNARY INSIDE A WINDOW METHOD, AND COULD THEREFORE
+    /// ONLY BE ASSERTED AS TEXT.</b> qa-1 showed the cost: the guard asserted the expression's
+    /// source, so restoring the contradiction needed <b>one extra line after it</b> — the asserted
+    /// string untouched, 1442 passed, 0 failed. <b>The proxy followed from WHERE THE DECISION SAT,
+    /// not from the renderer ceiling.</b> A boolean decision is pure logic and does not need a
+    /// renderer to test; moving it here makes it answerable behaviourally.
+    /// </para>
+    /// <para>
+    /// <b>SEPARATE FROM <see cref="ToEdit(Campaign?, string?, Net.DisplayName)"/> RATHER THAN FOLDED
+    /// INTO IT, AND THAT IS DELIBERATE.</b> <c>ToEdit</c>'s three-step fallback is documented,
+    /// SQ-87-grounded, and <b>pinned by a test that exists to DEMONSTRATE this very hazard</b>
+    /// (<c>ACarriedOverNameWouldContradictThePreviewWhenThereIsNoCampaign</c>). Changing it would
+    /// delete that evidence and silently reverse a split its author made on purpose. <b>Two
+    /// questions, two methods:</b> <c>ToEdit</c> answers <i>what does the box show</i>;
+    /// this answers <i>where may the offer be made at all</i>.
+    /// </para>
+    /// </remarks>
+    /// <param name="campaign">The campaign being played, or null when none is current.</param>
+    /// <param name="carriedOverDefault">
+    /// A name stored before campaign-scoping (SQ-87). <b>Ignored entirely when there is no
+    /// campaign.</b>
+    /// </param>
+    /// <param name="characterName">What the game says this player is called.</param>
+    public static string ToPreFill(
+        Campaign? campaign, string? carriedOverDefault, Net.DisplayName characterName) =>
+        ToEdit(campaign, campaign is null ? null : carriedOverDefault, characterName);
+
+    /// <summary>
     /// Records what the user left in the settings box, reporting whether anything changed.
     /// </summary>
     /// <remarks>
