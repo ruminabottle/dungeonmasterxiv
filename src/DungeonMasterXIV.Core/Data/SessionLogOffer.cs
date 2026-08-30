@@ -79,11 +79,15 @@ public sealed class SessionLogOffer
     /// <b>DELETE THIS STRING AND ITS USE WHEN THE EXPORT WRITER LANDS. IT BECOMES FALSE THE MOMENT
     /// A WRITER EXISTS</b>, and a user-facing sentence that silently stops being true is worse than
     /// one that was never written. <b>The removal is an explicit precondition on the export
-    /// writer's own ticket</b> (SQ-124 ruled option B on 2026-08-30, so the writer is no longer
-    /// blocked — it is simply not DMXENG-115's, and was deliberately not folded into it).
-    /// <b>DMXENG-115 is the ticket that introduced this sentence</b>; whoever removes it should say
-    /// so there. Named here rather than only in a PR body because a PR body is not where the next
-    /// engineer is standing when they make this false.
+    /// writer's own ticket, <b>DMXENG-123</b></b> (SQ-124 ruled option B on 2026-08-30, so the
+    /// writer is no longer blocked — it is simply not DMXENG-115's, and was deliberately not folded
+    /// into it).
+    /// <para>
+    /// <b>BOTH KEYS, so the expiry is discoverable from here rather than only from the board:</b>
+    /// <b>DMXENG-115</b> is where this sentence lives, <b>DMXENG-123</b> is the ticket that deletes
+    /// it and carries that deletion as an explicit obligation. Named in the code because a PR body
+    /// is not where the next engineer is standing when they make this false.
+    /// </para>
     /// </remarks>
     public const string NothingCanBeWrittenYet =
         "This choice is recorded, but no file can be written yet: the export format is not decided.";
