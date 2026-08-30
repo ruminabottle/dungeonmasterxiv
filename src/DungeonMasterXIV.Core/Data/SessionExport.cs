@@ -33,11 +33,14 @@ public static class SessionExport
         ArgumentNullException.ThrowIfNull(destination);
 
         // REFUSED ON A RESOLVED OFFER, and the guard is here rather than on the offer.
-        // SessionLogOffer.Keep() does NOT refuse a second call -- it re-sets the outcome and hands
-        // the log back again -- so producing twice would write two files for one choice. Nothing
-        // reaches it twice today: the view stops drawing the buttons once the offer closes. This
-        // guards the SEAM, which is the thing a test and a future caller can both reach, and it
-        // does so without changing a type this ticket is fenced away from.
+        // WHEN THIS WAS WRITTEN, SessionLogOffer.Keep() did NOT refuse a second call -- it re-set
+        // the outcome and handed the log back again -- so producing twice would have written two
+        // files for one choice. BUG-182 closed that at the type in 2719162, so Keep() now refuses
+        // too and this is no longer the only thing between a repeat call and a second file.
+        // Nothing reaches it twice today either: the view stops drawing the buttons once the offer
+        // closes. THE REASON FOR GUARDING HERE IS UNCHANGED: the SEAM is the thing a test and a
+        // future caller can both reach, and guarding it needed no change to a fenced type.
+        // The two refusals carry different messages, so a failure says which one answered.
         if (!offer.IsOpen)
         {
             throw new InvalidOperationException(
