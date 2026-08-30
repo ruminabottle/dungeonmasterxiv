@@ -11,22 +11,15 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THIS CLASS IS AT MARGIN 0 AND THE NEXT LINE ADDED INSIDE IT IS BLOCKED.</b> The class span is
-/// 400 against a capacity of 400, and that row is absolute — <c>main</c> carries no breach of it, so
-/// there is nothing to grandfather. <b>Anything you need to add here needs the class split first.</b>
-/// The condition predates the member below: it was measured at 399 with margin 1 on <c>main</c>
-/// (ea669fa), which already meant no DOCUMENTED member could ever be added.
+/// <b>COMPOSITION LIVES IN <see cref="SessionWiring"/>, NOT HERE (DMXENG-128).</b> This class stood
+/// at 400 class lines against a capacity of 400 — margin 0, so the next documented member was a
+/// denial, and #229 had already paid for that by omitting a member doc rather than breaching. The
+/// eleven collaborators, and the order they depend on each other in, now sit in that type.
 /// </para>
 /// <para>
-/// <b>WHICH IS WHY <c>Recorded</c> CARRIES NO MEMBER DOC, and it is not an oversight to be tidied
-/// up.</b> A one-line XML summary on it costs 402 and reddens the size gate. This prose is here
-/// instead because it sits ABOVE the class span and costs the block nothing. <b>It forwards what
-/// this client recorded, for R-2.12's session-end offer</b> — the composition root cannot reach the
-/// recording itself, which is <c>internal</c>, as is the resources object holding it, so without the
-/// forward the offer could be built and never fed. <b>Every client records its own log</b> (R-2.12,
-/// SQ-116), so it is what THIS client received and never an assembled superset; that is what makes
-/// the log owner-scoped by construction and A-2.16 satisfiable with no filter anywhere. Projection
-/// into written form is <c>StreamLogProjection</c>'s, in <c>Core/Data</c>.
+/// <b>So a twelfth collaborator edits <see cref="SessionWiring"/> and leaves this span unchanged</b>
+/// — the same cut <see cref="InboundWiring"/> made at DMXENG-65, for the reason it states there:
+/// what matters is WHERE THE NEXT ONE LANDS, not the line count on the day it was measured.
 /// </para>
 /// </remarks>
 public sealed class SessionCoordinator
@@ -120,6 +113,17 @@ public sealed class SessionCoordinator
     /// nothing shipped sends these yet (DMXENG-11 / A-1.15).
     /// </remarks>
     public MemberContentReceipts MemberContent => _resources.MemberContent;
+    /// <summary>
+    /// What this client recorded, for R-2.12's session-end offer.
+    /// </summary>
+    /// <remarks>
+    /// The composition root cannot reach the recording itself, which is <c>internal</c>, as is the
+    /// resources object holding it — so without this forward the offer could be built and never fed.
+    /// <b>Every client records its own log</b> (R-2.12, SQ-116), so this is what THIS client
+    /// received and never an assembled superset; that is what makes the log owner-scoped by
+    /// construction and A-2.16 satisfiable with no filter anywhere. Projection into written form is
+    /// <c>StreamLogProjection</c>'s, in <c>Core/Data</c>.
+    /// </remarks>
     public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
 
     /// <summary>The DM's hosting lifecycle.</summary>
