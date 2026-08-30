@@ -38,7 +38,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void AnOversizeSayingIsNotRetained()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
 
         handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = new string('x', OverTheStreamsBound) });
 
@@ -53,7 +53,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void AMemberSuppliedRosterIsNotRetained()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
         var roster = Enumerable.Range(0, 50000)
             .Select(i => new RosterEntry($"P{i}", new string('n', 40), SessionRole.Player))
             .ToList();
@@ -67,7 +67,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void MemberSuppliedEntriesAreNotRetained()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
         var entries = Enumerable.Range(0, 50000)
             .Select(i => new StreamLine(i, 0L, StreamEventKind.Message, "PRBCD2", new string('e', 40)))
             .ToList();
@@ -82,7 +82,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void AnOrdinaryMessageIsStillRetainedInFullAndStillReachesTheStream()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
 
         handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = "hello table" });
 
@@ -95,7 +95,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void ADepartureIsStillRecorded()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
 
         handlers.MemberAuthored.OnContent!(peer, new SessionContent { Leaving = true });
 
@@ -107,7 +107,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void RetentionIsStillReplacedRatherThanAccumulated()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
 
         for (var i = 0; i < 25; i++)
         {
@@ -123,7 +123,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void EachRefusalIsRecordedAgainstItsOwnBoundary()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
         var content = resources.MemberContent;
 
         // THE PREMISE: nothing refused yet, so each row below is a CHANGE and not a starting value.
@@ -152,7 +152,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void TheRefusalRecordCannotBeGrownByWhoeverCausedIt()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
         var oversize = new string('x', OverTheStreamsBound);
 
         for (var i = 0; i < 500; i++)
@@ -165,20 +165,63 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
         Assert.Equal(500, resources.MemberContent.RefusedSayings);
     }
 
-    // D-22: "the refused content itself is never displayed, STORED, or echoed, in whole or in part."
-    // The count is a number; it carries no fragment of what arrived.
+    // >>> A-2.38: NOTHING REACHES A SESSION SURFACE -- ASSERTED TOGETHER WITH A-2.36's RECORD.
+    //
+    // The criterion is explicit that BOTH HALVES are needed: an unchanged stream is satisfied
+    // trivially by a build where the refusal never happened. So the record and the non-movement are
+    // asserted in ONE test -- the refusal demonstrably occurred AND nothing moved.
     [Fact]
-    public void TheRefusedContentIsNotStoredAnywhereInTheReceipt()
+    public void ARefusalMovesNoSessionSurfaceAndIsStillRecorded()
     {
-        var (handlers, resources, peer) = Wired();
-        var secret = new string('q', OverTheStreamsBound);
+        var (handlers, resources, peer, roster) = Wired();
+        var rosterBefore = roster.Count;
 
-        handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = secret });
+        handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = new string('x', OverTheStreamsBound) });
+
+        // HALF ONE -- the refusal demonstrably HAPPENED. Without this the rest is a check that
+        // cannot fail.
+        Assert.Equal(1, resources.MemberContent.RefusedSayings);
+
+        // HALF TWO -- and no session surface moved. No entry, no marker, no gap indicator.
+        Assert.Empty(resources.Recording.Entries);
+        Assert.Equal(rosterBefore, roster.Count);
+    }
+
+    // >>> A-2.40: THE REFUSED CONTENT IS ABSENT, IN WHOLE OR IN PART.
+    //
+    // A distinctive SENTINEL is planted inside the refused payload; "in part" is the half that bites,
+    // so a truncated prefix kept "for diagnostics" would fail this and a whole-payload equality check
+    // would not catch it.
+    [Fact]
+    public void TheRefusedContentIsAbsentInWholeOrInPart()
+    {
+        const string Sentinel = "Zq7-SENTINEL-4vX";
+        var (handlers, resources, peer, _) = Wired();
+        var refused = new string('q', OverTheStreamsBound) + Sentinel;
+
+        // THE POSITIVE CONTROL IS THE SENTINEL ITSELF: the search finds it in the payload that was
+        // refused, so its absence below is a fact about the STORE and not about the search.
+        Assert.Contains(Sentinel, refused, StringComparison.Ordinal);
+
+        handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = refused });
 
         var receipt = Assert.Single(resources.MemberContent.Latest);
         Assert.Null(receipt.Content.Saying);
         Assert.Null(receipt.Content.Roster);
         Assert.Null(receipt.Content.Entries);
+
+        // Nowhere in anything the receipt can render as text, not merely absent from Saying.
+        var everythingStored = string.Join(
+            "|",
+            receipt.Peer.Value,
+            receipt.Order.ToString(),
+            receipt.Content.Saying ?? string.Empty,
+            receipt.Content.Leaving?.ToString() ?? string.Empty,
+            receipt.Content.ClosingAtUtcTicks?.ToString() ?? string.Empty,
+            resources.MemberContent.RefusedSayings.ToString());
+
+        Assert.DoesNotContain(Sentinel, everythingStored, StringComparison.Ordinal);
+        Assert.DoesNotContain("qqq", everythingStored, StringComparison.Ordinal);
     }
 
     // D-22: the record dies with the session, like the receipts it sits beside. A count that survived
@@ -186,7 +229,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     [Fact]
     public void TheRefusalRecordResetsWithTheSession()
     {
-        var (handlers, resources, peer) = Wired();
+        var (handlers, resources, peer, _) = Wired();
         handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = new string('x', OverTheStreamsBound) });
         Assert.Equal(1, resources.MemberContent.RefusedSayings);
 
@@ -200,7 +243,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
 
     // Drives the PRODUCTION handler rather than constructing a receipts object: the defect was the
     // ORDER of two calls in InboundWiring, and a test that called Record directly could not see it.
-    private static (InboundHandlers Handlers, SessionResources Resources, PeerCode Peer) Wired()
+    private static (InboundHandlers Handlers, SessionResources Resources, PeerCode Peer, SessionAudience Roster) Wired()
     {
         var host = new HostSession();
         host.Start(Code);
@@ -233,7 +276,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
 
         var wiring = new InboundWiring(admissions, resources, static _ => RelinkClaim.None, broadcast);
 
-        return (wiring.For(Now, sessionKey: null, onHostContent: _ => { }), resources, peer);
+        return (wiring.For(Now, sessionKey: null, onHostContent: _ => { }), resources, peer, admissions.Audience);
     }
 
     private sealed class SilentTransport : ISessionTransport
