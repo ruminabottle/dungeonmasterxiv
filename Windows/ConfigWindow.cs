@@ -179,7 +179,7 @@ public sealed class ConfigWindow : Window
         // 32-character Devanagari name is 192 bytes and would have been truncated at the boundary
         // this box exists to let the user cross deliberately.
         var campaign = _currentCampaign();
-        var typed = CampaignDisplayName.ToEdit(campaign, characterName);
+        var typed = CampaignDisplayName.ToEdit(campaign, settings.DisplayNameAlias, characterName);
         if (ImGui.InputText("Name others see", ref typed, DisplayName.MaxUtf8Bytes))
         {
             // The campaign is what persists the name now, so the campaign is what gets saved.
