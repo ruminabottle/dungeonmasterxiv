@@ -113,6 +113,8 @@ public sealed class SessionLogOffer
     /// <exception cref="InvalidOperationException">The choice has already resolved.</exception>
     public RetainedLog Keep()
     {
+        EnsureUnanswered();
+
         var kept = Held;
         Outcome = SessionLogOfferOutcome.Kept;
 
@@ -123,6 +125,8 @@ public sealed class SessionLogOffer
     /// <exception cref="InvalidOperationException">The choice has already resolved.</exception>
     public void Decline()
     {
+        EnsureUnanswered();
+
         _ = Held;
         Resolve();
     }
@@ -145,6 +149,24 @@ public sealed class SessionLogOffer
         Resolve();
 
         return true;
+    }
+
+    /// <summary>Refuses a second answer, whichever way the first one went.</summary>
+    /// <remarks>
+    /// <b>THE LOG IS THE WRONG THING TO GUARD ON, BECAUSE A KEEP DELIBERATELY LEAVES IT HELD</b> —
+    /// that is what makes <see cref="LineCount"/> readable after keeping, which callers rely on.
+    /// So <see cref="Held"/> still passed after a keep, and <see cref="Decline"/> would destroy the
+    /// kept log and rewrite the outcome to say the player had declined (BUG-182). <b>Whether the
+    /// choice has been ANSWERED and whether the log is still HERE are two different questions</b>,
+    /// and only the first one decides this.
+    /// </remarks>
+    private void EnsureUnanswered()
+    {
+        if (!IsOpen)
+        {
+            throw new InvalidOperationException(
+                "The offer has already been answered. A keep-or-lose choice is made once.");
+        }
     }
 
     private RetainedLog Held =>
