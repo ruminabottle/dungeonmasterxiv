@@ -24,7 +24,7 @@ namespace DungeonMasterXIV.Tests;
 /// <b>A-2.16 is tested by ABSENCE and it is the only way it can be.</b> The Spec Owner ruled the
 /// structural reading: a filtering exporter would have to be handed a view wider than its owner's
 /// in order to narrow it, which builds the shape D-13 forbids. So there is nothing to assert about
-/// filtering — the guarantee is that <see cref="LogExport.Write"/> takes one log and that no
+/// filtering — the guarantee is that <see cref="RetainedLogFormat.Write"/> takes one log and that no
 /// overload, collection parameter or merge exists. That is checked here by reflection, because a
 /// future overload would otherwise pass every behavioural test in this file.
 /// </para>
@@ -107,9 +107,9 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     [Fact]
     public void ExportTakesExactlyOneLogAndNoOverloadTakesMore()
     {
-        var writes = typeof(LogExport)
+        var writes = typeof(RetainedLogFormat)
             .GetMethods()
-            .Where(method => method.Name == nameof(LogExport.Write))
+            .Where(method => method.Name == nameof(RetainedLogFormat.Write))
             .ToList();
 
         // A merge would arrive as an overload or a collection parameter. Asserting on the SHAPE is
@@ -127,7 +127,7 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
         var theirs = new RetainedLog(
             Other, 1, [new LoggedEntry(new LoggedStamp(1, 1), "roll", "JKMNPR", "theirs")]);
 
-        var exported = LogExport.Write(mine);
+        var exported = RetainedLogFormat.Write(mine);
 
         Assert.Contains("mine", exported, StringComparison.Ordinal);
         Assert.DoesNotContain("theirs", exported, StringComparison.Ordinal);
@@ -158,7 +158,7 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
         var log = new RetainedLog(
             Campaign, 1, [new LoggedEntry(new LoggedStamp(1, 1), "message", "BCDFGH", "hello")]);
 
-        var exported = LogExport.Write(log);
+        var exported = RetainedLogFormat.Write(log);
 
         Assert.Contains("BCDFGH", exported, StringComparison.Ordinal);
 
