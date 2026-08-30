@@ -78,13 +78,16 @@ public class WhenEveryDieIsDroppedTheResultSaysSoTests
         Assert.Null(outcome.Notice);
     }
 
-    // ---- THE ZEROES THAT ARE NOT THIS BUG, and the direction nothing else here can measure.
-    //      Both total ZERO with EVERY die KEPT. The struck clause -- "a build that returns a total
-    //      of zero without stating that nothing survived fails" -- fires on both, and until these
-    //      two existed the suite could not tell a survival test from a total test in that
-    //      direction: every other silent case above has a NON-ZERO total, and the one zero-total
-    //      case has no dice at all, so it slips under any condition guarded by dice.Count > 0.
-    //      Measured, not argued: reinstating the struck clause as a widening left this suite green.
+    // ---- THE ZEROES THAT MUST STAY SILENT, and the direction nothing else here can measure.
+    //      Both total ZERO with EVERY die KEPT, so A-2.3b's rule sentence does not engage: nothing
+    //      was discarded, and there is nothing to say. The clause SQ-96 STRUCK -- "a build that
+    //      returns a total of zero without stating that nothing survived fails" -- would announce
+    //      that nothing survived on both of them, and that is WHY it was struck. These two tests
+    //      are what let the suite tell the binding rule from the struck one.
+    //      Until they existed it could not: every other silent case above has a NON-ZERO total, and
+    //      the one zero-total case has no dice at all, so it slips under any condition guarded by
+    //      dice.Count > 0. Measured, not argued -- reinstating the struck clause as a widening left
+    //      the suite green.
 
     [Fact]
     public void CountingNoSuccessesIsAZeroWithEveryDieKept()
