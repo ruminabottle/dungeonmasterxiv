@@ -59,13 +59,6 @@ public sealed class Plugin : IDalamudPlugin
         _campaignStore = new CampaignStore(
             new CampaignFileArchive(pluginInterface.ConfigDirectory),
             new CampaignStoreLog(log));
-
-        // R-2.12: retained logs live BESIDE campaign data rather than inside it. A campaign
-        // persists a roster, which is metadata; a log is what people said and did, and DMXENG-103
-        // rules that moving one into the other is a PRODUCT decision rather than an implementation
-        // one. A sibling directory keeps that true on disk as well as in the types.
-        var retainedLogs = new RetainedLogStore(
-            new RetainedLogFileArchive(Path.Combine(pluginInterface.ConfigDirectory.FullName, "logs")));
         _windowSystem = new WindowSystem("DungeonMasterXIV");
         _mainWindow = new MainWindow(_configurationStore);
 
@@ -126,13 +119,7 @@ public sealed class Plugin : IDalamudPlugin
             _hostingCampaign,
             () => _configurationStore.Configuration.Settings.Relink);
         _mainWindow.OpenSession = _sessionWindow.Open;
-        // THE DELETE CONTROL NOW REACHES THE LOG. R-1.7a's shipped sentence -- "nothing to delete
-        // anywhere but here" -- was true until retention put a second thing on disk. The control is
-        // unchanged; CampaignDeletion widens what it removes, so the sentence stays true without
-        // being edited (changing that copy would require R-1.7a to move first, and that is the
-        // Spec Owner's, not mine).
-        _campaignListWindow = new CampaignListWindow(
-            _campaignStore, new CampaignDeletion(_campaignStore, retainedLogs));
+        _campaignListWindow = CampaignListWindowFor(pluginInterface.ConfigDirectory);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
 
         try
@@ -189,6 +176,18 @@ public sealed class Plugin : IDalamudPlugin
     /// </para>
     /// </remarks>
     /// <param name="characterName">What the game says this player is called.</param>
+    /// <summary>
+    /// The campaign list window and the retained-log side its delete control must reach (R-2.12).
+    /// Logs sit BESIDE campaign data — <see cref="CampaignDeletion"/> says why that is a ruling and
+    /// not a layout choice. Out of the constructor because that is a grandfathered size breach.
+    /// </summary>
+    private CampaignListWindow CampaignListWindowFor(DirectoryInfo configDirectory)
+    {
+        var retainedLogs = new RetainedLogStore(
+            new RetainedLogFileArchive(Path.Combine(configDirectory.FullName, "logs")));
+        return new CampaignListWindow(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs));
+    }
+
     private ConfigWindow SettingsWindowFor(Func<DisplayName> characterName) =>
         new(_configurationStore, characterName, () => _hostingCampaign.Current, _campaignStore.Save);
 

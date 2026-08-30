@@ -44,12 +44,19 @@ public sealed class CampaignDeletion(CampaignStore campaigns, RetainedLogStore l
     /// Deletes the campaign and its retained log, reporting whether <b>anything</b> was removed.
     /// </summary>
     /// <remarks>
-    /// <b>BOTH SIDES ARE ALWAYS ATTEMPTED, AND THE ORDER OF THE OPERANDS IS NOT AN ACCIDENT.</b>
-    /// Written as <c>a | b</c> rather than <c>a || b</c>: short-circuiting would skip the log
-    /// whenever the campaign was already gone, which is precisely the case where an orphaned log
-    /// outlives the thing it belonged to. <b>A log with no campaign is the one a user can no longer
-    /// reach through this control at all</b>, so it is the case that most needs the second delete to
-    /// run.
+    /// <b>BOTH SIDES ARE ALWAYS ATTEMPTED.</b> Written as <c>a | b</c> rather than <c>a || b</c>:
+    /// <c>||</c> stops as soon as the LEFT side is true, so it would skip the log <b>every time the
+    /// campaign was successfully deleted</b> — the ordinary path, and the one this type exists for.
+    /// The log would survive its campaign on exactly the deletions a user actually performs.
+    /// <para>
+    /// <b>The reason above is corrected, and the correction is the point.</b> It first read
+    /// <i>"short-circuiting would skip the log whenever the campaign was ALREADY GONE"</i>, which is
+    /// backwards — an already-gone campaign returns false, so <c>||</c> would evaluate the log side
+    /// and that case would keep working. <b>The code was right and the stated cause was wrong</b>,
+    /// which no test catches on its own. What caught it was mutating <c>|</c> to <c>||</c> and
+    /// noticing that the orphaned-log test <i>did not</i> redden the way the comment predicted:
+    /// the reds landed on the ordinary-deletion cases instead.
+    /// </para>
     /// </remarks>
     /// <param name="campaignId">The campaign being deleted.</param>
     /// <returns>True when a campaign or a log was removed.</returns>

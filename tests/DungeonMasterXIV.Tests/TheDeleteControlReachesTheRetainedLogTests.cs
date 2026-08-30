@@ -75,9 +75,14 @@ public class TheDeleteControlReachesTheRetainedLogTests
         Assert.True(logs.Has(bystander.CampaignId), "An unrelated campaign's log was destroyed.");
     }
 
-    // THE ORPHAN CASE, AND IT IS WHY CampaignDeletion USES | RATHER THAN ||. Short-circuiting would
-    // skip the log whenever the campaign was already gone -- which is exactly the log a user can no
-    // longer reach through this control, so it is the one that most needs the second delete to run.
+    // THE ORPHAN CASE: a retained log whose campaign no longer exists must still be reachable, or it
+    // outlives the only control that could remove it.
+    //
+    // AND IT IS NOT THE GUARD ON | VERSUS ||, THOUGH AN EARLIER COMMENT HERE CLAIMED IT WAS.
+    // Mutating | to || leaves this test GREEN: a missing campaign returns false, so || evaluates the
+    // log side anyway. The operator is guarded by the ORDINARY deletion cases above, where the
+    // campaign delete returns true and || would skip the log. Recorded because the mutation run is
+    // what disproved the comment -- the code was right and its stated reason was wrong.
     [Fact]
     public void ALogWhoseCampaignIsAlreadyGoneIsStillDeleted()
     {
