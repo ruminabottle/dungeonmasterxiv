@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -58,6 +59,13 @@ public sealed class Plugin : IDalamudPlugin
         _campaignStore = new CampaignStore(
             new CampaignFileArchive(pluginInterface.ConfigDirectory),
             new CampaignStoreLog(log));
+
+        // R-2.12: retained logs live BESIDE campaign data rather than inside it. A campaign
+        // persists a roster, which is metadata; a log is what people said and did, and DMXENG-103
+        // rules that moving one into the other is a PRODUCT decision rather than an implementation
+        // one. A sibling directory keeps that true on disk as well as in the types.
+        var retainedLogs = new RetainedLogStore(
+            new RetainedLogFileArchive(Path.Combine(pluginInterface.ConfigDirectory.FullName, "logs")));
         _windowSystem = new WindowSystem("DungeonMasterXIV");
         _mainWindow = new MainWindow(_configurationStore);
 
@@ -118,7 +126,13 @@ public sealed class Plugin : IDalamudPlugin
             _hostingCampaign,
             () => _configurationStore.Configuration.Settings.Relink);
         _mainWindow.OpenSession = _sessionWindow.Open;
-        _campaignListWindow = new CampaignListWindow(_campaignStore);
+        // THE DELETE CONTROL NOW REACHES THE LOG. R-1.7a's shipped sentence -- "nothing to delete
+        // anywhere but here" -- was true until retention put a second thing on disk. The control is
+        // unchanged; CampaignDeletion widens what it removes, so the sentence stays true without
+        // being edited (changing that copy would require R-1.7a to move first, and that is the
+        // Spec Owner's, not mine).
+        _campaignListWindow = new CampaignListWindow(
+            _campaignStore, new CampaignDeletion(_campaignStore, retainedLogs));
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
 
         try
