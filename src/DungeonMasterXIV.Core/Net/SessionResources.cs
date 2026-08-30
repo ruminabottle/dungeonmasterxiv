@@ -87,6 +87,18 @@ internal sealed class SessionResources
     public MemberContentReceipts MemberContent { get; }
 
     /// <summary>
+    /// This client's own log of what it received (R-2.12, SQ-116, DMXENG-116).
+    /// </summary>
+    /// <remarks>
+    /// <b>Constructed HERE rather than passed in, and the reason is a measurement.</b> An extra
+    /// constructor argument would add a line to <c>SessionCoordinator</c>, whose class sits at 399
+    /// lines against a BLOCK of 400 — <b>margin 1, and a block is a refusal rather than a
+    /// conversation.</b> A property initializer costs that class nothing, and this type needs
+    /// nothing from the coordinator to build one.
+    /// </remarks>
+    public SessionRecording Recording { get; } = new();
+
+    /// <summary>
     /// Lets go of everything the session was holding. Called when hosting ends, and nowhere else.
     /// </summary>
     /// <remarks>
@@ -109,5 +121,9 @@ internal sealed class SessionResources
         MemberKeys.Forget();
         MemberContent.Clear();
         _grace().Reset();
+
+        // R-2.12: a log dies with the session. Appended rather than inserted, so the preserved
+        // order this method's remarks are about is still the order it arrived in.
+        Recording.Release();
     }
 }

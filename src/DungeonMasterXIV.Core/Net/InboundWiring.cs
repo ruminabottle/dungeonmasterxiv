@@ -92,6 +92,13 @@ internal sealed class InboundWiring(
 
                     if (content.Leaving is true)
                     {
+                        // R-2.12 / SQ-116: THIS CLIENT WRITES DOWN WHAT IT RECEIVED, and a member
+                        // saying it is leaving is one of the few things that actually arrives today.
+                        // Recorded BEFORE the departure is acted on, for A-1.16a's reason one row up:
+                        // acting first and recording second leaves a window where the member is gone
+                        // and nothing says why.
+                        resources.Recording.RecordAsHost(StreamEventKind.Left, peer, string.Empty, now);
+
                         admissions.Departed(peer);
                     }
                 }),
