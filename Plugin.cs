@@ -117,14 +117,7 @@ public sealed class Plugin : IDalamudPlugin
             _sessionCoordinator,
             NameWeSendAs(characterName),
             _hostingCampaign,
-            () => _configurationStore.Configuration.Settings.Relink,
-            new KeepOrLose(
-                KeepOrLoseTheSessionLog,
-                // A separate directory from "logs": that one holds the DM's RETAINED logs, which are
-                // keyed by campaign and may carry a peer code (A-1.11a-note). These may not, and
-                // filing them apart keeps the two obligations from meeting in one folder.
-                new SessionExportFileDestination(
-                    Path.Combine(pluginInterface.ConfigDirectory.FullName, "exports"))));
+            () => _configurationStore.Configuration.Settings.Relink, SessionEndChoiceFor(pluginInterface.ConfigDirectory));
         _mainWindow.OpenSession = _sessionWindow.Open;
         _campaignListWindow = CampaignListWindowFor(pluginInterface.ConfigDirectory);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
@@ -197,6 +190,24 @@ public sealed class Plugin : IDalamudPlugin
             new RetainedLogFileArchive(Path.Combine(configDirectory.FullName, "logs")));
         return new CampaignListWindow(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs));
     }
+
+    /// <summary>
+    /// The session-end choice: how to open the offer, and where an accepted export goes (A-2.23a).
+    /// </summary>
+    /// <remarks>
+    /// <b>A method rather than five lines in the constructor, and the size gate is why</b> — that
+    /// constructor is a grandfathered breach at margin -28, and a grandfathered breach may stay
+    /// where it is but may not GROW. Inlining this worsened it to -35 and the gate refused the
+    /// tree, which is the gate working.
+    /// </remarks>
+    /// <param name="configDirectory">Where Dalamud keeps this plugin's data; exports go beside it.</param>
+    private KeepOrLose SessionEndChoiceFor(DirectoryInfo configDirectory) =>
+        new(
+            KeepOrLoseTheSessionLog,
+            // A separate directory from "logs": that one holds the DM's RETAINED logs, keyed by
+            // campaign and permitted to carry a peer code (A-1.11a-note). These may not, and filing
+            // them apart keeps the two obligations from meeting in one folder.
+            new SessionExportFileDestination(Path.Combine(configDirectory.FullName, "exports")));
 
     /// <summary>
     /// Opens R-2.12's keep-or-lose choice over what THIS client recorded (A-2.23).
