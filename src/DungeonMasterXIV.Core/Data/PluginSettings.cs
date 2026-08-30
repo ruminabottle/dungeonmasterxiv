@@ -108,10 +108,36 @@ public sealed class PluginSettings
     /// persists settings with Newtonsoft, which matches a JSON member to a property by NAME. A
     /// v0.1.5 file carries <c>DisplayNameAlias</c>, so a property called anything else recovers
     /// nothing, and renaming the key needs a serializer attribute this project deliberately cannot
-    /// reach — <c>DungeonMasterXIV.Core</c> takes no serializer dependency, and adding one so that
-    /// a field could be spelt better would risk an assembly mismatch that fails in the game and
-    /// that nothing in this repository can detect. <b>The name is historical. What it MEANS is
-    /// this remark.</b>
+    /// reach — <c>DungeonMasterXIV.Core</c> takes no serializer dependency. <b>The name is
+    /// historical. What it MEANS is this remark.</b>
+    /// </para>
+    /// <para>
+    /// <b>WHY THE DEPENDENCY IS NOT ADDED. CORRECTED 2026-08-30, AND THE OLD REASON IS STRUCK
+    /// RATHER THAN DELETED BECAUSE IT WAS CITED AS AUTHORITY.</b> This used to read: <i>"adding one
+    /// so that a field could be spelt better would risk AN ASSEMBLY MISMATCH that fails in the game
+    /// and that nothing in this repository can detect."</i> <b>That was false in both halves</b>,
+    /// and DMXENG-117 quoted it to tell a ticket-taker an option was unavailable on evidence.
+    /// Measured three times independently — feature-engineer-3, feature-engineer-1, the Deployment
+    /// Manager — with <c>AssemblyName.GetAssemblyName</c>, the API that governs binding: Dalamud's
+    /// shipped Newtonsoft and the 13.0.3 package are <b>AssemblyVersion 13.0.0.0, PublicKeyToken
+    /// 30ad4fe6b2a6aeed, identical</b>. Only <c>FileVersion</c> differs (13.0.4.30916 against
+    /// 13.0.3.27908), <b>and FileVersion does not govern binding</b> — the trap that produced two
+    /// confident wrong answers before the right one.
+    /// </para>
+    /// <para>
+    /// <b>THE REAL MECHANISM, MEASURED BY feature-engineer-3 RATHER THAN INFERRED.</b> Adding a
+    /// <c>PackageReference</c> to <c>Core</c> makes the build deposit a <b>second physical
+    /// <c>Newtonsoft.Json.dll</c></b> into the plugin output, which unmodified <c>main</c> does not:
+    /// <c>DungeonMasterXIV.csproj</c> sets <c>CopyLocalLockFileAssemblies=true</c>, and the
+    /// <c>Private=false</c> that keeps Dalamud's own copy out <b>does not extend to transitive
+    /// package references</b>.
+    /// </para>
+    /// <para>
+    /// <b>WHAT WAS MEASURED AND WHAT WAS NOT, KEPT APART.</b> That the second file is deposited
+    /// <b>was measured here, by building</b>. <b>Which copy Dalamud's loader then prefers was NOT
+    /// measured, and cannot be here — it needs FFXIV.</b> That question is recorded with its control
+    /// in <c>.claude/team/IN-GAME-BACKLOG.md</c>, so it has a home rather than sitting in this
+    /// remark as an indefinite hold.
     /// </para>
     /// <para>
     /// <b>A READER WHO GREPS THIS AND CONCLUDES THE CAMPAIGN-SCOPING WAS REVERTED IS READING IT
