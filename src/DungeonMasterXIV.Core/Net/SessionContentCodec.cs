@@ -129,6 +129,7 @@ public static class SessionContentCodec
             ClosingAtUtcTicks = content.ClosingAtUtcTicks,
             Leaving = content.Leaving,
             Entries = lines,
+            Saying = content.Saying,
         };
     }
 

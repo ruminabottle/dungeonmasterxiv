@@ -78,10 +78,37 @@ internal sealed class SessionRecording
     /// <param name="text">What was said, empty for events that say nothing.</param>
     /// <param name="at">The instant the frame carrying it was advanced at.</param>
     /// <returns>Whether the log changed — false for a duplicate or an unminted stamp.</returns>
-    public bool RecordAsHost(StreamEventKind kind, PeerCode peer, string text, DateTimeOffset at)
+    public bool RecordAsHost(StreamEventKind kind, PeerCode peer, string text, DateTimeOffset at) =>
+        StampAsHost(kind, peer, text, at) is not null;
+
+    /// <summary>
+    /// Mints a stamp, records the entry, and hands it back so it can be sent on.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE REBROADCAST NEEDS THE STAMPED ENTRY, WHICH <see cref="RecordAsHost"/> CANNOT RETURN.</b>
+    /// A host that receives a member's message stamps it and sends it to everybody (R-2.19, A-2.34),
+    /// so the caller needs the sequence and instant that were just minted. <b>Reading them back out
+    /// of <see cref="Entries"/> would work today and is the coupling worth refusing</b>: it makes the
+    /// last element of a shared list mean "the one I just added", which stops being true the moment
+    /// anything else records between the two calls.
+    /// </para>
+    /// <para>
+    /// <b><see cref="RecordAsHost"/> now delegates here rather than repeating the minting.</b> Its
+    /// bool contract is unchanged and it stays the name for callers that only record — a membership
+    /// change is not sent on, so making them all handle an entry would be noise.
+    /// </para>
+    /// </remarks>
+    /// <param name="kind">What happened.</param>
+    /// <param name="peer">Whom it happened to, established by the key the payload opened under.</param>
+    /// <param name="text">What was said, empty for events that say nothing.</param>
+    /// <param name="at">The instant the frame carrying it was advanced at.</param>
+    /// <returns>The stamped entry, or null when the log did not change.</returns>
+    public StreamEntry? StampAsHost(StreamEventKind kind, PeerCode peer, string text, DateTimeOffset at)
     {
         _at = at;
-        return Record(new StreamEntry(_sequencer.Next(), kind, peer, text));
+        var entry = new StreamEntry(_sequencer.Next(), kind, peer, text);
+        return Record(entry) ? entry : null;
     }
 
     /// <summary>

@@ -156,6 +156,41 @@ internal sealed class RosterBroadcast
     }
 
     /// <summary>
+    /// Sends one stamped entry to every participant, so a member's message reaches the session
+    /// (R-2.19, A-2.34, R-2.12).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE REBROADCAST IS WHAT MAKES A MEMBER'S MESSAGE ARRIVE ANYWHERE.</b> A member seals to
+    /// the host and to nobody else — one shared key, D-11's pairwise model — so without this the
+    /// message reaches exactly one machine. <b>A-2.34 asserts arrival at a DIFFERENT member for
+    /// precisely that reason</b>: a build that stops here passes every other message requirement in
+    /// the document.
+    /// </para>
+    /// <para>
+    /// <b>IT GOES TO EVERY RECIPIENT INCLUDING THE SENDER, and that is not a redundant send.</b>
+    /// <see cref="SessionContent.Entries"/> records the rule: every client writes down what it
+    /// RECEIVED, the originator included, so the sender's own log is written by this message
+    /// arriving back. Skipping the sender would leave one client's log missing its own lines.
+    /// </para>
+    /// <para>
+    /// <b>One entry per document rather than a batch.</b> The host stamps as each message arrives,
+    /// so a document carrying several would either delay the first or re-send the earlier ones; both
+    /// are ordering hazards against R-2.4, and neither buys anything at a table's message rate.
+    /// </para>
+    /// </remarks>
+    /// <param name="line">The entry, already stamped by the host.</param>
+    public void PublishEntry(StreamLine line)
+    {
+        if (_host.Keys() is not { } keys || _host.Code() is not { } code || !_link.IsReadyToSend)
+        {
+            return;
+        }
+
+        SealToEveryRecipient(new SessionContent { Entries = new[] { line } }, keys, code);
+    }
+
+    /// <summary>
     /// Seals <paramref name="content"/> once per participant and sends it (D-11).
     /// </summary>
     /// <remarks>
