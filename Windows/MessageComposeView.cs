@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using Dalamud.Bindings.ImGui;
 using DungeonMasterXIV.Chat;
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Rolls;
 
 namespace DungeonMasterXIV.Windows;
 
@@ -48,6 +50,21 @@ namespace DungeonMasterXIV.Windows;
 internal sealed class MessageComposeView
 {
     private readonly SessionCoordinator _coordinator;
+
+    /// <summary>
+    /// Evaluates a typed roll (R-2.1, DMXENG-119).
+    /// </summary>
+    /// <remarks>
+    /// <b>Built here rather than threaded from the composition root, and the reason is measured.</b>
+    /// <c>SessionWindow</c>'s constructor takes FIVE parameters against a block of six — margin 1 —
+    /// so threading an evaluator through it would put a window constructor at parameter margin 0 to
+    /// deliver a dice feature, which is the condition DMXENG-128 existed to remove elsewhere.
+    /// <c>SystemDieRoller</c> is the production roller and takes no configuration, so there is
+    /// nothing here for a composition root to decide. <b>A-2.1's independent-check seam is
+    /// <c>IDieRoller</c> and it is untouched</b> — the evaluator still takes one, and its own tests
+    /// still supply their own.
+    /// </remarks>
+    private readonly RollEvaluator _rolls = new(new SystemDieRoller());
 
     /// <summary>What the person has typed and not yet sent.</summary>
     private string _entry = string.Empty;
@@ -96,6 +113,14 @@ internal sealed class MessageComposeView
     /// </remarks>
     internal void Submit()
     {
+        // A-2.33a: `/roll <expression>` invokes a roll. Everything else is a message, INCLUDING
+        // `/r` -- which RollCommand refuses to claim because `/r` is REPLY in FFXIV.
+        if (RollCommand.TryRead(_entry, out var expression))
+        {
+            Roll(expression);
+            return;
+        }
+
         var draft = _coordinator.Membership.Say(_entry);
 
         // The fault's own reason, never a sentence invented here: MessageFault distinguishes empty
@@ -104,6 +129,32 @@ internal sealed class MessageComposeView
         _refusal = draft.IsAccepted ? null : draft.Reason;
 
         if (draft.IsAccepted)
+        {
+            _entry = string.Empty;
+        }
+    }
+
+    /// <summary>Evaluates a roll and shows what it produced.</summary>
+    /// <remarks>
+    /// <b><c>Notice</c> IS SHOWN AND IT IS NOT DECORATION.</b> <c>RollOutcome</c> computes it
+    /// centrally so no call site can drop every die and forget to say so (A-2.3b) — <b>a display
+    /// that showed the total alone would put back exactly the defect that centralising it
+    /// removed</b>, and the number would read wrongly rather than look wrong.
+    /// <para>
+    /// <b>The wording is READ, never composed here.</b> A-2.3b and A-2.3c constrain how a result
+    /// reads and DMXENG-91 shipped that wording; inventing a sentence at this call site would
+    /// re-derive a criterion this ticket is fenced away from.
+    /// </para>
+    /// </remarks>
+    private void Roll(string expression)
+    {
+        var outcome = _rolls.Evaluate(expression);
+
+        _refusal = outcome.Evaluated
+            ? outcome.Notice is { } notice ? $"{outcome.Total} — {notice}" : outcome.Total.ToString(CultureInfo.InvariantCulture)
+            : outcome.Message;
+
+        if (outcome.Evaluated)
         {
             _entry = string.Empty;
         }
