@@ -165,7 +165,17 @@ internal static class SizeGate
 
         var found = new List<Breach>();
         var unmeasured = new List<string>();
+        // BUG-183: Split('\n') yields a trailing EMPTY element for a newline-terminated file, and
+        // that element is NOT a line. RULED in Program.cs:67 -- "a file is every line in it, first to
+        // last" -- with the operational half in engineering-standards.md: a trailing newline
+        // TERMINATES the last line, it does not BEGIN a new one. Dropping it makes this count what
+        // File.ReadAllLines counts, which is the Sizes CLI's reader and what `wc -l` agrees with.
+        // Unconditional rather than guarded on Length > 1, so an empty source reads 0 lines and not 1.
         var lines = source.Split('\n');
+        if (lines.Length > 0 && lines[^1].Length == 0)
+        {
+            lines = lines[..^1];
+        }
 
         if (lines.Length > capacities.File)
         {
