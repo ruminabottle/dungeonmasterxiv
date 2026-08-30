@@ -4,6 +4,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using DungeonMasterXIV.Campaigns;
+using DungeonMasterXIV.Data;
 
 namespace DungeonMasterXIV.Windows;
 
@@ -27,14 +28,25 @@ public sealed class CampaignListWindow : Window
     private int _rowsBuiltAtRevision = -1;
 
     /// <param name="store">The campaigns this window lists and deletes.</param>
-    public CampaignListWindow(CampaignStore store)
+    /// <param name="deletion">
+    /// Deletes a campaign AND its retained log. <b>The control is unchanged; what it reaches is
+    /// wider</b> — retention put a second thing on disk, and R-1.7a's shipped sentence
+    /// (<i>"nothing to delete anywhere but here"</i>) is only true if this control removes both.
+    /// </param>
+    public CampaignListWindow(CampaignStore store, CampaignDeletion deletion)
         : base("Dungeon Master XIV campaigns###dmx-campaigns")
     {
         _store = store;
 
         // Built once. Draw runs every frame over every row, so the delete callbacks must not be
         // resolved per row per frame.
-        _prompt = new DeletionPrompt(id => _store.Delete(id), name => _store.DeleteUnreadable(name));
+        //
+        // THE CAMPAIGN ARM GOES THROUGH CampaignDeletion RATHER THAN THE STORE. That is the whole
+        // wiring: the rule "a campaign's log dies with it" lives in Core where it can be tested,
+        // and this line is the only thing that had to change for the existing control to reach it.
+        // The unreadable arm is unchanged -- a file that will not parse has no campaign id, so no
+        // log can be keyed to it.
+        _prompt = new DeletionPrompt(id => deletion.Delete(id), name => _store.DeleteUnreadable(name));
 
         SizeConstraints = new WindowSizeConstraints
         {
