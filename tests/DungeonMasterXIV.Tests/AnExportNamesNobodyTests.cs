@@ -185,6 +185,64 @@ public class AnExportNamesNobodyTests
         Assert.DoesNotContain("these labels mean nothing outside this file", retained, StringComparison.Ordinal);
     }
 
+    // ---- A-2.23a machine half: accepting PRODUCES an export.
+
+    private sealed class FakeDestination : ISessionExportDestination
+    {
+        public List<string> Written { get; } = new();
+
+        public string Write(string contents)
+        {
+            Written.Add(contents);
+            return $"fake://{Written.Count}";
+        }
+    }
+
+    [Fact]
+    public void AcceptingTheOfferProducesAnExport()
+    {
+        // "A build in which a player accepts and no export is produced FAILS." The click is in an
+        // ImGui view, so this drives the seam the view calls rather than the view.
+        var offer = new SessionLogOffer(LogWithTwoParticipants(), long.MaxValue);
+        var destination = new FakeDestination();
+
+        SessionExport.Produce(offer, destination);
+
+        var only = Assert.Single(destination.Written);
+        Assert.StartsWith(SessionExportFormat.Header, only, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WhatIsProducedIsTheEXPORTAndNotTheRetainedLog()
+    {
+        // The half that silently writing the WRONG bytes would pass: both writers produce
+        // right-looking text from one log, and only one of them may leave the machine (A-1.11c).
+        var offer = new SessionLogOffer(LogWithTwoParticipants(), long.MaxValue);
+        var destination = new FakeDestination();
+
+        SessionExport.Produce(offer, destination);
+
+        var only = Assert.Single(destination.Written);
+        Assert.DoesNotContain(PeerA, only, StringComparison.Ordinal);
+        Assert.DoesNotContain(PeerB, only, StringComparison.Ordinal);
+        Assert.DoesNotContain(RetainedLogFormat.Header, only, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AcceptingResolvesTheChoice()
+    {
+        // Producing must not leave the offer open: a second accept would write a second file for a
+        // choice made once.
+        var offer = new SessionLogOffer(LogWithTwoParticipants(), long.MaxValue);
+        var destination = new FakeDestination();
+
+        SessionExport.Produce(offer, destination);
+
+        Assert.False(offer.IsOpen);
+        Assert.Throws<InvalidOperationException>(() => SessionExport.Produce(offer, destination));
+        Assert.Single(destination.Written);
+    }
+
     private static string LabelOnLineFor(string exported, string text)
     {
         var line = exported

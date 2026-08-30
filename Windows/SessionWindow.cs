@@ -61,7 +61,7 @@ public sealed class SessionWindow : Window
         Func<DisplayName> displayName,
         HostingCampaign hosting,
         Func<RelinkMemory> relink,
-        Func<SessionLogOffer> keepOrLose)
+        KeepOrLose keepOrLose)
         : base("Dungeon Master XIV session###dmx-session")
     {
         _coordinator = coordinator;

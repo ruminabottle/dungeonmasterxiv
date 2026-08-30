@@ -61,7 +61,7 @@ internal sealed class JoinFlowView
         SessionCoordinator coordinator,
         Func<DisplayName> displayName,
         Func<RelinkMemory> relink,
-        Func<SessionLogOffer> keepOrLose)
+        KeepOrLose keepOrLose)
     {
         _coordinator = coordinator;
         _requestForm = new JoinRequestForm(coordinator, displayName, relink);

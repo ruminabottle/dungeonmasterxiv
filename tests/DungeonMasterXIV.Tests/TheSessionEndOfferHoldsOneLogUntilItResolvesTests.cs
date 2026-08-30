@@ -240,14 +240,12 @@ public class TheSessionEndOfferHoldsOneLogUntilItResolvesTests
     }
 
     // ---- A-2.23a: an accept that reads as having written something.
-
-    [Fact]
-    public void TheOfferCarriesTheSentenceSayingNothingCanBeWrittenYet()
-    {
-        // A-2.23a: accepting while no export can be produced FAILS unless the offer says so AT the
-        // offer. The sentence lives on the type so the view cannot render the choice without it.
-        Assert.False(string.IsNullOrWhiteSpace(SessionLogOffer.NothingCanBeWrittenYet));
-    }
+    //
+    // The sentence-test that stood beside this one is GONE with the constant it pinned (DMXENG-123
+    // shipped the writer). It asserted only that SOME string existed, under a name claiming the
+    // sentence was pinned -- so it would have passed a build that set the constant to "x". No
+    // replacement is owed: writing one to make the removal look thorough would reproduce exactly
+    // the defect being removed.
 
     [Fact]
     public void TheOfferHoldsNothingThatCouldWriteAFile()

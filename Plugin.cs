@@ -117,7 +117,14 @@ public sealed class Plugin : IDalamudPlugin
             _sessionCoordinator,
             NameWeSendAs(characterName),
             _hostingCampaign,
-            () => _configurationStore.Configuration.Settings.Relink, KeepOrLoseTheSessionLog);
+            () => _configurationStore.Configuration.Settings.Relink,
+            new KeepOrLose(
+                KeepOrLoseTheSessionLog,
+                // A separate directory from "logs": that one holds the DM's RETAINED logs, which are
+                // keyed by campaign and may carry a peer code (A-1.11a-note). These may not, and
+                // filing them apart keeps the two obligations from meeting in one folder.
+                new SessionExportFileDestination(
+                    Path.Combine(pluginInterface.ConfigDirectory.FullName, "exports"))));
         _mainWindow.OpenSession = _sessionWindow.Open;
         _campaignListWindow = CampaignListWindowFor(pluginInterface.ConfigDirectory);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
