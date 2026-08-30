@@ -136,15 +136,55 @@ public class TheNameBoxDoesNotTakeWhatItCannotKeepTests
         Assert.NotEqual(preview.Value, box);
     }
 
-    // SO THE WINDOW MUST NOT PASS IT THERE, and that is asserted on the window rather than re-derived
-    // here -- computing the gate in this file would test the expression I just wrote, not the one that
-    // ships. A textual proxy again, and the same declared ceiling as the scan below.
+    // >>> DMXENG-120: THE SAME RULE, ASSERTED BEHAVIOURALLY INSTEAD OF AS TEXT <<<
+    //
+    // This was Assert.Contains("noCampaign ? null : carriedOverDefault", source) -- and qa-1 defeated
+    // it by ADDING ONE LINE after the ternary: the contradiction live, the asserted string untouched,
+    // 1442 passed, 0 failed. THE PROXY FOLLOWED FROM WHERE THE DECISION SAT, NOT FROM THE RENDERER
+    // CEILING. The decision is a boolean over two inputs; it never needed a renderer to test. It now
+    // lives in CampaignDisplayName.ToPreFill and is answerable directly.
     [Fact]
-    public void TheWindowDoesNotOfferTheCarriedOverNameWithoutACampaign()
+    public void TheCarriedOverNameIsNotOfferedWhenThereIsNoCampaign()
+    {
+        Assert.Equal(
+            CharacterName.Value,
+            CampaignDisplayName.ToPreFill(null, "Carried Over", CharacterName));
+    }
+
+    // THE CONTROL, and without it the row above is satisfied by a helper that ignores the carried
+    // value ALWAYS -- which would silently delete SQ-87's pre-fill rather than scope it.
+    [Fact]
+    public void TheCarriedOverNameIsStillOfferedWhenThereIsACampaign()
+    {
+        Assert.Equal(
+            "Carried Over",
+            CampaignDisplayName.ToPreFill(new Campaign { Name = "Whitewind" }, "Carried Over", CharacterName));
+    }
+
+    // AND THE BOX AGREES WITH THE PREVIEW, which is the harm BUG-141 actually names. Distinct from
+    // the row far above: THAT one guards the base state with NO carried value, and passed on both
+    // builds. This is the case where a carried value EXISTS and would have been offered -- the state
+    // only the merged code could reach. Asserted as the RELATION rather than as two constants: a
+    // build that moved both together would satisfy two equality checks and still show two names.
+    [Fact]
+    public void WithNoCampaignTheBoxAndThePreviewAgreeEvenWhenAnameWasCarriedOver()
+    {
+        var box = CampaignDisplayName.ToPreFill(null, "Carried Over", CharacterName);
+        var preview = CampaignDisplayName.Or(null, CharacterName);
+
+        Assert.Equal(preview.Value, box);
+    }
+
+    // THE WIRING, AND THIS PART GENUINELY IS UNDER THE CEILING. The rows above prove the RULE is
+    // right; none of them proves the window CONSULTS it. A window that computed its own answer would
+    // pass every one. Same shape as TheRetainedLogWiringIsPresentTests, and a textual proxy is the
+    // declared limit for "does this file call that".
+    [Fact]
+    public void TheWindowConsultsTheHelperRatherThanDecidingForItself()
     {
         var source = WindowSource("ConfigWindow.cs");
 
-        Assert.Contains("noCampaign ? null : carriedOverDefault", source);
+        Assert.Contains("CampaignDisplayName.ToPreFill(campaign, carriedOverDefault, characterName)", source);
     }
 
     // The guard on the guard (BUG-48's shape): a scan over a path that does not resolve matches
