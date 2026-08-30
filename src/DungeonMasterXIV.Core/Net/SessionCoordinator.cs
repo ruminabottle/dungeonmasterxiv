@@ -76,59 +76,28 @@ public sealed class SessionCoordinator
         ArgumentNullException.ThrowIfNull(log);
         ArgumentNullException.ThrowIfNull(capabilities);
 
-        _newKeys = capabilities.KeySource;
-        _resolveRelink = capabilities.RelinkSource;
+        // Composition moved to SessionWiring (DMXENG-128). The ORDER those collaborators are built
+        // in is a correctness property, so it now sits beside the code it constrains rather than
+        // beside the code that merely uses them -- the cut InboundWiring made at DMXENG-65.
+        _parts = new SessionWiring(transport, relayAddress, window, log, capabilities);
+
         _log = log;
-        _link = new RelayLink(transport, relayAddress, _inbox.Receive);
-        _admissions = new AdmissionControl(
-            new AdmissionAnnouncer(transport),
-            () => Host.Code,
-            () => HostKeys,
-            capabilities.ParticipantSource,
-            log);
-        // Null-conditional because _joiner is built FURTHER DOWN this constructor: the closure is
-        // not INVOKED until after construction, but the compiler cannot know that. Suppressing with
-        // ! would assert something this constructor does not yet guarantee. That reasoning stands.
-        //
-        // A DIRECTION RATHER THAN A COUNT: this said "two lines below" and #125 made it seven. A
-        // distance in prose carries no line number for any grep to find, so it went stale silently.
-        //
-        // The order itself is now DETECTED (DMXENG-45): JoinRequester guards its collaborators, so
-        // building it before these throws rather than passing a null nothing refuses. Measured --
-        // with the order swapped and no guard, the suite passed clean.
-        _handshake = new OutboundHandshake(_link, Host, Join, () => _joiner?.Keys);
-        // The PARAMETER, not the field. Reading _log here would work only because :56 happens
-        // to precede this line, and nothing detects a reordering -- which is DMXENG-45's defect
-        // exactly. Taking it from the argument removes the ordering dependency instead of
-        // relying on it.
-        _roster = new RosterBroadcast(
-            _link,
-            Audience,
-            HostIdentity.ForHost(() => HostKeys, () => Host.Code, capabilities.HostNameSource, _admissions.PeerCodeFor),
-            log);
-        // What RosterBroadcast reads to SEAL, read here to OPEN (R-1.3k).
-        _resources = new SessionResources(
-            _admissions,
-            _inbox,
-            () => Grace,
-            new MemberContentKeys(Audience, () => HostKeys, () => Host.Code, log),
-            new MemberContentReceipts());
-        _interruption = new SessionInterruption(_link, Host, Join, SynchroniseTransport, window);
-        _joiner = new JoinRequester(_handshake, _interruption, Join, _newKeys, SynchroniseTransport);
-        // AFTER _joiner, and that ordering is the point: SessionMembership closes over the joiner
-        // rather than over `this`, which is one fewer escaped reference than the line this replaces.
-        Membership = new SessionMembership(_link, _joiner, () => Join.Code);
-        // AFTER _interruption, which owns the Grace window this reads. The Func defers that read to
-        // use time, so the ordering hazard DMXENG-45 detected does not extend to it -- but HostRunner
-        // guards every argument anyway, which is the point of those guards.
-        _hosting = new HostRunner(Host, _resources, _handshake, _newKeys, SynchroniseTransport);
+        _link = _parts.Link;
+        _resolveRelink = _parts.ResolveRelink;
+        _admissions = _parts.Admissions;
+        _handshake = _parts.Handshake;
+        _roster = _parts.Roster;
+        _resources = _parts.Resources;
+        _interruption = _parts.Interruption;
+        _joiner = _parts.Joiner;
+        _hosting = _parts.Hosting;
+        Membership = _parts.Membership;
     }
 
-    private readonly Func<SessionKeyExchange> _newKeys;
     private readonly Func<string?, RelinkClaim> _resolveRelink;
     private readonly ISessionTransportLog _log;
     private readonly AdmissionControl _admissions;
-    private readonly AdmissionInbox _inbox = new();
+    private readonly SessionWiring _parts;
     private readonly OutboundHandshake _handshake;
     private readonly RosterBroadcast _roster;
     private readonly SessionResources _resources;
@@ -154,10 +123,10 @@ public sealed class SessionCoordinator
     public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
 
     /// <summary>The DM's hosting lifecycle.</summary>
-    public HostSession Host { get; } = new();
+    public HostSession Host => _parts.Host;
 
     /// <summary>This client's attempt to join someone else's session.</summary>
-    public JoinAttempt Join { get; } = new();
+    public JoinAttempt Join => _parts.Join;
 
 
 
@@ -302,24 +271,12 @@ public sealed class SessionCoordinator
     /// Brings the socket into line with whether a session needs one.
     /// </summary>
     /// <remarks>
-    /// R-1.1's invariant lives here and in <see cref="SessionLiveness.RequiresRelayConnection"/>
-    /// and nowhere else, so there is one answer to "should we be connected" rather than a rule each
-    /// call site is trusted to remember. That claim was previously half true: it named
-    /// <see cref="HostSession.RequiresRelayConnection"/>, and the join half was a private method
-    /// here that this line composed with it.
+    /// R-1.1's invariant lives in <see cref="SessionWiring.SynchroniseTransport"/> and
+    /// <see cref="SessionLiveness.RequiresRelayConnection"/> and nowhere else, so there is one
+    /// answer to "should we be connected" rather than a rule each call site is trusted to remember.
+    /// It moved beside the collaborators it reconciles at DMXENG-128; this remains the public door.
     /// </remarks>
-    public void SynchroniseTransport()
-    {
-        // The link reports rather than applies, so the mutual recursion between this and Fail still
-        // terminates the way it always has: Fail leaves nothing wanting a connection, so the next
-        // call through here disconnects and returns None.
-        var failure = _link.Synchronise(Liveness.RequiresRelayConnection);
-
-        if (failure != SessionFailure.None)
-        {
-            Fail(failure);
-        }
-    }
+    public void SynchroniseTransport() => _parts.SynchroniseTransport();
 
     /// <summary>
     /// Advances anything that depends on the passage of time. Called once per frame from the
@@ -346,7 +303,7 @@ public sealed class SessionCoordinator
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
         _interruption.ApplyReportedFailure();
-        Membership.SessionKey = _inbox.Drain(
+        Membership.SessionKey = _parts.Inbox.Drain(
             Join,
             Membership.Keys,
             Host,
@@ -397,7 +354,7 @@ public sealed class SessionCoordinator
     /// guard only had the other one. Which phases count, and why its twin is NOT beside it, are on
     /// <see cref="SessionLiveness.InAHostedSession"/>.
     /// </remarks>
-    public bool InAHostedSession => Liveness.InAHostedSession;
+    public bool InAHostedSession => _parts.Liveness.InAHostedSession;
 
     /// <summary>Reports a transport failure against whichever side of the session is active.</summary>
     /// <param name="failure">What the transport reported.</param>
@@ -426,6 +383,4 @@ public sealed class SessionCoordinator
         Membership.HeardFromTheHost(content.ClosingAtUtcTicks);
     }
 
-    /// <summary>What this client's phases mean. See <see cref="SessionLiveness"/>.</summary>
-    private SessionLiveness Liveness => new(Host, Join);
 }
