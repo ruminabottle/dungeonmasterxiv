@@ -62,9 +62,16 @@ public class TheKeyDerivedInThisDrainOpensTheSameBatchTests
         Assert.NotEmpty(coordinator.Roster);
     }
 
-    // THE PREMISE, and without it the criterion could pass for the wrong reason. The carry-forward is
-    // the ONLY key available to that payload only if the coordinator held no key when the tick began
-    // -- otherwise OpenWith would supply one and the batching would be irrelevant.
+    // A PREMISE AND A DETECTOR IN ONE, and the halves are labelled separately because they behave
+    // differently under mutation -- calling the whole thing a premise would be the mislabel this
+    // team keeps finding.
+    //
+    //   FIRST assertion  PREMISE, passes either way: the carry-forward is the ONLY key available to
+    //                    that payload only if the coordinator held none when the tick began,
+    //                    otherwise OpenWith supplies one and the batching is irrelevant.
+    //   LAST assertion   DETECTOR, measured: removing the carry-forward leaves Drain returning null
+    //                    for the batch, so the membership key is never set at all. A SECOND
+    //                    consequence of the same mutation, and one the roster assertion cannot see.
     [Fact]
     public void TheCoordinatorHeldNoKeyWhenTheBatchArrived()
     {
