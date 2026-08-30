@@ -85,6 +85,22 @@ public sealed class RetainedLogFileArchive(string directory) : IRetainedLogArchi
     /// cannot delete. Found by the code reviewer. The remedy is the same shape
     /// <c>CampaignStore</c> already uses for a file that will not parse: surface it separately
     /// rather than dropping it.
+    /// <para>
+    /// <b>THE INVARIANT, STATED BECAUSE THE FIRST VERSION OF THIS METHOD BROKE IT WHILE LOOKING
+    /// CORRECT: no path this archive can CREATE may lie outside the set the control can REMOVE.</b>
+    /// <see cref="Write"/> creates <c>{id}.log.txt.writing</c> before moving it into place, and both
+    /// enumerations globbed <c>*.log.txt</c> — which requires the name to END with the extension, so
+    /// <b>the pending file matched neither.</b> A crash between the write and the move stranded a
+    /// COMPLETE session log that nothing could list and no delete path could remove, while
+    /// <c>ConfigWindow</c> told the user there was <i>"nothing to delete anywhere but here"</i>
+    /// (BUG-166, found by the code reviewer).
+    /// </para>
+    /// <para>
+    /// <b>So this enumerates the DIRECTORY rather than a pattern.</b> A glob is a guess about what
+    /// this type writes; the directory is what it actually wrote. Anything that is not a well-formed
+    /// campaign log is surfaced — which covers the pending file, and covers the next shape somebody
+    /// adds without remembering to widen a pattern.
+    /// </para>
     /// </remarks>
     public IReadOnlyList<string> Unnameable()
     {
@@ -93,13 +109,21 @@ public sealed class RetainedLogFileArchive(string directory) : IRetainedLogArchi
             return [];
         }
 
-        return Directory.GetFiles(_directory, $"*{Extension}")
+        // EVERY file, not just those matching the log glob. See the remark above: the pending file
+        // this type writes does not end in the extension, so a glob for it cannot see the one thing
+        // an interrupted write leaves behind.
+        return Directory.GetFiles(_directory)
             .Select(Path.GetFileName)
             .Where(name => name is not null)
             .Select(name => name!)
-            .Where(name => !Guid.TryParse(name[..^Extension.Length], out _))
+            .Where(name => !IsAWellFormedLog(name))
             .ToList();
     }
+
+    /// <summary>A file this archive can name as a campaign's log. Everything else is surfaced.</summary>
+    private static bool IsAWellFormedLog(string name) =>
+        name.EndsWith(Extension, StringComparison.Ordinal)
+        && Guid.TryParse(name[..^Extension.Length], out _);
 
     /// <summary>Deletes a file this archive cannot name. The other half of the sentence.</summary>
     /// <param name="fileName">A name from <see cref="Unnameable"/>.</param>

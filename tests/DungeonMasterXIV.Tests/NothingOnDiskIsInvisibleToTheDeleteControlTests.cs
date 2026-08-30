@@ -130,6 +130,74 @@ public class NothingOnDiskIsInvisibleToTheDeleteControlTests : IDisposable
         }
     }
 
+    // ---- BUG-166: what an INTERRUPTED write leaves behind.
+
+    /// <summary>
+    /// <b>The case the successful-write test proves the file EXISTS for, and never checks.</b>
+    /// <see cref="RetainedLogFileArchive.Write"/> writes <c>{id}.log.txt.writing</c> and then moves
+    /// it into place; a crash between the two strands a COMPLETE session log. Both enumerations
+    /// globbed <c>*.log.txt</c>, which requires the name to END with the extension — so the pending
+    /// file matched neither, nothing could list it, and no delete path could remove it, while the
+    /// shipped copy said <i>"nothing to delete anywhere but here"</i>.
+    /// </summary>
+    /// <remarks>
+    /// <b><c>AWriteLeavesNoTemporaryFileBehind</c> above covers the SUCCESSFUL write</b> — so the
+    /// pending file was known to exist, and the interrupted case is the only case it exists for.
+    /// That is the one nobody wrote.
+    /// </remarks>
+    [Fact]
+    public void AnInterruptedWriteLeavesAFileTheDeleteControlCanStillReach()
+    {
+        Directory.CreateDirectory(_directory);
+        var pending = Guid.NewGuid() + ".log.txt.writing";
+        File.WriteAllText(Path.Combine(_directory, pending), "a complete session log");
+
+        var archive = Archive;
+
+        // Listed...
+        Assert.Contains(pending, archive.Unnameable());
+
+        // ...and removable. Listing without deleting would leave the sentence just as false.
+        Assert.True(archive.DeleteUnnameable(pending));
+        Assert.False(File.Exists(Path.Combine(_directory, pending)));
+    }
+
+    /// <summary>
+    /// The invariant rather than the instance: <b>NO file this archive can create may lie outside
+    /// what the control can remove.</b>
+    /// </summary>
+    /// <remarks>
+    /// <b>Written generically on purpose.</b> Pinning only the <c>.writing</c> suffix would fix the
+    /// instance the reviewer found and leave the next shape to be discovered the same way — a glob
+    /// is a guess about what this type writes, and the guess is what was wrong.
+    /// </remarks>
+    [Theory]
+    [InlineData("11111111-1111-1111-1111-111111111111.log.txt.writing")]
+    [InlineData("11111111-1111-1111-1111-111111111111.log.txt.tmp")]
+    [InlineData("not-a-guid.log.txt")]
+    [InlineData("stray")]
+    public void AnythingInTheDirectoryThatIsNotAWellFormedLogIsSurfaced(string name)
+    {
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(Path.Combine(_directory, name), "x");
+
+        Assert.Contains(name, Archive.Unnameable());
+    }
+
+    // THE BYSTANDER FOR THE WIDENED ENUMERATION: a well-formed log must STILL not be surfaced, or
+    // "nothing is invisible" is satisfied by calling everything unnameable -- which would put real
+    // campaign logs in a list the user is invited to delete as junk.
+    [Fact]
+    public void AWellFormedLogIsStillNotCalledUnnameable()
+    {
+        var archive = Archive;
+        var campaign = Guid.NewGuid();
+        archive.Write(campaign, "real");
+
+        Assert.Empty(archive.Unnameable());
+        Assert.Contains(campaign, archive.Campaigns());
+    }
+
     [Fact]
     public void AnArchiveWithNoDirectoryYetAnswersEmptyRatherThanThrowing()
     {
