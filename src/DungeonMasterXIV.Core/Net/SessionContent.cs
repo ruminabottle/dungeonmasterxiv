@@ -121,6 +121,40 @@ public sealed class SessionContent
     /// </para>
     /// </remarks>
     public bool? Leaving { get; init; }
+
+    /// <summary>
+    /// Stamped content the host has broadcast, in the host's order — the only way anything other
+    /// than membership and liveness reaches a client's log (R-2.12, SQ-116).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE HOST STAMPS AND EVERY CLIENT RECORDS WHAT IT RECEIVED, INCLUDING THE ORIGINATOR.</b>
+    /// A member sends content, the host stamps and rebroadcasts, and the sender records when the
+    /// stamped rebroadcast arrives — not when it sent. A client that logged its own send locally
+    /// would build its log from something other than what it received, which is exactly what
+    /// A-2.16's owner-scoping is entailed by, and it would reorder that one client's log against
+    /// everybody else's.
+    /// </para>
+    /// <para>
+    /// <b>WHY THIS IS NOT <see cref="StreamEntry"/>, WHICH IS THE OBVIOUS THING TO PUT HERE.</b>
+    /// That type carries <see cref="PeerCode"/> and <see cref="StreamStamp"/> as domain types, and
+    /// <c>PeerCode</c> CANNOT SURVIVE THIS WIRE. Measured, not reasoned: it is a readonly struct
+    /// whose only members are computed and get-only, so <c>System.Text.Json</c> writes
+    /// <c>{"Value":"BCDFGH","IsPresent":true}</c> and reads back <c>default</c> — absent, and equal
+    /// to every other absent code (DMXENG-105). A round trip through <c>StreamEntry</c> would look
+    /// correct on the way out and arrive as the collision.
+    /// </para>
+    /// <para>
+    /// <b>So this follows <see cref="RosterEntry"/>'s ruling rather than inventing one</b>: raw
+    /// primitives on the wire, and the gate at the decode boundary. #86 settled that for
+    /// <c>DisplayName</c> and it governs here identically.
+    /// </para>
+    /// <para>
+    /// <b>Optional like every section (D-14).</b> A build that has not heard of stamped content
+    /// ignores it and behaves as it does today.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<StreamLine>? Entries { get; init; }
 }
 
 /// <summary>

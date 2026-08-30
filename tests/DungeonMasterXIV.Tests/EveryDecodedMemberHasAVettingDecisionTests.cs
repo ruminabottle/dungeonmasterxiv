@@ -47,11 +47,13 @@ public class EveryDecodedMemberHasAVettingDecisionTests
     /// Every type <see cref="SessionContentCodec.TryDecode"/> can produce.
     /// </summary>
     /// <remarks>
-    /// Two, and that is why the wide scope was affordable: the codec deserialises
-    /// <see cref="SessionContent"/>, whose only member is a list of <see cref="RosterEntry"/>.
-    /// Counted before choosing wide over narrow rather than after.
+    /// Three. The codec deserialises <see cref="SessionContent"/>, which carries a list of
+    /// <see cref="RosterEntry"/> and a list of <see cref="StreamLine"/>. <b>This list is the reason
+    /// the census works on ADDITION</b> — a new decoded type whose members are not registered fails
+    /// here, which is how <c>StreamLine</c> arrived (DMXENG-118).
     /// </remarks>
-    private static readonly Type[] DecodedTypes = [typeof(SessionContent), typeof(RosterEntry)];
+    private static readonly Type[] DecodedTypes =
+        [typeof(SessionContent), typeof(RosterEntry), typeof(StreamLine)];
 
     /// <summary>
     /// What <c>SessionContentCodec.Vetted</c> does with each decoded member. A change here is a
@@ -110,6 +112,58 @@ public class EveryDecodedMemberHasAVettingDecisionTests
             ["RosterEntry.DisplayName"] =
                 "Replaced with DisplayName.OrNone(value).Value, so a name that could forge a line "
                 + "in the prompt is degraded rather than passed through (PR #86).",
+
+            ["SessionContent.Entries"] =
+                "Rebuilt. VettedEntries filters the list with StreamLine.TryToEntry as the "
+                + "predicate and returns a new SessionContent, so a line that cannot become a "
+                + "domain entry never reaches a caller. Null is returned untouched. DELIBERATELY "
+                + "NOT INSIDE THE ROSTER'S NULL CHECK: the previous Vetted returned the document "
+                + "untouched when Roster was null, which is why the departure guard is named "
+                + "WhenARosterIsPresent. A stamped broadcast ordinarily carries no roster, so "
+                + "vetting reached only via the roster would be unvetted on the common case "
+                + "(DMXENG-118).",
+
+            ["StreamLine.Sequence"] =
+                "The whole line is DROPPED below 1. HostSequencer issues from 1, so anything lower "
+                + "was not host-minted, and R-2.4 makes the host the sole minter. 0 is the specific "
+                + "hazard: it sorts to the FRONT of a populated log (BUG-161). This is the DOOR; "
+                + "SessionStream.Record's identical check is the backstop it says it is.",
+
+            ["StreamLine.AtUtcTicks"] =
+                "CARRIED THROUGH UNCHANGED. A long, so it cannot carry text and cannot forge a "
+                + "line — the same argument Role, ClosingAtUtcTicks and Leaving carry. IT IS THE "
+                + "HOST'S CLOCK AND NEVER THE READER'S (A-2.5), so no client re-stamps on receipt. "
+                + "RANGE IS NOT VETTED HERE AND THAT IS A NAMED RESIDUAL: unlike "
+                + "ClosingAtUtcTicks there is no TryFromWire equivalent, because this value orders "
+                + "and timestamps a log rather than driving a countdown in a draw path. A renderer "
+                + "that converts it to DateTimeOffset owes the range check ClosingAtUtcTicks "
+                + "already has.",
+
+            ["StreamLine.Kind"] =
+                "DELIBERATELY UNVETTED, on RosterEntry.Role's reasoning and inheriting its limit. "
+                + "An enum over int with no string converter: every string form is refused at "
+                + "decode because the deserialiser throws and TryDecode returns false, and an "
+                + "out-of-range number arrives as an undefined member whose ToString is digits. So "
+                + "it cannot carry text and cannot forge a line; it can present a value matching no "
+                + "case, which is a rendering question. THIS TEST GOES GREEN EITHER WAY.",
+
+            ["StreamLine.Peer"] =
+                "The whole line is DROPPED unless PeerCode.TryParse accepts it — the same answer as "
+                + "RosterEntry.PeerCode and for the same reason: the code is the IDENTITY, so a "
+                + "line whose code is unusable attributes content to nobody, and keeping it would "
+                + "manufacture a speaker rather than remove a forgery. IT IS A STRING ON THE WIRE "
+                + "BY MEASUREMENT, NOT PREFERENCE: a PeerCode serialises as "
+                + "{\"Value\":\"BCDFGH\",\"IsPresent\":true} and deserialises to default — absent, "
+                + "and equal to every other absent code (DMXENG-105).",
+
+            ["StreamLine.Text"] =
+                "DELIBERATELY UNVETTED, and named rather than omitted because an unmentioned field "
+                + "is exactly what let PeerCode through the roster gate (BUG-57). It is content a "
+                + "person typed, so there is no shape to hold it to: refusing newlines would refuse "
+                + "legitimate messages and truncating would silently alter what somebody said. WHAT "
+                + "IT REMAINS IS UNTRUSTED TEXT, so a renderer must not draw it beside anything a "
+                + "forged line could displace — the obligation DisplayName.OrNone discharges for "
+                + "names cannot be discharged here, and it moves to the renderer.",
 
             ["RosterEntry.Role"] =
                 "DELIBERATELY UNVETTED, and this is the entry the limit above is about. An enum "
