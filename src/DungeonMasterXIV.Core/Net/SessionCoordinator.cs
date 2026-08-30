@@ -9,6 +9,26 @@ namespace DungeonMasterXIV.Net;
 /// Drives the session layer: hosting, joining, admission and the relay connection that serves them.
 /// Dalamud-free, so the behaviour R-1.1 and R-1.3 specify is testable without a game or a socket.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>THIS CLASS IS AT MARGIN 0 AND THE NEXT LINE ADDED INSIDE IT IS BLOCKED.</b> The class span is
+/// 400 against a capacity of 400, and that row is absolute — <c>main</c> carries no breach of it, so
+/// there is nothing to grandfather. <b>Anything you need to add here needs the class split first.</b>
+/// The condition predates the member below: it was measured at 399 with margin 1 on <c>main</c>
+/// (ea669fa), which already meant no DOCUMENTED member could ever be added.
+/// </para>
+/// <para>
+/// <b>WHICH IS WHY <c>Recorded</c> CARRIES NO MEMBER DOC, and it is not an oversight to be tidied
+/// up.</b> A one-line XML summary on it costs 402 and reddens the size gate. This prose is here
+/// instead because it sits ABOVE the class span and costs the block nothing. <b>It forwards what
+/// this client recorded, for R-2.12's session-end offer</b> — the composition root cannot reach the
+/// recording itself, which is <c>internal</c>, as is the resources object holding it, so without the
+/// forward the offer could be built and never fed. <b>Every client records its own log</b> (R-2.12,
+/// SQ-116), so it is what THIS client received and never an assembled superset; that is what makes
+/// the log owner-scoped by construction and A-2.16 satisfiable with no filter anywhere. Projection
+/// into written form is <c>StreamLogProjection</c>'s, in <c>Core/Data</c>.
+/// </para>
+/// </remarks>
 public sealed class SessionCoordinator
 {
     private readonly RelayLink _link;
@@ -131,6 +151,7 @@ public sealed class SessionCoordinator
     /// nothing shipped sends these yet (DMXENG-11 / A-1.15).
     /// </remarks>
     public MemberContentReceipts MemberContent => _resources.MemberContent;
+    public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
 
     /// <summary>The DM's hosting lifecycle.</summary>
     public HostSession Host { get; } = new();

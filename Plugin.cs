@@ -117,7 +117,7 @@ public sealed class Plugin : IDalamudPlugin
             _sessionCoordinator,
             NameWeSendAs(characterName),
             _hostingCampaign,
-            () => _configurationStore.Configuration.Settings.Relink);
+            () => _configurationStore.Configuration.Settings.Relink, KeepOrLoseTheSessionLog);
         _mainWindow.OpenSession = _sessionWindow.Open;
         _campaignListWindow = CampaignListWindowFor(pluginInterface.ConfigDirectory);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
@@ -189,6 +189,39 @@ public sealed class Plugin : IDalamudPlugin
         var retainedLogs = new RetainedLogStore(
             new RetainedLogFileArchive(Path.Combine(configDirectory.FullName, "logs")));
         return new CampaignListWindow(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs));
+    }
+
+    /// <summary>
+    /// Opens R-2.12's keep-or-lose choice over what THIS client recorded (A-2.23).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The entries are copied here, not referenced</b>, so the log the offer holds outlives the
+    /// departure that follows it — SQ-115's requirement that <i>the log survives until the choice
+    /// resolves</i>, arranged as a hold on one object rather than a hold on the teardown.
+    /// </para>
+    /// <para>
+    /// <b>THE SIXTY SECONDS ARE ENGINEERING'S AND NO REQUIREMENT STATES THEM.</b> R-1.3c requires
+    /// only that the wait is bounded and its bound shown; SQ-115 put the arrangement here in terms.
+    /// The figure matches the closing window the player is already watching under R-1.3g, so the
+    /// two countdowns on one screen cannot disagree — <b>a second number would be the drift R-1.3c
+    /// names.</b> It is deliberately not read from settings: a user-settable window would make the
+    /// bound something a person could set to a value that fails the requirement.
+    /// </para>
+    /// <para>
+    /// <b>The campaign id is empty because a JOINER HAS NONE</b>, and this log is never stored or
+    /// keyed by one — a player's log dies unless kept, so it never reaches the archive that
+    /// deletion works through. The DM's retained log, which does carry a campaign, is a different
+    /// path entirely (<c>SessionLogRetention</c>).
+    /// </para>
+    /// </remarks>
+    private SessionLogOffer KeepOrLoseTheSessionLog()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        return new SessionLogOffer(
+            new RetainedLog(Guid.Empty, now.UtcTicks, StreamLogProjection.From(_sessionCoordinator.Recorded)),
+            now.Add(TimeSpan.FromSeconds(60)).UtcTicks);
     }
 
     /// <summary>Unwinds construction in reverse order.</summary>

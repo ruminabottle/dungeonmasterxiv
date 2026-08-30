@@ -40,7 +40,7 @@ public class TheRetainedLogFormatCannotBeForgedByTypingTests
             .Count(line => line.Contains('\t', StringComparison.Ordinal));
 
     /// <summary>
-    /// The single body line of a one-entry export, FOUND rather than indexed.
+    /// The single body line of a one-entry retained log, FOUND rather than indexed.
     /// </summary>
     /// <remarks>
     /// <b>These tests originally indexed <c>Split('\n')[4]</c> and broke the moment a version line

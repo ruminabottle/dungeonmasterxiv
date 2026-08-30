@@ -11,8 +11,8 @@ namespace DungeonMasterXIV.Data;
 /// <remarks>
 /// <para>
 /// <b>IT WAS CALLED <c>LogExport</c> UNTIL SQ-114, AND THE NAME WAS THE HAZARD.</b> An export is
-/// <b>AN ACT</b> — something a person asks for — not a path; a retained log is written
-/// automatically, so it is not one. The old name would have led whoever builds R-2.11's real export
+/// <b>AN ACT</b> — something a person asks for — not a path (A-2.17); a retained log is written
+/// automatically, so it is not one. The old name would have led whoever builds R-2.12's real export
 /// straight here, to a type whose <see cref="Write"/> already produces the right-looking output.
 /// <b>Reusing it there would put a peer code into a genuine export, and nothing would complain:</b>
 /// every test here is about the retained log, where the peer code is permitted (A-1.11b), and the
@@ -155,7 +155,7 @@ public static class RetainedLogFormat
             entry.Peer,
             Escape(entry.Text));
 
-    /// <summary>How many lines an export of <paramref name="log"/> will carry, for a caller's prompt.</summary>
+    /// <summary>How many lines <paramref name="log"/> will occupy when written, for a caller's prompt.</summary>
     public static int LineCount(RetainedLog log)
     {
         ArgumentNullException.ThrowIfNull(log);
@@ -163,7 +163,10 @@ public static class RetainedLogFormat
         return log.Entries.Count;
     }
 
-    /// <summary>Whether an export would contain anything at all.</summary>
+    /// <summary>
+    /// Whether <paramref name="log"/> holds anything at all, for a caller deciding whether the
+    /// session-end offer has anything to offer (R-2.12).
+    /// </summary>
     public static bool HasAnything(RetainedLog log) => LineCount(log) > 0;
 
     /// <summary>The peer codes appearing in <paramref name="log"/>, for a caller that wants to say who is in it.</summary>
