@@ -240,18 +240,17 @@ public sealed class ConfigWindow : Window
     {
         var noCampaign = campaign is null;
 
-        // >>> THE OFFER IS ONLY MADE WHERE IT CAN BE ACCEPTED (A-2.33's twin). <<<
+        // >>> THE OFFER IS ONLY MADE WHERE IT CAN BE ACCEPTED (A-2.33's twin) -- AND THE DECISION
+        // IS NO LONGER MADE HERE. <<<
         //
-        // ToEdit falls back to the carried-over name when the campaign has no alias -- and with NO
-        // campaign at all it would return that name into a box this method has just DISABLED, while
-        // "You will join as" below goes on showing the character name. That is BUG-141 REBUILT out
-        // of #217's parts: the same two lines disagreeing, now in a box the user cannot correct.
+        // It moved into CampaignDisplayName.ToPreFill (DMXENG-120), where it is a linkable boolean
+        // rule and can be asserted BEHAVIOURALLY. While it was a ternary in this method the only
+        // available guard was an assertion on this file's TEXT -- and qa-1 showed that a text
+        // assertion is defeated by ONE EXTRA LINE that leaves the asserted string untouched.
         //
-        // Passing null here is what keeps them equal. NEITHER SUITE CATCHES THIS ALONE -- #217's
-        // pass because the pre-fill is offered, mine pass because the box is disabled, and the
-        // contradiction lives in a state only the merged code can reach.
-        var carried = noCampaign ? null : carriedOverDefault;
-        var typed = CampaignDisplayName.ToEdit(campaign, carried, characterName);
+        // What this window still owes is the WIRING: that it consults the helper at all. That part
+        // genuinely is under the renderer ceiling and is still asserted textually.
+        var typed = CampaignDisplayName.ToPreFill(campaign, carriedOverDefault, characterName);
 
         // A-1.2z (BUG-141). WITH NO CAMPAIGN THIS BOX USED TO TAKE INPUT AND KEEP NONE OF IT, and the
         // "You will join as" line below then showed the character name instead. The two disagreed with
