@@ -24,9 +24,18 @@ namespace DungeonMasterXIV.Tests;
 /// <c>TheNameFieldSaysWhenItIsFullTests</c> records for its own scan, and the same remedy.
 /// </para>
 /// <para>
-/// <b>Comments are stripped before matching</b>, because this file's subjects are commented in prose
-/// that names the very identifiers being asserted — a scan that counted those would pass against a
-/// build where the wiring is only described.
+/// <b>LINE AND BLOCK COMMENTS ARE BOTH STRIPPED before matching</b>, because this file's subjects are
+/// commented in prose naming the very identifiers being asserted — a scan that counted those would
+/// pass against a build where the wiring is only described.
+/// </para>
+/// <para>
+/// <b>THIS SENTENCE USED TO SAY "COMMENTS ARE STRIPPED" WHILE THE REGEX STRIPPED ONLY LINE COMMENTS,
+/// AND THE CODE REVIEWER DEFEATED THE GUARD THROUGH EXACTLY THAT GAP</b> — all six tests here passed
+/// with the wiring commented out in a <c>/* */</c> block, because the block survived the strip and
+/// was matched as live code. <b>It needs no adversary: comment the call out while debugging and
+/// forget to restore it.</b> The prose claimed one notch more than the code delivered, which is the
+/// same defect class as the other findings on this PR — and this file is the guard against the
+/// wiring going missing, which has already happened once.
 /// </para>
 /// </remarks>
 public class TheRetainedLogWiringIsPresentTests
@@ -76,7 +85,11 @@ public class TheRetainedLogWiringIsPresentTests
             throw new FileNotFoundException($"{path} is not where the scan looks, so it would pass over nothing.", path);
         }
 
-        return Regex.Replace(File.ReadAllText(path), @"//[^\n]*", string.Empty);
+        // Block comments FIRST: a // inside a /* */ belongs to the block, and stripping lines first
+        // would strand the block's delimiters. Singleline so . spans newlines -- a commented-out
+        // wiring call is multi-line, which is the case that defeated the earlier version.
+        var withoutBlocks = Regex.Replace(File.ReadAllText(path), @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+        return Regex.Replace(withoutBlocks, @"//[^\n]*", string.Empty);
     }
 
     private static string RepositoryRoot()
