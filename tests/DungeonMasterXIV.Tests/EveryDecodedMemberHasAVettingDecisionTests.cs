@@ -47,11 +47,24 @@ public class EveryDecodedMemberHasAVettingDecisionTests
     /// Every type <see cref="SessionContentCodec.TryDecode"/> can produce.
     /// </summary>
     /// <remarks>
-    /// Two, and that is why the wide scope was affordable: the codec deserialises
-    /// <see cref="SessionContent"/>, whose only member is a list of <see cref="RosterEntry"/>.
-    /// Counted before choosing wide over narrow rather than after.
+    /// Three. The codec deserialises <see cref="SessionContent"/>, which carries a list of
+    /// <see cref="RosterEntry"/> and a list of <see cref="StreamLine"/>.
+    /// <para>
+    /// <b>THIS LIST IS HAND-MAINTAINED, AND AN EARLIER VERSION OF THIS REMARK CLAIMED IT WAS NOT.</b>
+    /// It said a new decoded TYPE whose members are not registered "fails here". <b>It does not, and
+    /// that was measured with a control:</b> add a type reachable from <see cref="SessionContent"/>,
+    /// leave it out of this list, and write one line of prose for the new PROPERTY — the whole
+    /// assembly goes green and the new type's members are never censused. Withhold the prose and one
+    /// test fails, naming only the property. <b>The property is caught; the TYPE is not.</b>
+    /// </para>
+    /// <para>
+    /// <b>That gap is now closed by <see cref="EveryTypeReachableFromADecodedMemberIsCensused"/></b>,
+    /// which walks the members of every listed type and fails if one carries a type of ours that is
+    /// absent from this list. So the list stays hand-written and forgetting it is caught.
+    /// </para>
     /// </remarks>
-    private static readonly Type[] DecodedTypes = [typeof(SessionContent), typeof(RosterEntry)];
+    private static readonly Type[] DecodedTypes =
+        [typeof(SessionContent), typeof(RosterEntry), typeof(StreamLine)];
 
     /// <summary>
     /// What <c>SessionContentCodec.Vetted</c> does with each decoded member. A change here is a
@@ -111,6 +124,58 @@ public class EveryDecodedMemberHasAVettingDecisionTests
                 "Replaced with DisplayName.OrNone(value).Value, so a name that could forge a line "
                 + "in the prompt is degraded rather than passed through (PR #86).",
 
+            ["SessionContent.Entries"] =
+                "Rebuilt. VettedEntries filters the list with StreamLine.TryToEntry as the "
+                + "predicate and returns a new SessionContent, so a line that cannot become a "
+                + "domain entry never reaches a caller. Null is returned untouched. DELIBERATELY "
+                + "NOT INSIDE THE ROSTER'S NULL CHECK: the previous Vetted returned the document "
+                + "untouched when Roster was null, which is why the departure guard is named "
+                + "WhenARosterIsPresent. A stamped broadcast ordinarily carries no roster, so "
+                + "vetting reached only via the roster would be unvetted on the common case "
+                + "(DMXENG-118).",
+
+            ["StreamLine.Sequence"] =
+                "The whole line is DROPPED below 1. HostSequencer issues from 1, so anything lower "
+                + "was not host-minted, and R-2.4 makes the host the sole minter. 0 is the specific "
+                + "hazard: it sorts to the FRONT of a populated log (BUG-161). This is the DOOR; "
+                + "SessionStream.Record's identical check is the backstop it says it is.",
+
+            ["StreamLine.AtUtcTicks"] =
+                "CARRIED THROUGH UNCHANGED. A long, so it cannot carry text and cannot forge a "
+                + "line — the same argument Role, ClosingAtUtcTicks and Leaving carry. IT IS THE "
+                + "HOST'S CLOCK AND NEVER THE READER'S (A-2.5), so no client re-stamps on receipt. "
+                + "RANGE IS NOT VETTED HERE AND THAT IS A NAMED RESIDUAL: unlike "
+                + "ClosingAtUtcTicks there is no TryFromWire equivalent, because this value orders "
+                + "and timestamps a log rather than driving a countdown in a draw path. A renderer "
+                + "that converts it to DateTimeOffset owes the range check ClosingAtUtcTicks "
+                + "already has.",
+
+            ["StreamLine.Kind"] =
+                "DELIBERATELY UNVETTED, on RosterEntry.Role's reasoning and inheriting its limit. "
+                + "An enum over int with no string converter: every string form is refused at "
+                + "decode because the deserialiser throws and TryDecode returns false, and an "
+                + "out-of-range number arrives as an undefined member whose ToString is digits. So "
+                + "it cannot carry text and cannot forge a line; it can present a value matching no "
+                + "case, which is a rendering question. THIS TEST GOES GREEN EITHER WAY.",
+
+            ["StreamLine.Peer"] =
+                "The whole line is DROPPED unless PeerCode.TryParse accepts it — the same answer as "
+                + "RosterEntry.PeerCode and for the same reason: the code is the IDENTITY, so a "
+                + "line whose code is unusable attributes content to nobody, and keeping it would "
+                + "manufacture a speaker rather than remove a forgery. IT IS A STRING ON THE WIRE "
+                + "BY MEASUREMENT, NOT PREFERENCE: a PeerCode serialises as "
+                + "{\"Value\":\"BCDFGH\",\"IsPresent\":true} and deserialises to default — absent, "
+                + "and equal to every other absent code (DMXENG-105).",
+
+            ["StreamLine.Text"] =
+                "DELIBERATELY UNVETTED, and named rather than omitted because an unmentioned field "
+                + "is exactly what let PeerCode through the roster gate (BUG-57). It is content a "
+                + "person typed, so there is no shape to hold it to: refusing newlines would refuse "
+                + "legitimate messages and truncating would silently alter what somebody said. WHAT "
+                + "IT REMAINS IS UNTRUSTED TEXT, so a renderer must not draw it beside anything a "
+                + "forged line could displace — the obligation DisplayName.OrNone discharges for "
+                + "names cannot be discharged here, and it moves to the renderer.",
+
             ["RosterEntry.Role"] =
                 "DELIBERATELY UNVETTED, and this is the entry the limit above is about. An enum "
                 + "over int with no string converter: every string form is refused at decode, and "
@@ -139,6 +204,60 @@ public class EveryDecodedMemberHasAVettingDecisionTests
         Assert.Equal(
             VettingDecisions.Keys.OrderBy(name => name, StringComparer.Ordinal).ToList(),
             members);
+    }
+
+    /// <summary>
+    /// Every type carried by a decoded member is itself censused.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THIS CLOSES WHAT THE CENSUS ABOVE CANNOT SEE.</b> That one enumerates the members of the
+    /// types in <see cref="DecodedTypes"/>. A NEW TYPE reached by a new member is invisible to it:
+    /// the member is caught, one line of prose discharges the member, and the type's own members are
+    /// never reached. Measured with a control before this was written — 1471 green with the prose
+    /// exit taken, 1 red with it withheld, naming only the property.
+    /// </para>
+    /// <para>
+    /// <b>Why this matters more than a tidier list.</b> <c>SessionContentCodec</c> names the class of
+    /// error it exists to prevent as <i>"a quiet disclosure, which is the class of error that put a
+    /// display name in the clear"</i>. <b>An unvetted TYPE reaching consumers is that class</b>, and
+    /// the prose exit sits exactly where somebody adding one would read.
+    /// </para>
+    /// <para>
+    /// <b>THE CEILING, stated because this file states its ceilings.</b> This proves a carried type
+    /// is LISTED, so its members get a recorded decision. It does not prove the decision is correct —
+    /// the class limit above governs here too. <b>Enums are excluded deliberately:</b> they have no
+    /// members to census, and the decision that matters for one is recorded on the member that
+    /// carries it (<c>RosterEntry.Role</c>, <c>StreamLine.Kind</c>).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryTypeReachableFromADecodedMemberIsCensused()
+    {
+        var ours = typeof(SessionContent).Assembly;
+
+        var carried = DecodedTypes
+            .SelectMany(type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            .Select(property => Carried(property.PropertyType))
+            .Where(type => type.Assembly == ours && !type.IsEnum)
+            .Distinct()
+            .OrderBy(type => type.Name, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.NotEmpty(carried);
+        Assert.All(
+            carried,
+            type => Assert.True(
+                DecodedTypes.Contains(type),
+                $"{type.Name} is carried by a decoded member but is absent from DecodedTypes, so "
+                + "none of its members has a recorded vetting decision. Add it to that list."));
+    }
+
+    // Nullable<T> and IReadOnlyList<T> are wrappers the wire uses, never the thing being carried.
+    private static Type Carried(Type type)
+    {
+        var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
+        return unwrapped.IsGenericType ? unwrapped.GetGenericArguments()[0] : unwrapped;
     }
 
     // A decision that says nothing is the same hole wearing a filled-in form. Fails if an entry is

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -91,16 +92,62 @@ public static class SessionContentCodec
     /// works and would therefore accept <c>"PEE-R3"</c> that the product never generated.
     /// </para>
     /// </remarks>
-    private static SessionContent Vetted(SessionContent content, out int dropped)
+    private static SessionContent Vetted(
+        SessionContent content, out int droppedRoster, out int droppedEntries)
+    {
+        var kept = VettedRoster(content.Roster, out droppedRoster);
+        var lines = VettedEntries(content.Entries, out droppedEntries);
+
+        // EVERY SECTION IS CARRIED FORWARD EXPLICITLY, AND A NEW ONE MUST BE ADDED HERE.
+        //
+        // This REBUILDS the document rather than editing it, because the sections are init-only. So
+        // a section added to SessionContent and not added to this line is SILENTLY DROPPED ON DECODE
+        // — the sender sets it, the wire carries it, the receiver never sees it, and nothing fails.
+        // That is the same shape as the peer-code hole this method was written to close (BUG-57):
+        // vetting that quietly deletes what it does not recognise.
+        //
+        // TWO GUARDS, AND THEY COVER OPPOSITE DIRECTIONS. GET BOTH.
+        //
+        // ON ADDITION: EveryDecodedMemberHasARecordedVettingDecision is a census over the decoded
+        // types and it FAILS THE MOMENT a member is added without a registered decision. It caught
+        // Entries within minutes of it being written. It is general.
+        //
+        // ON DELETION THERE IS NO GENERAL GUARD, and the previous version of this comment claimed
+        // otherwise: it named ASectionOtherThanTheRosterSurvivesVetting and said that test "fails if
+        // a future section is added to the type and forgotten here". MEASURED, ONE SECTION AT A TIME
+        // AGAINST THE FULL SUITE (DMXENG-118): deleting ClosingAtUtcTicks reddens that test alone;
+        // deleting Leaving reddens ADepartureSurvivesVettedsRebuildWhenARosterIsPresent and leaves
+        // the named one GREEN. Every section has its OWN deletion guard — the name generalises and
+        // the assertions do not.
+        //
+        // SO ADD A DEDICATED survives-vetting TEST FOR ANY SECTION YOU ADD HERE. The census will
+        // tell you the member is unregistered; nothing will tell you the carry-forward line is
+        // missing. Entries has AnEntrySectionSurvivesVettingWithNoRosterPresent.
+        return new SessionContent
+        {
+            Roster = kept,
+            ClosingAtUtcTicks = content.ClosingAtUtcTicks,
+            Leaving = content.Leaving,
+            Entries = lines,
+        };
+    }
+
+    /// <summary>The roster with unusable entries removed, or null when the section was absent.</summary>
+    /// <remarks>
+    /// Vetted still only decides; it does not announce. It reports HOW MANY it removed and the
+    /// caller decides whether anyone hears about it — this stays the door rather than becoming the
+    /// diagnostics layer (BUG-70).
+    /// </remarks>
+    private static IReadOnlyList<RosterEntry>? VettedRoster(
+        IReadOnlyList<RosterEntry>? roster, out int dropped)
     {
         dropped = 0;
-
-        if (content.Roster is null)
+        if (roster is null)
         {
-            return content;
+            return null;
         }
 
-        var kept = content.Roster
+        var kept = roster
             .Where(entry => PeerCode.TryParse(entry.PeerCode, out _))
             .Select(entry => entry with
             {
@@ -108,26 +155,37 @@ public static class SessionContentCodec
             })
             .ToList();
 
-        // Vetted still only decides; it does not announce. It reports HOW MANY it removed and the
-        // caller decides whether anyone hears about it — this stays the door rather than becoming
-        // the diagnostics layer (BUG-70).
-        dropped = content.Roster.Count - kept.Count;
-        // EVERY SECTION IS CARRIED FORWARD EXPLICITLY, AND A NEW ONE MUST BE ADDED HERE.
-        //
-        // This REBUILDS the document rather than editing it, because Roster is init-only. So a
-        // section added to SessionContent and not added to this line is SILENTLY DROPPED ON DECODE
-        // — the sender sets it, the wire carries it, the receiver never sees it, and nothing fails.
-        // That is the same shape as the peer-code hole this method was written to close (BUG-57):
-        // vetting that quietly deletes what it does not recognise.
-        //
-        // ASectionOtherThanTheRosterSurvivesVetting is the guard. It fails if a future section is
-        // added to the type and forgotten here, which is the only moment anyone would notice.
-        return new SessionContent
+        dropped = roster.Count - kept.Count;
+        return kept;
+    }
+
+    /// <summary>The stamped entries that can become domain entries, or null when absent.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The predicate is <see cref="StreamLine.TryToEntry"/> itself, not a copy of its rules.</b>
+    /// A second statement of "what makes a line usable" is how the peer-code hole opened in the
+    /// roster (BUG-57): the gate was restated at one door and the other door kept its own version.
+    /// </para>
+    /// <para>
+    /// <b>AND THIS IS DELIBERATELY NOT INSIDE THE ROSTER'S NULL CHECK.</b> The previous shape
+    /// returned the document untouched when <c>Roster</c> was null — which is why the departure
+    /// guard is named <i>WhenARosterIsPresent</i>. A section vetted only when some OTHER section
+    /// happens to be present is unvetted on every document that omits it, and for stamped content
+    /// that is the ordinary case rather than an edge one.
+    /// </para>
+    /// </remarks>
+    private static IReadOnlyList<StreamLine>? VettedEntries(
+        IReadOnlyList<StreamLine>? entries, out int dropped)
+    {
+        dropped = 0;
+        if (entries is null)
         {
-            Roster = kept,
-            ClosingAtUtcTicks = content.ClosingAtUtcTicks,
-            Leaving = content.Leaving,
-        };
+            return null;
+        }
+
+        var kept = entries.Where(line => line.TryToEntry(out _)).ToList();
+        dropped = entries.Count - kept.Count;
+        return kept;
     }
 
     /// <summary>Serialises <paramref name="content"/> for sealing.</summary>
@@ -178,7 +236,7 @@ public static class SessionContentCodec
             return false;
         }
 
-        content = Vetted(content, out var dropped);
+        content = Vetted(content, out var dropped, out var droppedEntries);
 
         // BUG-70. The drop itself is right for both of its causes; the SILENCE was right for only
         // one. A forged entry rejected is nothing to announce — but the other cause is that OUR OWN
@@ -188,6 +246,17 @@ public static class SessionContentCodec
         //
         // THE COUNT, NEVER THE VALUE. The rejected code is a string somebody else chose, and a log
         // is the artifact most likely to end up pasted into a bug report.
+        // The entry count is reported for the same reason and with the same restraint: an unusable
+        // line is either a forgery or OUR OWN encoder writing a peer code it cannot parse back, and
+        // silence would hide the second. THE COUNT, NEVER THE VALUE.
+        if (droppedEntries > 0)
+        {
+            log?.Warning(
+                $"Dropped {droppedEntries} stamped {(droppedEntries == 1 ? "entry" : "entries")} "
+                + "that could not be read back as host-minted content. The rejected values are "
+                + "deliberately not recorded here.");
+        }
+
         if (dropped > 0)
         {
             log?.Warning(
