@@ -1,4 +1,3 @@
-using System.Linq;
 using DungeonMasterXIV.Rolls;
 using Xunit;
 
@@ -173,30 +172,29 @@ public class WhenEveryDieIsDroppedTheResultSaysSoTests
         Assert.NotNull(outcome.Notice);
     }
 
-    // ---- A ROW WHOSE GRAMMAR IS NOT SETTLED, PINNED WITHOUT SETTLING IT.
-    //      Whether a drop count larger than the pool clamps or refuses is an OPEN Spec Owner
-    //      question (SQ-97), and A-2.3b is deliberately grammar-independent. So this asserts the
-    //      criterion under BOTH rulings instead of choosing one, and it fails only in the state
-    //      A-2.3b actually names: evaluated, dice rolled, none kept, and nothing said. On today's
-    //      build the second arm is the live one -- it evaluates and every die is dropped.
+    // ---- THE PREMISE A-2.3b ACTUALLY NAMES: DICE WERE ROLLED, AND NOT ONE SURVIVED.
+    //      THE SUBJECT WAS THE DEFECT AND THE ARMS WERE THE SYMPTOM. This row used to ask about
+    //      4d6dl9 -- a drop count EXCEEDING the pool -- and then branched three ways to stay true
+    //      whichever way that grammar is eventually ruled. Two of those three arms could be
+    //      satisfied without exercising the criterion at all: a REFUSAL satisfied the first, and
+    //      ANY ORDINARY EXPRESSION satisfied the second. Swapping the subject to a plain 4d6 left
+    //      the whole suite green.
+    //      A-2.3b is DELIBERATELY GRAMMAR-INDEPENDENT and says so, so it never needed those arms.
+    //      4d6dl4+100 drops a count EQUAL to the pool, which settles nothing about grammar, and it
+    //      is A-2.3b's own worked subject -- the case it calls the one a reader is least likely to
+    //      notice, because the total reads 100. With that subject the branching has nothing to do.
     [Fact]
-    public void DroppingMoreDiceThanWereRolledSaysSoIfItEvaluatesAtAll()
+    public void TheNoticeIsPinnedToDiceRolledAndNoneKept()
     {
-        var outcome = Roll("4d6dl9", 1, 6, 3, 5);
+        var outcome = Roll("4d6dl4+100", 1, 6, 3, 5);
 
-        if (!outcome.Evaluated)
-        {
-            Assert.False(string.IsNullOrWhiteSpace(outcome.Message));
-            Assert.Null(outcome.Notice);
-        }
-        else if (outcome.Dice.Any(die => die.Kept))
-        {
-            Assert.Null(outcome.Notice);
-        }
-        else
-        {
-            Assert.NotEmpty(outcome.Dice);
-            Assert.False(string.IsNullOrWhiteSpace(outcome.Notice));
-        }
+        // BOTH LINES ARE LOAD-BEARING AND THE ORDER MATTERS. Assert.All passes VACUOUSLY on an
+        // empty collection, so on a subject that rolled nothing it would assert precisely nothing;
+        // NotEmpty is what closes that. Between them they fail on either escape the old arms left
+        // open: a refusal rolls no dice, and an ordinary expression keeps some.
+        Assert.NotEmpty(outcome.Dice);
+        Assert.All(outcome.Dice, die => Assert.False(die.Kept));
+
+        Assert.False(string.IsNullOrWhiteSpace(outcome.Notice));
     }
 }
