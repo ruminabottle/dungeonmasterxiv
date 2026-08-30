@@ -1,4 +1,5 @@
 using System;
+using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
@@ -39,6 +40,7 @@ public sealed class SessionMembership
     private readonly JoinRequester _joiner;
     private readonly ReceivedClosing _closing = new();
     private readonly MemberDeparture _departure;
+    private readonly MemberMessage _message;
 
     /// <summary>Binds the member half to the joiner that owns its key material.</summary>
     /// <param name="link">The transport this client speaks to the relay over.</param>
@@ -60,6 +62,7 @@ public sealed class SessionMembership
 
         _joiner = joiner;
         _departure = new MemberDeparture(link, code, () => joiner.SessionKey);
+        _message = new MemberMessage(link, code, () => joiner.SessionKey);
     }
 
     /// <summary>This client's key pair when joining somebody else's session, or null.</summary>
@@ -90,6 +93,29 @@ public sealed class SessionMembership
     /// this client was never admitted. Quitting the join screen has nobody to tell.
     /// </remarks>
     public bool AnnounceDeparture() => _departure.Announce();
+
+    /// <summary>
+    /// Says something to the session, for the host to stamp and rebroadcast (R-2.19, A-2.34).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE MEMBER'S OWN LOG IS NOT WRITTEN HERE, and that is the requirement rather than a
+    /// simplification.</b> <see cref="SessionContent.Entries"/> records that every client writes down
+    /// what it RECEIVED, including the originator: the sender's line appears when the host's stamped
+    /// rebroadcast arrives. <b>A client that echoed its own send locally would build its log from
+    /// something other than what it received</b> and would order that one log against everybody
+    /// else's.
+    /// </para>
+    /// <para>
+    /// <b>The draft is returned so the compose surface can say what happened (A-2.35)</b> — an
+    /// over-long message is refused with the fault named, never truncated and never dropped in
+    /// silence.
+    /// </para>
+    /// </remarks>
+    /// <param name="text">What the person typed.</param>
+    /// <param name="limits">The bounds to apply, or <see cref="MessageLimits.Default"/> when null.</param>
+    public MessageDraft Say(string? text, MessageLimits? limits = null) =>
+        _message.Say(text, limits ?? MessageLimits.Default);
 
     /// <summary>
     /// What the host has said about this session ending, or null if it has said nothing (R-1.3g).

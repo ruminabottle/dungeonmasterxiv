@@ -123,6 +123,42 @@ public sealed class SessionContent
     public bool? Leaving { get; init; }
 
     /// <summary>
+    /// What a MEMBER is saying to the session (R-2.19). Null on every other document, which is all
+    /// of them the host sends.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE SECOND MEMBER-AUTHORED FIELD IN THIS TYPE, AND THE DIRECTION IS WHY IT EXISTS.</b>
+    /// <see cref="Entries"/> travels host to member and carries a SEQUENCE the host minted; this
+    /// travels member to host and carries none. <b>A member cannot ride <see cref="Entries"/>
+    /// upward</b>: <c>SessionContentCodec</c> keeps only lines <c>StreamLine.TryToEntry</c> accepts,
+    /// and that door refuses a sequence below 1 because the host is the sole minter (R-2.4). A
+    /// member-sent entry with sequence 0 is dropped at the host's decode; one with a sequence it
+    /// invented would be a member minting order, which is the D-3 inversion.
+    /// </para>
+    /// <para>
+    /// <b>So the two directions need two fields, and this one is raw text on purpose.</b> It asserts
+    /// nothing about the session — only what this sender said — which is what keeps it on the right
+    /// side of D-3, exactly as <see cref="Leaving"/> does. <b>The host decides what follows</b>: it
+    /// bounds the text, stamps it, and rebroadcasts. <b>WHO said it is read from the KEY the payload
+    /// opened under, never from the payload</b>, so a member cannot speak as anybody else.
+    /// </para>
+    /// <para>
+    /// <b>UNBOUNDED HERE AND BOUNDED AT THE HOST, which is deliberate rather than an omission.</b>
+    /// R-2.19 makes a message untrusted input that must be bounded, and the bound is a tunable
+    /// policy value — <see cref="DungeonMasterXIV.Chat.MessageLimits"/> — not a structural fact a
+    /// static codec can own. <b>This follows <see cref="Leaving"/>'s precedent: the section is
+    /// carried verbatim and the host is the gate</b>, in <c>InboundWiring</c>. A codec that enforced
+    /// a policy number would put the product's tuning inside the wire format.
+    /// </para>
+    /// <para>
+    /// <b>Nullable so absence is the ordinary case and older peers decode unchanged (D-14)</b>, like
+    /// every section here.
+    /// </para>
+    /// </remarks>
+    public string? Saying { get; init; }
+
+    /// <summary>
     /// Stamped content the host has broadcast, in the host's order — the only way anything other
     /// than membership and liveness reaches a client's log (R-2.12, SQ-116).
     /// </summary>
