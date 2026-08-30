@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Data;
 /// automatically, so it is not one. The old name would have led whoever builds R-2.12's real export
 /// straight here, to a type whose <see cref="Write"/> already produces the right-looking output.
 /// <b>Reusing it there would put a peer code into a genuine export, and nothing would complain:</b>
-/// every test here is about the retained log, where the peer code is permitted (A-1.11b), and the
+/// every test here is about the retained log, where the peer code is permitted (A-1.11a-note), and the
 /// bytes are identical. Renamed rather than annotated, because a comment saying <i>"this name is
 /// wrong"</i> leaves the attractor in place.
 /// </para>
