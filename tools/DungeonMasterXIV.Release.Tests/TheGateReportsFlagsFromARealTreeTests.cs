@@ -116,36 +116,25 @@ public class TheGateReportsFlagsFromARealTreeTests(ITestOutputHelper output)
 
     // >>> THE FAIL-OPEN ARM, DRIVEN <<<
     //
-    // git diff CANNOT SEE UNTRACKED FILES -- measured: with two new files on disk,
-    // `git diff --name-only origin/main` returned empty. So the walk unions in untracked additions,
-    // or a brand-new file arriving over a flag is reported by nothing until somebody commits it.
-    [Fact]
-    public void UntrackedAdditionsAreWalkedToo()
-    {
-        var combined = FlagSupply.Combine(["a.cs"], ["b.cs"]);
-
-        Assert.Equal(["a.cs", "b.cs"], combined);
-    }
-
-    // AND NULL PROPAGATES RATHER THAN SHORTENING THE LIST. "Could not ask" must never arrive looking
-    // like "nothing to walk" -- a partial walk reported as a clean one is the fail-open this gate
-    // exists to prevent. Both directions, because one arm guarded is one arm unguarded.
+    // NULL IS NOT EMPTY. Empty means "nothing changed" and produces a silent clean report; null means
+    // "could not ask". Reporting silence on the second is the fail-open this gate exists to prevent,
+    // and the live consumer asserts on the distinction -- so the distinction itself is pinned here.
     [Theory]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public void IfEitherListCannotBeReadTheAnswerIsCouldNotAsk(bool trackedFailed, bool untrackedFailed)
+    [InlineData(1, false)]
+    [InlineData(0, true)]
+    [InlineData(128, false)]
+    public void IfGitDidNotAnswerTheResultIsCouldNotAskRatherThanNothingChanged(int code, bool timedOut)
     {
-        Assert.Null(FlagSupply.Combine(
-            trackedFailed ? null : ["a.cs"],
-            untrackedFailed ? null : ["b.cs"]));
+        Assert.Null(FlagSupply.Parse(code, string.Empty, timedOut));
     }
 
-    // The control for the row above: two readable lists DO produce an answer, so the assertions
-    // there are about null-ness rather than about Combine never returning anything.
+    // The control: a successful call DOES produce an answer, and an empty one is an empty LIST rather
+    // than null -- otherwise the assertions above would hold on a Parse that never returns anything.
     [Fact]
-    public void TwoReadableListsProduceAnAnswer()
+    public void AGitCallThatAnsweredProducesAListEvenWhenNothingChanged()
     {
-        Assert.NotNull(FlagSupply.Combine([], []));
+        Assert.NotNull(FlagSupply.Parse(0, string.Empty, timedOut: false));
+        Assert.Empty(FlagSupply.Parse(0, string.Empty, timedOut: false)!);
+        Assert.Equal(["a.cs", "b.cs"], FlagSupply.Parse(0, "a.cs\nb.cs\n", timedOut: false));
     }
 }

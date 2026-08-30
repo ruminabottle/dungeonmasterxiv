@@ -31,6 +31,18 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </list>
 /// </para>
 /// <para>
+/// <b>AND IT DOES NOT SEE UNTRACKED FILES — MEASURED, AND THE FIRST ATTEMPT TO FIX IT WAS INERT.</b>
+/// <c>git diff --name-only</c> returned EMPTY with two new files on disk, so I unioned in
+/// <c>ls-files --others</c>. <b>That bought nothing and I only caught it by comparing two runs:</b>
+/// "0 of 2 changed file(s) are in intake" became "2 of 2" once the files were COMMITTED, because
+/// <see cref="SizeGateIntake.Files"/> is <c>git ls-files</c> — <b>tracked only</b> — so an untracked
+/// path is filtered out one line later regardless. The union was a tested mechanism with no effect:
+/// <b>the very shape this ticket exists to fix, reproduced inside its own fix.</b> Removed rather
+/// than kept as speculative generality. <b>The consequence stands and is the intake's to change, not
+/// this type's: a new file is measured once it is committed, and the block gate has always behaved
+/// the same way.</b>
+/// </para>
+/// <para>
 /// <b>WHAT THE CHOSEN OPTION CANNOT CATCH, stated rather than discovered later.</b> A delta sees two
 /// endpoints: a flag crossed and then uncrossed inside the branch is invisible, and so is one that
 /// was ALREADY over on the base ref and got worse — the second is
@@ -109,43 +121,30 @@ internal static class FlagSupply
     /// <param name="reference">The git ref to compare against.</param>
     internal static IReadOnlyList<string>? ChangedAgainst(string reference)
     {
-        return Combine(Lines($"diff --name-only {reference}"), Lines("ls-files --others --exclude-standard"));
+        var (code, output, _, timedOut) = ContainsMainFactAttribute.Git($"diff --name-only {reference}");
+        return Parse(code, output, timedOut);
     }
 
     /// <summary>
-    /// Tracked changes and untracked additions as one list, or null if either could not be read.
+    /// git's answer as a path list, or null when it did not answer.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>UNTRACKED FILES ARE INCLUDED BECAUSE <c>git diff</c> CANNOT SEE THEM, AND I MEASURED THAT
-    /// RATHER THAN ASSUMING IT.</b> With two new files on disk,
-    /// <c>git diff --name-only origin/main</c> returned EMPTY — so a brand-new file arriving over a
-    /// flag would have been reported by nothing until somebody committed it. A gate that is silent
-    /// on exactly the change an engineer is looking at when they run it is the same defect this
-    /// ticket exists to fix, one step smaller.
+    /// <b>NULL RATHER THAN AN EMPTY LIST WHEN GIT FAILS, AND THE DISTINCTION IS THE WHOLE RISK.</b>
+    /// Empty means "nothing changed" and yields a silent, clean report — indistinguishable from the
+    /// answer this gate exists to stop being faked. Null means "could not ask", and the caller must
+    /// refuse rather than report silence.
     /// </para>
     /// <para>
-    /// <b>Null propagates.</b> If either list is unreadable the answer is "could not ask", never a
-    /// shorter list — a partial walk reported as a clean one is the fail-open arm.
-    /// </para>
-    /// <para>
-    /// Pure, and separate from the git calls, for the reason <c>ContainsMainFactAttribute.Decide</c>
+    /// Pure, and separate from the git call, for the reason <c>ContainsMainFactAttribute.Decide</c>
     /// takes its runner as a parameter: an arm that cannot be driven is an arm nothing checks.
     /// </para>
     /// </remarks>
-    /// <param name="tracked">Paths git reported as changed, or null if it could not say.</param>
-    /// <param name="untracked">Paths git reported as untracked, or null if it could not say.</param>
-    internal static IReadOnlyList<string>? Combine(
-        IReadOnlyList<string>? tracked, IReadOnlyList<string>? untracked) =>
-        tracked is null || untracked is null
-            ? null
-            : [.. tracked.Concat(untracked).Distinct(StringComparer.Ordinal)];
-
-    private static IReadOnlyList<string>? Lines(string arguments)
-    {
-        var (code, output, _, timedOut) = ContainsMainFactAttribute.Git(arguments);
-        return code != 0 || timedOut
+    /// <param name="code">git's exit code.</param>
+    /// <param name="output">Its standard output.</param>
+    /// <param name="timedOut">Whether it was killed for exceeding its bound.</param>
+    internal static IReadOnlyList<string>? Parse(int code, string output, bool timedOut) =>
+        code != 0 || timedOut
             ? null
             : output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    }
 }
