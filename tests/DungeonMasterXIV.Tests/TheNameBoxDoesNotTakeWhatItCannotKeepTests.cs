@@ -116,6 +116,37 @@ public class TheNameBoxDoesNotTakeWhatItCannotKeepTests
         Assert.Contains("NameNeedsACampaign", source);
     }
 
+    // >>> THE STATE NEITHER SUITE COVERED, WHICH IS WHY #217 AND THIS COLLIDED SILENTLY. <<<
+    //
+    // THE HAZARD IS REAL AND THIS PROVES IT RATHER THAN ASSERTING IT. #217 made ToEdit fall back to a
+    // name carried over from before campaign-scoping. With NO campaign it returns that carried name --
+    // while the preview below the box still returns the CHARACTER name. Those are the same two lines
+    // that disagreed in BUG-141, rebuilt out of #217's parts, in a box now DISABLED so the user
+    // cannot even correct it.
+    //
+    // Nothing in either suite reaches here: #217's tests pass because the pre-fill is offered, mine
+    // pass because the box is disabled. The contradiction only exists where both changes are true.
+    [Fact]
+    public void ACarriedOverNameWouldContradictThePreviewWhenThereIsNoCampaign()
+    {
+        var box = CampaignDisplayName.ToEdit(null, "Carried Over", CharacterName);
+        var preview = CampaignDisplayName.Or(null, CharacterName);
+
+        Assert.Equal("Carried Over", box);
+        Assert.NotEqual(preview.Value, box);
+    }
+
+    // SO THE WINDOW MUST NOT PASS IT THERE, and that is asserted on the window rather than re-derived
+    // here -- computing the gate in this file would test the expression I just wrote, not the one that
+    // ships. A textual proxy again, and the same declared ceiling as the scan below.
+    [Fact]
+    public void TheWindowDoesNotOfferTheCarriedOverNameWithoutACampaign()
+    {
+        var source = WindowSource("ConfigWindow.cs");
+
+        Assert.Contains("noCampaign ? null : carriedOverDefault", source);
+    }
+
     // The guard on the guard (BUG-48's shape): a scan over a path that does not resolve matches
     // nothing and goes green, so the read is asserted rather than assumed.
     [Fact]
