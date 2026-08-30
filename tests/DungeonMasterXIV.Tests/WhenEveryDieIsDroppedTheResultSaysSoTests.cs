@@ -1,3 +1,4 @@
+using System.Linq;
 using DungeonMasterXIV.Rolls;
 using Xunit;
 
@@ -77,6 +78,43 @@ public class WhenEveryDieIsDroppedTheResultSaysSoTests
         Assert.Null(outcome.Notice);
     }
 
+    // ---- THE ZEROES THAT MUST STAY SILENT, and the direction nothing else here can measure.
+    //      Both total ZERO with EVERY die KEPT, so A-2.3b's rule sentence does not engage: nothing
+    //      was discarded, and there is nothing to say. The clause SQ-96 STRUCK -- "a build that
+    //      returns a total of zero without stating that nothing survived fails" -- would announce
+    //      that nothing survived on both of them, and that is WHY it was struck. These two tests
+    //      are what let the suite tell the binding rule from the struck one.
+    //      Until they existed it could not: every other silent case above has a NON-ZERO total, and
+    //      the one zero-total case has no dice at all, so it slips under any condition guarded by
+    //      dice.Count > 0. Measured, not argued -- reinstating the struck clause as a widening left
+    //      the suite green.
+
+    [Fact]
+    public void CountingNoSuccessesIsAZeroWithEveryDieKept()
+    {
+        var outcome = Roll("4d10>9", 1, 6, 3, 5);
+
+        // THE PREMISE FIRST. Without it this passes for an expression that was refused, or that
+        // rolled no dice at all, and then it asserts nothing whatever about survival.
+        Assert.Equal(0, outcome.Total);
+        Assert.Equal(4, outcome.Dice.Count);
+        Assert.All(outcome.Dice, die => Assert.True(die.Kept));
+
+        Assert.Null(outcome.Notice);
+    }
+
+    [Fact]
+    public void AZeroReachedByArithmeticKeepsEveryDieAndSaysNothing()
+    {
+        var outcome = Roll("4d6-15", 1, 6, 3, 5);
+
+        Assert.Equal(0, outcome.Total);
+        Assert.Equal(4, outcome.Dice.Count);
+        Assert.All(outcome.Dice, die => Assert.True(die.Kept));
+
+        Assert.Null(outcome.Notice);
+    }
+
     // A DIE THAT WAS REROLLED AWAY IS NOT A DIE THAT DIED: its replacement survived.
     [Fact]
     public void ARerolledDieDoesNotCountAsNothingSurviving()
@@ -101,6 +139,20 @@ public class WhenEveryDieIsDroppedTheResultSaysSoTests
         Assert.Null(outcome.Notice);
     }
 
+    // THE SAME ABSENCE WITH AN ORDINARY TOTAL. `0+0` above is the stronger control because it
+    // carries the zero a total test keys on; this one separates a different wrong condition, "no
+    // die was kept" taken alone, which is vacuously true of an empty dice list whatever the total.
+    [Fact]
+    public void ArithmeticWithNoDiceAndAnOrdinaryTotalIsNotStated()
+    {
+        var outcome = Roll("2+2");
+
+        Assert.True(outcome.Evaluated);
+        Assert.Equal(4, outcome.Total);
+        Assert.Empty(outcome.Dice);
+        Assert.Null(outcome.Notice);
+    }
+
     [Fact]
     public void ARefusalCarriesNoSurvivalNotice()
     {
@@ -119,5 +171,32 @@ public class WhenEveryDieIsDroppedTheResultSaysSoTests
         Assert.Equal(4, outcome.Dice.Count);
         Assert.All(outcome.Dice, die => Assert.False(die.Kept));
         Assert.NotNull(outcome.Notice);
+    }
+
+    // ---- A ROW WHOSE GRAMMAR IS NOT SETTLED, PINNED WITHOUT SETTLING IT.
+    //      Whether a drop count larger than the pool clamps or refuses is an OPEN Spec Owner
+    //      question (SQ-97), and A-2.3b is deliberately grammar-independent. So this asserts the
+    //      criterion under BOTH rulings instead of choosing one, and it fails only in the state
+    //      A-2.3b actually names: evaluated, dice rolled, none kept, and nothing said. On today's
+    //      build the second arm is the live one -- it evaluates and every die is dropped.
+    [Fact]
+    public void DroppingMoreDiceThanWereRolledSaysSoIfItEvaluatesAtAll()
+    {
+        var outcome = Roll("4d6dl9", 1, 6, 3, 5);
+
+        if (!outcome.Evaluated)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(outcome.Message));
+            Assert.Null(outcome.Notice);
+        }
+        else if (outcome.Dice.Any(die => die.Kept))
+        {
+            Assert.Null(outcome.Notice);
+        }
+        else
+        {
+            Assert.NotEmpty(outcome.Dice);
+            Assert.False(string.IsNullOrWhiteSpace(outcome.Notice));
+        }
     }
 }

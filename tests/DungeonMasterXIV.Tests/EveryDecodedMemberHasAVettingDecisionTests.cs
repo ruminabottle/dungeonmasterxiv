@@ -150,6 +150,18 @@ public class EveryDecodedMemberHasAVettingDecisionTests
                 + "that converts it to DateTimeOffset owes the range check ClosingAtUtcTicks "
                 + "already has.",
 
+            ["SessionContent.Saying"] =
+                "DELIBERATELY UNVETTED IN THE CODEC, AND BOUNDED AT THE HOST INSTEAD — carried "
+                + "forward verbatim by Vetted, exactly as Leaving is. It is content a person typed, "
+                + "so it has no shape to hold it to, and the bound R-2.19 requires is a TUNABLE "
+                + "POLICY VALUE (MessageLimits) rather than a structural fact a static codec can "
+                + "own. A codec enforcing a policy number would put the product's tuning inside the "
+                + "wire format. THE GATE IS InboundWiring.Said, which composes the arriving text "
+                + "against MessageLimits and drops it if it does not hold — an arrival is bounded "
+                + "because a peer is not obliged to run our sending code, which is the check "
+                + "MemberMessage's sender-side refusal cannot stand in for. WHO said it is read "
+                + "from the key the payload opened under and never from this field.",
+
             ["StreamLine.Kind"] =
                 "DELIBERATELY UNVETTED, on RosterEntry.Role's reasoning and inheriting its limit. "
                 + "An enum over int with no string converter: every string form is refused at "

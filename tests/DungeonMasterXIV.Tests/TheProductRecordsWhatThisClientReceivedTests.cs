@@ -148,7 +148,16 @@ public class TheProductRecordsWhatThisClientReceivedTests
             new MemberContentKeys(admissions.Audience, () => hostKeys, () => host.Code, SilentLog.Instance),
             new MemberContentReceipts());
 
-        var wiring = new InboundWiring(admissions, resources, static _ => RelinkClaim.None);
+        // The broadcast is required rather than optional so a host cannot silently fail to
+        // rebroadcast (A-2.34). This fixture asserts nothing about sending, so it is wired to a
+        // transport that goes nowhere.
+        var broadcast = new RosterBroadcast(
+            new RelayLink(new SilentTransport(), () => RelayEndpoint.Default, static _ => { }),
+            admissions.Audience,
+            new HostIdentity(() => hostKeys, () => host.Code, () => DisplayName.None, () => null),
+            SilentLog.Instance);
+
+        var wiring = new InboundWiring(admissions, resources, static _ => RelinkClaim.None, broadcast);
 
         return (wiring.For(Now, sessionKey: null, onHostContent: _ => { }), resources, peer);
     }

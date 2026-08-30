@@ -1,4 +1,5 @@
 using System;
+using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
@@ -41,6 +42,11 @@ namespace DungeonMasterXIV.Net;
 /// </remarks>
 /// <param name="admissions">Where an admission-time signal goes.</param>
 /// <param name="resources">Holds the per-peer keys and the member-content record.</param>
+/// <param name="roster">
+/// The host's outbound broadcast, so a member's message can be stamped and sent on. <b>Supplied
+/// rather than reached for: this type already owns the inbound doors, and A-2.34's arrival at a
+/// DIFFERENT member is the half a receive-only host silently fails.</b>
+/// </param>
 /// <param name="resolveRelink">
 /// Turns the raw claimed-participant string into a <see cref="RelinkClaim"/>. Supplied rather than
 /// looked up because deciding whether a claimed participant is one this campaign knows needs the
@@ -49,7 +55,8 @@ namespace DungeonMasterXIV.Net;
 internal sealed class InboundWiring(
     AdmissionControl admissions,
     SessionResources resources,
-    Func<string?, RelinkClaim> resolveRelink)
+    Func<string?, RelinkClaim> resolveRelink,
+    RosterBroadcast roster)
 {
     /// <summary>The handlers for one frame.</summary>
     /// <param name="now">The instant this frame is being advanced at.</param>
@@ -90,6 +97,8 @@ internal sealed class InboundWiring(
                 {
                     resources.MemberContent.Record(peer, content);
 
+                    Said(peer, content, now);
+
                     if (content.Leaving is true)
                     {
                         // R-2.12 / SQ-116: THIS CLIENT WRITES DOWN WHAT IT RECEIVED, and a member
@@ -107,4 +116,56 @@ internal sealed class InboundWiring(
             // admitted, so a stranger's notice records nothing.
             Transport: new TransportNotices(
                 OnConnectionDropped: key => admissions.RecordDrop(key, now)));
+
+    /// <summary>
+    /// Stamps a member's message and sends it to the whole session (R-2.19, A-2.34).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A SEPARATE METHOD RATHER THAN ANOTHER BRANCH INSIDE THE LAMBDA, because <c>For</c> is at
+    /// margin 12 on the method row</b> and this is the fifth door that type's own remarks anticipate.
+    /// </para>
+    /// <para>
+    /// <b>BOUNDED HERE EVEN THOUGH THE SENDER ALREADY BOUNDED IT, and the two are not redundant.</b>
+    /// <see cref="MemberMessage"/> refuses so the person who typed it is TOLD (A-2.35); this refuses
+    /// because <b>a peer is not obliged to run our sending code</b> and R-2.19 makes an arriving
+    /// message untrusted input. A host that trusted the sender's check would be bounded only against
+    /// its friends.
+    /// </para>
+    /// <para>
+    /// <b>AN OVER-LONG ARRIVAL IS DROPPED RATHER THAN REFUSED BACK, and that is not A-2.35's silent
+    /// drop.</b> That criterion is about the SENDER learning what happened to what they typed, and
+    /// this sender was told by their own client before it left. There is no channel to answer a peer
+    /// on, and inventing one would let any member make the host emit traffic on demand.
+    /// </para>
+    /// <para>
+    /// <b>WHO said it comes from <paramref name="peer"/> — the key the payload opened under — and
+    /// never from the document</b>, which is what stops a member speaking as somebody else.
+    /// </para>
+    /// </remarks>
+    /// <param name="peer">The sender, established by the key that opened the payload.</param>
+    /// <param name="content">What arrived.</param>
+    /// <param name="now">The instant this frame is being advanced at.</param>
+    private void Said(PeerCode peer, SessionContent content, DateTimeOffset now)
+    {
+        if (content.Saying is not { } text)
+        {
+            return;
+        }
+
+        var draft = MessageDraft.Compose(text, MessageLimits.Default);
+
+        if (!draft.IsAccepted || draft.Text is not { } said)
+        {
+            return;
+        }
+
+        if (resources.Recording.StampAsHost(StreamEventKind.Message, peer, said, now) is not { } entry)
+        {
+            return;
+        }
+
+        roster.PublishEntry(new StreamLine(
+            entry.Stamp.Sequence, entry.Stamp.AtUtcTicks, entry.Kind, entry.Peer.Value, entry.Text));
+    }
 }

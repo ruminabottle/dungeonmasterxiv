@@ -307,7 +307,7 @@ public sealed class SessionCoordinator
             Join,
             Membership.Keys,
             Host,
-            new InboundWiring(_admissions, _resources, _resolveRelink)
+            new InboundWiring(_admissions, _resources, _resolveRelink, _roster)
                 .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;
