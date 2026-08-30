@@ -110,7 +110,9 @@ public static class SessionContentCodec
         //
         // ON ADDITION: EveryDecodedMemberHasARecordedVettingDecision is a census over the decoded
         // types and it FAILS THE MOMENT a member is added without a registered decision. It caught
-        // Entries within minutes of it being written. It is general.
+        // Entries within minutes of it being written. It is general, and a mutation that only
+        // DELETES carry-forward lines cannot see it — which is how the previous version of this
+        // comment came to be written.
         //
         // ON DELETION THERE IS NO GENERAL GUARD, and the previous version of this comment claimed
         // otherwise: it named ASectionOtherThanTheRosterSurvivesVetting and said that test "fails if
@@ -118,7 +120,8 @@ public static class SessionContentCodec
         // AGAINST THE FULL SUITE (DMXENG-118): deleting ClosingAtUtcTicks reddens that test alone;
         // deleting Leaving reddens ADepartureSurvivesVettedsRebuildWhenARosterIsPresent and leaves
         // the named one GREEN. Every section has its OWN deletion guard — the name generalises and
-        // the assertions do not.
+        // the assertions do not — so a section added without one is unguarded, and this comment
+        // used to say otherwise at exactly the moment somebody was adding one.
         //
         // SO ADD A DEDICATED survives-vetting TEST FOR ANY SECTION YOU ADD HERE. The census will
         // tell you the member is unregistered; nothing will tell you the carry-forward line is
