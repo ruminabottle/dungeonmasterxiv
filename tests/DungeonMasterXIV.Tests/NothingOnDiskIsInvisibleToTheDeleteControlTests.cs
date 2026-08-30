@@ -39,7 +39,7 @@ public class NothingOnDiskIsInvisibleToTheDeleteControlTests : IDisposable
     // ---- the version.
 
     [Fact]
-    public void EveryExportCarriesTheFormatVersion()
+    public void EveryRetainedLogCarriesTheFormatVersion()
     {
         var log = new RetainedLog(Guid.NewGuid(), 1, [new LoggedEntry(new LoggedStamp(1, 1), "message", "BCDFGH", "hi")]);
 

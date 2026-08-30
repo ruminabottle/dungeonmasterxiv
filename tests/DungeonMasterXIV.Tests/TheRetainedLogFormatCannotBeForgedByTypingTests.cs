@@ -6,9 +6,10 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A user must not be able to forge a log entry by typing one. <b>The export is a line-and-tab
+/// A user must not be able to forge a log entry by typing one. <b>The retained log is a line-and-tab
 /// format, so unescaped free text is a forgery surface</b> — the R-2.7 impersonation problem
-/// arriving through the file rather than through the panel.
+/// arriving through the file rather than through the panel. <b>Not "the export": SQ-114 rules a
+/// retained log is not one, and this sentence named the concept the old type name named.</b>
 /// </summary>
 /// <remarks>
 /// <para>

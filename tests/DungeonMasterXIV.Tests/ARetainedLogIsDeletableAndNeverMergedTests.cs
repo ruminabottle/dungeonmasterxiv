@@ -9,8 +9,15 @@ namespace DungeonMasterXIV.Tests;
 
 /// <summary>
 /// R-2.12: a retained log is deletable from the place the product says everything is deletable
-/// (A-2.21); a player's log does not survive and the DM's does (A-2.22); an export is a function of
-/// exactly one log (A-2.16) and is never automatic (A-2.17).
+/// (A-2.21); a player's log does not survive and the DM's does (A-2.22); and <b>the writer takes
+/// exactly one log</b> (A-2.16's merge prohibition, the half SQ-109 left live).
+/// <para>
+/// <b>This summary used to end "and is never automatic (A-2.17)", which was false of its own
+/// subject.</b> A-2.17 governs the EXPORT; a retained log is written automatically at session end,
+/// and that is the only path this file tests. Same correction as the one in
+/// <see cref="Data.RetainedLogFormat"/>'s own remarks — true of the concept the old name named,
+/// false of the code it sat on.
+/// </para>
 /// </summary>
 /// <remarks>
 /// <para>
@@ -105,7 +112,7 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     // ---- A-2.16: exactly one log, structurally.
 
     [Fact]
-    public void ExportTakesExactlyOneLogAndNoOverloadTakesMore()
+    public void WriteTakesExactlyOneLogAndNoOverloadTakesMore()
     {
         var writes = typeof(RetainedLogFormat)
             .GetMethods()
@@ -120,7 +127,7 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     }
 
     [Fact]
-    public void AnExportContainsOnlyTheLogItWasGiven()
+    public void TheWrittenTextContainsOnlyTheLogItWasGiven()
     {
         var mine = new RetainedLog(
             Campaign, 1, [new LoggedEntry(new LoggedStamp(1, 1), "message", "BCDFGH", "mine")]);
@@ -137,7 +144,7 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     // ---- A-2.17: never automatic.
 
     [Fact]
-    public void RetainingDoesNotProduceAnExportedFile()
+    public void RetainingWritesOnlyToTheArchive()
     {
         var archive = new FakeRetainedLogArchive();
         var store = new RetainedLogStore(archive);
@@ -153,7 +160,7 @@ public class ARetainedLogIsDeletableAndNeverMergedTests
     // ---- A-2.31: no display name leaves the campaign.
 
     [Fact]
-    public void AnExportCarriesPeerCodesAndNeverADisplayName()
+    public void TheRetainedLogCarriesPeerCodesAndNeverADisplayName()
     {
         var log = new RetainedLog(
             Campaign, 1, [new LoggedEntry(new LoggedStamp(1, 1), "message", "BCDFGH", "hello")]);
