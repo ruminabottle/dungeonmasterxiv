@@ -42,6 +42,8 @@ public sealed class SessionWindow : Window
     /// <summary>The joiner's surface. Its own type; see <see cref="JoinFlowView"/>.</summary>
     private readonly JoinFlowView _joinFlow;
 
+    private readonly MessageComposeView _compose;
+
     /// <param name="coordinator">The session layer this window reflects.</param>
     /// <param name="displayName">What to call ourselves when joining (R-1.3e). Asked each time.</param>
     /// <param name="hosting">
@@ -69,6 +71,7 @@ public sealed class SessionWindow : Window
         _hosting = hosting;
         _campaignPicker = new HostCampaignPicker(hosting);
         _joinFlow = new JoinFlowView(coordinator, displayName, relink, keepOrLose);
+        _compose = new MessageComposeView(coordinator);
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new System.Numerics.Vector2(420, 260),
@@ -90,6 +93,11 @@ public sealed class SessionWindow : Window
         // these are the DM's prompts, and a joiner's surface was never their place. Composed rather
         // than called through, so the three surfaces can be read and changed independently.
         _admissionPrompts.Draw();
+
+        // R-2.19 / A-2.41: the route by which a person can actually send a message. Drawn from
+        // here rather than given a window of its own, because a window has a registration to
+        // forget and this has none -- the same zero-producer shape one layer up.
+        _compose.Draw();
     }
 
     private void DrawHosting()
