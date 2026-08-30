@@ -179,6 +179,16 @@ public class TheNameBoxDoesNotTakeWhatItCannotKeepTests
     // right; none of them proves the window CONSULTS it. A window that computed its own answer would
     // pass every one. Same shape as TheRetainedLogWiringIsPresentTests, and a textual proxy is the
     // declared limit for "does this file call that".
+    // THREE BYPASSES OF THIS SCAN ARE DEMONSTRATED AND ALL THREE RED. Named here because a guard's
+    // strength is the list of things it has been shown to catch, and that list belongs beside it:
+    //
+    //   BLOCK    /* the call */ then do something else            -> RED (blocks stripped, Singleline)
+    //   TRAILING ToEdit(...);  // ToPreFill(campaign, carried...) -> RED (//[^\n]* , not StartsWith)
+    //   ONE-WORD ToPreFill -> ToEdit, identical signature          -> RED
+    //
+    // THE TRAILING SHAPE IS THE ONE THAT MATTERS MOST AND IT WAS MISSED TWICE -- by me, and by the
+    // instruction that told me to copy a method rather than to satisfy three properties. It needs no
+    // adversary: leaving the old expression as a note beside its replacement is ordinary editing.
     [Fact]
     public void TheWindowConsultsTheHelperRatherThanDecidingForItself()
     {
@@ -209,6 +219,10 @@ public class TheNameBoxDoesNotTakeWhatItCannotKeepTests
     {
         var body = MethodBody(WindowSource("ConfigWindow.cs"), "private string DrawNameBox");
 
+        // AN EQUALITY, WHICH CATCHES BOTH DIRECTIONS. Over-counting is qa-1's attack B (a third
+        // mention added to override the result). UNDER-counting is the trailing-comment variant that
+        // passes null to ToEdit and names the value only in the comment -- once the comment is
+        // stripped the count is 1, and that variant reddens this row AND the wiring row. Measured.
         Assert.Equal(2, Occurrences(body, "carriedOverDefault"));
     }
 
@@ -252,21 +266,26 @@ public class TheNameBoxDoesNotTakeWhatItCannotKeepTests
                 $"{fileName} is not where the scan looks, so it would pass over nothing.", path);
         }
 
-        // BLOCK COMMENTS FIRST, and the ordering is the fix rather than a tidiness. A // inside a
-        // /* */ belongs to the block, and stripping lines first would strand the block's delimiters.
-        // Singleline so . spans newlines -- a commented-out wiring call is MULTI-LINE, which is the
-        // case that defeated the earlier version.
+        // >>> THREE PROPERTIES, NOT A COPY. A COPY LOSES THE ONE IT DOES NOT SHARE, SILENTLY. <<<
         //
-        // COPIED FROM TheRetainedLogWiringIsPresentTests.CodeOf RATHER THAN REDESIGNED. That fix is
-        // already merged; a second implementation of one rule is two things that must agree and will
-        // eventually not. THIRD SIGHTING of this defeat, and the Deployment Manager measured SIX
-        // files carrying this helper -- the other five are ticketed separately and are not mine.
-        var withoutBlocks = System.Text.RegularExpressions.Regex.Replace(
+        // (1) BLOCKS FIRST, then lines: a // inside a /* */ belongs to the block, so stripping lines
+        //     first strands the block's delimiters.
+        // (2) SINGLELINE on the block strip, because a commented-out wiring call is MULTI-LINE.
+        // (3) //[^\n]* RATHER THAN A StartsWith TEST -- and this is the property the first version
+        //     could not express. StartsWith only drops a line that BEGINS with //, so a TRAILING
+        //     comment survived and satisfied the scan while the code did something else.
+        //
+        // THE TRAILING SHAPE ARRIVES BY ACCIDENT, WHICH IS WHY IT MATTERS MORE THAN THE BLOCK ONE.
+        // Leaving the old expression as a note beside its replacement is ordinary editing; the block
+        // case needs somebody debugging and forgetting.
+        //
+        // It also strips // inside string literals. That makes the scan MORE aggressive, never less,
+        // so it cannot manufacture a false PASS -- only a false failure, and only for an asserted
+        // string containing //, which none here does.
+        var code = System.Text.RegularExpressions.Regex.Replace(
             File.ReadAllText(path), @"/\*.*?\*/", string.Empty,
             System.Text.RegularExpressions.RegexOptions.Singleline);
 
-        return string.Join(
-            "\n",
-            withoutBlocks.Split('\n').Where(line => !line.TrimStart().StartsWith("//", System.StringComparison.Ordinal)));
+        return System.Text.RegularExpressions.Regex.Replace(code, @"//[^\n]*", string.Empty);
     }
 }
