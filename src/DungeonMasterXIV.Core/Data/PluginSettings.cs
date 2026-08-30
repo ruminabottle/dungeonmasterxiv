@@ -99,6 +99,48 @@ public sealed class PluginSettings
     public RelinkMemory Relink { get; set; } = new();
 
     /// <summary>
+    /// A display name this client stored BEFORE names were campaign-scoped, kept as a local
+    /// pre-fill default and nothing else (SQ-87, and A-2.31's single exception added by SQ-112).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THE NAME OF THIS PROPERTY IS THE v0.1.5 ON-DISK KEY AND WAS NOT CHOSEN.</b> Dalamud
+    /// persists settings with Newtonsoft, which matches a JSON member to a property by NAME. A
+    /// v0.1.5 file carries <c>DisplayNameAlias</c>, so a property called anything else recovers
+    /// nothing, and renaming the key needs a serializer attribute this project deliberately cannot
+    /// reach — <c>DungeonMasterXIV.Core</c> takes no serializer dependency, and adding one so that
+    /// a field could be spelt better would risk an assembly mismatch that fails in the game and
+    /// that nothing in this repository can detect. <b>The name is historical. What it MEANS is
+    /// this remark.</b>
+    /// </para>
+    /// <para>
+    /// <b>A READER WHO GREPS THIS AND CONCLUDES THE CAMPAIGN-SCOPING WAS REVERTED IS READING IT
+    /// EXACTLY AS THE PRD PREDICTED, AND IS WRONG.</b> A-2.31 forbids a display name persisting
+    /// outside a campaign and now carries ONE exception: this value. <b>Exactly one, whose only
+    /// permitted reader is the pre-fill path, and which never travels as itself</b> (A-2.32).
+    /// <c>Campaigns.CampaignDisplayName.Or</c> — the send path — has no overload that can see it,
+    /// and <b>that absence is the mechanism rather than a convention.</b>
+    /// </para>
+    /// <para>
+    /// <b>NOTHING IN THE PRODUCT WRITES THIS.</b> It arrives only by deserialising a file an older
+    /// build wrote, so a player who never ran v0.1.5 cannot acquire one at all — which is what
+    /// keeps A-2.31's <i>"about what the product CAN do"</i> true of a build that carries it.
+    /// Choosing a name writes <c>Campaigns.Campaign.DisplayNameAlias</c>, never this. The setter is
+    /// public only because the deserialiser needs it.
+    /// </para>
+    /// <para>
+    /// <b>No schema bump, and the reason is not the usual one.</b> <see cref="CurrentSchemaVersion"/>
+    /// moves when settings already on disk would not survive being read as-is. This recovers a value
+    /// by name out of JSON that is already there, so it needs no version comparison — and <b>a bump
+    /// would not have helped anyway.</b> <see cref="RequiresWriteOnLoad"/> fires only when nothing
+    /// readable loaded; a v0.1.5 file carries version 1 and this build still writes 1, so the
+    /// existing hook cannot see this upgrade at all. Recovering by name is what makes the version
+    /// irrelevant rather than merely unchanged.
+    /// </para>
+    /// </remarks>
+    public string DisplayNameAlias { get; set; } = string.Empty;
+
+    /// <summary>
     /// The window to actually use: <see cref="InterruptionWindow"/> when it is safe, otherwise
     /// R-1.4's default.
     /// </summary>

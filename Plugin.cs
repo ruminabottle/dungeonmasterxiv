@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -118,7 +119,7 @@ public sealed class Plugin : IDalamudPlugin
             _hostingCampaign,
             () => _configurationStore.Configuration.Settings.Relink);
         _mainWindow.OpenSession = _sessionWindow.Open;
-        _campaignListWindow = new CampaignListWindow(_campaignStore);
+        _campaignListWindow = CampaignListWindowFor(pluginInterface.ConfigDirectory);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
 
         try
@@ -177,6 +178,18 @@ public sealed class Plugin : IDalamudPlugin
     /// <param name="characterName">What the game says this player is called.</param>
     private ConfigWindow SettingsWindowFor(Func<DisplayName> characterName) =>
         new(_configurationStore, characterName, () => _hostingCampaign.Current, _campaignStore.Save);
+
+    /// <summary>
+    /// The campaign list window and the retained-log side its delete control must reach (R-2.12).
+    /// Logs sit BESIDE campaign data — <see cref="CampaignDeletion"/> says why that is a ruling.
+    /// </summary>
+    /// <param name="configDirectory">Where Dalamud keeps this plugin's data; logs go beside it.</param>
+    private CampaignListWindow CampaignListWindowFor(DirectoryInfo configDirectory)
+    {
+        var retainedLogs = new RetainedLogStore(
+            new RetainedLogFileArchive(Path.Combine(configDirectory.FullName, "logs")));
+        return new CampaignListWindow(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs));
+    }
 
     /// <summary>Unwinds construction in reverse order.</summary>
     public void Dispose()

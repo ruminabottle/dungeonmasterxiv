@@ -190,10 +190,11 @@ public sealed class ConfigWindow : Window
         // 32-character Devanagari name is 192 bytes and would have been truncated at the boundary
         // this box exists to let the user cross deliberately.
         var campaign = _currentCampaign();
-        var typed = CampaignDisplayName.ToEdit(campaign, characterName);
-
-        // A-1.2z (BUG-141): the box, the refusal to store, and the telling that goes with them.
-        DrawNameBox(campaign, characterName, ref typed);
+        // A-1.2z (BUG-141) and SQ-87 (#217) both live in this one control, in DIFFERENT STATES:
+        // the disable applies with NO campaign, the carried-over pre-fill applies WITH one. Both
+        // sit in DrawNameBox because the rule that joins them -- an offer is only made where it can
+        // be accepted -- is one decision, and splitting it would let the halves drift apart.
+        var typed = DrawNameBox(campaign, settings.DisplayNameAlias, characterName);
 
         // Deliberately the SAME call the join uses, not a re-derivation of it. Two expressions that
         // are meant to agree drift; one that is shared cannot disagree with itself. A-1.2g asserts
@@ -231,50 +232,69 @@ public sealed class ConfigWindow : Window
     /// </remarks>
     /// <param name="campaign">The open campaign, or null when there is none.</param>
     /// <param name="characterName">The name used when nothing is stored.</param>
-    /// <param name="typed">The box buffer; ImGui writes the user's keystrokes into it.</param>
-    private void DrawNameBox(Campaign? campaign, DisplayName characterName, ref string typed)
+    /// <param name="carriedOverDefault">
+    /// A name stored before campaign-scoping (SQ-87), offered as a pre-fill.
+    /// </param>
+    /// <returns>What the box holds after the user has had their turn with it.</returns>
+    private string DrawNameBox(Campaign? campaign, string? carriedOverDefault, DisplayName characterName)
     {
-            // A-1.2z (BUG-141). WITH NO CAMPAIGN THIS BOX USED TO TAKE INPUT AND KEEP NONE OF IT, and the
-            // "You will join as" line below then showed the character name instead. The two disagreed with
-            // no explanation, which is worse than saying nothing: a box showing one name above a preview
-            // showing another reads as a broken PREVIEW rather than as a refusal to store, so the user was
-            // misinformed about which half was wrong.
-            //
-            // DISABLED RATHER THAN ANNOUNCED, because the Spec Owner ruled that A CONTROL OFFERED WHERE IT
-            // CANNOT WORK IS ITSELF THE DEFECT. Announcing the discard while still accepting keystrokes
-            // would leave the box taking text it will never keep -- the same defect with a caption. A
-            // disabled box shows the name that WILL be used, so the box and the preview cannot disagree.
-            //
-            // NOTHING IS STORED AND NOTHING NEW CAN BE. A-2.31 as amended by SQ-112 permits exactly ONE
-            // globally-stored name-shaped value, read only by the pre-fill path; giving the no-campaign
-            // name somewhere to live is the cheap fix and it is the forbidden one. This remedy needs no
-            // storage at all, which is why it is a telling.
-            var noCampaign = campaign is null;
-            if (noCampaign)
-            {
-                ImGui.BeginDisabled();
-            }
+        var noCampaign = campaign is null;
 
-            var edited = ImGui.InputText("Name others see", ref typed, DisplayName.MaxUtf8Bytes);
+        // >>> THE OFFER IS ONLY MADE WHERE IT CAN BE ACCEPTED (A-2.33's twin). <<<
+        //
+        // ToEdit falls back to the carried-over name when the campaign has no alias -- and with NO
+        // campaign at all it would return that name into a box this method has just DISABLED, while
+        // "You will join as" below goes on showing the character name. That is BUG-141 REBUILT out
+        // of #217's parts: the same two lines disagreeing, now in a box the user cannot correct.
+        //
+        // Passing null here is what keeps them equal. NEITHER SUITE CATCHES THIS ALONE -- #217's
+        // pass because the pre-fill is offered, mine pass because the box is disabled, and the
+        // contradiction lives in a state only the merged code can reach.
+        var carried = noCampaign ? null : carriedOverDefault;
+        var typed = CampaignDisplayName.ToEdit(campaign, carried, characterName);
 
-            if (noCampaign)
-            {
-                ImGui.EndDisabled();
-                ImGui.TextWrapped(NameNeedsACampaign);
-            }
+        // A-1.2z (BUG-141). WITH NO CAMPAIGN THIS BOX USED TO TAKE INPUT AND KEEP NONE OF IT, and the
+        // "You will join as" line below then showed the character name instead. The two disagreed with
+        // no explanation, which is worse than saying nothing: a box showing one name above a preview
+        // showing another reads as a broken PREVIEW rather than as a refusal to store, so the user was
+        // misinformed about which half was wrong.
+        //
+        // DISABLED RATHER THAN ANNOUNCED, because the Spec Owner ruled that A CONTROL OFFERED WHERE IT
+        // CANNOT WORK IS ITSELF THE DEFECT. Announcing the discard while still accepting keystrokes
+        // would leave the box taking text it will never keep -- the same defect with a caption. A
+        // disabled box shows the name that WILL be used, so the box and the preview cannot disagree.
+        //
+        // NOTHING IS STORED AND NOTHING NEW CAN BE. A-2.31 as amended by SQ-112 permits exactly ONE
+        // globally-stored name-shaped value, read only by the pre-fill path; giving the no-campaign
+        // name somewhere to live is the cheap fix and it is the forbidden one. This remedy needs no
+        // storage at all, which is why it is a telling.
+        if (noCampaign)
+        {
+            ImGui.BeginDisabled();
+        }
 
-            if (edited)
+        var edited = ImGui.InputText("Name others see", ref typed, DisplayName.MaxUtf8Bytes);
+
+        if (noCampaign)
+        {
+            ImGui.EndDisabled();
+            ImGui.TextWrapped(NameNeedsACampaign);
+        }
+
+        if (edited)
+        {
+            // The campaign is what persists the name now, so the campaign is what gets saved.
+            // RecordChosen reports false when nothing changed AND when there is no campaign to
+            // record against, so neither case writes a file. The guard is kept even though the box
+            // above is now disabled without one: two independent reasons nothing is written beats
+            // one, and this one does not depend on a UI state.
+            if (campaign is not null && CampaignDisplayName.RecordChosen(campaign, typed, characterName))
             {
-                // The campaign is what persists the name now, so the campaign is what gets saved.
-                // RecordChosen reports false when nothing changed AND when there is no campaign to
-                // record against, so neither case writes a file. The guard is kept even though the box
-                // above is now disabled without one: two independent reasons nothing is written beats
-                // one, and this one does not depend on a UI state.
-                if (campaign is not null && CampaignDisplayName.RecordChosen(campaign, typed, characterName))
-                {
-                    _saveCampaign(campaign);
-                }
+                _saveCampaign(campaign);
             }
+        }
+
+        return typed;
     }
 
     // R-1.8: the relay is swappable and the setting is discoverable rather than buried.
