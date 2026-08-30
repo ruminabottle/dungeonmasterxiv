@@ -52,18 +52,23 @@ public sealed class SessionWindow : Window
     /// What this client remembers about who it is, per session code (R-1.5b). Passed straight to the
     /// join flow, which is the only thing here that reads it.
     /// </param>
+    /// <param name="keepOrLose">
+    /// Opens R-2.12's keep-or-lose choice over the session's log, for the joiner's side only — the
+    /// DM's client retains without being asked. Passed through to <see cref="JoinFlowView"/>.
+    /// </param>
     public SessionWindow(
         SessionCoordinator coordinator,
         Func<DisplayName> displayName,
         HostingCampaign hosting,
-        Func<RelinkMemory> relink)
+        Func<RelinkMemory> relink,
+        Func<SessionLogOffer> keepOrLose)
         : base("Dungeon Master XIV session###dmx-session")
     {
         _coordinator = coordinator;
         _admissionPrompts = new AdmissionPromptView(coordinator);
         _hosting = hosting;
         _campaignPicker = new HostCampaignPicker(hosting);
-        _joinFlow = new JoinFlowView(coordinator, displayName, relink);
+        _joinFlow = new JoinFlowView(coordinator, displayName, relink, keepOrLose);
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new System.Numerics.Vector2(420, 260),

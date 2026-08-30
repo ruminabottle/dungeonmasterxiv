@@ -52,14 +52,20 @@ internal sealed class JoinFlowView
     /// appeared to work and did not.
     /// </para>
     /// </param>
+    /// <param name="keepOrLose">
+    /// Opens R-2.12's keep-or-lose choice over the session's log. Passed straight through to
+    /// <see cref="SessionEndingView"/>, which is the joiner's side and the moment the offer belongs
+    /// to; nothing here reads it.
+    /// </param>
     public JoinFlowView(
         SessionCoordinator coordinator,
         Func<DisplayName> displayName,
-        Func<RelinkMemory> relink)
+        Func<RelinkMemory> relink,
+        Func<SessionLogOffer> keepOrLose)
     {
         _coordinator = coordinator;
         _requestForm = new JoinRequestForm(coordinator, displayName, relink);
-        _ending = new SessionEndingView(coordinator);
+        _ending = new SessionEndingView(coordinator, keepOrLose);
     }
 
     /// <summary>Draws the joiner's half of the session window.</summary>
