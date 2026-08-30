@@ -48,9 +48,20 @@ public class EveryDecodedMemberHasAVettingDecisionTests
     /// </summary>
     /// <remarks>
     /// Three. The codec deserialises <see cref="SessionContent"/>, which carries a list of
-    /// <see cref="RosterEntry"/> and a list of <see cref="StreamLine"/>. <b>This list is the reason
-    /// the census works on ADDITION</b> — a new decoded type whose members are not registered fails
-    /// here, which is how <c>StreamLine</c> arrived (DMXENG-118).
+    /// <see cref="RosterEntry"/> and a list of <see cref="StreamLine"/>.
+    /// <para>
+    /// <b>THIS LIST IS HAND-MAINTAINED, AND AN EARLIER VERSION OF THIS REMARK CLAIMED IT WAS NOT.</b>
+    /// It said a new decoded TYPE whose members are not registered "fails here". <b>It does not, and
+    /// that was measured with a control:</b> add a type reachable from <see cref="SessionContent"/>,
+    /// leave it out of this list, and write one line of prose for the new PROPERTY — the whole
+    /// assembly goes green and the new type's members are never censused. Withhold the prose and one
+    /// test fails, naming only the property. <b>The property is caught; the TYPE is not.</b>
+    /// </para>
+    /// <para>
+    /// <b>That gap is now closed by <see cref="EveryTypeReachableFromADecodedMemberIsCensused"/></b>,
+    /// which walks the members of every listed type and fails if one carries a type of ours that is
+    /// absent from this list. So the list stays hand-written and forgetting it is caught.
+    /// </para>
     /// </remarks>
     private static readonly Type[] DecodedTypes =
         [typeof(SessionContent), typeof(RosterEntry), typeof(StreamLine)];
@@ -193,6 +204,60 @@ public class EveryDecodedMemberHasAVettingDecisionTests
         Assert.Equal(
             VettingDecisions.Keys.OrderBy(name => name, StringComparer.Ordinal).ToList(),
             members);
+    }
+
+    /// <summary>
+    /// Every type carried by a decoded member is itself censused.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>THIS CLOSES WHAT THE CENSUS ABOVE CANNOT SEE.</b> That one enumerates the members of the
+    /// types in <see cref="DecodedTypes"/>. A NEW TYPE reached by a new member is invisible to it:
+    /// the member is caught, one line of prose discharges the member, and the type's own members are
+    /// never reached. Measured with a control before this was written — 1471 green with the prose
+    /// exit taken, 1 red with it withheld, naming only the property.
+    /// </para>
+    /// <para>
+    /// <b>Why this matters more than a tidier list.</b> <c>SessionContentCodec</c> names the class of
+    /// error it exists to prevent as <i>"a quiet disclosure, which is the class of error that put a
+    /// display name in the clear"</i>. <b>An unvetted TYPE reaching consumers is that class</b>, and
+    /// the prose exit sits exactly where somebody adding one would read.
+    /// </para>
+    /// <para>
+    /// <b>THE CEILING, stated because this file states its ceilings.</b> This proves a carried type
+    /// is LISTED, so its members get a recorded decision. It does not prove the decision is correct —
+    /// the class limit above governs here too. <b>Enums are excluded deliberately:</b> they have no
+    /// members to census, and the decision that matters for one is recorded on the member that
+    /// carries it (<c>RosterEntry.Role</c>, <c>StreamLine.Kind</c>).
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryTypeReachableFromADecodedMemberIsCensused()
+    {
+        var ours = typeof(SessionContent).Assembly;
+
+        var carried = DecodedTypes
+            .SelectMany(type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            .Select(property => Carried(property.PropertyType))
+            .Where(type => type.Assembly == ours && !type.IsEnum)
+            .Distinct()
+            .OrderBy(type => type.Name, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.NotEmpty(carried);
+        Assert.All(
+            carried,
+            type => Assert.True(
+                DecodedTypes.Contains(type),
+                $"{type.Name} is carried by a decoded member but is absent from DecodedTypes, so "
+                + "none of its members has a recorded vetting decision. Add it to that list."));
+    }
+
+    // Nullable<T> and IReadOnlyList<T> are wrappers the wire uses, never the thing being carried.
+    private static Type Carried(Type type)
+    {
+        var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
+        return unwrapped.IsGenericType ? unwrapped.GetGenericArguments()[0] : unwrapped;
     }
 
     // A decision that says nothing is the same hole wearing a filled-in form. Fails if an entry is
