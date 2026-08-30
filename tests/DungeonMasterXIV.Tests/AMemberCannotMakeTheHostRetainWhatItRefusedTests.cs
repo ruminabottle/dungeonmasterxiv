@@ -229,6 +229,33 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
 
         handlers.MemberAuthored.OnContent!(peer, new SessionContent { Saying = refused });
 
+        // >>> THESE TWO GROUPS ARE NOT REDUNDANT, AND THE SECOND IS SHADOWED BY THE FIRST. <<<
+        //
+        // MEASURED by qa-1 on PR #239, and re-run independently here before this note was written.
+        // Mutate the fix to keep a truncated 40-character prefix "for diagnostics" -- A-2.40's
+        // predicted "in part" violation -- and the failure is:
+        //
+        //     Assert.Null() Failure: Value is not null
+        //
+        // So the THREE Null ASSERTS below are what catch the predicted violation. They run FIRST and
+        // the sentinel search never executes.
+        //
+        // THAT DOES NOT MAKE THE SENTINEL DECORATIVE, and the way to find out is to remove the
+        // shadowing. Delete the three Null asserts, re-run THE SAME mutation, and:
+        //
+        //     Assert.DoesNotContain() Failure: Sub-string found
+        //
+        // It fires. SHADOWED, NOT DECORATIVE.
+        //
+        // WHAT EACH ONE BUYS, which is the part a reader cannot get from looking at them:
+        //   the Null asserts  -- the fast, direct check that the three retained fields are empty.
+        //   the sentinel      -- the ONLY coverage of refused content leaking into some OTHER stored
+        //                        field. A Null check on Saying/Roster/Entries cannot see a fragment
+        //                        that ended up somewhere else, and "in part" is the half A-2.40
+        //                        names as the one that bites.
+        //
+        // DELETING EITHER LOSES REAL COVERAGE. Two independent assertions catching one predicted
+        // violation is durability, and it reads as duplication to anyone who has not run the above.
         var receipt = Assert.Single(resources.MemberContent.Latest);
         Assert.Null(receipt.Content.Saying);
         Assert.Null(receipt.Content.Roster);
