@@ -187,6 +187,53 @@ public class TheNameBoxDoesNotTakeWhatItCannotKeepTests
         Assert.Contains("CampaignDisplayName.ToPreFill(campaign, carriedOverDefault, characterName)", source);
     }
 
+    // >>> AND THE VALUE IS NAMED EXACTLY TWICE, WHICH IS THE HALF Contains CANNOT DO <<<
+    //
+    // A Contains passes BOTH demonstrated defeats: qa-1's attack B keeps the call and overrides the
+    // result on the next line, and the Code Reviewer's bypass comments the call out in a /* */ block
+    // and stops consulting the helper entirely. Each ADDS a third mention of carriedOverDefault --
+    // once in the signature, once in the ToPreFill call, and once more to defeat it.
+    //
+    // So the count is the assertion. Same ceiling, one extra line, two demonstrated defeats closed.
+    //
+    // THE SEVERITY THIS IS ACTUALLY PROTECTING, and it is why a weak textual guard was not good
+    // enough here: ToEdit(Campaign?, string?, DisplayName) and ToPreFill(Campaign?, string?,
+    // DisplayName) have IDENTICAL SIGNATURES AND DIFFERENT RULES. Changing ToPreFill to ToEdit is a
+    // ONE-WORD EDIT that compiles clean and reinstates BUG-141.
+    //
+    // THE RESIDUAL, STATED WHERE THE ASSERTION IS: re-reaching the value by another route -- reading
+    // _configurationStore.Configuration.Settings.DisplayNameAlias directly inside the method --
+    // names carriedOverDefault zero extra times and still defeats this. SMALLER, NOT CLOSED.
+    [Fact]
+    public void TheWindowNamesTheCarriedOverValueExactlyTwice()
+    {
+        var body = MethodBody(WindowSource("ConfigWindow.cs"), "private string DrawNameBox");
+
+        Assert.Equal(2, Occurrences(body, "carriedOverDefault"));
+    }
+
+    /// <summary>The source from a signature to the end of the file — enough to scope a count.</summary>
+    private static string MethodBody(string source, string signature)
+    {
+        var at = source.IndexOf(signature, System.StringComparison.Ordinal);
+        Assert.True(at >= 0, $"{signature} is not in the scanned source, so the count below would be over nothing.");
+
+        var next = source.IndexOf("\n    private ", at + signature.Length, System.StringComparison.Ordinal);
+        return next < 0 ? source[at..] : source[at..next];
+    }
+
+    private static int Occurrences(string haystack, string needle)
+    {
+        var count = 0;
+        for (var at = haystack.IndexOf(needle, System.StringComparison.Ordinal); at >= 0;
+             at = haystack.IndexOf(needle, at + needle.Length, System.StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
+    }
+
     // The guard on the guard (BUG-48's shape): a scan over a path that does not resolve matches
     // nothing and goes green, so the read is asserted rather than assumed.
     [Fact]
@@ -205,8 +252,21 @@ public class TheNameBoxDoesNotTakeWhatItCannotKeepTests
                 $"{fileName} is not where the scan looks, so it would pass over nothing.", path);
         }
 
+        // BLOCK COMMENTS FIRST, and the ordering is the fix rather than a tidiness. A // inside a
+        // /* */ belongs to the block, and stripping lines first would strand the block's delimiters.
+        // Singleline so . spans newlines -- a commented-out wiring call is MULTI-LINE, which is the
+        // case that defeated the earlier version.
+        //
+        // COPIED FROM TheRetainedLogWiringIsPresentTests.CodeOf RATHER THAN REDESIGNED. That fix is
+        // already merged; a second implementation of one rule is two things that must agree and will
+        // eventually not. THIRD SIGHTING of this defeat, and the Deployment Manager measured SIX
+        // files carrying this helper -- the other five are ticketed separately and are not mine.
+        var withoutBlocks = System.Text.RegularExpressions.Regex.Replace(
+            File.ReadAllText(path), @"/\*.*?\*/", string.Empty,
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
         return string.Join(
             "\n",
-            File.ReadAllLines(path).Where(line => !line.TrimStart().StartsWith("//", System.StringComparison.Ordinal)));
+            withoutBlocks.Split('\n').Where(line => !line.TrimStart().StartsWith("//", System.StringComparison.Ordinal)));
     }
 }
