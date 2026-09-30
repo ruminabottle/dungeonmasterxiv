@@ -76,7 +76,7 @@ public sealed class EveryMessageTypeReachesAnArmTests
         Func<Probe, bool>? Reached = null);
 
     // EVERY type, accounted for. A row is either an exclusion WITH A REASON or a handler that must
-    // demonstrably fire. Nothing may be silently absent -- that is the dropped receipt's whole shape.
+    // demonstrably fire. Nothing may be silently absent -- that is the comparability receipt's shape.
     private static readonly Dictionary<WireMessageType, Arm> Expected = new()
     {
         [WireMessageType.Unknown] = new(
@@ -126,9 +126,9 @@ public sealed class EveryMessageTypeReachesAnArmTests
             + "ignored, which is the SILENT path and would pass with the arm deleted."),
     };
 
-    // THE UNIVERSAL, and the one that would have caught the dropped receipt on the day the type was
-    // added. Fails BY NAME on any value this file does not account for -- which is what a new message
-    // type looks like before somebody wires its arm.
+    // THE UNIVERSAL, and the one that would have caught the comparability receipt's missing arm on
+    // the day the type was added. Fails BY NAME on any value this file does not account for -- which
+    // is what a new message type looks like before somebody wires its arm.
     [Fact]
     public void EveryMessageTypeIsAccountedFor()
     {

@@ -45,8 +45,8 @@ public class SessionClosingTravelsTests
 
     /// <summary>A peer code of the shape this product actually emits, so Vetted keeps the entry.</summary>
     /// <remarks>
-    /// Built from the alphabet and length the codec validates against rather than typed, so it
-    /// cannot become impossible if either moves — the fixture mistake Vetted already found once.
+    /// Built from the alphabet and length the codec validates against rather than typed, so it cannot
+    /// become impossible if either moves — the fixture mistake Vetted's peer-code check exposed once.
     /// </remarks>
     private static readonly string PeerCodeThisProductGenerates =
         SpeakableAlphabet.Characters[^SessionCode.Length..];

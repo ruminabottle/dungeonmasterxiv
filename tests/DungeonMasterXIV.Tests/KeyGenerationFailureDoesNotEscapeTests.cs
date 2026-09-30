@@ -102,12 +102,12 @@ public class KeyGenerationFailureDoesNotEscapeTests
         Assert.Equal(SessionFailure.None, coordinator.Host.Failure);
     }
 
-    // THE NARROW CATCH, AND IT NEEDS BOTH HALVES. TryMakeKeys catches CryptographicException only, and its doc
-    // comment calls that narrowness deliberate: "a broader catch here would hide a genuine defect in
-    // this method's own callers behind a message about keys". Nothing asserted it. Widening the catch
-    // to Exception — the single most likely edit anyone makes to a try/catch — left all 979 tests
-    // green, because a catch-all does not break the success path and nothing here ever threw a
-    // non-cryptographic exception from the seam.
+    // THE NARROW CATCH, AND IT NEEDS BOTH HALVES. TryMakeKeys catches CryptographicException only,
+    // and its doc comment calls that narrowness deliberate: "a broader catch here would hide a
+    // genuine defect in this method's own callers behind a message about keys". Nothing asserted it.
+    // Widening the catch to Exception — the single most likely edit anyone makes to a try/catch —
+    // left all 979 tests green, because a catch-all does not break the success path and nothing here
+    // ever threw a non-cryptographic exception from the seam.
     //
     // The property is "CRYPTOGRAPHIC FAILURES ARE CAUGHT AND NOTHING ELSE IS". Asserting only the
     // first half invites the opposite break — narrowing to CryptographicException EXACTLY and

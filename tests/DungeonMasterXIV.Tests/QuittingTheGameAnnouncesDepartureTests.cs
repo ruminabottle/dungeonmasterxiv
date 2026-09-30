@@ -69,8 +69,7 @@ public class QuittingTheGameAnnouncesDepartureTests
     }
 
     // A HOST MUST NOT ANNOUNCE ONE. The doc on the departure path implies a host is already a no-op;
-    // that implication is a reading of a comment rather than a measurement, so it
-    // is measured here.
+    // that was read from a comment, never measured, so it is measured here.
     [Fact]
     public void AHostQuittingTheGameSendsNoDeparture()
     {

@@ -11,12 +11,12 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split from <c>ShippedCopyMeetsItsConstraintsTests</c>, which had two reasons to change.</b>
-/// How copy is FOUND — which files are swept, how a literal is matched to its declaration — moves
-/// when the source layout does. What copy must SAY moves when a decision reverses. One rule
-/// names that split directly: <i>"when a file starts needing a section comment to separate its
-/// parts, those parts are two files."</i> The combined file also passed the 450-line blocking
-/// limit once the review findings were fixed, which is what forced the issue rather than taste.
+/// <b>Split from <c>ShippedCopyMeetsItsConstraintsTests</c>, which had two reasons to change.</b> How
+/// copy is FOUND — which files are swept, how a literal is matched to its declaration — moves when
+/// the source layout does. What copy must SAY moves when a decision reverses. The one-reason rule
+/// names that split directly: <i>"when a file starts needing a section comment to separate its parts,
+/// those parts are two files."</i> The combined file also passed the 450-line blocking limit once the
+/// review findings were fixed, which is what forced the issue rather than taste.
 /// </para>
 /// <para>
 /// <b>Nothing here asserts anything.</b> It is the corpus and the extractor only, so a change to
