@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Relay.Tests;
 
 /// <summary>
 /// A-1.5a-r: the relay's log shows the outcome of a connection and the reason for a failure, readable
-/// by a tester with no human present — and shows neither a character name nor an address (D-8).
+/// afterwards, with nobody watching the attempt — and shows neither a character name nor an address (D-8).
 /// </summary>
 public sealed class RelayLogTests
 {

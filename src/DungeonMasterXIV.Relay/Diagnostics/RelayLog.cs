@@ -4,8 +4,8 @@ using Microsoft.Extensions.Logging;
 namespace DungeonMasterXIV.Relay.Diagnostics;
 
 /// <summary>
-/// The relay's forensic log: enough for a tester to read the outcome of a connection attempt, and the
-/// reason for a failure, without a human present (A-1.5a-r).
+/// The relay's forensic log: enough to read the outcome of a connection attempt, and the reason for
+/// a failure, afterwards, with nobody watching the attempt (A-1.5a-r).
 /// </summary>
 /// <remarks>
 /// <para>

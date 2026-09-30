@@ -41,7 +41,7 @@ public sealed class CertificateFailuresNameTheirOwnCauseTests(ITestOutputHelper 
     /// a permissions problem.
     /// </summary>
     /// <remarks>
-    /// An assertion of ABSENCE, which is the shape the unreadable-file tests could not have. They
+    /// An assertion of ABSENCE, which is the shape the diagnosability tests could not have. They
     /// assert the message contains the path, the uid and the underlying error — and asserting that a
     /// message contains the right things cannot detect that it also asserts a wrong thing. All three
     /// passed on output telling the operator to chown a file whose ownership was already correct.

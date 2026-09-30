@@ -6,8 +6,8 @@
 # (R-1.8) explicitly did NOT withdraw this artifact — it is the only thing tying the deployed
 # process back to a commit, and R-1.8 names the remaining gap rather than claiming this closes it.
 #
-# There is deliberately no self-hosting documentation here (R-1.8). This is our
-# deployment, not a guide to running your own.
+# There is deliberately no self-hosting documentation here: self-hosting is not a tested guarantee
+# (R-1.8). This is our deployment, not a guide to running your own.
 
 # TWO values, not one, because the SDK and the runtime are numbered in DIFFERENT NAMESPACES and a
 # single pinned version cannot name both. Verified against the registry rather than derived from the

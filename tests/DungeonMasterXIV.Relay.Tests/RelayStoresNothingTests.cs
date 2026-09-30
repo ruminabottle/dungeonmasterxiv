@@ -121,9 +121,9 @@ public sealed class RelayStoresNothingTests
     /// written during the session, the same comparison must fail.
     /// </summary>
     /// <remarks>
-    /// Run because "describe the input that makes this fail" is the test for whether
-    /// something is a check, and because a snapshot comparison that silently watched the wrong
-    /// directory would pass forever. This is that input, executed rather than argued.
+    /// Run because "describe the input that makes this fail" is how to tell whether something is a
+    /// check, and because a snapshot comparison that silently watched the wrong directory would pass
+    /// forever. This is that input, executed rather than argued.
     /// </remarks>
     [Fact]
     public async Task RelayWritesAreDetected()

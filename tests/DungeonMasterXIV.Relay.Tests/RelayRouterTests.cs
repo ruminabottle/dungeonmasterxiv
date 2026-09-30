@@ -39,8 +39,8 @@ public sealed class RelayRouterTests
     }
 
     /// <summary>
-    /// The confirmed narrowing: a join request reaches the host and nobody
-    /// else, so a joiner's public key and the fact of an attempt stay off other members' wires.
+    /// The narrowing: a join request reaches the host and nobody else, so a joiner's public key and
+    /// the fact of an attempt stay off other members' wires.
     /// </summary>
     [Fact]
     public void AJoinRequestGoesToTheHostAndNobodyElse()
