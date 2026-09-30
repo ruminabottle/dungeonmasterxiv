@@ -1,9 +1,9 @@
-# THE EXPECTED POPULATION, HELD OUTSIDE THE RUN (DMXENG-70).
+# THE EXPECTED POPULATION, HELD OUTSIDE THE RUN.
 #
 # A gate that checks its own arithmetic is checking that it added up what it SAW. It has no
 # way to know what it did not see. The only thing separating 'measured everything and found
 # nothing' from 'stopped early and found nothing' is an expected count established
-# independently of the run -- which is this file. BUG-121 is the same defect one layer up:
+# independently of the run -- which is this file. The same defect appears one layer up:
 # dotnet test prints Failed 0 / Passed 299 / Total 299 on an aborted host, which is
 # internally consistent and completely false.
 #

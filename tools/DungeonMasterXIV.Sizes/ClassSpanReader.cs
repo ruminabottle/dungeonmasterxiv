@@ -3,12 +3,11 @@ using System.Text.RegularExpressions;
 namespace DungeonMasterXIV.Sizes;
 
 /// <summary>
-/// Counts type spans under the procedure ruled in <c>engineering-standards.md</c>.
+/// Counts type spans under the ruled procedure for counting a class.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The procedure, cited rather than restated</b> — see "## HOW TO COUNT A CLASS" and its
-/// subsection "### THE SHAPES A REAL FILE HAS": first line of the TYPE declaration to its closing
+/// <b>The procedure</b>: first line of the TYPE declaration to its closing
 /// brace, INCLUSIVE, nothing excluded. Attributes and doc above the declaration are outside it.
 /// </para>
 /// <para>

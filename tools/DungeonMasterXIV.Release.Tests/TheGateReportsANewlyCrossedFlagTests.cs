@@ -5,17 +5,17 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// DMXENG-107: a flag the tree did not cross before and crosses now is REPORTED, not refused.
+/// A flag the tree did not cross before and crosses now is REPORTED, not refused.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>THE GAP THIS CLOSES.</b> The gate held five constants and all five were BLOCKS. The flag row
-/// existed in the tool, which prints it, and in the standard, which rules it, and in the gate not at
+/// existed in the tool, which prints it, and in the size table, which rules it, and in the gate not at
 /// all — so <c>InboundFrame</c> went 236 UNDER to 261 OVER across #212 and every gate report was
 /// honest about what it measured and silent about what it did not.
 /// </para>
 /// <para>
-/// <b>REPORTING, NEVER REFUSING.</b> <c>engineering-standards.md:1140</c> — <i>"Blocking limits are a
+/// <b>REPORTING, NEVER REFUSING.</b> The rule is <i>"Blocking limits are a
 /// denial on their own. Flags are a conversation."</i> A gate that refused here would not be stricter;
 /// it would implement a different rule. <see cref="TheFlagReportCannotMakeTheGateRefuse"/> is the
 /// assertion, because a doc comment saying "non-blocking" is not a mechanism.
@@ -102,7 +102,7 @@ public class TheGateReportsANewlyCrossedFlagTests
         }
     }
 
-    // >>> OBLIGATION 4: THE REPORT NAMES ITS ROW AND ITS DIRECTION (BUG-111) <<<
+    // >>> OBLIGATION 4: THE REPORT NAMES ITS ROW AND ITS DIRECTION <<<
     //
     // A bare margin says nothing about WHICH limit it is a margin from, and an absent row is not read
     // as absent -- the reader fills the gap with whichever row they arrived asking about.
@@ -133,7 +133,7 @@ public class TheGateReportsANewlyCrossedFlagTests
         Assert.Empty(SizeGate.Refusals(current, current, [Path], [Path]));  // and the gate is silent
     }
 
-    // >>> #216 REVIEW: THE REPORT STATES THE TOTALS IT WAS COMPUTED FROM <<<
+    // >>> THE REPORT STATES THE TOTALS IT WAS COMPUTED FROM <<<
     //
     // The totals are the disambiguator for this mechanism's own documented false positive, and the
     // first draft left them in <remarks> -- where no reader of the REPORT will ever look. A reader

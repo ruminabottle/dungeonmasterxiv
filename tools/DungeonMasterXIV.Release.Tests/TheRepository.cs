@@ -16,7 +16,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>The tag is the authority for the advertised version (D-16, R-7.4a), and it lives in git.</b>
 /// A constant here, or a second copy in a fixture, would be a version with two authors — which is
-/// BUG-14 restated, and the reason the csproj stopped owning it.
+/// the any-tag-any-build defect restated, and the reason the csproj stopped owning it.
 /// </para>
 /// <para>
 /// <b>This fails rather than skips when it cannot find a tag.</b> A shallow clone with no tags
@@ -98,7 +98,7 @@ internal static class TheRepository
     /// fifteen fields come from the source manifest, the tag or the tool's own rules; the two API
     /// level fields are stamped by the SDK at build time and appear nowhere in source. An ORDINARY
     /// <c>dotnet build</c> supplies them — no Release configuration and no tag — so requiring this
-    /// adds nothing beyond what BUG-12 already documents for this test project.
+    /// adds nothing beyond the build-first step this test project already requires.
     /// </para>
     /// <para>
     /// <b>A second copy of this walk, deliberately.</b> <c>ApiLevelIsCopiedFromTheBuildTests</c> has
@@ -121,7 +121,7 @@ internal static class TheRepository
             candidates.Length > 0,
             "No built DungeonMasterXIV.json under bin/. The repository manifest is checked by " +
             "REGENERATING it, and the Dalamud API level exists only on the built artefact — so this " +
-            "fails rather than skips. BUG-12: `dotnet test` alone never builds the plugin, because " +
+            "fails rather than skips. `dotnet test` alone never builds the plugin, because " +
             "no test project references it and that isolation is deliberate. Run `dotnet build` " +
             "first, then `dotnet test`. This tree is not broken; the command was incomplete.");
 

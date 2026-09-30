@@ -9,12 +9,12 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-24: adding a field to <see cref="PluginManifest"/> fails this until the comparison covers it.
+/// Adding a field to <see cref="PluginManifest"/> fails this until the comparison covers it.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>What this replaces is a sentence, not a mechanism.</b> BUG-16 shipped a hand-written array of
-/// eight fields with a comment saying the list was derived from what the repository entry
+/// <b>What this replaces is a sentence, not a mechanism.</b> The zip check shipped a hand-written
+/// array of eight fields with a comment saying the list was derived from what the repository entry
 /// republishes. That was an accurate account of how the list was written and it held nothing true:
 /// a ninth property, republished, was compared by nothing, and the whole suite stayed green while a
 /// zip advertising one value shipped another. An invariant that enumerates a world which grows
@@ -63,7 +63,7 @@ public class EveryFieldTheManifestCarriesIsComparedTests
             uncovered.Count == 0,
             $"PluginManifest carries {string.Join(", ", uncovered.Select(property => property.Name))}, and a " +
             "zip differing only in that value is accepted. The repository entry would advertise one " +
-            "thing while the archive a user installs says another, which is BUG-16 reopened for the " +
+            "thing while the archive a user installs says another, which is the stale-zip defect reopened for the " +
             "new field.\n" +
             "Add it to ReleaseAsset.Differences, keeping the per-field message. If it genuinely must " +
             "not be compared, exclude it here deliberately and say why -- the point of this test is " +
@@ -132,7 +132,7 @@ public class EveryFieldTheManifestCarriesIsComparedTests
         }
 
         // Not a silent skip. A property of an unhandled type would otherwise be dropped from the
-        // sweep, which is this bug's own failure mode arriving through its own fix.
+        // sweep, which is the hand-listed-field failure mode arriving through its own fix.
         throw new Xunit.Sdk.XunitException(
             $"PluginManifest.{property.Name} is a {property.PropertyType.Name}, which this test does " +
             "not know how to vary, so it cannot tell whether the comparison covers it. Teach ValueFor " +

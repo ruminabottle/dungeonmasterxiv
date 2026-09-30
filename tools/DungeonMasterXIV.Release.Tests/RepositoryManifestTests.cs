@@ -66,9 +66,9 @@ public class RepositoryManifestTests
         Assert.True(Entry().TryGetProperty(field, out _), $"the manifest is missing {field}");
     }
 
-    // The permanent internal name (PRD-0 R-0.1). Fails if it is ever derived from a file name, a
-    // display name or a version -- Dalamud matches an installed plugin to its manifest entry by this,
-    // so a change orphans every existing install silently.
+    // The permanent internal name (core-skeleton R-0.1). Fails if it is ever derived from a file
+    // name, a display name or a version -- Dalamud matches an installed plugin to its manifest
+    // entry by this, so a change orphans every existing install silently.
     [Fact]
     public void TheInternalNameIsThePermanentOne()
     {
@@ -126,7 +126,7 @@ public class RepositoryManifestTests
         Assert.DoesNotContain("anonym", description, StringComparison.OrdinalIgnoreCase);
     }
 
-    // R-7.3's REQUIREMENT half, which the copy did not satisfy until the Product Owner wrote it.
+    // R-7.3's REQUIREMENT half, which the copy did not satisfy until it was rewritten.
     //
     // Each phrase is asserted separately so a failure names which promise was dropped rather than
     // reporting that "the description changed". They are not decorative synonyms:

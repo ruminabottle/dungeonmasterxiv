@@ -22,7 +22,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>Every case here is drawn from a construction that actually occurs in this repository</b>,
 /// not invented to be caught. A control that fires only on the spelling its author happened to pick
-/// is not a control — the guard in DMXENG-39 nearly shipped with exactly that flaw, blind to the
+/// is not a control — an earlier guard here nearly shipped with exactly that flaw, blind to the
 /// target-typed <c>new()</c> that four factories use.
 /// </para>
 /// </remarks>
@@ -78,9 +78,9 @@ public class ABraceInsideALiteralIsNotABraceTests
     // This case does not: after a mis-parsed \" the closing quote is taken as the literal's end and
     // the following brace is read as CODE. Verified by running the mutation against it directly.
     //
-    // The lesson is the one from DMXENG-39 an hour ago -- a control that fires on the input its
-    // author happened to pick is not a control, and the fix is to find the input that DISCRIMINATES
-    // rather than one that merely passes.
+    // The lesson is the one the target-typed new() guard taught -- a control that fires on the
+    // input its author happened to pick is not a control, and the fix is to find the input that
+    // DISCRIMINATES rather than one that merely passes.
     [Fact]
     public void AnEscapedQuoteDoesNotEndTheLiteral()
     {

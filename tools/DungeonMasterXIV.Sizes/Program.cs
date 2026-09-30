@@ -13,7 +13,7 @@ const int ClassFlag = 250;
 const int ClassBlock = 400;
 const int FileFlag = 300;
 const int FileBlock = 450;
-// DMXENG-55: the three rows of the table that nothing measured. The values are the table's, and
+// The three rows of the table that nothing used to measure. The values are the table's, and
 // they live beside the other four so a reader can see at a glance that there are now FIVE rows.
 const int MethodFlag = 40;
 const int MethodBlock = 60;
@@ -69,7 +69,7 @@ foreach (var path in args)
         : lines.Length > FileFlag ? "over the file flag"
         : "under the file flag";
 
-    // BUG-111: THE STANDING AND THE MARGIN BOTH NAME THEIR OWN ROW. A bare "margin 334" says nothing
+    // THE STANDING AND THE MARGIN BOTH NAME THEIR OWN ROW. A bare "margin 334" says nothing
     // about WHICH limit it is 334 away from, and an absent row is not read as absent -- the reader
     // fills the gap with whichever row they arrived asking about. That is not hypothetical: a
     // compliant type printed `4 lines ... margin 396` and was read as "4 members, margin 396" by
@@ -101,7 +101,7 @@ foreach (var path in args)
             : span.Lines > ClassFlag ? "over the class flag"
             : "under the class flag";
 
-        // BUG-111. This line is about the TYPE SPAN and nothing else, and it now says so twice --
+        // This line is about the TYPE SPAN and nothing else, and it now says so twice --
         // in the standing and in the margin's unit. It carries no parameter or nesting information,
         // because those rows belong to members and print only when they have something to say.
         Console.WriteLine(
@@ -170,7 +170,7 @@ Console.WriteLine(Census.Describe(measured, refused, args.Length));
 Console.WriteLine(Census.DescribeMembers(membersMeasured, membersRefused));
 
 // Always 0 on a successful measurement, even for a breach. Whether a breach fails a build is a
-// policy question the standards do not answer -- they say a blocking limit is "a denial on its
+// policy question the size rules do not answer -- they say a blocking limit is "a denial on its
 // own", which is about review. Returning non-zero here would answer it by implementation, which is
 // the exact move that made writing this tool unsafe before the convention was written down.
 return 0;

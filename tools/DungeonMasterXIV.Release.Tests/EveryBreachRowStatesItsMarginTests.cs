@@ -8,7 +8,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-110: the parameter and nesting rows state a margin, like the length rows already do.
+/// The parameter and nesting rows state a margin, like the length rows already do.
 /// </summary>
 /// <remarks>
 /// <para>

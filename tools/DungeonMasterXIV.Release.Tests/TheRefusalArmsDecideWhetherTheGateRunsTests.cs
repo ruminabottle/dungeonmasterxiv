@@ -5,14 +5,14 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// Each arm on which the gate declines refuses for its OWN reason, not merely with a false (BUG-128).
+/// Each arm on which the gate declines refuses for its OWN reason, not merely with a false.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>These arms decide whether the merge gate runs at all</b>, and until BUG-128 each of the three
-/// currency strings appeared exactly once in the repository — in the source that produces it. They are the
-/// mechanism keeping <i>"could not validate"</i> distinct from <i>"clean"</i>, which is the entire
-/// purpose of BUG-124's fix, and nothing held them.
+/// <b>These arms decide whether the merge gate runs at all</b>, and until this file each of the
+/// three currency strings appeared exactly once in the repository — in the source that produces it.
+/// They are the mechanism keeping <i>"could not validate"</i> distinct from <i>"clean"</i>, which
+/// is the entire purpose of the currency check, and nothing held them.
 /// </para>
 /// <para>
 /// <b>EVERY REFUSAL TEST ANSWERS THE ANCESTRY QUESTION WITH "YES, CONTAINED".</b> That is the whole
@@ -78,7 +78,7 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
         Assert.False(
             contains,
             "origin was unreachable and the gate ran anyway. Degrading to the local answer when the "
-            + "remote cannot be reached is exactly the behaviour BUG-124 removed: it reports a tree "
+            + "remote cannot be reached is exactly what the currency check removed: it reports a tree "
             + $"this check has not validated as clean. Detail was: {detail}");
 
         Assert.Contains("could not reach origin", detail, StringComparison.Ordinal);
@@ -98,9 +98,9 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
         Assert.Contains("no refs/remotes/origin/main", detail, StringComparison.Ordinal);
     }
 
-    // THIS IS BUG-124's DEFECT ITSELF, not merely the arm that reports it. The cache is six commits
+    // THIS IS THE STALE-CACHE DEFECT, not merely the arm that reports it. The cache is six commits
     // behind origin and merge-base says HEAD contains the CACHED ref -- which is true, and which was
-    // the exact false green #185 exists to stop: contained-against-a-stale-cache read as contained.
+    // the exact false green the currency check stops: contained-against-a-stale-cache read as contained.
     [Fact]
     public void AStaleCacheRefusesEvenWhenAncestryWouldSayContained()
     {
@@ -110,7 +110,7 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
         Assert.False(
             contains,
             "The cached origin/main is stale and the gate ran on the strength of an ancestry answer "
-            + "measured against that stale cache. That is BUG-124 exactly: the gate passes against a "
+            + "measured against that stale cache. That is the defect exactly: the gate passes against a "
             + $"tree nobody is going to merge. Detail was: {detail}");
 
         Assert.Contains("is STALE", detail, StringComparison.Ordinal);
@@ -118,7 +118,7 @@ public class TheRefusalArmsDecideWhetherTheGateRunsTests
         Assert.Contains(OriginHead[..7], detail, StringComparison.Ordinal);
     }
 
-    // THE FIFTH ARM (BUG-126's), AND THIS IS NOT A DUPLICATE OF THE TEST THAT ALREADY COVERS IT.
+    // THE FIFTH ARM (the timeout), AND THIS IS NOT A DUPLICATE OF THE TEST THAT ALREADY COVERS IT.
     // AnUnresponsiveOriginCannotHangTheGateTests drives it with a fake that times out EVERY command,
     // so local git is degenerate there and no later arm is reachable to compete. This drives the
     // shape that actually happens: the NETWORK call times out while local git is perfectly healthy

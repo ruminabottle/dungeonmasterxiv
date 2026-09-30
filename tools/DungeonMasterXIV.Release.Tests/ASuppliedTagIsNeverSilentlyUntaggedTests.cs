@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-32: a tag that was supplied either gives the build its version, or is refused. It never
+/// A tag that was supplied either gives the build its version, or is refused. It never
 /// leaves the build looking untagged.
 /// </summary>
 /// <remarks>
@@ -27,7 +27,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>Why <c>v0.0.0</c> is in the accept list and matters.</b> It legitimately stamps the same
 /// version an untagged build carries. So "the stamped version is not the sentinel" would be the
-/// wrong property — it would fail on a tag the Deployment Manager has ruled permitted. What
+/// wrong property — it would fail on a tag that is ruled permitted. What
 /// separates the two cases is whether the version was DERIVED from the tag, which is exactly what
 /// the assertion checks.
 /// </para>

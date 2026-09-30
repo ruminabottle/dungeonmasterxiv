@@ -6,13 +6,13 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-16: the zip carries the manifest Dalamud installs, and it must say what the repository entry
+/// The zip carries the manifest Dalamud installs, and it must say what the repository entry
 /// says.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>Why the assembly check cannot cover this.</b> A metadata-only edit leaves the built assembly
-/// byte-identical — measured independently by qa-2 and by the Deployment Manager — so a previous
+/// byte-identical — measured independently, twice — so a previous
 /// build's zip satisfies <see cref="ReleaseAsset.MustMatchTheAssembly"/> while carrying the previous
 /// build's metadata, including <c>DalamudApiLevel</c>.
 /// </para>

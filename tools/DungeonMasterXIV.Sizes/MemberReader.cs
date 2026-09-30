@@ -5,32 +5,32 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace DungeonMasterXIV.Sizes;
 
 /// <summary>
-/// Reads the method, parameter and nesting rows out of one file (DMXENG-55).
+/// Reads the method, parameter and nesting rows out of one file.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>WHY THIS PARSES RATHER THAN MATCHES, WHICH IS A DEPARTURE FROM
-/// <see cref="ClassSpanReader"/> AND IS DELIBERATE.</b> The standards say in their own words that
+/// <see cref="ClassSpanReader"/> AND IS DELIBERATE.</b> The size rules say in their own words that
 /// "the obvious implementation of this rule is wrong", and back it with a measurement: a hand-rolled
 /// class count was wrong on <b>5 of 81 files, in both directions</b>. A method declaration, a
 /// parameter list and a nesting level are all harder to recognise from a line than a type
 /// declaration is — generic constraints, multi-line signatures, expression bodies, nested lambdas.
-/// <b>This ticket exists because an approximate instrument became the rule; three more
+/// <b>This reader exists because an approximate instrument became the rule; three more
 /// approximations would rebuild that at one remove.</b>
 /// </para>
 /// <para>
 /// <b>The two original rows were NOT moved onto this parser.</b> They are ruled, tested and already
-/// quoted in ticket text and PR bodies. Re-deriving them through a different reader would silently
+/// quoted in PR bodies and elsewhere. Re-deriving them through a different reader would silently
 /// change numbers people have cited, which is a change nobody asked for and nobody would see.
 /// </para>
 /// <para>
 /// <b>WHAT THIS ROW COVERS, STATED HERE AND PRINTED ON EVERY RUN.</b> Methods, constructors,
 /// operators, conversion operators and finalizers. <b>Property, indexer and event accessors are NOT
-/// measured</b> — the standards say "Method", and whether an accessor body is one is a question
+/// measured</b> — the size table says "Method", and whether an accessor body is one is a question
 /// nobody has ruled. Saying so is the point: an unstated exclusion is how two rows became five.
 /// </para>
 /// <para>
-/// <b>A LOCAL FUNCTION IS REFUSED BY NAME.</b> The Deployment Manager deliberately did not rule on
+/// <b>A LOCAL FUNCTION IS REFUSED BY NAME.</b> The ruling deliberately did not say
 /// how one counts — whether it is its own member, or part of its container's length and depth. This
 /// refuses and says which, exactly as <see cref="ClassSpanReader"/> refuses a partial type, because
 /// the alternative is that this file settles an open question by implementation.
@@ -59,8 +59,8 @@ public static class MemberReader
 
     private static MemberSpan? Describe(SyntaxNode node) => node switch
     {
-        // MEASURED, not refused (BUG-94). This was refused while the question was open; the
-        // Deployment Manager has now ruled that a local function IS ITS OWN MEMBER for both rows,
+        // MEASURED, not refused. This was refused while the question was open; the
+        // ruling is now that a local function IS ITS OWN MEMBER for both rows,
         // "otherwise arbitrary depth and length hide behind a name and are measured nowhere".
         // Continuing to print NOT RULED would be a false refusal, which is the defect this file was
         // corrected for.
@@ -176,12 +176,12 @@ public static class MemberReader
     /// initialiser or a nested type — none of which is what makes a pyramid hard to read.
     /// </para>
     /// <para>
-    /// <b>A LAMBDA RESETS THE BASELINE, which is the Deployment Manager's ruling and the one they
-    /// hold loosely.</b> Control flow inside a lambda counts from that lambda's own zero, so a
+    /// <b>A LAMBDA RESETS THE BASELINE, which is ruled, and that ruling is
+    /// held loosely.</b> Control flow inside a lambda counts from that lambda's own zero, so a
     /// method whose body is one <c>foreach</c> containing a lambda containing an <c>if</c> measures
-    /// 1 and not 2. Their reasoning: a lambda is usually the thing that FLATTENS a pyramid, and
+    /// 1 and not 2. The reasoning: a lambda is usually the thing that FLATTENS a pyramid, and
     /// counting its contents would penalise the fix and reward the pyramid. <b>If it starts hiding
-    /// real nesting, that case goes back to them.</b>
+    /// real nesting, the ruling is to be reversed.</b>
     /// </para>
     /// <para>
     /// <b>An <c>else if</c> does not add a level</b>, because it is one decision continued rather
@@ -207,8 +207,8 @@ public static class MemberReader
 
         foreach (var child in node.ChildNodes())
         {
-            // A LOCAL FUNCTION IS SKIPPED ENTIRELY, and that is ruling 4 rather than an optimisation
-            // (BUG-94): its control flow is measured on its OWN row, so adding it here would count
+            // A LOCAL FUNCTION IS SKIPPED ENTIRELY, and that is ruling 4, not an optimisation:
+            // its control flow is measured on its OWN row, so adding it here would count
             // it twice and report a container as a pyramid it does not contain. That differs from
             // the lambda below deliberately -- a lambda is not a member, so its contents have no
             // other row to be counted on and must be counted here, from a reset baseline.

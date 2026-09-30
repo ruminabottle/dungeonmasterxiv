@@ -124,7 +124,7 @@ public sealed class ReleaseAsset
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>The DLL check cannot see this (BUG-16).</b> A metadata-only edit leaves the assembly
+    /// <b>The DLL check cannot see this.</b> A metadata-only edit leaves the assembly
     /// byte-identical — measured, twice, by two people — so a previous build's zip satisfies
     /// <see cref="MustMatchTheAssembly"/> while carrying the previous build's metadata. The
     /// repository entry then advertises one <c>DalamudApiLevel</c> and links an archive declaring
@@ -143,7 +143,7 @@ public sealed class ReleaseAsset
     /// list covers every property <see cref="PluginManifest"/> carries, which is also every field
     /// the repository entry republishes. An earlier version of this comment said the list was
     /// derived from <see cref="RepositoryManifest.Build"/> "so it moves when that does" — that
-    /// described how the list was written and guaranteed nothing (BUG-24): a ninth property was
+    /// described how the list was written and guaranteed nothing: a ninth property was
     /// added, republished, and compared by nothing, with the whole suite green. The guarantee now
     /// lives in <c>EveryFieldTheManifestCarriesIsComparedTests</c>, which varies each property in
     /// turn and requires this method to refuse and name it.

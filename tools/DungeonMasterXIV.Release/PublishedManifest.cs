@@ -17,19 +17,19 @@ namespace DungeonMasterXIV.Release;
 /// skipped, so a tester's URL 404'd while every other check stayed green.
 /// </para>
 /// <para>
-/// <b>The whole document is compared, not a list of fields (BUG-27).</b> The first version of this
+/// <b>The whole document is compared, not a list of fields.</b> The first version of this
 /// class named four fields it cared about. <c>IsTestingExclusive</c> was not among them — so half of
 /// D-12's gate could be crossed by editing one boolean in a committed file, with the suite green,
 /// and the only thing standing in the way was somebody noticing a one-line diff at review. That is
 /// enforcement by review, which D-15 rejects. Generation is deterministic, so the invariant is
 /// <i>this file is what the tool would produce</i>, and every field is covered by consequence rather
-/// than by being remembered. Derive the invariant, do not enumerate it — the rule that closed
-/// BUG-24, one level up.
+/// than by being remembered. Derive the invariant, do not enumerate it — the rule that replaced
+/// the hand-listed field comparison, one level up.
 /// </para>
 /// <para>
 /// <b>Compared as parsed JSON, never as bytes.</b> A byte comparison fails on key order and
 /// whitespace, which are not defects — an instrument that produces false failures trains people to
-/// ignore it, and that is worse than one that cannot fail (BUG-16's caution).
+/// ignore it, and that is worse than one that cannot fail.
 /// </para>
 /// </remarks>
 public sealed class PublishedManifest

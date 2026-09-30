@@ -15,15 +15,15 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>Two sources, deliberately.</b> The manifest is generated from the built DLL, and this reads
 /// the DLL again independently. It used to be three: a second test read <c>&lt;Version&gt;</c> out of
-/// the csproj. That property is gone (BUG-14, D-16) — the version is now derived from the git tag,
+/// the csproj. That property is gone (D-16) — the version is now derived from the git tag,
 /// so there is no declared value left to compare a build against, and the guarantee that the
 /// advertised version tracks the tag moved to <see cref="VersionHasOneAuthorTests"/>.
 /// </para>
 /// <para>
 /// <b>A-7.2 no longer names this.</b> A-7.2 asked for a match and was replaced by A-7.2a/A-7.2b,
-/// because in BUG-14's reproduction the two sides matched, the criterion passed, and the release was
-/// broken. What is checked here is still worth checking; it is simply not sufficient, and this file
-/// no longer claims it is.
+/// because in the any-tag-any-build reproduction the two sides matched, the criterion passed, and
+/// the release was broken. What is checked here is still worth checking; it is simply not
+/// sufficient, and this file no longer claims it is.
 /// </para>
 /// <para>
 /// <b>These fail rather than skip when the plugin has not been built.</b> A skipped version check
@@ -44,7 +44,7 @@ public class ManifestMatchesTheBuiltPluginTests
         Assert.True(
             candidates.Length > 0,
             "No built DungeonMasterXIV.dll under bin/. A-7.2 compares the manifest against the ARTEFACT, " +
-            "so this fails rather than skips. BUG-12: `dotnet test` alone never builds the plugin, because no " +
+            "so this fails rather than skips. `dotnet test` alone never builds the plugin, because no " +
             "test project references it and that isolation is deliberate. Run `dotnet build` first, then " +
             "`dotnet test`. This tree is not broken; the command was incomplete.");
 
@@ -65,7 +65,7 @@ public class ManifestMatchesTheBuiltPluginTests
         // The tag names whatever this tree was actually built as. A literal "v0.1.0" here would now
         // be refused against any other build -- correctly, and it would make this test about the
         // tag check rather than about the manifest. Asked for by name rather than spelt as
-        // $"v{version}", because since BUG-22 only one spelling of a version is a legal tag and
+        // $"v{version}", because only one spelling of a version is a legal tag and
         // "v0.0.0.0" is not it.
         var manifest = RepositoryManifest.Build(
             new ReleaseInputs(
@@ -80,13 +80,13 @@ public class ManifestMatchesTheBuiltPluginTests
 
         // And the equality is not vacuous: the field carries a parseable version rather than the
         // empty string both sides would render alike. This deliberately does NOT require a release
-        // version -- since BUG-14 an ordinary `dotnet build` carries TaggedVersion.UntaggedBuild,
+        // version -- an ordinary `dotnet build` now carries TaggedVersion.UntaggedBuild,
         // and asserting otherwise would fail this suite on every tree nobody handed a tag.
         Assert.False(string.IsNullOrWhiteSpace(fromTheManifest));
         Assert.Equal(fromTheArtefact, Version.Parse(fromTheManifest!));
     }
 
-    // The csproj must not go back to declaring a release version. That literal was BUG-14: it made
+    // The csproj must not go back to declaring a release version. That literal made
     // every build releasable under any tag, and a second release repeating it is not rejected by
     // Dalamud, merely never offered. The version it may still carry is the untagged fallback, which
     // is unreleasable by construction -- so this asserts the shape, and VersionHasOneAuthorTests
@@ -115,7 +115,7 @@ public class ManifestMatchesTheBuiltPluginTests
                 Version.Parse(value) == TaggedVersion.UntaggedBuild,
                 $"DungeonMasterXIV.csproj declares <Version>{value}</Version>. The advertised version " +
                 "has one author and it is the git tag (D-16, R-7.4a); a literal here is a second one, " +
-                "which is BUG-14.");
+                "which lets any tag release any build.");
         }
     }
 

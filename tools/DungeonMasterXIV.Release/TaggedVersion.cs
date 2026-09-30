@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Release;
 /// <b>Why the tag and not the csproj property.</b> A-7.2a requires that a second release cut from a
 /// later tag advertises a different version <i>without hand-editing anything</i>. Had the csproj
 /// property stayed the author, satisfying that would mean editing the csproj — so the criterion
-/// chooses the tag, and BUG-14 is what a second author cost: any tag was accepted against any build,
+/// chooses the tag, and this is what a second author cost: any tag was accepted against any build,
 /// four different tags all advertised <c>0.0.0.1</c>, and Dalamud silently never offers a second
 /// release that repeats the version of the first.
 /// </para>
@@ -68,7 +68,7 @@ public static class TaggedVersion
 
         var padded = Pad(named);
 
-        // BUG-25. An assembly version component caps at 65534, so a tag above that names a version
+        // An assembly version component caps at 65534, so a tag above that names a version
         // no artefact can ever carry -- the build refuses it and the release could never verify
         // against anything. Refused HERE as well as in the csproj because the two must agree: a tag
         // the tool accepts and the build refuses is the invariant
@@ -84,11 +84,11 @@ public static class TaggedVersion
 
         var canonical = CanonicalTagFor(padded);
 
-        // BUG-22. Tag to version is MANY-to-one: v0.1.0, v0.1.0.0, v01.2.3 and vv0.1.0 all pad to a
+        // Tag to version is MANY-to-one: v0.1.0, v0.1.0.0, v01.2.3 and vv0.1.0 all pad to a
         // version another tag also names. Two such tags are two distinct git refs carrying two
         // distinct assets, and they advertise ONE version -- so Dalamud never offers the second,
-        // which is BUG-14's consequence surviving BUG-14's fix. Requiring the canonical spelling
-        // makes the aliasing unrepresentable instead of merely unlikely.
+        // which is a repeated version surviving the tag-matches-build check. Requiring the
+        // canonical spelling makes the aliasing unrepresentable instead of merely unlikely.
         if (!string.Equals(tag, canonical, StringComparison.Ordinal))
         {
             throw new ArgumentException(
@@ -116,10 +116,10 @@ public static class TaggedVersion
     /// <b>Three components, or four when the fourth is not zero.</b> The build pads whatever it is
     /// given to four (<c>v0.1.0</c> is stamped <c>0.1.0.0</c>), so a version has many spellings and
     /// exactly one of them has to be legal or two tags can name it. Three is the choice because it is
-    /// what every example in this repository already uses — PRD-7, <c>Program.cs</c>'s documented
-    /// command, and A-7.2a's own wording all say <c>v0.1.0</c> — so the canonical form is the one
-    /// people are already writing. A four-component tag stays legal when its revision is non-zero,
-    /// because <c>v0.0.0.1</c> has no shorter spelling.
+    /// what every example in this repository already uses — the distribution spec,
+    /// <c>Program.cs</c>'s documented command, and A-7.2a's own wording all say <c>v0.1.0</c> — so
+    /// the canonical form is the one people are already writing. A four-component tag stays legal
+    /// when its revision is non-zero, because <c>v0.0.0.1</c> has no shorter spelling.
     /// </remarks>
     public static string CanonicalTagFor(Version version)
     {

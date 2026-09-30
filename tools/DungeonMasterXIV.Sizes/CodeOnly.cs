@@ -9,8 +9,8 @@ namespace DungeonMasterXIV.Sizes;
 /// <para>
 /// <b>A BRACE INSIDE A LITERAL IS NOT A BRACE, AND THE RULED PROCEDURE ALREADY SAYS SO</b> — the
 /// class span runs to <i>its closing brace</i>, and <c>'}'</c> in a char literal is not one. This is
-/// a lexing bug in a reader that misread the rule, not a change to what the rule counts. The
-/// Deployment Manager ruled it on exactly that ground.
+/// a lexing bug in a reader that misread the rule, not a change to what the rule counts. It was
+/// ruled on exactly that ground.
 /// </para>
 /// <para>
 /// <b>Both arms are real and one of them lies.</b> An unmatched <c>'{'</c> makes the scan run off

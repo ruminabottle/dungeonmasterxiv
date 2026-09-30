@@ -7,14 +7,14 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-114: the file and type margins are the numbers they claim to be, not merely labelled ones.
+/// The file and type margins are the numbers they claim to be, not merely labelled ones.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The gap fell between two fixes and belonged to neither.</b> BUG-111 made these two lines NAME
-/// the row their margin belongs to, and its tests assert the LABEL. BUG-110 made the member rows
+/// <b>The gap fell between two fixes and belonged to neither.</b> One fix made these two lines NAME
+/// the row their margin belongs to, and its tests assert the LABEL. Another made the member rows
 /// STATE a margin, and its tests assert the ARITHMETIC. The file and type rows <i>already printed a
-/// margin</i> before either bug — so no test was ever written for a number that had always been
+/// margin</i> before either fix — so no test was ever written for a number that had always been
 /// there, while the member rows got arithmetic tests because their margins were new. <b>A number
 /// that predates both fixes inherits the coverage of neither.</b>
 /// </para>
@@ -33,7 +33,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </para>
 /// <para>
 /// <b>The block sizes are mirrored here deliberately, and a change to either SHOULD redden this.</b>
-/// They are the limits four tickets were sequenced against; moving one is a decision, not a
+/// They are the limits other work was sequenced against; moving one is a decision, not a
 /// refactor, and this test makes it cost one deliberate edit with the arithmetic written out beside
 /// it.
 /// </para>
@@ -86,8 +86,8 @@ public class TheMarginArithmeticIsTheArithmeticTests
     // THE CONTROL. Every assertion here is Contains over a line located by substring; if the tool
     // produced nothing -- bad path, build failure, empty fixture -- the locator throws rather than
     // the assertion passing, but a report that ran and said nothing useful would still be silent.
-    // qa-3's first control in a scratch tree came back 1 FAILED before they had mutated anything,
-    // which is the reason this exists and the reason I ran mine before starting.
+    // A first control in a scratch tree once came back 1 FAILED before anything was mutated,
+    // which is the reason this exists.
     [Fact]
     public void TheToolProducedAReportAtAll()
     {

@@ -9,13 +9,13 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-126: the containment check's network call is bounded, so an origin that is reached but never
+/// The containment check's network call is bounded, so an origin that is reached but never
 /// answers ends in a skip rather than in a suite that never returns.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>UNRESPONSIVE, NOT REFUSED — and the distinction is the entire bug.</b> A refused connection
-/// returns at once because the host sends RST, and BUG-124's arm 4 already handles it. A DROPPED
+/// returns at once because the host sends RST, and the exit-code arm already handles it. A DROPPED
 /// connection sends nothing at all, so nothing below the wait ever ends it. A test that pointed at a
 /// closed port would pass against the unfixed code, because that path was never broken.
 /// </para>

@@ -5,11 +5,11 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-22: a version has exactly one legal tag, so two tags cannot advertise one version.
+/// A version has exactly one legal tag, so two tags cannot advertise one version.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>BUG-14's fix left this standing.</b> Making the tag the single author fixed the ordinary
+/// <b>The single-author fix left this standing.</b> Making the tag the author fixed the ordinary
 /// increment — <c>v0.1.0</c> then <c>v0.1.1</c> — but tag-to-version is many-to-one: <c>v0.1.0</c>,
 /// <c>v0.1.0.0</c>, <c>v01.2.3</c> and <c>vv0.1.0</c> all pad to a version another tag also names.
 /// Two such tags are two distinct git refs carrying two distinct assets and advertising one version,
@@ -55,7 +55,7 @@ public class CanonicalTagTests
     }
 
     // Whitespace and a capital V are read well enough to NAME the canonical form and then refused.
-    // The build does not trim either, so accepting them would be a fresh divergence (BUG-23).
+    // The build does not trim either, so accepting them would be a fresh divergence.
     [Theory]
     [InlineData(" v0.1.0")]
     [InlineData("v0.1.0 ")]

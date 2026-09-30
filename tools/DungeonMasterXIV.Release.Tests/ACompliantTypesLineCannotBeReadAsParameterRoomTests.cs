@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-111: the type-span line says which row its margin belongs to, so a silent parameter row
+/// The type-span line says which row its margin belongs to, so a silent parameter row
 /// cannot be answered by the number next to it.
 /// </summary>
 /// <remarks>
@@ -21,11 +21,11 @@ namespace DungeonMasterXIV.Release.Tests;
 /// of 4 and a block of 6.
 /// </para>
 /// <para>
-/// <b>EVERY TEST HERE ASSERTS THE COMPLIANT CASE, and that is the opposite of BUG-110's
-/// requirement.</b> The breaching case already prints, and is already guarded — a test over it would
-/// pass against the fixed tool and the broken one alike, because the defect is entirely in what a
-/// COMPLIANT type's line lets a reader conclude. The natural instinct after BUG-110 is to reach for
-/// boundaries again; boundaries are exactly what cannot see this.
+/// <b>EVERY TEST HERE ASSERTS THE COMPLIANT CASE, and that is the opposite of the margin-row
+/// fix's requirement.</b> The breaching case already prints, and is already guarded — a test over
+/// it would pass against the fixed tool and the broken one alike, because the defect is entirely in
+/// what a COMPLIANT type's line lets a reader conclude. The natural instinct after the margin-row
+/// fix is to reach for boundaries again; boundaries are exactly what cannot see this.
 /// </para>
 /// <para>
 /// <b>Both halves are asserted: what the printed line SAYS, and that the absent row stays absent.</b>

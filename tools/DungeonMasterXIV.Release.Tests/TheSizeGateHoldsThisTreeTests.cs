@@ -14,8 +14,8 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>WHY MEASURING THE WORKING TREE IS MEASURING THE MERGE, AND DO NOT "FIX" THIS INTO A BRANCH-TIP
 /// CHECK.</b> The rule is that size is judged on <c>merge(main, branch)</c>, never on the branch tip
-/// — and this test computes no merge. It does not need to: the Deployment Manager refuses to merge
-/// any PR that does not already contain <c>origin/main</c>, so <b>every mergeable branch already
+/// — and this test computes no merge. It does not need to: no PR is merged
+/// that does not already contain <c>origin/main</c>, so <b>every mergeable branch already
 /// contains main and the working tree IS the merged tree by construction.</b> The guarantee lives at
 /// that chokepoint, not in this check. Remove the chokepoint and this test quietly becomes the
 /// branch-tip check the rule forbids, which is why the reasoning is written here rather than assumed.
@@ -29,7 +29,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <c>TheSizeGateRefusesWhatItShouldTests</c>, not here; no real input can fire those rows.</item>
 /// <item>Measuring fewer files than exist — guarded by the baseline floor below.</item>
 /// <item>Counting its own output and finding it consistent. <b>Self-consistent arithmetic proves
-/// nothing</b>: BUG-121's aborted host prints <c>Failed 0 / Passed 299 / Total 299</c>, which
+/// nothing</b>: an aborted test host prints <c>Failed 0 / Passed 299 / Total 299</c>, which
 /// reconciles perfectly and is false. The check below is NOT that — its right-hand side is the intake
 /// from <c>git ls-files</c>, established independently of the loop it is checking.</item>
 /// </list>
@@ -56,7 +56,7 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
         }
 
         // (3) LOOP COMPLETENESS AS A SET, NOT A COUNT. The right-hand side comes from git, outside
-        // the loop being checked, so this is not the self-consistency BUG-121 defeats.
+        // the loop being checked, so this is not the self-consistency an aborted host defeats.
         //
         // AND IT COMPARES THE FILE NAMES RATHER THAN HOW MANY THERE WERE. A count reduces a vector
         // to a scalar and then watches one element of it: reading one file twice while skipping
@@ -114,7 +114,7 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
     }
 
     // THE DUPLICATED LIMITS ARE POLICED. They cannot be referenced from Program.cs -- top-level
-    // consts in an entry-point file -- and the ticket's boundary is to use the sizes tool AS-IS
+    // consts in an entry-point file -- and the boundary is to use the sizes tool AS-IS
     // rather than restructure it. So they are copied, and this fails the moment the copies disagree.
     [Theory]
     [InlineData("ClassBlock", SizeGate.ClassBlock)]
@@ -145,7 +145,7 @@ public class TheSizeGateHoldsThisTreeTests(ITestOutputHelper output)
     // no test failed, nothing reported, and the copy silently became unpoliced. The drift guard would
     // have gone on passing while guarding four fifths of what it claimed to.
     //
-    // DMXENG-107's brief warned me about exactly this and said the guard cannot tell you if you
+    // A guard whose rows are its population cannot tell you if you
     // forget. So the guard is given the ability to tell: the population is DERIVED from the type by
     // reflection rather than restated by hand, and a constant added without a row reds HERE.
     //
