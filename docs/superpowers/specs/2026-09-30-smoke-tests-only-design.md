@@ -1,7 +1,7 @@
 # Cut the test suite to smoke tests
 
 **Date:** 2026-09-30
-**Status:** Approved for planning
+**Status:** Implemented 2026-09-30
 **Supersedes:** Tasks 10 and 11 of [2026-09-30-comment-id-rewrite-design.md](2026-09-30-comment-id-rewrite-design.md)
 
 ## Goal

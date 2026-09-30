@@ -1,7 +1,7 @@
 # Rewrite the dead IDs out of code comments
 
 **Date:** 2026-09-30
-**Status:** Approved for planning
+**Status:** Superseded after PR 6a (tests A–S); Tasks 10–11 cancelled by [2026-09-30-smoke-tests-only-design.md](2026-09-30-smoke-tests-only-design.md)
 **Scope:** Sub-project 2 of 2 from [2026-09-29-retire-agent-team-design.md](2026-09-29-retire-agent-team-design.md). Sub-project 1 (the switch to specs) landed in #250.
 
 ## Goal
