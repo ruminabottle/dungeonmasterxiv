@@ -31,7 +31,7 @@ namespace DungeonMasterXIV.Windows;
 /// </remarks>
 internal sealed class JoinRequestForm
 {
-    // A-1.2v (BUG-92). SAID IN BOTH PLACES A NAME IS TYPED, deliberately: a joiner who never opens
+    // A-1.2v. SAID IN BOTH PLACES A NAME IS TYPED, deliberately: a joiner who never opens
     // settings meets this box and no other, so a message that lived only in ConfigWindow would leave
     // the criterion unmet on the surface most people actually use — the same argument A-1.2n makes
     // for the name control itself being here.
@@ -107,7 +107,7 @@ internal sealed class JoinRequestForm
         // remembering to keep them in step.
         var willSend = DisplayName.OrNone(_nameEntry);
 
-        // A-1.2v (BUG-92): the field stopping is told, not left to be noticed. SEPARATE from the
+        // A-1.2v: the field stopping is told, not left to be noticed. SEPARATE from the
         // line below, which is about whether the name can be SENT -- a full box is not an
         // invalid name, and what is in it may resolve perfectly. Both can be true at once and
         // they answer different questions, so neither is an else-branch of the other.
@@ -121,7 +121,7 @@ internal sealed class JoinRequestForm
             : $"That name cannot be sent, so they will see \"{DisplayName.Unstated}\". Letters, "
               + "digits, spaces, apostrophes and hyphens work.");
 
-        // JoinFlowCode.Accepts, not SessionCode.TryParse inline (DMXENG-15). The decision about
+        // JoinFlowCode.Accepts, not SessionCode.TryParse inline. The decision about
         // what this field takes is Core's, so a test can call the same thing this button calls
         // instead of re-deriving it and claiming the two agree in a comment.
         if (ImGui.Button("Request to join") && JoinFlowCode.Accepts(_codeEntry, out var code))

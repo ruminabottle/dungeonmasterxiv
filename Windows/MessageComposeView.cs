@@ -52,7 +52,7 @@ internal sealed class MessageComposeView
     private readonly SessionCoordinator _coordinator;
 
     /// <summary>
-    /// Evaluates a typed roll (R-2.1, DMXENG-119).
+    /// Evaluates a typed roll (R-2.1).
     /// </summary>
     /// <remarks>
     /// <b>Built here rather than threaded from the composition root, and the reason is measured.</b>

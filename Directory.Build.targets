@@ -63,7 +63,7 @@
         the one that sounds right.
 
         This paragraph previously said the construct did not appear here and to re-check before
-        writing one. It appeared three times while that sentence sat above it (BUG-26). So do not
+        writing one. It appeared three times while that sentence sat above it. So do not
         read the count as current — read the SHAPE, and if you are adding a double-quote inside an
         interpolated hole, count them.
 

@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Windows;
 /// renderers would be two places for the unknown-role rule to drift.
 /// </para>
 /// <para>
-/// <b>Its own type is what keeps that true across the split (DMXENG-15).</b> This was a private
+/// <b>Its own type is what keeps that true across the split.</b> This was a private
 /// method on <see cref="SessionWindow"/> while both callers were also on
 /// <see cref="SessionWindow"/>. Moving the joiner's surface into <see cref="JoinFlowView"/> put the
 /// two call sites in two files, and a private method cannot serve both — so the choice was one

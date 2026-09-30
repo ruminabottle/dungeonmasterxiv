@@ -148,7 +148,7 @@ internal sealed class JoinFlowView
     /// taken from. Core returns both, so this is one destructuring assignment and there is no way
     /// to update one without the other.
     /// </remarks>
-    // RECORDED, NOT REDESIGNED (BUG-64, qa-3). Returning the pair makes correct use a one-liner; it
+    // RECORDED, NOT REDESIGNED (qa-3). Returning the pair makes correct use a one-liner; it
     // Every phase gets a sentence. R-1.3 forbids leaving anyone looking at an ambiguous spinner,
     // so there is no state here that renders as "..." and nothing else.
     private static string DescribeJoin(JoinPhase phase) => phase switch

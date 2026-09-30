@@ -70,7 +70,7 @@ public sealed class Plugin : IDalamudPlugin
         _hostingCampaign = new HostingCampaign(_campaignStore);
         _configWindow = SettingsWindowFor(characterName);
         // ONE adapter, TWO consumers. The coordinator needs it so that a roster entry dropped on
-        // the way in is observable to a developer rather than silent (BUG-70) -- the codec has said
+        // the way in is observable to a developer rather than silent -- the codec has said
         // so since #120, but nothing production-side was listening until this line existed.
         var sessionLog = new SessionTransportLog(log);
         _relayTransport = new WebSocketSessionTransport(sessionLog);
@@ -151,7 +151,7 @@ public sealed class Plugin : IDalamudPlugin
     /// <para>
     /// <b>A method rather than lines in the constructor, and the reason is a measurement.</b>
     /// <c>Plugin</c>'s constructor is 91 lines against a 60 capacity — a pre-existing breach nobody
-    /// on this branch created (BUG-103). Putting new code inline would have taken it to 97.
+    /// on this branch created. Putting new code inline would have taken it to 97.
     /// <b>Declining to enlarge a breach is not the same as repairing one</b>: the other 91 lines
     /// are not this chunk's to touch, but where its own lines go is its to choose.
     /// </para>
@@ -305,7 +305,7 @@ public sealed class Plugin : IDalamudPlugin
     // A step that throws must not abandon the steps still queued behind it: the transport teardown
     // sits above three RemoveWindow calls, and skipping those leaves windows registered against a
     // disposed plugin. That surfaces on the NEXT enable as a duplicate window rather than here, so
-    // the failure and the symptom are separated by a user action (A-0.6, BUG-8).
+    // the failure and the symptom are separated by a user action (A-0.6).
     private void Unwind() => _unwind.UnwindAll(
         (step, exception) => _log.Error(
             exception,

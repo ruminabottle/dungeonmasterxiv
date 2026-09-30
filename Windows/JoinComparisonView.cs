@@ -42,12 +42,12 @@ internal sealed class JoinComparisonView
     // not supply wording for these. Written here under the same constraint: no phrasing from its
     // forbidden list, and no claim that a session is protected when nobody checked.
     //
-    // Travelled with the constants it governs (DMXENG-15). It sat above all four in SessionWindow;
+    // Travelled with the constants it governs. It sat above all four in SessionWindow;
     // three came here and CodeChangedWarning stayed, so it is stated in both places rather than
     // left behind pointing at copy that had moved.
 
     // The joiner's side of CompareOutOfBand. Same instruction, same constraint, addressed to the
-    // person who until now was told to read out a code their client never showed them (BUG-31).
+    // person who until now was told to read out a code their client never showed them.
     private const string ReadYourCodeAloud =
         "Read this code to your DM over voice or chat while they decide, and check it matches what "
         + "they see. Do not send it through the plugin - a channel someone has tampered with cannot "
