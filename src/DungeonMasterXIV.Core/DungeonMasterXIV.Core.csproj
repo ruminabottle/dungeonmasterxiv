@@ -54,16 +54,6 @@
   </ItemGroup>
 
   <!--
-    So SessionKeyExchange can expose ONE seam to the tests: the probe-key generator in CanAgreeWith.
-    A PLATFORM failure was once indistinguishable from a BAD KEY, and a test must fail if the two
-    are conflated again - which needs a way to make the platform half fail on demand. A mutable
-    static would have handed one test's stub to whatever thread drained next.
-  -->
-  <ItemGroup>
-    <InternalsVisibleTo Include="DungeonMasterXIV.Tests" />
-  </ItemGroup>
-
-  <!--
     The rule above, as a build failure rather than a request. Batches over each reference's
     %(Identity) — item references are NOT expanded inside property-function arguments, so the
     tempting $([System.String]::Copy('@(Reference)').Contains('Dalamud')) silently evaluates
