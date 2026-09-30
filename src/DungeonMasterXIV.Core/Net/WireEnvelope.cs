@@ -292,7 +292,7 @@ public sealed record WireEnvelope
     /// </para>
     /// <para>
     /// <b>THIS IS THE ONLY MESSAGE THAT CARRIES THE DEADLINE, and two things about it survive the
-    /// deletion of the second route (DMXENG-41).</b> A <c>ForJoinRequest</c> overload used to stamp
+    /// deletion of the second route.</b> A <c>ForJoinRequest</c> overload used to stamp
     /// one too; it had no production caller and the Spec Owner ruled that R-1.3c names an observable
     /// state of the joining player rather than a carrier, so it went.
     /// </para>

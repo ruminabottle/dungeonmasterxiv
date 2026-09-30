@@ -62,7 +62,7 @@ internal sealed class HostRunner
     /// block of six — see <see cref="SessionResources"/> for why that was invisible.
     /// </param>
     /// <param name="handshake">What puts the code request on the wire, and what remembers it was sent.</param>
-    /// <param name="newKeys">How a key pair is made (BUG-61).</param>
+    /// <param name="newKeys">How a key pair is made.</param>
     /// <param name="synchronise">Brings the socket into line once the phase has moved.</param>
     public HostRunner(
         HostSession host,

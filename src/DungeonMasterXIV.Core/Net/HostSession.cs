@@ -137,7 +137,7 @@ public sealed class HostSession
     /// <param name="requestWasSent">
     /// Whether the code request actually went out. The caller knows; this type cannot. Without it a
     /// timeout cannot tell "the relay heard us and said nothing" from "we never reached the relay",
-    /// and reported the first for both (BUG-38).
+    /// and reported the first for both.
     /// </param>
     /// <returns>True if this call ended the attempt.</returns>
     public bool ExpireIfRegistrationTimedOut(TimeSpan elapsedSinceStart, bool requestWasSent)

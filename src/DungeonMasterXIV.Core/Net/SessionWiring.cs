@@ -7,7 +7,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>COMPOSING THE COLLABORATORS IS NOT COORDINATING THEM (DMXENG-128).</b> This is the same cut
+/// <b>COMPOSING THE COLLABORATORS IS NOT COORDINATING THEM.</b> This is the same cut
 /// <see cref="InboundWiring"/> made at DMXENG-65 and for the same stated reason: the point is WHERE
 /// THE NEXT COLLABORATOR LANDS. A twelfth collaborator now edits <i>this</i> type and leaves
 /// <see cref="SessionCoordinator"/>'s class span unchanged — where before, every one of the eleven
@@ -33,7 +33,7 @@ internal sealed class SessionWiring
     /// <param name="relayAddress">Reads the configured relay at the moment of connecting.</param>
     /// <param name="window">How long a session survives an interruption (A-1.23, A-1.27).</param>
     /// <param name="log">Where transport decisions are recorded.</param>
-    /// <param name="capabilities">What Core cannot do for itself (DMXENG-13).</param>
+    /// <param name="capabilities">What Core cannot do for itself.</param>
     internal SessionWiring(
         ISessionTransport transport,
         Func<string> relayAddress,
@@ -55,7 +55,7 @@ internal sealed class SessionWiring
         // not INVOKED until after construction, but the compiler cannot know that. Suppressing with
         // ! would assert something this constructor does not yet guarantee. That reasoning stands.
         //
-        // The order itself is now DETECTED (DMXENG-45): JoinRequester guards its collaborators, so
+        // The order itself is now DETECTED: JoinRequester guards its collaborators, so
         // building it before these throws rather than passing a null nothing refuses. Measured --
         // with the order swapped and no guard, the suite passed clean.
         Handshake = new OutboundHandshake(Link, Host, Join, () => Joiner?.Keys);

@@ -85,7 +85,7 @@ public static class WireEnvelopeReading
     /// </para>
     /// <para>
     /// <b>Dropped, not failed — the opposite of the ruling one arm inward, deliberately.</b>
-    /// <c>AdmissionInbox</c> FAILS an unusable acceptance (BUG-59) because nothing lapses a joiner
+    /// <c>AdmissionInbox</c> FAILS an unusable acceptance because nothing lapses a joiner
     /// locally, so dropping would leave it awaiting an answer that already came. That turns on the
     /// answer being THIS CLIENT'S. Somebody else's says nothing about this attempt — the host may
     /// still be deciding, so remaining in <c>AwaitingDecision</c> is the true state. Failing would
@@ -118,7 +118,7 @@ public static class WireEnvelopeReading
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>THE ARMS LIVE HERE ONCE SO A CALLER CAN TELL THE TWO NULLS APART (BUG-87).</b>
+    /// <b>THE ARMS LIVE HERE ONCE SO A CALLER CAN TELL THE TWO NULLS APART.</b>
     /// <see cref="TryGetAdmissionOutcome"/> returns null for "not an admission answer" and for "an
     /// admission answer for somebody else" alike — deliberately, per the note above — which leaves a
     /// caller unable to distinguish an envelope worth remarking on from ordinary traffic. Asking

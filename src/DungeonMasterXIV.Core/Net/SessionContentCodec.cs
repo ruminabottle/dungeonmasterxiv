@@ -29,7 +29,7 @@ namespace DungeonMasterXIV.Net;
 /// only door". That was narrowly true and read as a claim about the whole record, so a reviewer met
 /// it and was told the boundary was closed. It was not: <c>PeerCode</c> passed through untouched,
 /// and the forged <c>"Code to compare"</c> line the name gate exists to stop simply moved one field
-/// over (BUG-57).
+/// over.
 /// </para>
 /// <para>
 /// <b>Why that hole was not obvious, which is the part worth carrying.</b> A peer code is derived
@@ -103,7 +103,7 @@ public static class SessionContentCodec
         // This REBUILDS the document rather than editing it, because the sections are init-only. So
         // a section added to SessionContent and not added to this line is SILENTLY DROPPED ON DECODE
         // — the sender sets it, the wire carries it, the receiver never sees it, and nothing fails.
-        // That is the same shape as the peer-code hole this method was written to close (BUG-57):
+        // That is the same shape as the peer-code hole this method was written to close:
         // vetting that quietly deletes what it does not recognise.
         //
         // TWO GUARDS, AND THEY COVER OPPOSITE DIRECTIONS. GET BOTH.
@@ -117,7 +117,7 @@ public static class SessionContentCodec
         // ON DELETION THERE IS NO GENERAL GUARD, and the previous version of this comment claimed
         // otherwise: it named ASectionOtherThanTheRosterSurvivesVetting and said that test "fails if
         // a future section is added to the type and forgotten here". MEASURED, ONE SECTION AT A TIME
-        // AGAINST THE FULL SUITE (DMXENG-118): deleting ClosingAtUtcTicks reddens that test alone;
+        // AGAINST THE FULL SUITE: deleting ClosingAtUtcTicks reddens that test alone;
         // deleting Leaving reddens ADepartureSurvivesVettedsRebuildWhenARosterIsPresent and leaves
         // the named one GREEN. Every section has its OWN deletion guard — the name generalises and
         // the assertions do not — so a section added without one is unguarded, and this comment
@@ -140,7 +140,7 @@ public static class SessionContentCodec
     /// <remarks>
     /// Vetted still only decides; it does not announce. It reports HOW MANY it removed and the
     /// caller decides whether anyone hears about it — this stays the door rather than becoming the
-    /// diagnostics layer (BUG-70).
+    /// diagnostics layer.
     /// </remarks>
     private static IReadOnlyList<RosterEntry>? VettedRoster(
         IReadOnlyList<RosterEntry>? roster, out int dropped)
@@ -168,7 +168,7 @@ public static class SessionContentCodec
     /// <para>
     /// <b>The predicate is <see cref="StreamLine.TryToEntry"/> itself, not a copy of its rules.</b>
     /// A second statement of "what makes a line usable" is how the peer-code hole opened in the
-    /// roster (BUG-57): the gate was restated at one door and the other door kept its own version.
+    /// roster: the gate was restated at one door and the other door kept its own version.
     /// </para>
     /// <para>
     /// <b>AND THIS IS DELIBERATELY NOT INSIDE THE ROSTER'S NULL CHECK.</b> The previous shape
@@ -209,7 +209,7 @@ public static class SessionContentCodec
     /// <param name="log">
     /// Where a stripped roster entry is reported. Optional, and null is the silent case: the
     /// entry is refused either way, so this decides whether a developer finds out, not whether
-    /// the door holds (BUG-70). The rejected value is deliberately never written — a log is the
+    /// the door holds. The rejected value is deliberately never written — a log is the
     /// artefact most likely to be pasted into a bug report, so echoing an attacker-chosen
     /// string here would be a disclosure decision, not a formatting one.
     /// </param>

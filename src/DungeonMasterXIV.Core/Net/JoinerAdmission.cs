@@ -23,7 +23,7 @@ namespace DungeonMasterXIV.Net;
 /// on the receipt.
 /// </para>
 /// <para>
-/// <b>Not folded in with either content door (DMXENG-59).</b> This pair shares its nullity condition
+/// <b>Not folded in with either content door.</b> This pair shares its nullity condition
 /// with <see cref="MemberAuthoredContent"/> — both are host-only — so co-nullity alone would permit
 /// merging them. The D-3 boundary that separates the two doors is a stronger claim than co-nullity,
 /// and it wins: see <see cref="InboundHandlers"/>.
@@ -32,9 +32,9 @@ namespace DungeonMasterXIV.Net;
 /// <param name="OnJoinRequest">
 /// Called with the joiner's public key, self-declared name, and the participant id it CLAIMS, for
 /// each inbound <see cref="WireMessageType.JoinRequest"/>, when this client is a host. Null when
-/// there is nobody to tell, which is every joiner-only client (BUG-42).
+/// there is nobody to tell, which is every joiner-only client.
 /// <para>
-/// <b>The claim travels as the raw string it arrived as (R-1.5, T-37).</b> This layer decodes and
+/// <b>The claim travels as the raw string it arrived as (R-1.5).</b> This layer decodes and
 /// routes; deciding whether a claimed participant is one this campaign knows needs the campaign,
 /// which is not Core's to look up — see <see cref="SessionCapabilities.RelinkSource"/>. Null means
 /// no claim was made, which is every first-time join.
@@ -42,7 +42,7 @@ namespace DungeonMasterXIV.Net;
 /// </param>
 /// <param name="OnComparabilityReceipt">
 /// Called with the joiner's public key when that joiner reports it held the host key and could
-/// render the fingerprint (R-1.3a-iv, BUG-75). Null when there is nobody to tell, which is every
+/// render the fingerprint (R-1.3a-iv). Null when there is nobody to tell, which is every
 /// joiner-only client — only a host keeps a record this can establish anything on.
 /// <para>
 /// <b>It carries a CAPABILITY, never a comparison.</b> R-1.3a-iii forbids the second: an

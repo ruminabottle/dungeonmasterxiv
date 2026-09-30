@@ -117,7 +117,7 @@ public sealed class AdmissionControl
     /// <para>
     /// <b>No relink claim is read here, deliberately.</b> The envelope can carry
     /// <c>ClaimedParticipantId</c>, and resolving it needs both ends of a conversation that does not
-    /// exist yet (BUG-41). Passing the default is leaving that alone rather than half-building it.
+    /// exist yet. Passing the default is leaving that alone rather than half-building it.
     /// </para>
     /// </remarks>
     public void AdmitToTheQueue(
@@ -264,7 +264,7 @@ public sealed class AdmissionControl
     /// see <see cref="SessionAudience"/>, which is where D-13's None level is enforced.
     /// </summary>
     /// <param name="peerCode">The requester's session-scoped code.</param>
-    /// <param name="role">What they may do (E-11). Admission itself stays DM-only.</param>
+    /// <param name="role">What they may do. Admission itself stays DM-only.</param>
     /// <remarks>
     /// Whether the DM compared the fingerprint is taken from the request rather than passed in, so
     /// an admission cannot be recorded as verified unless the DM actually said so (R-1.3a).

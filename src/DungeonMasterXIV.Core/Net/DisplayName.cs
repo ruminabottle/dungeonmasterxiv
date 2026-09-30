@@ -24,7 +24,7 @@ namespace DungeonMasterXIV.Net;
 /// is what puts it in the reader's eye beside the value it is imitating. Stated as a RELATION rather
 /// than a distance on purpose: the earlier wording said "two lines below", which was a line number
 /// wearing a disguise. It carried no digits, so no sweep for stale line numbers could find it, and it
-/// had gone stale (BUG-81). A name is data
+/// had gone stale. A name is data
 /// rendered next to a security control, which makes control characters a spoofing surface rather
 /// than a tidiness problem. Length is bounded for the same reason: a very long name pushes the
 /// fingerprint off the visible prompt, which is the de-emphasis D-8 forbids, achieved without any
@@ -120,7 +120,7 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     /// gets validated, and that the two therefore never disagree. <b>It is struck rather than
     /// reworded, because it was not a clumsy sentence: it was a considered position, and A-1.2v
     /// decided against it.</b> A field that stops accepting keystrokes with no explanation fails the
-    /// criterion (BUG-92), and the reasoning was wrong in a way worth keeping visible — it took
+    /// criterion, and the reasoning was wrong in a way worth keeping visible — it took
     /// "the user sees what gets validated" as the property that mattered, when the property that
     /// matters is whether <b>the user can tell that anything happened at all</b>.
     /// </para>
@@ -219,7 +219,7 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     public static DisplayName OrNone(string? candidate) =>
         TryParse(candidate, out var name) ? name : None;
 
-    /// <summary>The four role words reserved to the host (R-1.3j.6, ruled by the human, SQ-80).</summary>
+    /// <summary>The four role words reserved to the host (R-1.3j.6, ruled by the human).</summary>
     private static readonly string[] ReservedToTheHost = ["DM", "GM", "Dungeon Master", "Game Master"];
 
     /// <summary>Whether a candidate is one of the reserved role words.</summary>

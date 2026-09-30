@@ -34,7 +34,7 @@ public enum SessionFailure
     RelayBehindPlugin = 5,
 
     /// <summary>
-    /// The relay accepted the connection but never confirmed the session code (BUG-36).
+    /// The relay accepted the connection but never confirmed the session code.
     /// </summary>
     /// <remarks>
     /// Distinct from <see cref="RelayUnreachable"/> because the relay <b>was</b> reached: it
@@ -47,7 +47,7 @@ public enum SessionFailure
     RegistrationNotAnswered = 6,
 
     /// <summary>
-    /// The relay address in settings could not be parsed, so nothing was contacted (BUG-37).
+    /// The relay address in settings could not be parsed, so nothing was contacted.
     /// </summary>
     /// <remarks>
     /// Distinct from <see cref="RelayUnreachable"/> because <b>no connection was attempted</b>. The
@@ -63,7 +63,7 @@ public enum SessionFailure
     RelayAddressUnreadable = 7,
 
     /// <summary>
-    /// The connection to the relay never finished opening before the clock ran out (BUG-38).
+    /// The connection to the relay never finished opening before the clock ran out.
     /// </summary>
     /// <remarks>
     /// Distinct from <see cref="RegistrationNotAnswered"/>, which is the case where the socket DID
@@ -80,7 +80,7 @@ public enum SessionFailure
     ConnectionNeverOpened = 8,
 
     /// <summary>
-    /// The host's acceptance carried a public key this client cannot agree with (BUG-59).
+    /// The host's acceptance carried a public key this client cannot agree with.
     /// </summary>
     /// <remarks>
     /// The mirror of BUG-56, at the other end of the exchange: that one stopped a host admitting a
@@ -99,7 +99,7 @@ public enum SessionFailure
     HostKeyUnusable = 9,
 
     /// <summary>
-    /// This client could not create the key pair a session needs, so nothing started (BUG-61).
+    /// This client could not create the key pair a session needs, so nothing started.
     /// </summary>
     /// <remarks>
     /// <b>It says the keys could not be created and deliberately not why.</b> On the machine this

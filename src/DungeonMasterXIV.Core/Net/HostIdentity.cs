@@ -11,7 +11,7 @@ namespace DungeonMasterXIV.Net;
 /// <see cref="RosterBroadcast"/> builds the roster from <see cref="SessionAudience.Recipients"/>,
 /// and the host is deliberately not on that list — <i>"so nothing can be addressed to it"</i>. That
 /// is correct for a SEND LIST and wrong for a MEMBERSHIP LIST, and the two had been the same
-/// expression. This carries what the host needs to author its own entry (DMXENG-33, A-1.13b).
+/// expression. This carries what the host needs to author its own entry (A-1.13b).
 /// </para>
 /// <para>
 /// <b>Every member is a function, and that is the same decision the two it replaces already made.</b>

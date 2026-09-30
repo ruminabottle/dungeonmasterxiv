@@ -1,7 +1,7 @@
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// One decoded frame, and what this client does about it (DMXENG-97).
+/// One decoded frame, and what this client does about it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -101,7 +101,7 @@ internal readonly record struct InboundFrame(
             // key were not used until the next frame arrived.
             InboundApplication.ApplyContent(envelope, sessionKey ?? handlers.HostAuthored.OpenWith, handlers.HostAuthored.OnContent, log);
 
-            // THE HOST'S SIDE OF THE SAME FRAME (R-1.3k, DMXENG-50). Both arms run, and only
+            // THE HOST'S SIDE OF THE SAME FRAME (R-1.3k). Both arms run, and only
             // one of them can ever fire: the line above opens HOST-authored content with the
             // key a joiner derived on admission, and this one opens MEMBER-authored content
             // with the keys a host shares with its peers. A payload is sealed under exactly one
@@ -124,12 +124,12 @@ internal readonly record struct InboundFrame(
 
         // A joiner asking to be let in. The consumer existed and was well tested from the day it
         // was written; nothing routed to it, so the relay forwarded every request to a host that
-        // dropped it and no prompt was ever shown (BUG-42). Handled before the outcome arms
+        // dropped it and no prompt was ever shown. Handled before the outcome arms
         // because a JoinRequest is not an outcome and matches none of them -- which is exactly
         // how it fell through to nothing.
         if (envelope.Type == WireMessageType.JoinRequest)
         {
-            // THE KEY IS CHECKED HERE, AT THE ONE DOOR IT ARRIVES THROUGH (BUG-56). A joiner
+            // THE KEY IS CHECKED HERE, AT THE ONE DOOR IT ARRIVES THROUGH. A joiner
             // controls these bytes and nothing validated them, so a peer the host could never
             // derive a key for could be admitted: addressable by the relay, unreachable by the
             // host, and silent to everyone. Guarding each place that derives instead is a
@@ -148,7 +148,7 @@ internal readonly record struct InboundFrame(
                 // the person behind it is still waiting, and the prompt they need carries the
                 // fingerprint whatever the name turns out to be. See DisplayName.OrNone.
                 // The claim travels as the RAW STRING it arrived as and is resolved by the
-                // host (T-37) -- unvalidated here on purpose, because nothing is granted on it
+                // host -- unvalidated here on purpose, because nothing is granted on it
                 // and CampaignRelink.Resolve is where it meets a parse and a roster. See
                 // JoinerAdmission.OnJoinRequest.
                 onJoinRequest(
@@ -167,7 +167,7 @@ internal readonly record struct InboundFrame(
     {
         var handlers = Handlers;
 
-        // THE HOP THAT DID NOT EXIST (BUG-75). The joiner SENDS this (OutboundHandshake), the
+        // THE HOP THAT DID NOT EXIST. The joiner SENDS this (OutboundHandshake), the
         // relay ROUTES it to the host (RelayRouter), and until now nothing here consumed it --
         // so it reached the host and fell through to nothing. Sent, routed, silently dropped:
         // the same shape as BUG-42's consumer nothing routed to, arriving from the other side.
@@ -215,7 +215,7 @@ internal readonly record struct InboundFrame(
         // in practice a mistyped code, which is the most common thing a joiner ever does. The
         // same message means something different to a host ("that code is taken, pick another"),
         // which is why this is a separate arm rather than a widened ApplyRegistration: one
-        // function serving both readings is how the host's arm gets hijacked (BUG-43).
+        // function serving both readings is how the host's arm gets hijacked.
         if (envelope.Type == WireMessageType.CodeRefused && attempt.Phase == JoinPhase.Contacting)
         {
             attempt.Fail(SessionFailure.SessionCodeNotActive);

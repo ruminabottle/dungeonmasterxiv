@@ -55,7 +55,7 @@ internal sealed class OutboundHandshake
     /// <remarks>
     /// Set only after the socket reported ready and the request left, so it is the record of whether
     /// we ever got to speak. Without it a registration timeout cannot tell "the relay heard us and
-    /// said nothing" from "we never reached the relay", and reported the first for both (BUG-38).
+    /// said nothing" from "we never reached the relay", and reported the first for both.
     /// </remarks>
     public bool RegistrationWasSent => _requestedCode is not null;
 

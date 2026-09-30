@@ -87,7 +87,7 @@ internal sealed class SessionResources
     public MemberContentReceipts MemberContent { get; }
 
     /// <summary>
-    /// This client's own log of what it received (R-2.12, SQ-116, DMXENG-116).
+    /// This client's own log of what it received (R-2.12).
     /// </summary>
     /// <remarks>
     /// <b>Constructed HERE rather than passed in, and the reason is a measurement.</b> An extra

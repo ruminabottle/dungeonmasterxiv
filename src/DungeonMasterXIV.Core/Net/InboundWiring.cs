@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THE SUPPLY OF THE HANDLERS IS NOT THE ADVANCING OF A FRAME (DMXENG-65).</b>
+/// <b>THE SUPPLY OF THE HANDLERS IS NOT THE ADVANCING OF A FRAME.</b>
 /// <see cref="SessionCoordinator.Tick"/> was fifty-one lines and roughly twenty-five of them were
 /// this: deciding which collaborator answers each door, and explaining why. Those are two reasons to
 /// change — a new inbound message type edits the wiring, a new per-frame obligation edits the tick —

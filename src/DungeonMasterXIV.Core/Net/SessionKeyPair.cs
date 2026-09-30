@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Its own type because BOTH entry points need it and neither owns it (DMXENG-31).</b> This was
+/// <b>Its own type because BOTH entry points need it and neither owns it.</b> This was
 /// <c>SessionCoordinator.TryMakeKeys</c>, called by <c>StartHosting</c> and by the join request.
 /// When the join side moved to <see cref="JoinRequester"/> the helper had to go somewhere: moving it
 /// with the join would have left hosting without it, and duplicating it was refused outright — two

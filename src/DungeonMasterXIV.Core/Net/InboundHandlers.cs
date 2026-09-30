@@ -30,7 +30,7 @@ namespace DungeonMasterXIV.Net;
 /// costs. Since DMXENG-59 the two doors are two TYPES, so the wrong one will not compile.
 /// </para>
 /// <para>
-/// <b>Why the six members group into exactly these three, and not some other three (DMXENG-59).</b>
+/// <b>Why the six members group into exactly these three, and not some other three.</b>
 /// The record was AT the parameter block (6 of 6), so <see cref="MemberAuthoredContent"/>'s sibling
 /// door could not gain a seventh member and DMXENG-58 was blocked behind it. Grouping by the D-3
 /// boundary the file already bolded gives the two doors and leaves admission as the remainder —
@@ -52,7 +52,7 @@ namespace DungeonMasterXIV.Net;
 /// claim this paragraph used to make — it is also the reason that actually reaches the question.
 /// </para>
 /// <para>
-/// <b>Provenance is NOT that reason, and the difference is the whole point (BUG-109).</b> "Both
+/// <b>Provenance is NOT that reason, and the difference is the whole point.</b> "Both
 /// admission members are supplied from the admission side" answers <i>is admission a coherent group
 /// at all</i> — and it does, which is why it belongs above at the grouping. It does not answer
 /// <i>why not merge that group into another one</i>: TWO GROUPS CAN EACH BE COHERENT AND STILL
@@ -69,7 +69,7 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>This paragraph used to cite the D-3 door boundary, and that was the wrong reason for the
-/// right conclusion (BUG-109).</b> D-3 as stated above is the boundary BETWEEN THE TWO CONTENT
+/// right conclusion.</b> D-3 as stated above is the boundary BETWEEN THE TWO CONTENT
 /// DOORS. <see cref="JoinerAdmission"/> carries <see cref="JoinerAdmission.OnJoinRequest"/> and
 /// <see cref="JoinerAdmission.OnComparabilityReceipt"/>, and neither is content — so it sits on
 /// neither side of that boundary, and merging it into <see cref="MemberAuthoredContent"/> would not

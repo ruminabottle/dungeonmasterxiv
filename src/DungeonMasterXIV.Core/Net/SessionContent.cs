@@ -160,7 +160,7 @@ public sealed class SessionContent
 
     /// <summary>
     /// Stamped content the host has broadcast, in the host's order — the only way anything other
-    /// than membership and liveness reaches a client's log (R-2.12, SQ-116).
+    /// than membership and liveness reaches a client's log (R-2.12).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -177,7 +177,7 @@ public sealed class SessionContent
     /// <c>PeerCode</c> CANNOT SURVIVE THIS WIRE. Measured, not reasoned: it is a readonly struct
     /// whose only members are computed and get-only, so <c>System.Text.Json</c> writes
     /// <c>{"Value":"BCDFGH","IsPresent":true}</c> and reads back <c>default</c> — absent, and equal
-    /// to every other absent code (DMXENG-105). A round trip through <c>StreamEntry</c> would look
+    /// to every other absent code. A round trip through <c>StreamEntry</c> would look
     /// correct on the way out and arrive as the collision.
     /// </para>
     /// <para>
@@ -221,5 +221,5 @@ public sealed class SessionContent
 /// </remarks>
 /// <param name="PeerCode">The participant's session-scoped code.</param>
 /// <param name="DisplayName">What they call themselves. Shown, never acted on.</param>
-/// <param name="Role">What they may do (E-11).</param>
+/// <param name="Role">What they may do.</param>
 public readonly record struct RosterEntry(string PeerCode, string DisplayName, SessionRole Role);

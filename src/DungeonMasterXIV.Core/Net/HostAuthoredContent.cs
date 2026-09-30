@@ -7,7 +7,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>One of the two doors <see cref="InboundHandlers"/> bolds, made a type (DMXENG-59).</b> The key
+/// <b>One of the two doors <see cref="InboundHandlers"/> bolds, made a type.</b> The key
 /// belongs with the handler rather than beside it — as the record has said since DMXENG-50, it is
 /// not configuration, it is the thing that decides whether <see cref="OnContent"/> can be called at
 /// all. The pair is also null together: both are absent on a pure host, which authors the roster and
@@ -26,7 +26,7 @@ namespace DungeonMasterXIV.Net;
 /// argument this pair was split on, and it comes free.
 /// </para>
 /// <para>
-/// <b>THE MECHANISM IS TYPE IDENTITY, NOT MEMBER SHAPE (BUG-109).</b> This paragraph used to say the
+/// <b>THE MECHANISM IS TYPE IDENTITY, NOT MEMBER SHAPE.</b> This paragraph used to say the
 /// guarantee holds because the two types "share names and share no types", naming the differing
 /// <c>byte[]</c> versus function and the differing handler arities as the reason. That was the wrong
 /// mechanism for a right conclusion. These are record structs, so they are NOMINALLY typed and never

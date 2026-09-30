@@ -40,7 +40,7 @@ internal sealed class PhaseTimeouts
     /// <param name="join">The joining phase machine, asked whether contact timed out.</param>
     /// <param name="registrationWasSent">
     /// Whether this client's code request ever left. <b>It is the difference between "the relay
-    /// heard us and said nothing" and "we never reached the relay"</b> (BUG-38), and it is passed in
+    /// heard us and said nothing" and "we never reached the relay"</b>, and it is passed in
     /// rather than read because the handshake is what knows it.
     /// </param>
     /// <returns>

@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Net;
 /// <b>Measured rather than assumed:</b> <c>PeerCode</c> is a readonly struct whose only members are
 /// computed and get-only, so <c>System.Text.Json</c> serialises it as
 /// <c>{"Value":"BCDFGH","IsPresent":true}</c> and deserialises it to <c>default</c> — <i>absent</i>,
-/// and equal to every other absent code (DMXENG-105). <b>It looks correct leaving and arrives as the
+/// and equal to every other absent code. <b>It looks correct leaving and arrives as the
 /// collision.</b>
 /// </para>
 /// <para>
@@ -46,7 +46,7 @@ public readonly record struct StreamLine(
     /// <b>THIS IS THE DOOR, AND IT IS THE ONLY ONE.</b> <c>SessionContentCodec.Vetted</c> uses this
     /// same method as its predicate, so a line that cannot become an entry is dropped at decode and
     /// never reaches a consumer. One expression, decided once — a second copy of these rules
-    /// somewhere else is how <c>PeerCode</c> got through the roster gate (BUG-57).
+    /// somewhere else is how <c>PeerCode</c> got through the roster gate.
     /// </para>
     /// <para>
     /// <b>An unparseable peer code DROPS the line rather than degrading it</b>, exactly as it does

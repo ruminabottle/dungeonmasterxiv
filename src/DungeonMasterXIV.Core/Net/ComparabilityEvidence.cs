@@ -9,7 +9,7 @@ namespace DungeonMasterXIV.Net;
 /// <b>This is a fact about the HOST'S GROUNDS, not about the joiner.</b> That distinction is what
 /// makes three states necessary rather than a two-valued fact read differently: <i>not established</i>
 /// is a statement about what the host knows, and no boolean about the joiner can express it. The
-/// Spec Owner's words: <i>"no reading of a boolean about the joiner can express it"</i> (SQ-59).
+/// Spec Owner's words: <i>"no reading of a boolean about the joiner can express it"</i>.
 /// </para>
 /// <para>
 /// <b>It replaces a <c>bool</c> that collapsed two of these into one.</b> The previous model was

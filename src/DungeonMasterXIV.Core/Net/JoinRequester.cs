@@ -42,7 +42,7 @@ internal sealed class JoinRequester
     /// <param name="handshake">What actually puts the request on the wire.</param>
     /// <param name="interruption">Holds the seat; told when a deliberate re-ask releases it.</param>
     /// <param name="join">The join phase machine this drives.</param>
-    /// <param name="newKeys">How a key pair is made (BUG-61).</param>
+    /// <param name="newKeys">How a key pair is made.</param>
     /// <param name="synchronise">Brings the socket into line once the phase has moved.</param>
     public JoinRequester(
         OutboundHandshake handshake,
@@ -119,7 +119,7 @@ internal sealed class JoinRequester
         ReleaseTheSeatAndKeys();
 
         // The same guard, because joining fails identically to hosting: both make a key pair, which
-        // is why an affected machine has nothing left that works (BUG-61).
+        // is why an affected machine has nothing left that works.
         if (!SessionKeyPair.TryMake(_newKeys, out var joinerKeys))
         {
             _join.Fail(SessionFailure.SessionKeysUnavailable);

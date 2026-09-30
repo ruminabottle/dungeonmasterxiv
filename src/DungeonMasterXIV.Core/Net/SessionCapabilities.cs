@@ -16,7 +16,7 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>What belongs here is a CAPABILITY: something Core calls to have done what it cannot do.</b>
-/// Making a key pair is one because the platform owns the entropy path (BUG-61); minting a
+/// Making a key pair is one because the platform owns the entropy path; minting a
 /// participant is one because Core has no campaign store. What does NOT belong is configuration —
 /// <c>relayAddress</c> and <c>window</c> are values read from settings, not things Core asks
 /// anybody to do, and folding them in here would make this "arguments that were in the way".
@@ -49,7 +49,7 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>They arrived separately and that is not an argument for merging any of them.</b>
-/// <c>HostDisplayName</c> (DMXENG-33) and <c>ResolveRelink</c> (DMXENG-8) landed within an hour of
+/// <c>HostDisplayName</c> and <c>ResolveRelink</c> landed within an hour of
 /// each other and collided textually on this parameter list. <b>Adjacency is not kinship</b> —
 /// folding two members together because they arrived next to each other is a grouping chosen for
 /// its arithmetic, which is what DMXENG-57 refused when it declined to move the log in here to

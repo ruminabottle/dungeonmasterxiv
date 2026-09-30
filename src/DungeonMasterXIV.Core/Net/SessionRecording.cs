@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// This client's own log of what it RECEIVED, for the session it is in (R-2.12, SQ-116).
+/// This client's own log of what it RECEIVED, for the session it is in (R-2.12).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Net;
 /// failing test.
 /// </para>
 /// <para>
-/// <b>EVERY CLIENT RECORDS ITS OWN LOG, AND RECORDING IS NOT AUTHORING (SQ-116).</b> The host still
+/// <b>EVERY CLIENT RECORDS ITS OWN LOG, AND RECORDING IS NOT AUTHORING.</b> The host still
 /// authors the shared stream and its order; a client writes down what ARRIVED. A client that
 /// invented entries the host never sent would violate D-3; one that writes down what it received
 /// does not.
@@ -47,7 +47,7 @@ namespace DungeonMasterXIV.Net;
 /// <c>cb334c9</c>: <see cref="SessionContent"/> carries a roster, a closing instant and a leaving
 /// flag — <b>no message, no roll, and no stamp.</b> So a NON-HOST client cannot record at all: it
 /// has no host-minted stamp and cannot mint one, and <see cref="SessionStream.Record"/> refuses an
-/// unminted stamp by construction (BUG-161). <b>That is the wire's gap, not this type's, and it has
+/// unminted stamp by construction. <b>That is the wire's gap, not this type's, and it has
 /// its own ticket — an absence on a board survives, and a comment in a file nobody opens does
 /// not.</b>
 /// </para>

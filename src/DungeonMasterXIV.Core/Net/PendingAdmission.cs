@@ -142,7 +142,7 @@ public sealed class PendingAdmission
     /// </summary>
     public void ConfirmFingerprintMatched()
     {
-        // A-1.2f'S REFUSAL, AND IT REFUSES ALMOST NOTHING -- WHICH IS CORRECT (R-1.3a-iv, SQ-59).
+        // A-1.2f'S REFUSAL, AND IT REFUSES ALMOST NOTHING -- WHICH IS CORRECT (R-1.3a-iv).
         //
         // It fires ONLY on EstablishedIncapable: positive evidence the joiner could NOT compare.
         // NOT on NotEstablished, which is silence. A-1.2o fails a build that suppresses "on the

@@ -25,7 +25,7 @@ namespace DungeonMasterXIV.Net;
 /// <b>What is deliberately NOT here: <see cref="SessionInterruption.InAJoinedSession"/>.</b> It looks
 /// like the fourth member of this set and it is not, because the phase cannot answer it — an
 /// admitted joiner whose link dropped is still holding a seat, and four predecessors reach
-/// <c>Failed</c> while only one of them holds one (BUG-53). <b>The seat clock is what expires, so
+/// <c>Failed</c> while only one of them holds one. <b>The seat clock is what expires, so
 /// the seat clock is what is asked.</b> This type is the rules the PHASES can answer; that one
 /// stays with the clock it depends on.
 /// </para>
@@ -38,7 +38,7 @@ namespace DungeonMasterXIV.Net;
 internal readonly record struct SessionLiveness(HostSession Host, JoinAttempt Join)
 {
     /// <summary>
-    /// Whether this client is hosting a session someone could still be in (R-1.3h, BUG-115).
+    /// Whether this client is hosting a session someone could still be in (R-1.3h).
     /// </summary>
     /// <remarks>
     /// <para>

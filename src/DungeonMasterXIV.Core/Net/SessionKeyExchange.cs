@@ -133,7 +133,7 @@ public sealed class SessionKeyExchange : IDisposable
         SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(_keyPair.Public).GetDerEncoded();
 
     /// <summary>
-    /// Whether <see cref="DeriveSharedKey"/> could actually agree with this public key (BUG-56).
+    /// Whether <see cref="DeriveSharedKey"/> could actually agree with this public key.
     /// </summary>
     /// <param name="otherPartyPublicKey">Bytes that arrived from the wire, trusted for nothing.</param>
     /// <returns><c>true</c> only if an agreement against these bytes succeeds.</returns>

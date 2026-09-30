@@ -105,7 +105,7 @@ public sealed class MemberContentReceipts
         _latest[peer.Value] = new MemberContentReceipt(peer, _received, Retainable(content));
     }
 
-    /// <summary>What this host is prepared to keep from a member-authored payload (DMXENG-137).</summary>
+    /// <summary>What this host is prepared to keep from a member-authored payload.</summary>
     /// <remarks>
     /// <para>
     /// <b>THE BOUND LIVES HERE RATHER THAN AT THE CALL SITE, so a second caller cannot reintroduce

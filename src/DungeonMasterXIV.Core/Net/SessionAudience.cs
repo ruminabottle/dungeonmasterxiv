@@ -61,7 +61,7 @@ public sealed class SessionAudience
     /// entry, so a retried admission cannot inflate the host's count or duplicate a recipient.
     /// </remarks>
     /// <param name="peerCode">The participant's session-scoped code.</param>
-    /// <param name="role">What they may do (E-11). Defaults to a plain player.</param>
+    /// <param name="role">What they may do. Defaults to a plain player.</param>
     /// <param name="verification">
     /// Whether the DM compared the fingerprint (R-1.3a). Defaults to <b>not compared</b>, so an
     /// admission is only ever recorded as verified when a caller says so explicitly.

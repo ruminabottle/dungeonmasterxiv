@@ -121,7 +121,7 @@ internal sealed class MissedMessages
             throw new ArgumentException(
                 "the peer code is absent, so this is not a member this can hold for or mark a gap "
                 + "against. Every absent code is the same key, so accepting one merges members' "
-                + "streams rather than losing them. See PeerCode's remarks on default (DMXENG-105).",
+                + "streams rather than losing them. See PeerCode's remarks on default.",
                 nameof(member));
         }
     }

@@ -85,7 +85,7 @@ internal sealed class MemberContentKeys
     /// <param name="log">
     /// Where a peer whose key will not import is reported. <b>Required, not optional</b>, for the
     /// reason <see cref="RosterBroadcast"/> states: an optional log is one the single production
-    /// caller can omit and nothing fails (DMXENG-13).
+    /// caller can omit and nothing fails.
     /// </param>
     public MemberContentKeys(
         SessionAudience audience,
