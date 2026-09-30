@@ -74,7 +74,7 @@ public class ReleaseInputsTests
             Valid().DownloadLink);
     }
 
-    // C19. The file name in the link is READ OFF THE ASSET, so the link moves when the file does.
+    // The file name in the link is READ OFF THE ASSET, so the link moves when the file does.
     // It used to be the constant "DungeonMasterXIV.zip", a name DalamudPackager has never written --
     // it writes latest.zip -- which made every link 404 while the manifest, the release and the
     // plugin were all fine. Two names rather than one: against the old constant the first case fails

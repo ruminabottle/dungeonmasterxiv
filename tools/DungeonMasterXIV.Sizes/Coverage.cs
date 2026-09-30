@@ -80,6 +80,6 @@ public static class Coverage
         and re-deriving them would move numbers nobody asked to have moved.
 
         The size limits and how a class and a file are counted are ruled, not chosen here.
-        This tool cites those rulings; it does not make one.
+        This tool applies those rulings; it does not make one.
         """;
 }

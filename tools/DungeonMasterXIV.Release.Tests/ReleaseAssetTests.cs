@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// C19. The asset is identified by the file on disk, and the file is checked against the assembly
+/// The asset is identified by the file on disk, and the file is checked against the assembly
 /// the manifest describes (A-7.2a, A-7.2b — A-7.2 was replaced 2026-08-27 because it could not fail
 /// against one build released under several tags).
 /// </summary>

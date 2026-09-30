@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <remarks>
 /// <para>
 /// <b>SEPARATE FROM <see cref="SizeGate"/> ON THE MERITS, NOT TO MAKE A NUMBER SMALLER.</b> The
-/// standard's test for a size flag is <i>the number of reasons the file could change</i>, and
+/// size rules' test for a size flag is <i>the number of reasons the file could change</i>, and
 /// <c>SizeGate</c> was acquiring a fourth: measurement, refusal, delta, and report wording. Those
 /// last two change for reasons the first two do not — a change to how a crossing READS is not a
 /// change to what a crossing IS.

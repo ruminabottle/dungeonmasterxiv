@@ -12,7 +12,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <b>A GATE THAT CHECKS ITS OWN ARITHMETIC IS CHECKING THAT IT ADDED UP WHAT IT SAW.</b> It has no
 /// way to know what it did not see. The only thing separating <i>measured everything and found
 /// nothing</i> from <i>stopped early and found nothing</i> is an expected count established
-/// independently of the run — which is this file. The same defect one layer up:
+/// independently of the run — which is this file. The same defect appears one layer up:
 /// <c>dotnet test</c> prints <c>Failed 0 / Passed 299 / Total 299</c> on an aborted host, which is
 /// internally consistent and completely false.
 /// </remarks>

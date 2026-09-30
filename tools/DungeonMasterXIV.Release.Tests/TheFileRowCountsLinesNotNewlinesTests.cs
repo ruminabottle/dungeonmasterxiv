@@ -135,7 +135,7 @@ public class TheFileRowCountsLinesNotNewlinesTests
     /// <summary>
     /// A class is a SPAN between two known lines, so it cannot pick up a trailing phantom — but the
     /// same array feeds <c>ClassSpanReader</c>, so "cannot" is asserted here rather than argued.
-    /// Sizing the <c>SessionCoordinator</c> split depended on it reading 400/400, margin 0.
+    /// The <c>SessionCoordinator</c> split depends on it reading 400/400, margin 0.
     /// </summary>
     [Fact]
     public void TheClassRowIsUnmovedByATrailingNewline()

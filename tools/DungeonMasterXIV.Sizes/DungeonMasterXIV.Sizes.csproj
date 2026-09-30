@@ -2,7 +2,7 @@
 
   <!--
     Reports class spans under the ruled counting procedure. It REPORTS and
-    does not enforce: whether a breach fails a build is a policy question the standards do not
+    does not enforce: whether a breach fails a build is a policy question the size rules do not
     answer, and answering it here would be the same mistake this tool exists downstream of.
   -->
   <PropertyGroup>
@@ -20,7 +20,7 @@
   <!--
     ROSLYN, FOR THE METHOD, PARAMETER AND NESTING ROWS AND FOR THOSE ONLY.
 
-    The standards warn in their own words that "the obvious implementation of this rule is wrong",
+    The size rules warn in their own words that "the obvious implementation of this rule is wrong",
     with a measurement behind it: a hand-rolled class count was wrong on 5 of 81 files, in BOTH
     directions. Methods, parameter lists and nesting are strictly harder to recognise by regex than
     a type declaration is, and this parser exists BECAUSE an approximate instrument quietly became

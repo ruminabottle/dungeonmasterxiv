@@ -23,7 +23,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </remarks>
 public class TheOtherThreeRowsAreMeasuredTests
 {
-    // THE PARAMETER ROW, AND THE BREACH THAT CAUSED THIS TICKET. HostRunner's constructor took seven
+    // THE PARAMETER ROW, AND THE BREACH THAT CAUSED THESE ROWS TO BE MEASURED. HostRunner's constructor took seven
     // against a block of six and nothing saw it. Fails if the row goes back to being unmeasured.
     [Fact]
     public void ASevenParameterConstructorIsCounted()

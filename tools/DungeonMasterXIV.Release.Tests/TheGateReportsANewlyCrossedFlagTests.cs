@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <remarks>
 /// <para>
 /// <b>THE GAP THIS CLOSES.</b> The gate held five constants and all five were BLOCKS. The flag row
-/// existed in the tool, which prints it, and in the standard, which rules it, and in the gate not at
+/// existed in the tool, which prints it, and in the size table, which rules it, and in the gate not at
 /// all — so <c>InboundFrame</c> went 236 UNDER to 261 OVER across #212 and every gate report was
 /// honest about what it measured and silent about what it did not.
 /// </para>

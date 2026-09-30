@@ -53,6 +53,13 @@ public class TagStripperTests
         Assert.Equal("/// the rule", TagStripper.Strip($"/// ({Bug87}) the rule"));
 
     [Fact]
+    public void ATagRightAfterTheMarkerAndBeforePunctuationIsLeftForJudgment()
+    {
+        var text = $"/// ({Bug87}).</b>";
+        Assert.Equal(text, TagStripper.Strip(text));
+    }
+
+    [Fact]
     public void SpecIdsAreNeverTouched()
     {
         var text = $"(R{D}1.3h) and (A{D}2.40, D{D}11)";

@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Sizes;
 /// <remarks>
 /// <para>
 /// <b>WHY THIS PARSES RATHER THAN MATCHES, WHICH IS A DEPARTURE FROM
-/// <see cref="ClassSpanReader"/> AND IS DELIBERATE.</b> The standards say in their own words that
+/// <see cref="ClassSpanReader"/> AND IS DELIBERATE.</b> The size rules say in their own words that
 /// "the obvious implementation of this rule is wrong", and back it with a measurement: a hand-rolled
 /// class count was wrong on <b>5 of 81 files, in both directions</b>. A method declaration, a
 /// parameter list and a nesting level are all harder to recognise from a line than a type
@@ -26,7 +26,7 @@ namespace DungeonMasterXIV.Sizes;
 /// <para>
 /// <b>WHAT THIS ROW COVERS, STATED HERE AND PRINTED ON EVERY RUN.</b> Methods, constructors,
 /// operators, conversion operators and finalizers. <b>Property, indexer and event accessors are NOT
-/// measured</b> — the standards say "Method", and whether an accessor body is one is a question
+/// measured</b> — the size table says "Method", and whether an accessor body is one is a question
 /// nobody has ruled. Saying so is the point: an unstated exclusion is how two rows became five.
 /// </para>
 /// <para>
@@ -179,9 +179,9 @@ public static class MemberReader
     /// <b>A LAMBDA RESETS THE BASELINE, which is ruled, and that ruling is
     /// held loosely.</b> Control flow inside a lambda counts from that lambda's own zero, so a
     /// method whose body is one <c>foreach</c> containing a lambda containing an <c>if</c> measures
-    /// 1 and not 2. Their reasoning: a lambda is usually the thing that FLATTENS a pyramid, and
+    /// 1 and not 2. The reasoning: a lambda is usually the thing that FLATTENS a pyramid, and
     /// counting its contents would penalise the fix and reward the pyramid. <b>If it starts hiding
-    /// real nesting, that case goes back to them.</b>
+    /// real nesting, the ruling is to be reversed.</b>
     /// </para>
     /// <para>
     /// <b>An <c>else if</c> does not add a level</b>, because it is one decision continued rather

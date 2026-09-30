@@ -96,7 +96,7 @@ internal static class SizeGate
     // THE FLAG ROW, AND IT IS NOT A SECOND SET OF BLOCKS.
     // The rule is "Blocking limits are a denial on their own. FLAGS ARE A
     // CONVERSATION" -- and that sentence governs the GATE as well as the
-    // standard. A gate that refused here would not be stricter; it would implement a different rule.
+    // size table. A gate that refused here would not be stricter; it would implement a different rule.
     // Nothing in Refusals reads these, and TheFlagReportCannotMakeTheGateRefuse pins that.
     //
     // Duplicated from Program.cs for the same reason the blocks are -- top-level consts in an

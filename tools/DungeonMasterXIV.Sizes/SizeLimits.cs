@@ -15,6 +15,6 @@ namespace DungeonMasterXIV.Sizes;
 /// measuring tool that fails its own new measurement is not a finding, it is a defect.
 /// </para>
 /// </remarks>
-/// <param name="Flag">Where the standards raise it for discussion.</param>
-/// <param name="Block">Where the standards make it a denial on its own.</param>
+/// <param name="Flag">Where the size rules raise it for discussion.</param>
+/// <param name="Block">Where the size rules make it a denial on its own.</param>
 public readonly record struct SizeLimits(int Flag, int Block);

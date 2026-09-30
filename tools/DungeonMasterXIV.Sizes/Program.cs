@@ -170,7 +170,7 @@ Console.WriteLine(Census.Describe(measured, refused, args.Length));
 Console.WriteLine(Census.DescribeMembers(membersMeasured, membersRefused));
 
 // Always 0 on a successful measurement, even for a breach. Whether a breach fails a build is a
-// policy question the standards do not answer -- they say a blocking limit is "a denial on its
+// policy question the size rules do not answer -- they say a blocking limit is "a denial on its
 // own", which is about review. Returning non-zero here would answer it by implementation, which is
 // the exact move that made writing this tool unsafe before the convention was written down.
 return 0;
