@@ -1,16 +1,16 @@
 <Project>
 
   <!--
-    C15's fence. The relay's container smoke test has to dial wss:// at a throwaway self-signed
+    The TLS fence. The relay's container smoke test has to dial wss:// at a throwaway self-signed
     certificate, so it disables certificate validation on its client socket. That line is the risk,
     not the certificate: a client that accepts any certificate has no transport authentication and
     still LOOKS protected, which is worse than plain ws:// and is what D-11 exists to prevent.
 
-    Before C15 this repository contained no such line anywhere. That is the only moment fencing one
-    off is free, so it is fenced now rather than after the second copy exists. It is the most
-    copy-pasted line in .NET networking, and the next person debugging a self-hosted relay would
-    otherwise find it in our own test project and carry it into the plugin — where it would silently
-    undo the transport guarantee RelayEndpoint's TLS requirement is there to make.
+    Before that smoke test this repository contained no such line anywhere. That is the only moment
+    fencing one off is free, so it is fenced now rather than after the second copy exists. It is the
+    most copy-pasted line in .NET networking, and the next person debugging a self-hosted relay
+    would otherwise find it in our own test project and carry it into the plugin — where it would
+    silently undo the transport guarantee RelayEndpoint's TLS requirement is there to make.
 
     A comment saying "test only" is not a control; it is the thing that gets copied along with the
     line. This is a control, and the next paragraph is the rest of the sentence.
@@ -43,8 +43,8 @@
         characters inside an interpolated hole — a char literal '"' is the way it happens — which
         leaves the regex's quote pairing misaligned and can expose a '/*'. Everything from there to
         the next '*/' anywhere in the file is then stripped, and any bypass in that span goes
-        unseen. Nested raw string literals ('""""') misalign it the same way. BUG-26 demonstrated
-        both by construction rather than by reasoning.
+        unseen. Nested raw string literals ('""""') misalign it the same way. Both were demonstrated
+        by construction rather than by reasoning.
 
         Counted on 2026-08-27, against the files rather than from memory:
 
@@ -76,8 +76,8 @@
         detect it and flags none of this solution's files, but it FAILS on any file holding a
         genuine '/* */' block comment, because a real comment's interior lines legitimately vanish.
         Telling a genuine block opener from one inside a string literal is the same lexing question
-        this stripper only approximates. A guard that false-FAILs on the documentation form BUG-18
-        was filed to permit would be worse than this paragraph.
+        this stripper only approximates. A guard that false-FAILs on a '/* */' comment documenting
+        the rule would be worse than this paragraph.
 
       - %(Compile) is silent on anything that is not compiled C# from disk, notably source-generated
         files. There are no generators in this solution today.
@@ -85,9 +85,9 @@
 
   <PropertyGroup>
     <!--
-      An ALLOWLIST of the projects permitted to hold a bypass, for C18's reason: naming what is
-      forbidden goes stale the first time somebody adds a project, and the new project passes
-      cleanly. Naming what is permitted means a project added tomorrow is scanned by default.
+      An ALLOWLIST of the projects permitted to hold a bypass, as in the relay's D-15 check: naming
+      what is forbidden goes stale the first time somebody adds a project, and the new project
+      passes cleanly. Naming what is permitted means a project added tomorrow is scanned by default.
     -->
     <TlsValidationBypassPermittedIn>DungeonMasterXIV.Relay.Tests</TlsValidationBypassPermittedIn>
   </PropertyGroup>
@@ -112,10 +112,10 @@
           Condition="'$(MSBuildProjectName)' != '$(TlsValidationBypassPermittedIn)'">
 
     <!--
-      ONE BATCH PER FILE, and that is what BUG-18 turned on. The scan used to flatten every line of
-      every file into one list, so a line had no way to ask whether it sat inside a block comment —
-      and an interior line of plain indented prose was scanned as though it were code, failing the
-      build for a comment that told people NOT to do the thing.
+      ONE BATCH PER FILE, and the false failure below turned on it. The scan used to flatten every
+      line of every file into one list, so a line had no way to ask whether it sat inside a block
+      comment — and an interior line of plain indented prose was scanned as though it were code,
+      failing the build for a comment that told people NOT to do the thing.
 
       Batching per Compile item means the file's own text is in hand, so the question is answered
       once for the file instead of guessed at per line.

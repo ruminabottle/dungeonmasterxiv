@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Windows;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="JoinFlowView"/> by DMXENG-75, and it is a PURE MOVE.</b> No behaviour
+/// <b>Split out of <see cref="JoinFlowView"/>, and it is a PURE MOVE.</b> No behaviour
 /// changes here and no criterion is claimed. <c>JoinFlowView.Draw</c> was 121 lines against a
 /// 60-line method block, and R-1.3g's client half has to add to that surface.
 /// </para>

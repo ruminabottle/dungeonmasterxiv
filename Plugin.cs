@@ -78,15 +78,15 @@ public sealed class Plugin : IDalamudPlugin
         // rather than trusted from disk. This is the only production construction of the
         // coordinator, so this is the only place the windows can get their length -- which is what
         // makes "no literal in the grace path" structural rather than something a test hopes for.
-        // The connection that did not exist until DMXENG-48: the store and the coordinator were both
-        // built here and never joined, so no session had a campaign and AddParticipant had no
-        // production caller at all.
+        // The connection that did not exist until hosting always had a campaign (A-1.9i): the store
+        // and the coordinator were both built here and never joined, so no session had a campaign
+        // and AddParticipant had no production caller at all.
         //
         // MOVED ABOVE THE COORDINATOR RATHER THAN LEFT BELOW IT AND COMMENTED. The minter below
-        // closes over this field, and a closure that is merely not-invoked-yet is the ordering
-        // dependency DMXENG-45 exists because of -- one nothing detects, which a reorder turns into
-        // a null nobody refuses. Constructing it first removes the dependency instead of
-        // documenting it; it needs only the store, which exists well above here.
+        // closes over this field, and a closure that is merely not-invoked-yet is a
+        // construction-order dependency -- one nothing detects, which a reorder turns into a null
+        // nobody refuses. Constructing it first removes the dependency instead of documenting it;
+        // it needs only the store, which exists well above here.
         _sessionCoordinator = new SessionCoordinator(
             _relayTransport,
             () => _configurationStore.Configuration.Settings.RelayAddress,
@@ -104,7 +104,7 @@ public sealed class Plugin : IDalamudPlugin
                 MintParticipant: label => _hostingCampaign.Current is { } campaign
                     ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
                     : null,
-                // T-37, and the line that gives CampaignRelink.Resolve its FIRST production caller.
+                // A-1.9a, and the line that gives CampaignRelink.Resolve its FIRST production caller.
                 // Until now every one of its eight call sites was in tests: a claim arrived on the
                 // wire and every relink branch took the not-a-relink path, so the host could not
                 // approve a relink no matter what a client sent.
@@ -150,8 +150,8 @@ public sealed class Plugin : IDalamudPlugin
     /// </para>
     /// <para>
     /// <b>A method rather than lines in the constructor, and the reason is a measurement.</b>
-    /// <c>Plugin</c>'s constructor is 91 lines against a 60 capacity — a pre-existing breach nobody
-    /// on this branch created. Putting new code inline would have taken it to 97.
+    /// <c>Plugin</c>'s constructor is 91 lines against a 60 capacity — a breach that predates this
+    /// method. Putting new code inline would have taken it to 97.
     /// <b>Declining to enlarge a breach is not the same as repairing one</b>: the other 91 lines
     /// are not this chunk's to touch, but where its own lines go is its to choose.
     /// </para>
@@ -163,15 +163,15 @@ public sealed class Plugin : IDalamudPlugin
     /// <remarks>
     /// <para>
     /// <b><see cref="_hostingCampaign"/> is constructed BEFORE this runs, not closed over and hoped
-    /// for.</b> The coordinator below records why: <i>a closure that is merely not-invoked-yet is
-    /// the ordering dependency DMXENG-45 exists because of — one nothing detects, which a reorder
-    /// turns into a null nobody refuses.</i> Same argument here, so the same remedy.
+    /// for.</b> The coordinator below records why: <i>a closure that is merely not-invoked-yet is a
+    /// construction-order dependency — one nothing detects, which a reorder turns into a null
+    /// nobody refuses.</i> Same argument here, so the same remedy.
     /// </para>
     /// <para>
     /// <b>A method rather than lines in the constructor, and the reason is a measurement.</b>
-    /// <c>Plugin</c>'s constructor is a grandfathered breach at 88 lines against a 60 capacity
-    /// (BUG-103). Inline these lines and it reaches 95 — <b>the size gate refused exactly that,</b>
-    /// naming the margin moving from -28 to -35. Grandfathered breaches may stay where they are;
+    /// <c>Plugin</c>'s constructor is a grandfathered breach at 88 lines against a 60 capacity.
+    /// Inline these lines and it reaches 95 — <b>the size gate refused exactly that,</b> naming the
+    /// margin moving from -28 to -35. Grandfathered breaches may stay where they are;
     /// they may not grow. The same reasoning already put <see cref="NameWeSendAs"/> here.
     /// </para>
     /// </remarks>
@@ -215,12 +215,12 @@ public sealed class Plugin : IDalamudPlugin
     /// <remarks>
     /// <para>
     /// <b>The entries are copied here, not referenced</b>, so the log the offer holds outlives the
-    /// departure that follows it — SQ-115's requirement that <i>the log survives until the choice
+    /// departure that follows it — R-2.12's requirement that <i>the log survives until the choice
     /// resolves</i>, arranged as a hold on one object rather than a hold on the teardown.
     /// </para>
     /// <para>
     /// <b>THE SIXTY SECONDS ARE ENGINEERING'S AND NO REQUIREMENT STATES THEM.</b> R-1.3c requires
-    /// only that the wait is bounded and its bound shown; SQ-115 put the arrangement here in terms.
+    /// only that the wait is bounded and its bound shown; R-2.12 makes the arrangement engineering's.
     /// The figure matches the closing window the player is already watching under R-1.3g, so the
     /// two countdowns on one screen cannot disagree — <b>a second number would be the drift R-1.3c
     /// names.</b> It is deliberately not read from settings: a user-settable window would make the
@@ -263,7 +263,7 @@ public sealed class Plugin : IDalamudPlugin
         // R-1.1: unloading the plugin ends the session, and ending it drops the relay connection.
         // Registered as an unwind step so it runs on a constructor throw as well as on Dispose.
         // R-1.1: unloading the plugin ends the session, and ending it drops the relay connection.
-        // BUG-154: the three calls this replaced were the HOST's half only, so a joiner quitting the
+        // The three calls this replaced were the HOST's half only, so a joiner quitting the
         // game deliberately looked exactly like one that vanished and had its seat held five minutes.
         // The ordered sequence lives in EndSessionForTeardown because the ORDER is the fix and a
         // lambda here cannot be tested -- the test project reaches Core and not this project.

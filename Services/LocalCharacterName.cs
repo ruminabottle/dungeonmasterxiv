@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>In <c>Services/</c> because it is a game-state read.</b> The standards put Dalamud reads
+/// <b>In <c>Services/</c> because it is a game-state read.</b> The folder layering puts Dalamud reads
 /// here, not in a window and not in <c>Plugin.cs</c>, and this is the whole of the surface: one
 /// property, one Dalamud call, no state. A window asking <c>IClientState</c> directly would be a
 /// window making a game API call, and <c>Plugin.cs</c> doing it would be wiring reading game state.
@@ -23,7 +23,7 @@ namespace DungeonMasterXIV.Services;
 /// remembered.</b> In Dalamud 15 <c>LocalPlayer</c> lives on <see cref="IObjectTable"/>;
 /// <c>IClientState</c> no longer carries it and offers only <c>IsLoggedIn</c>, <c>TerritoryType</c>
 /// and similar. The obvious <c>IClientState.LocalPlayer</c> does not compile against the shipped
-/// reference assemblies - same shape as the ImGuiNET move the standards already record.
+/// reference assemblies - same shape as ImGuiNET becoming <c>Dalamud.Bindings.ImGui</c>.
 /// </para>
 /// <para>
 /// <b>Not cached.</b> The name is read at the moment it is needed. A player can be logged out, or

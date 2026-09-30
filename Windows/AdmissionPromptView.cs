@@ -30,7 +30,7 @@ namespace DungeonMasterXIV.Windows;
 /// </remarks>
 internal sealed class AdmissionPromptView
 {
-    // R-1.7a, replaced 2026-08-28 by SQ-34. Literal product copy: substitute nothing, and do not
+    // R-1.7a, replaced 2026-08-28. Literal product copy: substitute nothing, and do not
     // "improve" it. The previous sentence said the prompt shows a code and NOT a character name,
     // while the headline beside it rendered "Bob (PEER-3) is asking to join" — it contradicted
     // R-1.3e from the moment R-1.3e was decided. The code was byte-identical to what

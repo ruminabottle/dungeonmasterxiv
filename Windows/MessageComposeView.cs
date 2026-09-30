@@ -12,10 +12,10 @@ namespace DungeonMasterXIV.Windows;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THIS IS THE PRODUCT SURFACE R-2.19 WAS MISSING.</b> <c>SessionMembership.Say</c> shipped with
-/// DMXENG-121, correct and public, and nothing outside Core called it — nine message types built,
-/// merged and green with no route by which a player could construct one. A-2.41 names no screen and
-/// neither does this type's existence; <b>what it answers is that there IS one.</b>
+/// <b>THIS IS THE PRODUCT SURFACE R-2.19 WAS MISSING.</b> <c>SessionMembership.Say</c> shipped
+/// correct and public, and nothing outside Core called it — nine message types built, merged and
+/// green with no route by which a player could construct one. A-2.41 names no screen and neither
+/// does this type's existence; <b>what it answers is that there IS one.</b>
 /// </para>
 /// <para>
 /// <b>WHY A CONTROL IN THE SESSION WINDOW RATHER THAN A SLASH COMMAND OR A WINDOW OF ITS OWN, and
@@ -27,7 +27,7 @@ namespace DungeonMasterXIV.Windows;
 /// puts the compose path somewhere the player is not looking during the thing it is for.
 /// </para>
 /// <para>
-/// <b>2. A NEW WINDOW WOULD HAVE ADDED A FAILURE MODE THIS TICKET EXISTS TO CLOSE.</b>
+/// <b>2. A NEW WINDOW WOULD HAVE ADDED A FAILURE MODE THIS SURFACE EXISTS TO CLOSE.</b>
 /// <c>Plugin.Register</c> adds each window explicitly, so a fifth that skipped that line would be a
 /// surface nothing can reach — <b>the same zero-producer defect one layer up</b>, and a call-site
 /// test would not notice. Drawn from <see cref="SessionWindow"/>, which is already registered, there
@@ -55,14 +55,14 @@ internal sealed class MessageComposeView
     /// Evaluates a typed roll (R-2.1).
     /// </summary>
     /// <remarks>
-    /// <b>Built here rather than threaded from the composition root, and the reason is measured.</b>
-    /// <c>SessionWindow</c>'s constructor takes FIVE parameters against a block of six — margin 1 —
-    /// so threading an evaluator through it would put a window constructor at parameter margin 0 to
-    /// deliver a dice feature, which is the condition DMXENG-128 existed to remove elsewhere.
-    /// <c>SystemDieRoller</c> is the production roller and takes no configuration, so there is
-    /// nothing here for a composition root to decide. <b>A-2.1's independent-check seam is
-    /// <c>IDieRoller</c> and it is untouched</b> — the evaluator still takes one, and its own tests
-    /// still supply their own.
+    /// <b>Built here rather than threaded from the composition root, and the reason is
+    /// measured.</b> <c>SessionWindow</c>'s constructor takes FIVE parameters against a block of
+    /// six — margin 1 — so threading an evaluator through it would put a window constructor at
+    /// parameter margin 0 to deliver a dice feature, which is the condition the
+    /// <c>SessionWiring</c> split removed from <c>SessionCoordinator</c>. <c>SystemDieRoller</c> is
+    /// the production roller and takes no configuration, so there is nothing here for a composition
+    /// root to decide. <b>A-2.1's independent-check seam is <c>IDieRoller</c> and it is
+    /// untouched</b> — the evaluator still takes one, and its own tests still supply their own.
     /// </remarks>
     private readonly RollEvaluator _rolls = new(new SystemDieRoller());
 
@@ -108,7 +108,7 @@ internal sealed class MessageComposeView
     /// <b>Separated from <see cref="Draw"/> so the send path can be EXERCISED.</b> No test in this
     /// repository can drive ImGui — the test project references Core alone and may never reference
     /// the plugin — so a compose path that existed only inside a draw call could be asserted by
-    /// reading it and never by running it. That is the shape this ticket exists to close, and it
+    /// reading it and never by running it. That is the shape this surface exists to close, and it
     /// would have been reproduced one layer further in.
     /// </remarks>
     internal void Submit()
@@ -142,8 +142,8 @@ internal sealed class MessageComposeView
     /// removed</b>, and the number would read wrongly rather than look wrong.
     /// <para>
     /// <b>The wording is READ, never composed here.</b> A-2.3b and A-2.3c constrain how a result
-    /// reads and DMXENG-91 shipped that wording; inventing a sentence at this call site would
-    /// re-derive a criterion this ticket is fenced away from.
+    /// reads and <c>RollSurvival</c> already words it; inventing a sentence at this call site would
+    /// re-derive a criterion this surface is fenced away from.
     /// </para>
     /// </remarks>
     private void Roll(string expression)

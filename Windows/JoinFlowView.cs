@@ -12,9 +12,9 @@ namespace DungeonMasterXIV.Windows;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="SessionWindow"/> by DMXENG-15, and it is a PURE MOVE.</b> No
+/// <b>Split out of <see cref="SessionWindow"/>, and it is a PURE MOVE.</b> No
 /// behaviour changes here, no criterion is claimed, and nothing was fixed on the way past. The
-/// seam is PR #89's, whose body is authoritative: <c>DrawJoining</c> had grown to carry five
+/// seam is where a paragraph had become a screen: <c>DrawJoining</c> had grown to carry five
 /// things — phase reporting, the fingerprint comparison, the code box, the name box and the
 /// failure line — and the DM's side had already left for
 /// <see cref="AdmissionPromptView"/> for the same reason.
@@ -111,7 +111,7 @@ internal sealed class JoinFlowView
         // code box goes with the button — leaving a field to type into is still offering the way,
         // and R-1.3h means the affordance is ABSENT rather than disabled-and-explained.
         //
-        // The decision stays HERE and the composing left with DMXENG-75: what the window OFFERS is
+        // The decision stays HERE and the composing left for the form: what the window OFFERS is
         // this view's, how a request is built is the form's.
         if (!InAHostedSession() && (join.MayRequestAgain || join.Phase == JoinPhase.Denied))
         {
@@ -148,7 +148,7 @@ internal sealed class JoinFlowView
     /// taken from. Core returns both, so this is one destructuring assignment and there is no way
     /// to update one without the other.
     /// </remarks>
-    // RECORDED, NOT REDESIGNED (qa-3). Returning the pair makes correct use a one-liner; it
+    // RECORDED, NOT REDESIGNED. Returning the pair makes correct use a one-liner; it
     // Every phase gets a sentence. R-1.3 forbids leaving anyone looking at an ambiguous spinner,
     // so there is no state here that renders as "..." and nothing else.
     private static string DescribeJoin(JoinPhase phase) => phase switch

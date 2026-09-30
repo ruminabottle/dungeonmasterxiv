@@ -22,10 +22,9 @@ namespace DungeonMasterXIV.Windows;
 /// </para>
 /// <para>
 /// <b>Why it is here at all rather than in the campaign list (A-1.9j).</b> Resuming must be
-/// reachable WITHOUT NAVIGATING AWAY. The Spec Owner's reason is the defect it prevents: pure
-/// auto-create means <i>"a DM resuming last week's game silently gets a NEW campaign and loses the
-/// roster"</i> — and a DM who has to leave the session window to avoid that will not know they
-/// needed to.
+/// reachable WITHOUT NAVIGATING AWAY. The reason is the defect it prevents: pure auto-create means
+/// <i>"a DM resuming last week's game silently gets a NEW campaign and loses the roster"</i> — and
+/// a DM who has to leave the session window to avoid that will not know they needed to.
 /// </para>
 /// <para>
 /// <b>Campaigns are listed by <see cref="CampaignName"/> and never by their code (A-1.9k-3).</b>
@@ -47,15 +46,15 @@ internal sealed class HostCampaignPicker
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>Substitute nothing and do not "improve" it (R-1.7a).</b> Three claims, one per sentence,
-    /// each ruled by the Product Owner: resumption will not restore participants; the state is empty
-    /// AND temporary; the campaign is intact — a missing feature, not lost data. Punctuation is not
-    /// load-bearing; the claims are, and all three must survive any re-wrapping.
+    /// <b>Substitute nothing and do not "improve" it (R-1.7a).</b> Three claims, one per sentence:
+    /// resumption will not restore participants; the state is empty AND temporary; the campaign is
+    /// intact — a missing feature, not lost data. Punctuation is not load-bearing; the claims are,
+    /// and all three must survive any re-wrapping.
     /// </para>
     /// <para>
     /// <b>It is here rather than in a release note because THIS IS WHERE THE FALSE BELIEF FORMS.</b>
-    /// A note was ruled sufficient for BUG-41 only because nothing in the product claimed the missing
-    /// thing. The picker claims it, so the disclosure goes on the control.
+    /// Under D-18 a note was sufficient for the unreachable relink only because nothing in the product
+    /// claimed the missing thing. The picker claims it, so the disclosure goes on the control.
     /// </para>
     /// <para>
     /// <b>One phrasing was rejected and is recorded so nobody re-adds it: "...and you will admit them

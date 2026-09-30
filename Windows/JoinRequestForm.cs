@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Windows;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="JoinFlowView"/> by DMXENG-75, and it is a PURE MOVE.</b> No behaviour
+/// <b>Split out of <see cref="JoinFlowView"/>, and it is a PURE MOVE.</b> No behaviour
 /// changes here and no criterion is claimed. <c>JoinFlowView.Draw</c> was 121 lines against a
 /// 60-line method block — grandfathered by the delta gate, which forbids making it worse — and
 /// R-1.3g's client half has to add to that surface.
@@ -20,7 +20,7 @@ namespace DungeonMasterXIV.Windows;
 /// <see cref="JoinFlowView"/> had — the code box, the name box and the seed marker — belonged to
 /// this form and to nothing else; what remains there reads the attempt and renders it, holding no
 /// state at all. A view that owns no input and a form that owns nothing but is the same split
-/// PR #89 made when the DM's side left for <see cref="AdmissionPromptView"/>.
+/// made when the DM's side left for <see cref="AdmissionPromptView"/>.
 /// </para>
 /// <para>
 /// <b>Whether this may be shown at all is NOT decided here.</b> R-1.3h — a hosting client offers no
@@ -132,7 +132,7 @@ internal sealed class JoinRequestForm
             //
             // Sent from the same resolved value that was SHOWN, not re-resolved here: a second
             // call would be a second chance to disagree with the line above.
-            // R-1.5b's CARRYING half, and the line DMXENG-1 exists for: until now the only
+            // R-1.5b's CARRYING half, and the line that makes relink reachable: until now the only
             // production caller passed two arguments, so claimedParticipantId was null on every
             // join the shipped build made and relink was unreachable however much of it existed.
             //
