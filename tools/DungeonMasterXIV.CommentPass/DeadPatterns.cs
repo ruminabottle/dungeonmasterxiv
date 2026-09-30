@@ -26,7 +26,7 @@ public static class DeadPatterns
         new("engineering" + Dash + "standards"),
         new("product" + Dash + "directives"),
         new(@"\bbrief" + @"\.md"),
-        new(NotAfterWordChar + "qa" + Dash + @"\d"),
+        new(NotAfterWordChar + "[Qq][Aa]" + Dash + @"\d"),
     ];
 
     /// <summary>A hit here is rewritten or deliberately kept, and a kept one is listed in the PR.</summary>
