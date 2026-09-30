@@ -32,6 +32,7 @@ public class ManifestMatchesTheBuiltPluginTests
             .GetProperty("TestingAssemblyVersion").GetString();
 
         Assert.False(string.IsNullOrWhiteSpace(fromTheManifest));
+        Assert.Equal(fromTheArtefact.ToString(), fromTheManifest);
         Assert.Equal(fromTheArtefact, Version.Parse(fromTheManifest!));
     }
 }

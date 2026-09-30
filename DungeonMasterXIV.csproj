@@ -4,7 +4,8 @@
     <AssemblyName>DungeonMasterXIV</AssemblyName>
     <RootNamespace>DungeonMasterXIV</RootNamespace>
     <!-- The version is authored only by the release tag: dotnet build -c Release -p:ReleaseTag=v1.2.3. -->
-    <!-- ReleaseTagVersion is the tag without its 'v'; an untagged build falls back to 0.0.0.0, which is never released. -->
+    <!-- ReleaseTagVersion is the tag with leading 'v's trimmed; untagged builds fall back to 0.0.0.0, never released.
+         Kept separate from Version so a bare 'v' leaves it empty and fails the shape check instead of building as 0.0.0.0. -->
     <ReleaseTagVersion Condition="'$(ReleaseTag)' != ''">$(ReleaseTag.TrimStart('v'))</ReleaseTagVersion>
 
     <Version Condition="'$(ReleaseTagVersion)' != ''">$(ReleaseTagVersion)</Version>
@@ -31,13 +32,15 @@
     <Error Condition="!$(ReleaseTag.StartsWith('v'))"
            Text="ReleaseTag '$(ReleaseTag)' must begin with a lowercase 'v', e.g. v0.1.0. The tag is the one place the advertised version is authored (D-16, R-7.4a), and the release tool refuses any other spelling of it." />
 
-    <!-- The tag must leave a version shape: one to four numeric components, optionally with a prerelease suffix. -->
+    <!-- The tag must leave a version shape: one to four components of at most five digits each,
+         optionally with a prerelease suffix. -->
     <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ReleaseTagVersion)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}(-[0-9A-Za-z.-]+)?$'))"
            Text="ReleaseTag '$(ReleaseTag)' is not a shape this build can turn into a version: it leaves '$(ReleaseTagVersion)', and a version is one to four dot-separated numbers of at most five digits each, e.g. v0.1.0 or v1.2.3.4. Retag with that shape." />
 
   </Target>
 
-  <!-- Assembly-version components cap at 65534; refuse a larger one here instead of as CS7034 in generated code. -->
+  <!-- Assembly-version components cap at 65534; refuse a larger one here instead of as CS7034 in generated code.
+       Its own conditioned target: an Error batched over an empty item list still runs once, and Int64.Parse('') would crash. -->
   <Target Name="ReleaseTagFitsAnAssemblyVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
           Condition="'$(ReleaseTag)' != '' AND $([System.Text.RegularExpressions.Regex]::IsMatch('$(ReleaseTagVersion)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}$'))">
     <ItemGroup>
