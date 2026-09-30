@@ -35,8 +35,8 @@ internal sealed record Breach(string File, string Row, string Unit, int Value, i
 /// lets the tests construct the cases the repository cannot supply.
 /// </para>
 /// <para>
-/// <b>The rows are split ABSOLUTE and DELTA, and the split is ruled rather than chosen here
-/// (DMXENG-70).</b> <c>main</c> carries zero class and zero file breaches, so absolute costs nothing
+/// <b>The rows are split ABSOLUTE and DELTA, and the split is ruled rather than chosen here.</b>
+/// <c>main</c> carries zero class and zero file breaches, so absolute costs nothing
 /// at those scopes and is strictly stronger — a delta would pass a class breach that arrived by a
 /// route nobody anticipated. At method scope absolute is unaffordable: seven breaches exist, one of
 /// them <c>Drain</c> at −120 with a bug-lane ticket held on it. So method rows fail on a NEW breach or

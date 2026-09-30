@@ -29,7 +29,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>The assembly is only half the archive.</b> The same zip carries the manifest Dalamud installs,
 /// and comparing it is a separate question with a separate failure mode — see
-/// <see cref="ZipManifestMatchesTheBuildTests"/> (BUG-16).
+/// <see cref="ZipManifestMatchesTheBuildTests"/>.
 /// </para>
 /// </remarks>
 public class ReleaseAssetTests

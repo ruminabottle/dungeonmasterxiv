@@ -55,7 +55,7 @@ public class CanonicalTagTests
     }
 
     // Whitespace and a capital V are read well enough to NAME the canonical form and then refused.
-    // The build does not trim either, so accepting them would be a fresh divergence (BUG-23).
+    // The build does not trim either, so accepting them would be a fresh divergence.
     [Theory]
     [InlineData(" v0.1.0")]
     [InlineData("v0.1.0 ")]

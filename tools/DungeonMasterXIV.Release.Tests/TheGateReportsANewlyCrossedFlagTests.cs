@@ -102,7 +102,7 @@ public class TheGateReportsANewlyCrossedFlagTests
         }
     }
 
-    // >>> OBLIGATION 4: THE REPORT NAMES ITS ROW AND ITS DIRECTION (BUG-111) <<<
+    // >>> OBLIGATION 4: THE REPORT NAMES ITS ROW AND ITS DIRECTION <<<
     //
     // A bare margin says nothing about WHICH limit it is a margin from, and an absent row is not read
     // as absent -- the reader fills the gap with whichever row they arrived asking about.

@@ -54,7 +54,7 @@ public class TheBuildAndTheToolReadTheTagAlikeTests
     // Direction 2, the one that would strand an operator: a tag the tool is happy to release but the
     // build refuses to produce. That set must be empty.
     //
-    // THIS ASKS A REAL BUILD (BUG-25). It used to ask the spelling guard, which runs one target and
+    // THIS ASKS A REAL BUILD. It used to ask the spelling guard, which runs one target and
     // never reaches the compiler -- so v70000.0.0 passed it four times over while the real build
     // exited 1 with CS7034. A test whose reach is narrower than the claim it makes reports success
     // about a case it never visited.

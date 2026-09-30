@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THREE OUTCOMES, NOT TWO (DMXENG-70).</b> The size gate measures the working tree, and that is
+/// <b>THREE OUTCOMES, NOT TWO.</b> The size gate measures the working tree, and that is
 /// only the merged tree if this branch already contains <c>origin/main</c>. On a branch that does
 /// not, a green would mean <i>"some tree was clean"</i> rather than <i>"the merged tree is clean"</i>
 /// — which is the exact failure class the gate exists to end, occurring inside the gate. So the
@@ -111,8 +111,8 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     /// tell a bounded call from an unbounded one.
     /// </para>
     /// <para>
-    /// <b>THE TIMEOUT ARM IS CHECKED BEFORE THE EXIT-CODE ARM, AND THAT ORDERING IS LOAD-BEARING
-    /// (BUG-126).</b> Unreachable and unresponsive are different facts. A refused connection returns
+    /// <b>THE TIMEOUT ARM IS CHECKED BEFORE THE EXIT-CODE ARM, AND THAT ORDERING IS LOAD-BEARING.</b>
+    /// Unreachable and unresponsive are different facts. A refused connection returns
     /// at once because the host sends RST, and the exit-code arm below already reports it as "could
     /// not reach origin". A DROPPED connection sends nothing, so only the bound ends it — and if it
     /// fell through to that same arm the reader would be told origin could not be reached when
@@ -124,7 +124,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     internal static (bool Contains, string Detail) Decide(
         Func<string, TimeSpan?, (int Code, string Output, string Errors, bool TimedOut)> git)
     {
-        // CURRENCY BEFORE ANCESTRY, AND THE ORDER IS THE FIX (BUG-124). `merge-base` reads
+        // CURRENCY BEFORE ANCESTRY, AND THE ORDER IS THE FIX. `merge-base` reads
         // refs/remotes/origin/main, which is a LOCAL CACHE as fresh as this clone's last fetch --
         // not a fact about the remote. A stale cache is an ancestor of a tree that is itself behind
         // real main, so the ancestor question answers YES and the gate RUNS AND PASSES against a

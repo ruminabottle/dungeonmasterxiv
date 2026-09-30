@@ -1,4 +1,4 @@
-# THE EXPECTED POPULATION, HELD OUTSIDE THE RUN (DMXENG-70).
+# THE EXPECTED POPULATION, HELD OUTSIDE THE RUN.
 #
 # A gate that checks its own arithmetic is checking that it added up what it SAW. It has no
 # way to know what it did not see. The only thing separating 'measured everything and found

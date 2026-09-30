@@ -59,7 +59,7 @@ public class TheBuildContextExcludesHostOutputTests
             File.Exists(Path.Combine(Root().FullName, ".dockerignore")),
             "No .dockerignore at the repository root, which is the build context for both "
             + "`docker build -f deploy/Dockerfile .` and deploy/compose.yaml's `context: ..`. "
-            + "Host obj/ will overwrite the container's restore (BUG-77).");
+            + "Host obj/ will overwrite the container's restore.");
 
         Assert.False(
             File.Exists(Path.Combine(Root().FullName, "deploy", ".dockerignore")),

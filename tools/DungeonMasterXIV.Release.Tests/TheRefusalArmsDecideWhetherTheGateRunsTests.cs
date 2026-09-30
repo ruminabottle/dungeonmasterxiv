@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// Each arm on which the gate declines refuses for its OWN reason, not merely with a false (BUG-128).
+/// Each arm on which the gate declines refuses for its OWN reason, not merely with a false.
 /// </summary>
 /// <remarks>
 /// <para>

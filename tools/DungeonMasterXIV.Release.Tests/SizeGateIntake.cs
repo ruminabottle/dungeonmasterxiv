@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// Which files the gate measures, taken from git rather than from the filesystem.
 /// </summary>
 /// <remarks>
-/// <b>`git ls-files`, never a hand-written `find` (DMXENG-70).</b> A `find` rooted at the directories
+/// <b>`git ls-files`, never a hand-written `find`.</b> A `find` rooted at the directories
 /// somebody remembered is what dropped <c>Plugin.cs</c> from an earlier census — it sits at the
 /// repository root alongside fourteen other tracked <c>.cs</c> files, which is exactly where a search
 /// that starts at <c>src/</c> and <c>tests/</c> will never look. Asking git for the tracked set

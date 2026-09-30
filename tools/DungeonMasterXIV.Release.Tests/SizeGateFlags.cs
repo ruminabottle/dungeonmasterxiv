@@ -5,7 +5,7 @@ using System.Linq;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// Comparing two flag measurements, and saying what newly crossed (DMXENG-107).
+/// Comparing two flag measurements, and saying what newly crossed.
 /// </summary>
 /// <remarks>
 /// <para>

@@ -43,7 +43,7 @@ using DungeonMasterXIV.Release;
 // AND against --plugin-manifest, which is a second question, not the same one twice. A metadata-only
 // edit leaves the assembly byte-identical, so the SHA check passes on a zip a build behind and the
 // entry advertises metadata the archive contradicts -- including DalamudApiLevel, whose failure mode
-// is silence (BUG-16).
+// is silence.
 //
 // --dry-run prints the manifest and writes nothing. It is how this is verified without cutting a
 // release, which is the whole point of the current gate: a manifest today would deliver a plugin

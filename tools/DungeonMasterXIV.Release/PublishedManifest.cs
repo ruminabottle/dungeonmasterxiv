@@ -17,7 +17,7 @@ namespace DungeonMasterXIV.Release;
 /// skipped, so a tester's URL 404'd while every other check stayed green.
 /// </para>
 /// <para>
-/// <b>The whole document is compared, not a list of fields (BUG-27).</b> The first version of this
+/// <b>The whole document is compared, not a list of fields.</b> The first version of this
 /// class named four fields it cared about. <c>IsTestingExclusive</c> was not among them — so half of
 /// D-12's gate could be crossed by editing one boolean in a committed file, with the suite green,
 /// and the only thing standing in the way was somebody noticing a one-line diff at review. That is

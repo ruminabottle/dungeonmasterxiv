@@ -6,7 +6,7 @@ namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
 /// The half DMXENG-107 left out: something that reads a tree TWICE and hands the pair to the
-/// reporter (DMXENG-112).
+/// reporter.
 /// </summary>
 /// <remarks>
 /// <para>

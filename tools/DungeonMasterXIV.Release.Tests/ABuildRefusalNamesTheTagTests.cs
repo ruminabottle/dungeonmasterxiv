@@ -55,7 +55,7 @@ public class ABuildRefusalNamesTheTagTests
     }
 
     // The half that keeps the shape gate from absorbing the tool's job. Each of these is a tag the
-    // RELEASE TOOL refuses -- as an alias (BUG-22), or for naming no version -- and every one must
+    // RELEASE TOOL refuses -- as an alias, or for naming no version -- and every one must
     // still BUILD. A gate that judged canonical form here would be the third parser BUG-23 exists
     // to prevent, and these are exactly the tags that would show it had.
     [Theory]

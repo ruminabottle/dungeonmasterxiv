@@ -113,7 +113,7 @@ public class TheManifestTracksTheTagTests
     }
 
     // Key order and whitespace are not defects. A comparison that fails on them produces false
-    // failures, which trains people to ignore it -- worse than one that cannot fail (BUG-16).
+    // failures, which trains people to ignore it -- worse than one that cannot fail.
     [Fact]
     public void ReorderedKeysAndReformattedWhitespaceAreNotDifferences()
     {

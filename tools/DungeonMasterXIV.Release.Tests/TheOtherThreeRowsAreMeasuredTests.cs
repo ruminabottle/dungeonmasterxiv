@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// The method, parameter and nesting rows — the three the tool did not measure (DMXENG-55).
+/// The method, parameter and nesting rows — the three the tool did not measure.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -181,7 +181,7 @@ public class TheOtherThreeRowsAreMeasuredTests
         Assert.Equal(1, span.Depth);
     }
 
-    // A LOCAL FUNCTION IS ITS OWN MEMBER (BUG-94, rulings 2 and 4). It used to be REFUSED while the
+    // A LOCAL FUNCTION IS ITS OWN MEMBER (rulings 2 and 4). It used to be REFUSED while the
     // question was open, and the test here asserted only that the refusal existed -- with an EMPTY
     // fixture, so it could not have failed if the local function were silently measured through its
     // container, which is exactly what the tool was doing. qa-1 found that; this is the test that

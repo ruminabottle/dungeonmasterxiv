@@ -59,7 +59,7 @@ public static class Coverage
         NOT MEASURED, AND SAYING SO IS THE POINT: property, indexer and event accessors are outside
         the method and nesting rows, because whether an accessor body is a "method" is unruled.
 
-        A LOCAL FUNCTION IS NOW MEASURED, AND IT USED TO BE REFUSED (BUG-94). It is its own member
+        A LOCAL FUNCTION IS NOW MEASURED, AND IT USED TO BE REFUSED. It is its own member
         for both rows, and the two rows behave DIFFERENTLY on purpose:
 
           LENGTH  counts TWICE. A member's span runs from its declaration to its closing brace with

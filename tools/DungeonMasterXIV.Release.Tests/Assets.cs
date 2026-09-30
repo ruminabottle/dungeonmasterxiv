@@ -32,7 +32,7 @@ internal static class Assets
 
     /// <summary>
     /// The entry <see cref="ReleaseAsset.MustCarryTheSameMetadataAs"/> compares — the manifest
-    /// Dalamud actually reads when it installs (BUG-16).
+    /// Dalamud actually reads when it installs.
     /// </summary>
     public const string PluginManifestName = "DungeonMasterXIV.json";
 

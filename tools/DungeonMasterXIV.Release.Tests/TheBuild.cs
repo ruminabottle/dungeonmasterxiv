@@ -42,7 +42,7 @@ internal static class TheBuild
     /// Whether the build's spelling GUARD rejects this tag — the guard alone, not the build.
     /// </summary>
     /// <remarks>
-    /// <b>Named for what it asks (BUG-25).</b> This used to be called <c>RefusesTag</c> and was used
+    /// <b>Named for what it asks.</b> This used to be called <c>RefusesTag</c> and was used
     /// to test the claim "no tag the tool accepts is one the build refuses". It runs one target, so
     /// what it actually answers is whether the <i>guard</i> refuses — and <c>v70000.0.0</c> passes the
     /// guard while the real build fails it with CS7034. Four cases went green over a tag that
@@ -77,7 +77,7 @@ internal static class TheBuild
 
     /// <summary>What a real build says when it refuses this tag.</summary>
     /// <remarks>
-    /// <b>The real build, not the guard target (BUG-30).</b> The claim being tested is that the
+    /// <b>The real build, not the guard target.</b> The claim being tested is that the
     /// operator gets a readable refusal, and the operator runs <c>dotnet build</c> — so the text has
     /// to come from there. Two shapes reached past the guards and failed inside MSBuild itself,
     /// which a single-target invocation would never have shown.

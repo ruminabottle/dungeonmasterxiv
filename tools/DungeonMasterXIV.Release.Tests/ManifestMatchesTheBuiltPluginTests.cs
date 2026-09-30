@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>Two sources, deliberately.</b> The manifest is generated from the built DLL, and this reads
 /// the DLL again independently. It used to be three: a second test read <c>&lt;Version&gt;</c> out of
-/// the csproj. That property is gone (BUG-14, D-16) — the version is now derived from the git tag,
+/// the csproj. That property is gone (D-16) — the version is now derived from the git tag,
 /// so there is no declared value left to compare a build against, and the guarantee that the
 /// advertised version tracks the tag moved to <see cref="VersionHasOneAuthorTests"/>.
 /// </para>

@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace DungeonMasterXIV.Sizes;
 
 /// <summary>
-/// Reads the method, parameter and nesting rows out of one file (DMXENG-55).
+/// Reads the method, parameter and nesting rows out of one file.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -59,7 +59,7 @@ public static class MemberReader
 
     private static MemberSpan? Describe(SyntaxNode node) => node switch
     {
-        // MEASURED, not refused (BUG-94). This was refused while the question was open; the
+        // MEASURED, not refused. This was refused while the question was open; the
         // Deployment Manager has now ruled that a local function IS ITS OWN MEMBER for both rows,
         // "otherwise arbitrary depth and length hide behind a name and are measured nowhere".
         // Continuing to print NOT RULED would be a false refusal, which is the defect this file was
@@ -207,8 +207,8 @@ public static class MemberReader
 
         foreach (var child in node.ChildNodes())
         {
-            // A LOCAL FUNCTION IS SKIPPED ENTIRELY, and that is ruling 4 rather than an optimisation
-            // (BUG-94): its control flow is measured on its OWN row, so adding it here would count
+            // A LOCAL FUNCTION IS SKIPPED ENTIRELY, and that is ruling 4 rather than an optimisation:
+            // its control flow is measured on its OWN row, so adding it here would count
             // it twice and report a container as a pyramid it does not contain. That differs from
             // the lambda below deliberately -- a lambda is not a member, so its contents have no
             // other row to be counted on and must be counted here, from a reset baseline.
