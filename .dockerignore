@@ -1,4 +1,4 @@
-# Keeps HOST build output out of the Docker build context (BUG-77).
+# Keeps HOST build output out of the Docker build context.
 #
 # WHAT GOES WRONG WITHOUT THIS. deploy/Dockerfile restores inside the image, correctly, producing
 # /build/src/.../obj/project.assets.json with container paths. It then COPYs the source directories

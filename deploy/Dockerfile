@@ -6,7 +6,7 @@
 # but explicitly did NOT withdraw this artifact — it is the only thing tying the deployed process
 # back to a commit, and PRD-1 names the remaining gap rather than claiming this closes it.
 #
-# There is deliberately no self-hosting documentation here (E-9, and C2's do-not list). This is our
+# There is deliberately no self-hosting documentation here (C2's do-not list). This is our
 # deployment, not a guide to running your own.
 
 # TWO values, not one, because the SDK and the runtime are numbered in DIFFERENT NAMESPACES and a
@@ -20,7 +20,7 @@
 # broken the runtime stage.
 #
 # WHAT THIS PROTECTS, not just what it sets: the relay is the deployed artefact and was the last
-# unpinned half of the build after global.json pinned the plugin (DMXENG-36). It also closes a trap —
+# unpinned half of the build after global.json pinned the plugin. It also closes a trap —
 # the .dockerignore added for BUG-77 excludes build output ONLY, and compose builds with context "..",
 # so global.json is still in the context. The moment anyone widens the COPY list below, or adds
 # `COPY global.json ./` thinking they are being tidy, a FLOATING sdk tag that is not exactly 10.0.400

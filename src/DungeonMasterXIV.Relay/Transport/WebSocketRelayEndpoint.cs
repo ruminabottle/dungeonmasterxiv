@@ -26,7 +26,7 @@ public sealed class WebSocketRelayEndpoint(
 
     /// <summary>
     /// Whether the RELAY is stopping, which is the only thing that tells two causes of one exception
-    /// apart (BUG-78). The token passed to <see cref="ServeAsync"/> is the request's, and it fires
+    /// apart. The token passed to <see cref="ServeAsync"/> is the request's, and it fires
     /// when the CLIENT goes away; this one fires when the process is going down.
     /// </summary>
     private readonly IHostApplicationLifetime _lifetime = lifetime;
