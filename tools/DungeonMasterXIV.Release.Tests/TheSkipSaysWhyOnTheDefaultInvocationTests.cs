@@ -4,7 +4,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-123: when the size gate cannot run, the DEFAULT <c>dotnet test</c> invocation says WHY.
+/// When the size gate cannot run, the DEFAULT <c>dotnet test</c> invocation says WHY.
 /// </summary>
 /// <remarks>
 /// <para>

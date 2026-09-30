@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// DMXENG-107: a flag the tree did not cross before and crosses now is REPORTED, not refused.
+/// A flag the tree did not cross before and crosses now is REPORTED, not refused.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// honest about what it measured and silent about what it did not.
 /// </para>
 /// <para>
-/// <b>REPORTING, NEVER REFUSING.</b> <c>engineering-standards.md:1140</c> — <i>"Blocking limits are a
+/// <b>REPORTING, NEVER REFUSING.</b> The rule is <i>"Blocking limits are a
 /// denial on their own. Flags are a conversation."</i> A gate that refused here would not be stricter;
 /// it would implement a different rule. <see cref="TheFlagReportCannotMakeTheGateRefuse"/> is the
 /// assertion, because a doc comment saying "non-blocking" is not a mechanism.
@@ -133,7 +133,7 @@ public class TheGateReportsANewlyCrossedFlagTests
         Assert.Empty(SizeGate.Refusals(current, current, [Path], [Path]));  // and the gate is silent
     }
 
-    // >>> #216 REVIEW: THE REPORT STATES THE TOTALS IT WAS COMPUTED FROM <<<
+    // >>> THE REPORT STATES THE TOTALS IT WAS COMPUTED FROM <<<
     //
     // The totals are the disambiguator for this mechanism's own documented false positive, and the
     // first draft left them in <remarks> -- where no reader of the REPORT will ever look. A reader

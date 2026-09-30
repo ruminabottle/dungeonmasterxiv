@@ -52,7 +52,7 @@ public class ApiLevelIsCopiedFromTheBuildTests
         Assert.True(
             candidates.Length > 0,
             "No built DungeonMasterXIV.json under bin/. R-7.3a copies the API level from the ARTEFACT, " +
-            "so this fails rather than skips. BUG-12: `dotnet test` alone never builds the plugin, because no " +
+            "so this fails rather than skips. `dotnet test` alone never builds the plugin, because no " +
             "test project references it and that isolation is deliberate. Run `dotnet build` first, then " +
             "`dotnet test`. This tree is not broken; the command was incomplete.");
 

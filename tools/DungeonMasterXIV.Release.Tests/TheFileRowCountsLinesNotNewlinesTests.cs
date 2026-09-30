@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-183 — the FILE row counts LINES, and a trailing newline terminates the last one rather than
+/// The FILE row counts LINES, and a trailing newline terminates the last one rather than
 /// beginning another.
 /// </summary>
 /// <remarks>
@@ -20,12 +20,12 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <b>So these tests sit ON the boundary, not near it.</b> Every existing file-row fixture in this
 /// assembly is built with <c>string.Join('\n', ...)</c> and therefore carries NO trailing newline —
 /// phantom-free by accident of construction, and green against the defect. A test written near the
-/// boundary, or one built the same way, would have passed against this bug. That is the lesson the
-/// ticket asked to be encoded.
+/// boundary, or one built the same way, would have passed against this bug. That is the lesson
+/// this file encodes.
 /// </para>
 /// <para>
 /// <b>The ruling being pinned</b> is <c>Program.cs:67</c> — "a file is every line in it, first to
-/// last" — and its operational half in <c>engineering-standards.md</c>: a trailing newline
+/// last" — and its operational half: a trailing newline
 /// TERMINATES the last line, it does not BEGIN a new one. <c>File.ReadAllLines</c> matches
 /// <c>wc -l</c>; <c>Split('\n')</c> matches neither, so the gate was the defective instrument and
 /// the CLI is the reference.
@@ -86,7 +86,7 @@ public class TheFileRowCountsLinesNotNewlinesTests
     }
 
     /// <summary>
-    /// The negative control the ticket required: files WITHOUT a trailing newline agreed before this
+    /// The required negative control: files WITHOUT a trailing newline agreed before this
     /// fix and must keep agreeing. A suite that only proved the terminated case could not tell a fix
     /// from a change of subject.
     /// </summary>
@@ -135,7 +135,7 @@ public class TheFileRowCountsLinesNotNewlinesTests
     /// <summary>
     /// A class is a SPAN between two known lines, so it cannot pick up a trailing phantom — but the
     /// same array feeds <c>ClassSpanReader</c>, so "cannot" is asserted here rather than argued.
-    /// DMXENG-128 depends on <c>SessionCoordinator</c> reading 400/400, margin 0.
+    /// Sizing the <c>SessionCoordinator</c> split depended on it reading 400/400, margin 0.
     /// </summary>
     [Fact]
     public void TheClassRowIsUnmovedByATrailingNewline()

@@ -10,8 +10,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Cited, not restated:</b> "## HOW TO COUNT A CLASS" and "### THE SHAPES A REAL FILE HAS" in
-/// <c>engineering-standards.md</c>. First line of the type declaration to its closing brace,
+/// <b>The ruled procedure:</b> first line of the type declaration to its closing brace,
 /// inclusive, nothing excluded; attributes and doc above it outside.
 /// </para>
 /// <para>

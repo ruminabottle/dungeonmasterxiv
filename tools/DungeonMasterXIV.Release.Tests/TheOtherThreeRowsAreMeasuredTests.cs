@@ -101,7 +101,7 @@ public class TheOtherThreeRowsAreMeasuredTests
         Assert.Equal(3, span.Lines);
     }
 
-    // RULING 2: an expression-bodied member is a method for this row. The Deployment Manager said it
+    // RULING 2: an expression-bodied member is a method for this row. The ruling says it
     // "will almost never bind, and the case where it does is exactly the one worth catching" -- so
     // this is the case where it does.
     [Fact]
@@ -184,7 +184,7 @@ public class TheOtherThreeRowsAreMeasuredTests
     // A LOCAL FUNCTION IS ITS OWN MEMBER (rulings 2 and 4). It used to be REFUSED while the
     // question was open, and the test here asserted only that the refusal existed -- with an EMPTY
     // fixture, so it could not have failed if the local function were silently measured through its
-    // container, which is exactly what the tool was doing. qa-1 found that; this is the test that
+    // container, which is exactly what the tool was doing. This is the test that
     // was missing.
     //
     // THE FIXTURE CARRIES REAL NESTING ON PURPOSE. An empty local function cannot distinguish a

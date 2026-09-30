@@ -62,7 +62,7 @@ internal static class SizeGateIntake
         git.WaitForExit();
 
         // NOT SUPPRESSED. A silent git failure yields an empty list, and an empty intake measures
-        // nothing while reporting no breaches -- the vacuous pass this whole ticket exists to stop.
+        // nothing while reporting no breaches -- the vacuous pass this whole intake exists to stop.
         return git.ExitCode == 0
             ? output
             : throw new InvalidOperationException($"git {arguments} exited {git.ExitCode}: {errors}");

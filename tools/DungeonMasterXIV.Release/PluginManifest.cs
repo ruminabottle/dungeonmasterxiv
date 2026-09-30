@@ -11,7 +11,7 @@ namespace DungeonMasterXIV.Release;
 /// <remarks>
 /// <para>
 /// Read rather than restated so the product copy exists once. R-7.3 fixes <c>Name</c>,
-/// <c>Punchline</c> and <c>Description</c> as the Product Owner's, and a second copy in a release
+/// <c>Punchline</c> and <c>Description</c> as product copy, and a second copy in a release
 /// script is a second thing to keep in step that nobody would notice going stale.
 /// </para>
 /// <para>
@@ -25,7 +25,7 @@ namespace DungeonMasterXIV.Release;
 /// </remarks>
 public sealed class PluginManifest
 {
-    /// <summary>Permanent, per PRD-0 R-0.1. Never derived from a file name or a version.</summary>
+    /// <summary>Permanent, per R-0.1. Never derived from a file name or a version.</summary>
     public const string InternalName = "DungeonMasterXIV";
 
     [JsonPropertyName("Name")]

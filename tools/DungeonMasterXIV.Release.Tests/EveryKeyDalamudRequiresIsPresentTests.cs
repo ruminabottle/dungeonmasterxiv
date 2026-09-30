@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-34: the entry carries every key Dalamud declares it cannot do without.
+/// The entry carries every key Dalamud declares it cannot do without.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,7 +16,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <c>AssemblyVersion</c> entirely, so its output was self-consistent with the defect and every one
 /// of those checks was green while a real tester was blocked. A harness that derives its
 /// expectations from the product cannot see the product being wrong — third occurrence, after
-/// PR #20 and BUG-16.
+/// PR #20 and the stale-zip manifest.
 /// </para>
 /// <para>
 /// <b>Where the list comes from, and how to re-derive it.</b> Dalamud 15's

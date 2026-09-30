@@ -18,8 +18,8 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>Evaluation is not the whole build, and one target is not either.</b> <c>-getProperty:</c> does
 /// not run targets; <see cref="GuardRefusesTag"/> runs exactly one. Neither reaches the compiler, so
-/// a claim about what THE BUILD does needs <see cref="FailsToBuild"/> — that distinction is BUG-25,
-/// and it cost a test that passed on a live counter-example to its own invariant.
+/// a claim about what THE BUILD does needs <see cref="FailsToBuild"/> — missing that distinction
+/// once cost a test that passed on a live counter-example to its own invariant.
 /// </para>
 /// <para>
 /// Extracted when a third test class needed it. Two copies of a filesystem walk were cheaper than a

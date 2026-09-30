@@ -61,8 +61,8 @@ public static class RepositoryManifest
 
             // R-7.1 and D-12's second gate. THIS FLAG is what keeps the plugin off the stable
             // channel -- not the absence of stable fields. The comment here used to claim the
-            // opposite, and omitting AssemblyVersion on the strength of it is BUG-34: a real tester
-            // was blocked by a manifest Dalamud cannot use. The correct argument was already
+            // opposite, and omitting AssemblyVersion on the strength of it blocked a real tester
+            // with a manifest Dalamud cannot use. The correct argument was already
             // written six lines below, about the download links, and simply not carried across.
             ["IsTestingExclusive"] = true,
             ["TestingAssemblyVersion"] = inputs.AssemblyVersion.ToString(),
@@ -76,7 +76,7 @@ public static class RepositoryManifest
             ["DownloadLinkUpdate"] = inputs.DownloadLink,
             ["DalamudApiLevel"] = inputs.DalamudApiLevel,
 
-            // BUG-34, and it is required rather than a courtesy. Dalamud 15 declares
+            // It is required rather than a courtesy. Dalamud 15 declares
             // AssemblyVersion NON-NULLABLE on PluginManifest, while TestingAssemblyVersion carries
             // no such annotation and is optional -- established by reflecting on the shipped
             // Dalamud.dll, whose type-level default is NullableContext(2), so the properties

@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// DMXENG-112: the report reaches a reader from a REAL TREE WALK, not a constructed pair.
+/// The report reaches a reader from a REAL TREE WALK, not a constructed pair.
 /// </summary>
 /// <remarks>
 /// <b>THE SENTENCE #216's TESTS DID NOT SAY.</b> They proved the reporter works when given a pair;

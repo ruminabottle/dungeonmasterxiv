@@ -19,7 +19,7 @@ using DungeonMasterXIV.Release;
 // Omitting the build step is the mistake this refuses by name; see ReleaseInputs.Validate.
 //
 // This used to be one command, and the version came from a hand-maintained <Version> in the csproj.
-// Four different tags against one unchanged build all exited 0 and all advertised 0.0.0.1 -- BUG-14.
+// Four different tags against one unchanged build all exited 0 and all advertised 0.0.0.1.
 // Dalamud does not reject a repeated version, it never offers the build, so the second release to a
 // tester was silently never delivered and the symptom was a tester who went quiet.
 //
@@ -89,7 +89,7 @@ try
         ?? throw new InvalidOperationException($"'{pluginManifestPath}' is not a plugin manifest."))
         .RequireBuilt(pluginManifestPath);
 
-    // BUG-16. The line above checks the zip carries the same ASSEMBLY; this checks it carries the
+    // The line above checks the zip carries the same ASSEMBLY; this checks it carries the
     // same METADATA. They are separate questions because a metadata-only edit leaves the assembly
     // byte-identical, so the SHA comparison passes over a zip whose manifest is a build behind.
     asset.MustCarryTheSameMetadataAs(plugin, pluginManifestPath);

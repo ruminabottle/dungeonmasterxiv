@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// Every run says how much of what it looked at got a number.
 /// </summary>
 /// <remarks>
-/// <b>The obligation the Deployment Manager added after this tool shipped:</b> a refusing tool must
+/// <b>The obligation added after this tool shipped:</b> a refusing tool must
 /// report the refusal COUNT alongside its results, every run. A refusal is safe about the number and
 /// unsafe about the census — it lies by omission about what it looked at, and a list of results
 /// reads as a clean sweep to anyone not counting twice.

@@ -19,8 +19,8 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <para>
 /// <b>A SKIP RATHER THAN A FAILURE, AND THAT IS RULED RATHER THAN SOFT.</b> Refusing outright would
 /// turn the suite red for every engineer mid-development, and a habitually red suite trains people to
-/// read past it — worse than the hole. The skip becomes a refusal at the merge gate instead: the
-/// Deployment Manager does not merge a PR whose suite skipped this test, so the honest outcome
+/// read past it — worse than the hole. The skip becomes a refusal at the merge gate instead: a
+/// PR whose suite skipped this test is not merged, so the honest outcome
 /// propagates rather than being swallowed.
 /// </para>
 /// <para>
@@ -43,7 +43,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
             return;
         }
 
-        // BUG-125: THE LEADING SENTENCE NAMED A CAUSE THE CHECK HAD NOT ESTABLISHED. `Containment`
+        // THE LEADING SENTENCE NAMED A CAUSE THE CHECK HAD NOT ESTABLISHED. `Containment`
         // returns contains:false on five arms and only ONE of them is "this branch is behind main":
         // git can fail, origin can be unreachable, the clone can have no cached ref, and the cached
         // ref can be stale -- and on a stale ref the branch may well contain main. The true reason
@@ -56,7 +56,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         Skip = "SIZE GATE NOT RUN, so this tree is not known to be the merged tree and a pass "
              + $"here would describe a tree nobody is going to merge: {detail}";
 
-        // BUG-123: THE SKIP FIRED CORRECTLY AND NOBODY COULD SEE WHY. `Skip` is printed only at -v n
+        // THE SKIP FIRED CORRECTLY AND NOBODY COULD SEE WHY. `Skip` is printed only at -v n
         // or above; the DEFAULT invocation prints the test's DISPLAY NAME and nothing else about a
         // skip. So on the invocation everyone actually runs, a reader got a name and had to already
         // know that test's skip condition to interpret it -- and "Skipped 1" beside "Failed 0" reads
@@ -100,10 +100,10 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     /// <remarks>
     /// <para>
     /// <b>THE RUNNER IS A PARAMETER SO THE ARMS CAN BE DRIVEN.</b> Every branch below depends on a
-    /// network condition that cannot be created from a test — and the two that BUG-126 added were
-    /// measurably unguarded while this was a closure: deleting the timeout arm, and dropping the
-    /// bound from the call, both left the whole suite green. A seam is what makes the difference
-    /// between a reason that exists and a reason that is reached.
+    /// network condition that cannot be created from a test — and the two the timeout fix added
+    /// were measurably unguarded while this was a closure: deleting the timeout arm, and dropping
+    /// the bound from the call, both left the whole suite green. A seam is what makes the
+    /// difference between a reason that exists and a reason that is reached.
     /// </para>
     /// <para>
     /// It takes the runner rather than the results so that the ARGUMENTS are observable too. The
@@ -111,13 +111,13 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     /// tell a bounded call from an unbounded one.
     /// </para>
     /// <para>
-    /// <b>THE TIMEOUT ARM IS CHECKED BEFORE THE EXIT-CODE ARM, AND THAT ORDERING IS LOAD-BEARING.</b>
+    /// <b>THE TIMEOUT ARM IS CHECKED BEFORE THE EXIT-CODE ARM, AND THE ORDER IS LOAD-BEARING.</b>
     /// Unreachable and unresponsive are different facts. A refused connection returns
     /// at once because the host sends RST, and the exit-code arm below already reports it as "could
     /// not reach origin". A DROPPED connection sends nothing, so only the bound ends it — and if it
     /// fell through to that same arm the reader would be told origin could not be reached when
     /// origin WAS reached, which is a cause this check never observed. Naming the wrong cause is
-    /// BUG-125's whole subject.
+    /// the whole defect this skip message was rewritten to remove.
     /// </para>
     /// </remarks>
     /// <param name="git">Runs a git command with an optional bound, as <see cref="Git"/> does.</param>
@@ -136,7 +136,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
         var (remoteCode, remote, remoteErrors, remoteTimedOut) =
             git("ls-remote origin refs/heads/main", RemoteTimeout);
 
-        // BUG-126, and the ORDER is the point -- see the arm ordering note on this method.
+        // The timeout arm, and the ORDER is the point -- see the arm ordering note on this method.
         if (remoteTimedOut)
         {
             return (false, TimedOutDetail);
@@ -213,7 +213,7 @@ public sealed class ContainsMainFactAttribute : FactAttribute
     /// connection was accepted and then nothing came back, which is a different fact with a
     /// different cause — a VPN, proxy or DNS sink rather than being offline — and pointing a reader
     /// at the wrong one costs them the time it takes to disprove it. Naming a cause the check did
-    /// not observe is BUG-125's whole subject.
+    /// not observe is the whole defect this skip message was rewritten to remove.
     /// </para>
     /// <para>
     /// Extracted for the same reason <see cref="SkippedDisplayName"/> is: a test can hold this

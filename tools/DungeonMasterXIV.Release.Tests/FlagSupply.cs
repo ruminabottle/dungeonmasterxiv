@@ -5,8 +5,8 @@ using System.Linq;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// The half DMXENG-107 left out: something that reads a tree TWICE and hands the pair to the
-/// reporter.
+/// The half the flag report shipped without: something that reads a tree TWICE and hands the pair
+/// to the reporter.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,8 +24,8 @@ namespace DungeonMasterXIV.Release.Tests;
 /// <item><b>Chosen — the base ref.</b> It is the tree the PR is actually measured against, it needs
 /// no file anyone can forget to update, and it is already how this gate decides whether it may run
 /// at all.</item>
-/// <item><b>Rejected — a baseline FILE.</b> Ruled out as DMXENG-107's shape 3, and the reasoning is
-/// unchanged: an empty floor fails OPEN and makes the check vacuous, which
+/// <item><b>Rejected — a baseline FILE.</b> Ruled out for the flag report itself, and the reasoning
+/// is unchanged: an empty floor fails OPEN and makes the check vacuous, which
 /// <c>SizeGateBaseline</c>'s own doc already had to write a guard against.</item>
 /// <item><b>Rejected — a caller-supplied pair.</b> That is what exists, and it is the defect.</item>
 /// </list>
@@ -37,7 +37,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// "0 of 2 changed file(s) are in intake" became "2 of 2" once the files were COMMITTED, because
 /// <see cref="SizeGateIntake.Files"/> is <c>git ls-files</c> — <b>tracked only</b> — so an untracked
 /// path is filtered out one line later regardless. The union was a tested mechanism with no effect:
-/// <b>the very shape this ticket exists to fix, reproduced inside its own fix.</b> Removed rather
+/// <b>the very shape this type exists to fix, reproduced inside its own fix.</b> Removed rather
 /// than kept as speculative generality. <b>The consequence stands and is the intake's to change, not
 /// this type's: a new file is measured once it is committed, and the block gate has always behaved
 /// the same way.</b>

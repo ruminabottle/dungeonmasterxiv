@@ -5,15 +5,15 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-23: the tag is the single authored source, and it is read by two parsers. This is what stops
+/// The tag is the single authored source, and it is read by two parsers. This is what stops
 /// them drifting.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>One author, two readers.</b> The build derives <c>Version</c> from <c>$(ReleaseTag)</c> in
 /// <c>DungeonMasterXIV.csproj</c>; the tool parses the same tag in <see cref="TaggedVersion"/>.
-/// D-16's whole argument for BUG-14 was "one authored source, everything else computed from it" —
-/// and the moment the tag became that source it was immediately computed from twice.
+/// D-16's whole argument was "one authored source, everything else computed from it" — and the
+/// moment the tag became that source it was immediately computed from twice.
 /// </para>
 /// <para>
 /// <b>Parsing it once is not available, and that is a fact rather than a preference.</b> MSBuild
@@ -23,7 +23,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </para>
 /// <para>
 /// <b>The invariant is not "the two readers accept the same tags".</b> They do not, and forcing that
-/// would mean a third parser in MSBuild — the very thing BUG-23 warns about. It is:
+/// would mean a third parser in MSBuild — the very thing to avoid. It is:
 /// </para>
 /// <list type="number">
 /// <item>no tag both accept yields two different versions — the dangerous case, silent by nature;</item>
@@ -33,8 +33,8 @@ namespace DungeonMasterXIV.Release.Tests;
 /// </remarks>
 public class TheBuildAndTheToolReadTheTagAlikeTests
 {
-    // Every canonical spelling, through BOTH readers, compared. This is the assertion whose absence
-    // BUG-23 identified: VersionHasOneAuthorTests exercised each reader, and nothing compared them.
+    // Every canonical spelling, through BOTH readers, compared. This is the assertion that was
+    // missing: VersionHasOneAuthorTests exercised each reader, and nothing compared them.
     [Theory]
     [InlineData("v0.1.0")]
     [InlineData("v0.1.1")]
@@ -61,7 +61,7 @@ public class TheBuildAndTheToolReadTheTagAlikeTests
     //
     // Scoped to representative tags rather than every spelling, because a real build is ~0.7s
     // against a few milliseconds for the guard: the two ordinary shapes, the boundary that must
-    // still work, and BUG-25's counter-example.
+    // still work, and the above-65534 counter-example.
     [Theory]
     [InlineData("v0.1.0")]
     [InlineData("v1.2.3.4")]
@@ -75,17 +75,17 @@ public class TheBuildAndTheToolReadTheTagAlikeTests
 
     // The control for the helper above. Without it, a FailsToBuild that answered false for
     // everything -- a mistyped argument, a swallowed exit code -- would make that theory pass over
-    // nothing, which is precisely how BUG-25 got here.
+    // nothing, which is precisely how the above-65534 tag slipped through.
     [Fact]
     public void TheRealBuildHelperCanSeeAFailure()
     {
         Assert.True(TheBuild.FailsToBuild("V0.1.0"));
     }
 
-    // BUG-25's counter-example, from both sides. 65534 is the largest component an assembly version
-    // can carry, so a tag above it names a version no artefact can ever hold. Making only the
-    // build's refusal prettier would have left invariant 2 false while this file asserted it, so the
-    // tool refuses it too and the two agree.
+    // The above-65534 counter-example, from both sides. 65534 is the largest component an assembly
+    // version can carry, so a tag above it names a version no artefact can ever hold. Making only
+    // the build's refusal prettier would have left invariant 2 false while this file asserted it,
+    // so the tool refuses it too and the two agree.
     [Theory]
     [InlineData("v65535.0.0")]
     [InlineData("v70000.0.0")]
@@ -105,7 +105,7 @@ public class TheBuildAndTheToolReadTheTagAlikeTests
         Assert.Equal(new Version(65534, 0, 0, 0), TaggedVersion.Of("v65534.0.0"));
     }
 
-    // BUG-23's headline. Before the guard this died inside NuGet restore as
+    // The headline failure. Before the guard this died inside NuGet restore as
     // "MSB4181: The RestoreTask task returned false but did not log an error" -- naming neither the
     // tag nor the version nor the csproj. Git tags are case-sensitive and a capital V is a real
     // convention, so this is reachable with an unreadable failure.

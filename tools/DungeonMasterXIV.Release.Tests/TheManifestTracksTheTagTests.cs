@@ -8,7 +8,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// D-16: publishing the repository manifest is not a step a person has to remember. BUG-27: and
+/// D-16: publishing the repository manifest is not a step a person has to remember. And
 /// not a document a person can quietly edit.
 /// </summary>
 /// <remarks>
@@ -44,7 +44,7 @@ public class TheManifestTracksTheTagTests
         PublishedManifest.At(TheRepository.ManifestPath()).MustMatch(TheToolWouldGenerate(tag), tag);
     }
 
-    // BUG-27's own case, as something you can watch fail rather than an argument that it would.
+    // The stable-flag case, as something you can watch fail rather than an argument that it would.
     // D-12's gate is a boolean in a committed file; before this it was not compared at all.
     [Fact]
     public void FlippingIsTestingExclusiveIsRefused()
@@ -58,7 +58,7 @@ public class TheManifestTracksTheTagTests
         Assert.Contains("D-12", failure.Message, StringComparison.Ordinal);
     }
 
-    // The rest of the matrix the Deployment Manager reproduced. Every one of these passed before,
+    // The rest of the reproduced matrix. Every one of these passed before,
     // and the point of the whole-document comparison is that none of them is named anywhere.
     [Theory]
     [InlineData("InternalName", "NotTheRealPlugin")]

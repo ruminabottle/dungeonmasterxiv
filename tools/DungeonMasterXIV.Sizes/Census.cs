@@ -12,7 +12,7 @@ namespace DungeonMasterXIV.Sizes;
 /// invisible to it.
 /// </para>
 /// <para>
-/// <b>Extracted from the program so it can be tested.</b> The Deployment Manager made this an
+/// <b>Extracted from the program so it can be tested.</b> This is an
 /// obligation on any refusing tool, and an obligation defended by a comment is a comment.
 /// </para>
 /// </remarks>
@@ -36,7 +36,7 @@ public static class Census
               + $"{measured} of {types}.";
     }
 
-    /// <summary>The same statement for the member rows added by DMXENG-55.</summary>
+    /// <summary>The same statement for the three member rows.</summary>
     /// <remarks>
     /// <para>
     /// <b>A SEPARATE LINE RATHER THAN A BIGGER NUMBER, AND THIS WAS A DEFECT I CAUGHT IN MY OWN

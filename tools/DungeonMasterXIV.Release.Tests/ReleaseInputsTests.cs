@@ -9,8 +9,8 @@ public class ReleaseInputsTests
     private const string Repo = "https://github.com/ruminabottle/dungeonmasterxiv";
 
     // The version is DERIVED from the tag rather than written beside it. Both fixtures here used to
-    // pair "v0.1.0" with 0.0.0.1 -- a disagreeing pair, and BUG-14 is exactly that pair being
-    // accepted, so no test in this file could construct the defect it needed to see.
+    // pair "v0.1.0" with 0.0.0.1 -- a disagreeing pair, and the original defect was exactly that
+    // pair being accepted, so no test in this file could construct the defect it needed to see.
     private static ReleaseInputs Valid(string tag = "v0.1.0", int apiLevel = 13, string? assetName = null) =>
         new(tag, TaggedVersion.Of(tag), apiLevel, Repo, Assets.Any(assetName ?? Assets.PackagerName));
 

@@ -39,7 +39,7 @@ internal sealed record Breach(string File, string Row, string Unit, int Value, i
 /// <c>main</c> carries zero class and zero file breaches, so absolute costs nothing
 /// at those scopes and is strictly stronger — a delta would pass a class breach that arrived by a
 /// route nobody anticipated. At method scope absolute is unaffordable: seven breaches exist, one of
-/// them <c>Drain</c> at −120 with a bug-lane ticket held on it. So method rows fail on a NEW breach or
+/// them <c>Drain</c> at −120. So method rows fail on a NEW breach or
 /// on an existing one getting WORSE, and the seven pass at their recorded margins.
 /// </para>
 /// </remarks>
@@ -50,17 +50,17 @@ internal sealed record Breach(string File, string Row, string Unit, int Value, i
 /// <b>REFUSALS ARE CARRIED, NOT FILTERED, AND THIS TYPE EXISTS BECAUSE THE FIRST DRAFT FILTERED
 /// THEM.</b> A span the reader refuses has not been measured, so it has not been found compliant —
 /// and dropping it leaves a gate that reports no breaches for a file it never read. That is
-/// <i>could-not-evaluate</i> collapsing into <i>pass</i>, which is BUG-121's shape one layer down:
-/// <c>dotnet test</c> printing "Passed!" with a truncated total when the host aborts. Three outcomes,
-/// and the third must not wear the first one's face.
+/// <i>could-not-evaluate</i> collapsing into <i>pass</i>, which is the same shape, one layer down,
+/// as <c>dotnet test</c> printing "Passed!" with a truncated total when the host aborts. Three
+/// outcomes, and the third must not wear the first one's face.
 /// </remarks>
 internal sealed record Measured(IReadOnlyList<Breach> Breaches, IReadOnlyList<string> Unmeasured);
 
 /// <summary>One capacity per row — the block set or the flag set.</summary>
 /// <remarks>
-/// <b>Init-only rather than positional, and the reason is this ticket's own subject.</b> Five
-/// positional parameters would sit at the PARAMETER FLAG of 4 that DMXENG-107 teaches the gate to
-/// report. A type introduced to measure the flag row should not cross it.
+/// <b>Init-only rather than positional, and the reason is this type's own subject.</b> Five
+/// positional parameters would sit at the PARAMETER FLAG of 4 that the gate now
+/// reports. A type introduced to measure the flag row should not cross it.
 /// </remarks>
 internal sealed record Thresholds
 {
@@ -84,7 +84,7 @@ internal static class SizeGate
 {
     // THE LIMITS ARE DUPLICATED FROM Program.cs AND THAT DUPLICATION IS POLICED, NOT TOLERATED.
     // They are top-level `const`s in a Program.cs that compiles to an entry point, so nothing outside
-    // that file can reference them, and the ticket's boundary is to use the sizes tool AS-IS rather
+    // that file can reference them, and the boundary is to use the sizes tool AS-IS rather
     // than restructure it. TheGateHoldsTheSameLimitTheToolDoes reads Program.cs and fails if these
     // ever disagree, which turns a silent drift into a red test.
     internal const int ClassBlock = 400;
@@ -93,9 +93,9 @@ internal static class SizeGate
     internal const int ParameterBlock = 6;
     internal const int NestingBlock = 4;
 
-    // THE FLAG ROW, ADDED BY DMXENG-107, AND IT IS NOT A SECOND SET OF BLOCKS.
-    // engineering-standards.md:1140 -- "Blocking limits are a denial on their own. FLAGS ARE A
-    // CONVERSATION" -- and the DM has confirmed that sentence governs the GATE as well as the
+    // THE FLAG ROW, AND IT IS NOT A SECOND SET OF BLOCKS.
+    // The rule is "Blocking limits are a denial on their own. FLAGS ARE A
+    // CONVERSATION" -- and that sentence governs the GATE as well as the
     // standard. A gate that refused here would not be stricter; it would implement a different rule.
     // Nothing in Refusals reads these, and TheFlagReportCannotMakeTheGateRefuse pins that.
     //
@@ -172,7 +172,7 @@ internal static class SizeGate
             found.Add(new Breach(path, FileRow, string.Empty, lines.Length, capacities.File));
         }
 
-        // BUG-186 split the two loops out to bring this body under the method block. ORDER IS PART
+        // The two loops were split out to bring this body under the method block. ORDER IS PART
         // OF THE CONTRACT and the split must not reorder: file row, then types, then members.
         var types = MeasureTypes(path, lines, capacities);
         var members = MeasureMembers(path, source, capacities);
@@ -185,7 +185,7 @@ internal static class SizeGate
     }
 
     /// <summary>
-    /// The file's lines. BUG-183: <c>Split('\n')</c> leaves a trailing EMPTY element for a
+    /// The file's lines. <c>Split('\n')</c> leaves a trailing EMPTY element for a
     /// newline-terminated file and that element is not a line — RULED in <c>Program.cs:67</c>, "a
     /// file is every line in it, first to last". Dropping it counts what <c>File.ReadAllLines</c>
     /// counts. Unconditional, not guarded on length, so an empty source reads 0 lines and not 1.

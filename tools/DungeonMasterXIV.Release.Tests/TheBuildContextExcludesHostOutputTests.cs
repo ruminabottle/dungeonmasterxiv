@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-77: host build output is kept out of the Docker build context by a <c>.dockerignore</c> at
+/// Host build output is kept out of the Docker build context by a <c>.dockerignore</c> at
 /// the repository root.
 /// </summary>
 /// <remarks>
@@ -17,7 +17,7 @@ namespace DungeonMasterXIV.Release.Tests;
 /// which needs a daemon this suite does not require and should not start.
 /// </para>
 /// <para>
-/// <b>The effect was verified by mutation instead, and the record is BUG-77's PR.</b> From a context
+/// <b>The effect was verified by mutation instead, and the record is PR #131.</b> From a context
 /// that had been built in locally, <c>docker build -f deploy/Dockerfile .</c> failed with
 /// <c>NETSDK1064</c> (BouncyCastle not found) before the fix, succeeded after it, and failed
 /// identically again when the <c>.dockerignore</c> was moved away and nothing else changed. That last
@@ -68,7 +68,7 @@ public class TheBuildContextExcludesHostOutputTests
     }
 
     // Fails if: the patterns are removed or hollowed out. bin/ AND obj/ both, because obj/ carries
-    // project.assets.json -- the file that actually causes BUG-77 -- while bin/ is the same class of
+    // project.assets.json -- the file that broke the restore -- while bin/ is the same class of
     // host output and excluding only one would leave the pattern looking deliberate and half-done.
     [Theory]
     [InlineData("obj")]
@@ -81,7 +81,7 @@ public class TheBuildContextExcludesHostOutputTests
     }
 
     // THE MIRROR FAILURE, and the reason this is not just a two-line presence check. Over-excluding
-    // breaks the image in the SAME confusing shape as BUG-77 itself: the build fails inside the
+    // breaks the image in the SAME confusing shape as the original bug: the build fails inside the
     // container naming source code, while the host builds fine. A future `*` or `src/` added here to
     // "shrink the context" would do exactly that, and nothing else in the suite would notice.
     [Fact]

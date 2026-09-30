@@ -49,7 +49,7 @@ public sealed record ReleaseInputs(
             throw new ArgumentException("A release tag is required; the download link must point at a tagged asset.");
         }
 
-        // BUG-14. Tag and AssemblyVersion arrive from two places and used to be compared with
+        // Tag and AssemblyVersion arrive from two places and used to be compared with
         // nothing: four different tags against one unchanged build all exited 0 and all advertised
         // 0.0.0.1. Dalamud does not reject a repeated version, it simply never offers the build, so
         // the second release to a tester was silently never delivered. R-7.4a: the release stops

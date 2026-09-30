@@ -5,7 +5,7 @@ namespace DungeonMasterXIV.Sizes;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THIS IS THE ACTUAL FIX FOR DMXENG-55 AND NOT A NICETY.</b> The tool never lied: it measured
+/// <b>THIS IS THE ACTUAL FIX AND NOT A NICETY.</b> The tool never lied: it measured
 /// two of the five rows in the size table and its banner named exactly those two. What failed was
 /// the practice that grew around it — every size conversation ran it and read a clean result as
 /// "the size limits are met". <b>An instrument that covers part of a rule quietly redefines the
@@ -79,7 +79,7 @@ public static class Coverage
         rows were deliberately not moved onto the parser — they are ruled, tested and already quoted,
         and re-deriving them would move numbers nobody asked to have moved.
 
-        Ruled by the Deployment Manager; see engineering-standards.md "## Size limits", "HOW TO COUNT
-        A CLASS" and "THE SHAPES A REAL FILE HAS". This tool cites those rulings; it does not make one.
+        The size limits and how a class and a file are counted are ruled, not chosen here.
+        This tool cites those rulings; it does not make one.
         """;
 }

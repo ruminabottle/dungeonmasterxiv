@@ -6,13 +6,13 @@ namespace DungeonMasterXIV.Sizes;
 /// <remarks>
 /// <b>Three rows on one record because they are three readings of one member</b>, taken in one pass.
 /// Splitting them into three result types would let a future caller report one row and omit the
-/// others, which is the failure this whole ticket is downstream of.
+/// others, which is the failure this whole tool is downstream of.
 /// </remarks>
 /// <param name="Name">The member as a reader would name it, e.g. <c>HostRunner(...)</c>.</param>
 /// <param name="Line">1-based line of the declaration's first line.</param>
 /// <param name="Lines">
 /// Declaration line to end, inclusive — the same procedure the class row uses, applied to a member.
-/// <b>An expression-bodied member is a method for this row</b>, ruled by the Deployment Manager: it
+/// <b>An expression-bodied member is a method for this row</b>, as ruled: it
 /// will almost never bind, and the case where it does is exactly the one worth catching.
 /// </param>
 /// <param name="Parameters">
@@ -25,9 +25,9 @@ namespace DungeonMasterXIV.Sizes;
 /// ruled: control flow inside one counts from the lambda's own baseline, because the row exists to
 /// stop conditional pyramids and a lambda is usually what flattens one.
 /// <para>
-/// <b>The Deployment Manager holds that third ruling loosely and said so.</b> It is a judgement
+/// <b>That third ruling is held loosely.</b> It is a judgement
 /// about what the row is FOR rather than a fact about counting. If it starts hiding real nesting,
-/// the case goes back to them and they will reverse it.
+/// the ruling is to be reversed.
 /// </para>
 /// </param>
 /// <param name="Refusal">Why no numbers were produced, or null when they are meaningful.</param>

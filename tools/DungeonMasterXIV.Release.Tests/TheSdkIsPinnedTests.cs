@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Release.Tests;
 
 /// <summary>
-/// BUG-63: the build SDK is pinned by a <c>global.json</c> at the repository root.
+/// The build SDK is pinned by a <c>global.json</c> at the repository root.
 /// </summary>
 /// <remarks>
 /// <para>
