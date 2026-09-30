@@ -3,29 +3,8 @@
   <PropertyGroup>
     <AssemblyName>DungeonMasterXIV</AssemblyName>
     <RootNamespace>DungeonMasterXIV</RootNamespace>
-    <!-- NOT hand-maintained; the hand-maintained 0.0.0.1 that used to sit here was the defect below.
-         D-16/R-7.4a: the advertised version has exactly one author and it is the GIT TAG. A release
-         build is told the tag and computes the version from it; every other appearance (the
-         assembly, the repository manifest's TestingAssemblyVersion, the download link's path) is
-         computed from that same tag and checked against the artefact by the release tool.
-
-             dotnet build -c Release -p:ReleaseTag=v0.1.0
-
-         An ordinary `dotnet build` supplies no tag and gets 0.0.0.0 (TaggedVersion.UntaggedBuild),
-         so ordinary builds keep working and carry no release version. Any tag anybody would
-         actually cut disagrees with 0.0.0.0, so the release tool stops and names the rebuild. The
-         old literal was the opposite: releasable under any tag, and therefore invisible, because a
-         second release repeating a version is not rejected by Dalamud, merely never offered. -->
-    <!-- ReleaseTagVersion is what the TAG derived to; Version is what the build uses. They
-         were one property, and the defaulting on the second line erased the difference: a bare 'v'
-         derives to an empty string, gets replaced by 0.0.0.0, and every guard downstream is then
-         handed a perfectly good shape that the tag has nothing to do with. A tag of 'v' built
-         silently and stamped 0.0.0.0, indistinguishable from an untagged developer build, while
-         every other malformed shape was named.
-
-         Keeping them apart is what lets a guard ask "what did the TAG give us" rather than "what is
-         the build using", and it closes the whole class rather than the two spellings that were
-         reported: any tag whose derivation leaves nothing is now empty here, not defaulted. -->
+    <!-- The version is authored only by the release tag: dotnet build -c Release -p:ReleaseTag=v1.2.3. -->
+    <!-- ReleaseTagVersion is the tag without its 'v'; an untagged build falls back to 0.0.0.0, which is never released. -->
     <ReleaseTagVersion Condition="'$(ReleaseTag)' != ''">$(ReleaseTag.TrimStart('v'))</ReleaseTagVersion>
 
     <Version Condition="'$(ReleaseTagVersion)' != ''">$(ReleaseTagVersion)</Version>
@@ -46,57 +25,19 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
-  <!-- Without this, `-p:ReleaseTag=V0.1.0` dies inside NuGet restore with
-       "error MSB4181: The RestoreTask task returned false but did not log an error" — a message
-       naming neither the tag, nor the version, nor this file. Git tags are case-sensitive and a
-       capital V is a real convention, so that is a reachable spelling with an unreadable failure.
-
-       A SHAPE check, deliberately not a version parse. The version rule lives in TaggedVersion and
-       is the release tool's to enforce; a second parser here would disagree with it at the edges.
-       This only asserts the one thing the build itself needs — that what follows is a version and
-       not a prefixed one — and hands everything else to the tool, which refuses with the canonical
-       spelling in hand. -->
+  <!-- Refuses a malformed tag before NuGet restore, which would otherwise fail with an unexplained MSB4181. -->
   <Target Name="ReleaseTagIsSpeltForTheBuild" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
           Condition="'$(ReleaseTag)' != ''">
     <Error Condition="!$(ReleaseTag.StartsWith('v'))"
            Text="ReleaseTag '$(ReleaseTag)' must begin with a lowercase 'v', e.g. v0.1.0. The tag is the one place the advertised version is authored (D-16, R-7.4a), and the release tool refuses any other spelling of it." />
 
-    <!-- Asks the ONE question the build has to answer before anything parses: is what the tag leaves
-         behind a shape this build can turn into a version? Deliberately a shape gate rather than
-         another special case. Two shapes had reached past the guards into MSBuild's own error text - a
-         five-component tag died in restore as MSB4181, byte-for-byte the message the spelling guard
-         above was added to remove, and a twenty-digit component overflowed Int64.Parse as MSB4184, the
-         crash the range target's own comment says it was shaped to avoid. Both were the same defect:
-         the guards enumerated the shapes we had hit rather than the shape we accept.
-
-         One to four components of at most five digits, with an optional prerelease suffix. Five
-         digits because 65534 is five digits; WHICH five-digit values are allowed is the range
-         target's question, not this one. The bound is also what makes that target's Int64.Parse
-         safe by construction rather than by a condition someone has to keep correct.
-
-         What this deliberately does NOT judge: canonical form. v0.1.0.0, v01.2.3, vv0.1.0 and v2.3
-         are all shapes the build can turn into a version, and they build exactly as before; the
-         release tool refuses them as aliases. Putting that judgement here would be a third parser
-         of the tag, and parsers of one tag drift apart. -->
+    <!-- The tag must leave a version shape: one to four numeric components, optionally with a prerelease suffix. -->
     <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ReleaseTagVersion)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}(-[0-9A-Za-z.-]+)?$'))"
            Text="ReleaseTag '$(ReleaseTag)' is not a shape this build can turn into a version: it leaves '$(ReleaseTagVersion)', and a version is one to four dot-separated numbers of at most five digits each, e.g. v0.1.0 or v1.2.3.4. Retag with that shape." />
 
   </Target>
 
-  <!-- Assembly-version components cap at 65534. Without this the build fails as
-       "error CS7034 ... '70000.0.0.0' does not conform" pointing at
-       obj/x64/Release/DungeonMasterXIV.AssemblyInfo.cs: a generated file the operator never wrote,
-       quoting the PADDED version and never naming the tag they typed. Batched over the components
-       so the refusal names the offending one, the way the spelling guard above names the tag.
-
-       A SEPARATE target, conditioned so it can be skipped whole. An Error batched over %(...) still
-       runs ONCE with empty metadata when the item list is empty, so guarding only the ItemGroup left
-       Int64.Parse('') crashing with MSB4184 - measured, not assumed.
-
-       Only numeric versions are checked. A prerelease tag such as v0.1.0-rc1 is left alone
-       deliberately: the build accepts it today and the release tool refuses it, a divergence pinned
-       by TheBuildAndTheToolReadTheTagAlikeTests. Parsing it here would turn a documented refusal
-       into an MSBuild crash. -->
+  <!-- Assembly-version components cap at 65534; refuse a larger one here instead of as CS7034 in generated code. -->
   <Target Name="ReleaseTagFitsAnAssemblyVersion" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
           Condition="'$(ReleaseTag)' != '' AND $([System.Text.RegularExpressions.Regex]::IsMatch('$(ReleaseTagVersion)', '^[0-9]{1,5}(\.[0-9]{1,5}){0,3}$'))">
     <ItemGroup>
