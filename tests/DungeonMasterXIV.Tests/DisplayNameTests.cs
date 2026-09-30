@@ -267,7 +267,7 @@ public class DisplayNameTests
         Assert.NotEqual(DisplayName.OrNone("Bob"), DisplayName.OrNone("Rob"));
     }
 
-    // A-1.2w (R-1.3j.6, ruled by the HUMAN, SQ-80). The four role words belong to the host.
+    // A-1.2w (R-1.3j.6, ruled by the HUMAN). The four role words belong to the host.
     [Theory]
     [InlineData("DM")]
     [InlineData("GM")]

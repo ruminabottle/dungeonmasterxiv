@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A DM whose hosting attempt failed can actually start another one (DMXENG-68, BUG-120).
+/// A DM whose hosting attempt failed can actually start another one.
 /// </summary>
 /// <remarks>
 /// <para>

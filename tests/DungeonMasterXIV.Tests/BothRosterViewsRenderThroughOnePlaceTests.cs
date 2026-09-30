@@ -30,7 +30,7 @@ namespace DungeonMasterXIV.Tests;
 /// else in the project is compiled by the SDK's default glob and is invisible to everything here:
 /// neither side of the completeness control looks outside <c>Windows/</c>, and neither project-file
 /// refusal engages, because putting a window there needs NO csproj change for them to refuse.
-/// Measured by qa-1 (BUG-68) rather than reasoned: csproj touched 0, build errors 0, all 8 guard
+/// Measured by qa-1 rather than reasoned: csproj touched 0, build errors 0, all 8 guard
 /// tests green — with the compile step controlled separately, since "it built" does not prove the
 /// file was compiled. An invalid-C# file in the same place draws 4 compiler references, so files
 /// there genuinely enter the compilation and the green is a real blind spot rather than an unbuilt
@@ -56,7 +56,7 @@ namespace DungeonMasterXIV.Tests;
 /// both enumerations, so it is caught. The reason is that MATCHING ON THIS PLATFORM is
 /// case-insensitive — .NET's <c>MatchCasing.PlatformDefault</c> keys off the OPERATING SYSTEM, not
 /// the volume, so even a case-sensitive APFS volume on macOS still matches <c>Upper.CS</c>
-/// (qa-2 built one and measured it, BUG-69). The matcher is applied in-process from that option
+/// (qa-2 built one and measured it). The matcher is applied in-process from that option
 /// rather than delegated to the filesystem, which is why the volume cannot change the answer: under
 /// <c>MatchCasing.CaseSensitive</c> the same directory yields only <c>lower.cs</c> (measured here).
 /// PlatformDefault is DOCUMENTED as resolving case-sensitive on Linux; nobody on this team has run
@@ -134,7 +134,7 @@ public class BothRosterViewsRenderThroughOnePlaceTests
         Assert.Contains("class JoinFlowView", code, StringComparison.Ordinal);
     }
 
-    // BUG-48's lesson, applied to THIS guard (DMXENG-15). Until the split this read one named file,
+    // BUG-48's lesson, applied to THIS guard. Until the split this read one named file,
     // so every "exactly one" above was only ever true OF SessionWindow.cs while claiming to be true
     // of the codebase — a second role label or a second renderer one file along would have passed.
     // Nothing was actually wrong on main; the guard was true by accident rather than by coverage.
@@ -150,7 +150,7 @@ public class BothRosterViewsRenderThroughOnePlaceTests
         // down it was not true -- the claim is kept because it is now earned, not because it was
         // written down first.
         //
-        // The two sides now come from DIFFERENT enumerations, which is the whole repair (BUG-67).
+        // The two sides now come from DIFFERENT enumerations, which is the whole repair.
         // The old version compared WindowSources() against the identical EnumerateFiles call, so a
         // file both sides missed was missed equally and this passed: it could only ever detect a
         // disagreement between one function and itself. Nothing beneath Windows/ can be invisible to
@@ -204,7 +204,7 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     // line -- constant left honest, literal passed to the draw call, all 775 green. So this asserts
     // the draw call renders RosterHeading.Text and that no literal heading sits beside it.
     //
-    // WHAT THIS IS AND IS NOT (BUG-66). The two halves of this guard are different KINDS of thing
+    // WHAT THIS IS AND IS NOT. The two halves of this guard are different KINDS of thing
     // and only one of them is a proof.
     //
     //   VALUE -- a proof. RosterHeading.Text is a Core constant and
@@ -216,7 +216,7 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     //   call is PRESENT. It does not prove it is the ONLY heading drawn, and no scan of this shape
     //   can say that.
     //
-    // TWO LINES DEFEAT IT, recorded so nobody has to rediscover them (qa-1, BUG-66):
+    // TWO LINES DEFEAT IT, recorded so nobody has to rediscover them (qa-1):
     //
     //     ImGui.TextUnformatted(RosterHeading.Text);        // Contains passes
     //     ImGui.TextUnformatted("Everyone in this game:");  // DoesNotContain passes

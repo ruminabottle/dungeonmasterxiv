@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Tests;
 /// breaking R-1.5a, which is the failure SQ-60 and SQ-62 both stopped.
 /// </para>
 /// <para>
-/// <b>The quoted form of A-1.30 in DMXENG-60 is the STRUCK one</b> (SQ-73): <i>"assert the seat is
+/// <b>The quoted form of A-1.30 in DMXENG-60 is the STRUCK one</b>: <i>"assert the seat is
 /// held"</i> is satisfiable by doing nothing, and passed on a build where the host never learned of
 /// the kill at all. <b>So the vanish direction here does not assert an absence.</b> It asserts that
 /// the drop was RECORDED and the member is STILL ADMITTED — a do-nothing build fails the first half.

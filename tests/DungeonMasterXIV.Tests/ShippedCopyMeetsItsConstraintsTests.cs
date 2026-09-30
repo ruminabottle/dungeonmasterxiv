@@ -53,7 +53,7 @@ public class ShippedCopyMeetsItsConstraintsTests
     /// product no longer has (A-1.7d).
     /// </summary>
     /// <remarks>
-    /// <b>"not a character name"</b> — the 2026-08-27 reversal (SQ-34). It contradicted R-1.3e from
+    /// <b>"not a character name"</b> — the 2026-08-27 reversal. It contradicted R-1.3e from
     /// the moment R-1.3e was decided, and was found by someone else hours later rather than by the
     /// reversal itself. <c>TheDisclosureNoLongerDeniesThatANameIsShown</c> pins it for the one
     /// constant it was found in; this refuses it across every shipped string, including ones written

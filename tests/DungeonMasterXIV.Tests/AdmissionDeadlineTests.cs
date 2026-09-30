@@ -80,7 +80,7 @@ public class AdmissionDeadlineTests
         using var host = new SessionKeyExchange();
         var deadline = AdmissionDeadline.DecidedByHost(HostDecidedAt);
 
-        // Built through ForJoinPending, the ONLY message that carries a deadline (DMXENG-41). It
+        // Built through ForJoinPending, the ONLY message that carries a deadline. It
         // used to be built through a ForJoinRequest overload that had no production caller -- so
         // this asserted the round trip over a shape nothing ever sent. Now it asserts it over the
         // shape that actually travels, which is what "survives the wire" was always meant to mean.

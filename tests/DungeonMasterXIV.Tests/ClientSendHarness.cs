@@ -45,7 +45,7 @@ internal sealed class ClientSendHarness
             .Select(e => e!)
             .ToList();
 
-        /// <summary>The socket finished opening. Sending before this is discarded (BUG-36).</summary>
+        /// <summary>The socket finished opening. Sending before this is discarded.</summary>
         public void Ready() => _transport.OpenTheSocket = true;
 
         /// <summary>The host answers with its key, so this client can render a fingerprint.</summary>

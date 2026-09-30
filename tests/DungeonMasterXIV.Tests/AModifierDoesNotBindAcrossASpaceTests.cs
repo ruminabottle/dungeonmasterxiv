@@ -4,7 +4,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A-2.3c — a modifier is not bound to its term across <b>a space</b> (R-2.1, DMXENG-93).
+/// A-2.3c — a modifier is not bound to its term across <b>a space</b> (R-2.1).
 /// </summary>
 /// <remarks>
 /// <para>

@@ -133,7 +133,7 @@ internal static class ClientSendTable
         // TEXT and asserts the call carries three arguments with a non-null third -- the narrow
         // thing that distinguishes the overload carrying the claim from the two that drop it.
         //
-        // THIS SENTENCE PREVIOUSLY CITED TheJoinerRemembersWhoItIsTests AND THAT WAS FALSE (BUG-100).
+        // THIS SENTENCE PREVIOUSLY CITED TheJoinerRemembersWhoItIsTests AND THAT WAS FALSE.
         // That file tests RelinkMemory storage: no view, no join, no envelope. The citation was
         // written in good faith because AStoredParticipantIsWhatAJoinWouldCarry is named for a claim
         // its body does not make. AN UNCOVERED PATH READS AS UNCOVERED; AN UNCOVERED PATH WITH A

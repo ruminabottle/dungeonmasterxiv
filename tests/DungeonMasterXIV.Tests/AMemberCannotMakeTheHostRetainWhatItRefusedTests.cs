@@ -220,7 +220,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     //
     // THE SENTINEL IS A SUFFIX, which is the fact an earlier version of this note got wrong: it
     // said a truncated PREFIX kept "for diagnostics" would fail this test. It would not -- a prefix
-    // carries no sentinel and trips the "qqq" search instead (BUG-188). So the two searches in the
+    // carries no sentinel and trips the "qqq" search instead. So the two searches in the
     // body are not redundant: a PREFIX mutation carries no sentinel, a SUFFIX mutation carries no
     // run of q's, and each catches what the other misses. The table in the body has the measured
     // values.

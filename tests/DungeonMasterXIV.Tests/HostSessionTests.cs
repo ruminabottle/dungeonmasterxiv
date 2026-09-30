@@ -72,10 +72,10 @@ public class HostSessionTests
 
         Assert.Equal(HostingPhase.Failed, session.Phase);
 
-        // NOT RelayUnreachable (BUG-36) — but note this now says so because the CALLER states the
+        // NOT RelayUnreachable — but note this now says so because the CALLER states the
         // request went out, not because reaching a timeout implies it. The old comment here claimed
         // the latter as a guarantee of the code path, and it was false: a hung connect reached this
-        // line having never connected (BUG-38). The sentence is gone rather than corrected, because
+        // line having never connected. The sentence is gone rather than corrected, because
         // it is the sentence that misled three readers in one evening.
         Assert.Equal(SessionFailure.RegistrationNotAnswered, session.Failure);
         Assert.False(session.RequiresRelayConnection);

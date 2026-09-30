@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// <c>MissedMessages</c> refuses an absent <see cref="PeerCode"/> at both writers (DMXENG-105).
+/// <c>MissedMessages</c> refuses an absent <see cref="PeerCode"/> at both writers.
 /// </summary>
 /// <remarks>
 /// <para>

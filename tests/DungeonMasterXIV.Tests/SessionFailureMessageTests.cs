@@ -17,7 +17,7 @@ public class SessionFailureMessageTests
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>An allowlist, deliberately, and not a list of forbidden phrases (BUG-49).</b> The defect
+    /// <b>An allowlist, deliberately, and not a list of forbidden phrases.</b> The defect
     /// this replaces was <c>RelayUnreachable</c> claiming "This is not your connection" — a
     /// statement about cause that a firewall rejecting with a TCP RST disproves, since a refusal is
     /// evidence something answered and that something can sit on the user's side. **No regex finds

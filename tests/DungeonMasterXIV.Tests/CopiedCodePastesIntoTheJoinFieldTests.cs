@@ -25,7 +25,7 @@ namespace DungeonMasterXIV.Tests;
 /// so <see cref="WhatTheCopyActionProduces"/> could not call the window. C34 removed the need to:
 /// it calls <see cref="SessionCode.ToClipboardString"/>, the member the button calls.
 /// <para>
-/// <b>That mirror is no longer unchecked (BUG-44), and the sentence here used to say it was.</b> It
+/// <b>That mirror is no longer unchecked, and the sentence here used to say it was.</b> It
 /// read "the one link a reviewer must still check by eye" — which was true of a linked test and not
 /// of a source-reading one, and an unchecked link turned out to be an undetectable one: changing the
 /// button to add a label left the whole suite green at 534 passed while producing a clipboard value
@@ -61,7 +61,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// <c>Windows/SessionWindow.cs</c>.
     /// </summary>
     /// <remarks>
-    /// <b>Reading the source is how a Core-only project reaches a plugin line (BUG-44).</b> This
+    /// <b>Reading the source is how a Core-only project reaches a plugin line.</b> This
     /// project references Core alone and may never reference the plugin, so nothing here can execute
     /// <see cref="WhatTheCopyActionProduces"/>'s original. That was taken to mean the link could only
     /// be checked by eye — and an unchecked link is an undetectable one: changing the button to
@@ -102,7 +102,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// <remarks>
     /// <para>
     /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason
-    /// (BUG-67, reaching this file as BUG-101).</b> The obvious implementation is
+    /// (reaching this file as BUG-101).</b> The obvious implementation is
     /// <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c> — which is the call
     /// <see cref="WindowSources"/> makes. Comparing a function against itself is what left the old
     /// control blind: both sides missed subdirectories, missed them EQUALLY, and the equality
@@ -210,7 +210,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     }
 
     /// <summary>
-    /// What the join field accepts — <b>the production decision itself, called (DMXENG-15).</b>
+    /// What the join field accepts — <b>the production decision itself, called.</b>
     /// </summary>
     /// <remarks>
     /// <para>
@@ -246,7 +246,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     // AND A GREEN RUN HERE IS NOT EVIDENCE THAT THE JOIN FIELD HAS ONE WAY IN.
     // ===================================================================================
     //
-    // DECLARED AT THE DEPLOYMENT MANAGER'S DIRECTION BEFORE MERGE (DMXENG-15), because this is the
+    // DECLARED AT THE DEPLOYMENT MANAGER'S DIRECTION BEFORE MERGE, because this is the
     // FIFTH member of a family this board has ruled on three times, and it would otherwise have
     // arrived undeclared and become tomorrow's bug against finished work.
     //
@@ -278,7 +278,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     //     SECOND path, hand-rolled, banned identifier absent   -> NOT CAUGHT  (9 passed, 0 failed)
     //     SECOND path in ANOTHER window file entirely          -> NOT CAUGHT  (9 passed, 0 failed)
     //
-    // THE FILE MOVED AND THE SCOPE DID NOT (DMXENG-75): the code box and the button left
+    // THE FILE MOVED AND THE SCOPE DID NOT: the code box and the button left
     // JoinFlowView for JoinRequestForm when JoinFlowView.Draw was cut from 121 lines to 53. This
     // still reads ONE NAMED FILE -- the one that now holds the button -- rather than being widened
     // to the directory on the way past, because the paragraph below argues against widening and a

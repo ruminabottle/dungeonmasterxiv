@@ -56,7 +56,7 @@ namespace DungeonMasterXIV.Tests;
 /// </remarks>
 public class NoTwoPersistedMembersAliasTheSameObjectTests
 {
-    /// <summary>The one class this guard is measured against reverting (BUG-146).</summary>
+    /// <summary>The one class this guard is measured against reverting.</summary>
     private static readonly Type[] KnownStoredTypes =
         [typeof(PluginSettings), typeof(RelinkMemory), typeof(RememberedParticipant)];
 

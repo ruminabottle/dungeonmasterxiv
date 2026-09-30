@@ -308,7 +308,7 @@ public class DisplayNameAliasTests
 
         public void Disconnect() => IsConnected = false;
 
-        // Mirrors the real transport: a frame sent before the socket opens is discarded (BUG-36).
+        // Mirrors the real transport: a frame sent before the socket opens is discarded.
         public void Send(byte[] envelope)
         {
             if (IsReadyToSend)

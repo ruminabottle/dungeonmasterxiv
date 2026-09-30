@@ -4,7 +4,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// R-2.12 — stamped content crosses the wire, so a client can record what it RECEIVED (SQ-116).
+/// R-2.12 — stamped content crosses the wire, so a client can record what it RECEIVED.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -43,7 +43,7 @@ public class StampedContentTravelsTests
     }
 
     // R-2.4: the host is the sole minter, so an unminted sequence is refused AT THE DOOR. Sequence 0
-    // is the specific hazard — it sorts to the FRONT of a populated log (BUG-161).
+    // is the specific hazard — it sorts to the FRONT of a populated log.
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -98,7 +98,7 @@ public class StampedContentTravelsTests
     // AND THE PEER CODE SURVIVES AS AN IDENTITY, NOT AS AN ABSENT ONE. This is the measured reason
     // StreamLine carries a string: a PeerCode placed on this wire serialises to
     // {"Value":"BCDFGH","IsPresent":true} and deserialises to default — absent, and equal to every
-    // other absent code (DMXENG-105). This row fails if anyone "simplifies" the DTO to the struct.
+    // other absent code. This row fails if anyone "simplifies" the DTO to the struct.
     [Fact]
     public void ThePeerCodeArrivesPresentRatherThanAsTheAbsentDefault()
     {

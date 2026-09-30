@@ -107,7 +107,7 @@ public class EveryGrammarConstructIsReachableFromAStringTests
         Assert.Equal(6, dropped.Value);
     }
 
-    // THE CENSUS, AND IT NOW READS THE THEORY RATHER THAN REPEATING IT (BUG-150). The previous
+    // THE CENSUS, AND IT NOW READS THE THEORY RATHER THAN REPEATING IT. The previous
     // version listed the same eleven expressions a second time and claimed that deleting a row from
     // the theory could not pass silently. It could: a second copy of a list agrees with the first
     // only until one of them changes, and the only trace was the suite total dropping by one, which

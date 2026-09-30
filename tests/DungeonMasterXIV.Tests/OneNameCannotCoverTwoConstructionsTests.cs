@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A factory NAME must not cover overloads that construct independently (DMXENG-39, A-1.12a).
+/// A factory NAME must not cover overloads that construct independently (A-1.12a).
 /// </summary>
 /// <remarks>
 /// <para>

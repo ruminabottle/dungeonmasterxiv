@@ -8,7 +8,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// Both windows read one settable value and neither is a literal in the code path (A-1.27, BUG-55).
+/// Both windows read one settable value and neither is a literal in the code path (A-1.27).
 /// </summary>
 /// <remarks>
 /// <para>

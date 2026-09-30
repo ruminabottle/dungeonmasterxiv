@@ -9,7 +9,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A peer code may only enter through <see cref="PeerCode"/> (T-47, the durable half of BUG-57).
+/// A peer code may only enter through <see cref="PeerCode"/> (the durable half of BUG-57).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -248,7 +248,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
 
         foreach (var type in types.Where(t => !IsCompilerGenerated(t)))
         {
-            // KEYED ON THE FULL NAME (BUG-73). The short name is not unique, so a type sharing one
+            // KEYED ON THE FULL NAME. The short name is not unique, so a type sharing one
             // with an allowlisted type inherited its exemption AND its stated reason -- which here
             // reads PERMANENT and cites a wire-format ruling. The control could not catch it: the
             // genuine door is still found, so "every listed door is still found" stayed satisfied.
@@ -263,7 +263,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
                 }
             }
 
-            // FIELDS (BUG-72). GetFields was never called, so a field was not a door no matter what
+            // FIELDS. GetFields was never called, so a field was not a door no matter what
             // it held. Compiler-generated backing fields are excluded by name, as everywhere here.
             foreach (var field in type.GetFields(Everything))
             {
@@ -291,7 +291,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
     /// <summary>Whether a member of this type hands someone a peer code as a raw <c>string</c>.</summary>
     /// <remarks>
     /// <para>
-    /// <b>Was <c>== typeof(string)</c>, which three shapes walked past (BUG-72).</b> An
+    /// <b>Was <c>== typeof(string)</c>, which three shapes walked past.</b> An
     /// <c>out</c>/<c>ref</c> parameter has type <c>string&amp;</c>, an array holds strings without
     /// being one, and a collection holds them in a type argument. Each carries the value just as
     /// plainly as a bare parameter does.

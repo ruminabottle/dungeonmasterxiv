@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A live host is not offered "Start session" (R-1.3h, BUG-115).
+/// A live host is not offered "Start session" (R-1.3h).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -87,7 +87,7 @@ public class AHostIsNotOfferedAnotherSessionTests
         Assert.True(
             above.Contains("InAHostedSession()", StringComparison.Ordinal),
             "The Start session button is reachable without consulting the hosting side. A live host "
-            + "is one click from re-keying or ejecting its own table (R-1.3h, BUG-115).");
+            + "is one click from re-keying or ejecting its own table (R-1.3h).");
     }
 
     private static SessionCoordinator Coordinator() =>

@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// <c>SessionRole</c> crosses the wire as a number, and a name is refused (BUG-104).
+/// <c>SessionRole</c> crosses the wire as a number, and a name is refused.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -51,7 +51,7 @@ public class ARoleArrivesAsANumberNotANameTests
             $"A Role of {role} was accepted. SessionContentCodec.Options declares no Converters, so "
             + "enums must arrive as numbers -- if a JsonStringEnumConverter has been added, the "
             + "codec's finding that Role cannot carry text is now false and needs rewriting, not "
-            + "this test relaxing (BUG-104).");
+            + "this test relaxing.");
     }
 
     // THE VACUITY CONTROL, and without it the theory above proves nothing: every one of those

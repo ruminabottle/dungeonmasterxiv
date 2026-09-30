@@ -99,7 +99,7 @@ public class RelayLinkTests
 
         var failure = link.Synchronise(wanted: true);
 
-        // RelayAddressUnreadable, not RelayUnreachable (BUG-37). Nothing was dialled, so nothing was
+        // RelayAddressUnreadable, not RelayUnreachable. Nothing was dialled, so nothing was
         // contacted and this build has learned nothing about the relay — and ConnectCount == 0 on the
         // next line is the proof of exactly that, which is why the two assertions belong together.
         Assert.Equal(SessionFailure.RelayAddressUnreadable, failure);
