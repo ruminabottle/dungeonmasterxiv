@@ -13,7 +13,7 @@ namespace DungeonMasterXIV.Net;
 /// R-2.6 states that coupling as load-bearing: every message the host queues here is one the host is
 /// already a legitimate party to. <b>If player-to-player privacy is ever added, this type is holding
 /// content it must not read</b> — R-2.6 and R-2.10 may not be revisited alone, and this remark is
-/// here so whoever adds that privacy meets the coupling at the code as well as in the PRD.
+/// here so whoever adds that privacy meets the coupling at the code as well as in the rolls spec.
 /// </para>
 /// <para>
 /// <b>THIS IS NOT HISTORY FOR NEWCOMERS.</b> A client that was never admitted receives nothing
@@ -23,32 +23,32 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>Re-sending is REQUIRED, not forbidden.</b> A-2.6a's clause "a build that restores the log by
-/// re-sending fails" was STRUCK on 2026-08-29 because decision 7 requires exactly that re-send. A
-/// reading that makes re-sending a failure is a reading of the struck version.
+/// re-sending fails" was STRUCK on 2026-08-29: product-overview Session panel item 7 requires exactly
+/// that re-send. A reading that makes re-sending a failure is a reading of the struck version.
 /// </para>
 /// <para>
-/// <b>IT DECIDES NO CAPACITY, AND THAT IS DELIBERATE.</b> R-2.10 says a gap "that could not be held"
-/// is marked; it does not say what makes something unholdable, and the PRD states no bound anywhere.
-/// So the caller — which owns whatever limit exists — reports the loss through
+/// <b>IT DECIDES NO CAPACITY, AND THAT IS DELIBERATE.</b> R-2.10 says a gap "that could not be
+/// held" is marked; it does not say what makes something unholdable, and the rolls spec states no
+/// bound anywhere. So the caller — which owns whatever limit exists — reports the loss through
 /// <see cref="NoteGap"/>, and this type guarantees only that a reported loss is MARKED. Choosing a
 /// number here would settle a product question by building a mechanism for it.
 /// </para>
 /// <para>
-/// <b>AND THE SPEC OWNER SUPPLIED THE FLOOR THAT WAS MISSING (2026-08-29), WHICH LANDS ON THAT
-/// CALLER RATHER THAN HERE.</b> Marking is decision 7's <i>exception</i> clause, not its ordinary
-/// outcome: the feature is <i>you get your messages back</i>, not <i>you are told you did not</i>.
-/// So <b>a drop at the SHORT end of R-1.5a's seat window must not produce a gap where a drop at the
-/// LONG end may</b> — stated relatively, so it asserts no constant, cannot go stale, and still fails
-/// the decorative build that holds a handful of messages and gaps at both ends.
+/// <b>AND R-2.10 SUPPLIED THE FLOOR THAT WAS MISSING (2026-08-29), WHICH LANDS ON THAT CALLER
+/// RATHER THAN HERE.</b> Marking is Session panel item 7's <i>exception</i> clause, not its
+/// ordinary outcome: the feature is <i>you get your messages back</i>, not <i>you are told you did
+/// not</i>. So <b>a drop at the SHORT end of R-1.5a's seat window must not produce a gap where a
+/// drop at the LONG end may</b> — stated relatively, so it asserts no constant, cannot go stale,
+/// and still fails the decorative build that holds a handful of messages and gaps at both ends.
 /// </para>
 /// <para>
-/// <b>A build that MARKS NOTHING is therefore conforming, and is the one to reach for first.</b> The
-/// hold is already bounded in practice by the seat window — past it the seat is gone and there is
-/// nothing to deliver to — so "hold everything until the seat expires" satisfies R-2.10, and
+/// <b>A build that MARKS NOTHING is therefore conforming, and is the one to reach for first.</b>
+/// The hold is already bounded in practice by the seat window — past it the seat is gone and there
+/// is nothing to deliver to — so "hold everything until the seat expires" satisfies R-2.10, and
 /// satisfies the floor trivially, because a build that never gaps never gaps at the short end. That
 /// leaves <see cref="NoteGap"/> as dead code rather than a violated clause, which is a legitimate
-/// outcome: <b>decision 7 says gaps are marked, not that gaps must exist.</b> Whether memory permits
-/// it is the resource judgement, and it is the caller's.
+/// outcome: <b>Session panel item 7 says gaps are marked, not that gaps must exist.</b> Whether
+/// memory permits it is the resource judgement, and it is the caller's.
 /// </para>
 /// </remarks>
 internal sealed class MissedMessages
@@ -99,7 +99,7 @@ internal sealed class MissedMessages
     /// <para>
     /// <b>THIS IS PeerCode's RULE BEING KEPT, NOT A POLICY CHOSEN HERE.</b> Its remarks say a caller
     /// that defaults one <i>"has an absent code, not a valid one, and must treat it as a refusal"</i>.
-    /// Two collections here are keyed on it, and until DMXENG-105 neither honoured that.
+    /// Two collections here are keyed on it, and until this guard neither honoured that.
     /// </para>
     /// <para>
     /// <b>An absent key MERGES members rather than losing them.</b> <c>default(PeerCode)</c> equals
@@ -121,7 +121,7 @@ internal sealed class MissedMessages
             throw new ArgumentException(
                 "the peer code is absent, so this is not a member this can hold for or mark a gap "
                 + "against. Every absent code is the same key, so accepting one merges members' "
-                + "streams rather than losing them. See PeerCode's remarks on default (DMXENG-105).",
+                + "streams rather than losing them. See PeerCode's remarks on default.",
                 nameof(member));
         }
     }

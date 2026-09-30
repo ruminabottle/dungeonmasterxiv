@@ -85,7 +85,7 @@ public sealed class AdmittedPeer
     public PeerCode PeerCode { get; }
 
     /// <summary>
-    /// What this participant may do (E-11). An Assistant runs the table; only the DM controls who is
+    /// What this participant may do. An Assistant runs the table; only the DM controls who is
     /// at it, which is why admission does not branch on this.
     /// </summary>
     public SessionRole Role { get; }

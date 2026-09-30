@@ -60,7 +60,7 @@ public sealed class AdmissionInbox
     /// <para>
     /// <b>This defers; it refuses nobody.</b> Every frame is still processed, in order, on a later
     /// tick — which is why bounding here needed no product decision, and why capping
-    /// <c>AdmissionDesk</c>'s pending list would have (BUG-58): that one decides what a legitimate
+    /// <c>AdmissionDesk</c>'s pending list would have: that one decides what a legitimate
     /// joiner is told when they arrive at the cap.
     /// </para>
     /// </remarks>
@@ -86,7 +86,7 @@ public sealed class AdmissionInbox
     /// <param name="host">
     /// This client's hosting lifecycle, when it is a host. One socket carries both roles' traffic
     /// into one queue, so the relay's answer to a code request is drained here too rather than by a
-    /// second consumer that would race this one for the same frames (BUG-36).
+    /// second consumer that would race this one for the same frames.
     /// </param>
     /// <param name="handlers">
     /// What this client does with what arrives — see <see cref="InboundHandlers"/>. Omitting it
@@ -96,7 +96,7 @@ public sealed class AdmissionInbox
     /// Where this drain reports content it accepted but had to strip — see
     /// <see cref="SessionContentCodec.TryDecode"/>. Optional because a caller that only wants
     /// the derived key has nobody to tell; a null log makes the strip silent, which is the
-    /// condition BUG-70 was about rather than an accepted default.
+    /// silent-drop defect rather than an accepted default.
     /// </param>
     /// <returns>The derived session key if this drain admitted us, otherwise null.</returns>
     /// <remarks>
@@ -134,7 +134,7 @@ public sealed class AdmissionInbox
         return sessionKey;
     }
 
-    /// <summary>A bounded FIFO slice of what has arrived, leaving the remainder queued (BUG-58).</summary>
+    /// <summary>A bounded FIFO slice of what has arrived, leaving the remainder queued.</summary>
     /// <remarks>
     /// Taking the whole queue let a stranger decide how much work this client did in one frame: the
     /// join path is open to strangers by design. Draining one costs key agreement; see

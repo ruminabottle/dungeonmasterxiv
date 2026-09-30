@@ -8,8 +8,8 @@ namespace DungeonMasterXIV.Net;
 /// logs speech satisfies half a requirement.
 /// </para>
 /// <para>
-/// <b>ADMISSION MECHANICS ARE NOT HERE AND THEIR ABSENCE IS DELIBERATE.</b> Who asked, who was
-/// refused and what a fingerprint said belong to PRD-1's admission flow. <b>The stream records THAT
+/// <b>ADMISSION MECHANICS ARE NOT HERE AND THEIR ABSENCE IS DELIBERATE.</b> Who asked, who was refused
+/// and what a fingerprint said belong to the session-layer admission flow. <b>The stream records THAT
 /// membership changed, not HOW it was negotiated</b> — so there is no Refused, no Asked, and no
 /// fingerprint anywhere in this enum, and adding one later is a scope decision rather than a detail.
 /// </para>

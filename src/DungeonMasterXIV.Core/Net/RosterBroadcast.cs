@@ -48,11 +48,11 @@ internal sealed class RosterBroadcast
     /// parameters instead of adding two.
     /// </param>
     /// <param name="log">
-    /// Where a participant dropped from the broadcast is reported (PR #86 finding 5).
-    /// <b>Required, not optional, and that is the point.</b> An optional log is one the single
-    /// production caller can omit and nothing fails — the defect DMXENG-13 was re-scoped to remove
-    /// from <see cref="SessionCoordinator"/> one level up. Threading it onward as optional would
-    /// rebuild that defect here: a guaranteed log that nobody is guaranteed to be given.
+    /// Where a participant dropped from the broadcast is reported. <b>Required, not optional, and
+    /// that is the point.</b> An optional log is one the single production caller can omit and
+    /// nothing fails — the defect already removed from <see cref="SessionCoordinator"/> one level
+    /// up. Threading it onward as optional would rebuild that defect here: a guaranteed log that
+    /// nobody is guaranteed to be given.
     /// </param>
     public RosterBroadcast(
         RelayLink link,
@@ -104,7 +104,7 @@ internal sealed class RosterBroadcast
         //
         // Skipped rather than faked when the code is unavailable: an entry whose peer code will not
         // parse is DROPPED by SessionContentCodec on the joiner's side, so a placeholder would
-        // reintroduce the absence this exists to fix -- loudly, since BUG-70 made that drop warn,
+        // reintroduce the absence this exists to fix -- loudly, since that drop was made to warn,
         // but reintroduce it. A roster without the DM is the bug; a roster with a DM the other side
         // deletes is the same bug wearing a receipt.
         if (_host.OwnPeerCode() is { } ownCode)
@@ -195,9 +195,9 @@ internal sealed class RosterBroadcast
     /// </summary>
     /// <remarks>
     /// <b>Shared by the roster and the closing notice rather than copied.</b> The interesting part
-    /// of this loop is not the sending — it is the two ways a participant can be unreachable and the
-    /// requirement that neither passes in silence (PR #86 finding 5). A second copy would be a
-    /// second place for that silence to come back.
+    /// of this loop is not the sending — it is the two ways a participant can be unreachable and
+    /// the requirement that neither passes in silence. A second copy would be a second place for
+    /// that silence to come back.
     /// </remarks>
     /// <param name="content">What to say.</param>
     /// <param name="keys">The host's key pair.</param>
@@ -240,7 +240,7 @@ internal sealed class RosterBroadcast
                 // a participant the host cannot address. Refusing such an admission outright is a
                 // product decision about what the DM is told, not one to take here.
                 //
-                // PR #86 FINDING 5. Surviving the loop was always right; the SILENCE was the defect.
+                // Surviving the loop was always right; the SILENCE was the defect.
                 // "A participant silently omitted from this and every future broadcast is a person
                 // sitting in a session hearing nothing" -- and until this line, nothing anywhere
                 // said so. The peer CODE is in the message because it is the only thing that

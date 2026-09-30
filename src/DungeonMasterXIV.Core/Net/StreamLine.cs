@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Net;
 /// <b>Measured rather than assumed:</b> <c>PeerCode</c> is a readonly struct whose only members are
 /// computed and get-only, so <c>System.Text.Json</c> serialises it as
 /// <c>{"Value":"BCDFGH","IsPresent":true}</c> and deserialises it to <c>default</c> — <i>absent</i>,
-/// and equal to every other absent code (DMXENG-105). <b>It looks correct leaving and arrives as the
+/// and equal to every other absent code. <b>It looks correct leaving and arrives as the
 /// collision.</b>
 /// </para>
 /// <para>
@@ -46,7 +46,7 @@ public readonly record struct StreamLine(
     /// <b>THIS IS THE DOOR, AND IT IS THE ONLY ONE.</b> <c>SessionContentCodec.Vetted</c> uses this
     /// same method as its predicate, so a line that cannot become an entry is dropped at decode and
     /// never reaches a consumer. One expression, decided once — a second copy of these rules
-    /// somewhere else is how <c>PeerCode</c> got through the roster gate (BUG-57).
+    /// somewhere else is how <c>PeerCode</c> got through the roster gate.
     /// </para>
     /// <para>
     /// <b>An unparseable peer code DROPS the line rather than degrading it</b>, exactly as it does
@@ -56,8 +56,8 @@ public readonly record struct StreamLine(
     /// <para>
     /// <b>AND A SEQUENCE BELOW 1 IS REFUSED, BECAUSE THE HOST IS THE SOLE MINTER (R-2.4).</b>
     /// <see cref="HostSequencer"/> issues from 1, so anything lower was not minted by a host —
-    /// and 0 sorts to the FRONT of a populated log, which is the ordering hazard BUG-161 was raised
-    /// for. <b>This is the door; <c>SessionStream.Record</c>'s identical check is the backstop it
+    /// and 0 sorts to the FRONT of a populated log, which is the ordering hazard this guards against.
+    /// <b>This is the door; <c>SessionStream.Record</c>'s identical check is the backstop it
     /// says it is</b>, and the two are deliberate rather than duplicated: this one refuses at the
     /// boundary where the value arrives from another client, that one refuses what the type system
     /// cannot.

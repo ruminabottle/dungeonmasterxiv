@@ -5,7 +5,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>In Core so a test can CALL it, which is the whole reason it exists (DMXENG-15).</b> The
+/// <b>In Core so a test can CALL it, which is the whole reason it exists.</b> The
 /// decision was one expression inside <c>DrawJoining</c>, and no test project references the
 /// plugin, so the only witness available was
 /// <c>CopiedCodePastesIntoTheJoinFieldTests.WhatTheJoinFieldAccepts</c> — a private

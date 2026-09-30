@@ -75,17 +75,17 @@ public sealed class SessionContent
     /// <b>1. This notice — the DM's outward announcement with time remaining. BUILT.</b>
     /// </para>
     /// <para>
-    /// <b>2. Removal when a player DELIBERATELY QUITS (A-1.15, A-1.16a). NOT BUILT, and the reason is
-    /// a capability rather than an omission here:</b> a host cannot READ member-authored content at
-    /// all. <c>InboundHandlers.OpenWith</c> is a single key and a host holds one per admitted peer,
-    /// so a departure notice would be forwarded by the relay and dropped unopened. That capability is
-    /// R-1.3k / A-1.13c and it is <b>DMXENG-50</b>; A-1.15 and A-1.16a wait on it. Adding a departure
-    /// section here before then would put a message on the wire that nothing can receive.
+    /// <b>2. Removal when a player DELIBERATELY QUITS (A-1.15, A-1.16a). NOT BUILT, and the reason
+    /// is a capability rather than an omission here:</b> a host cannot READ member-authored content
+    /// at all. <c>InboundHandlers.OpenWith</c> is a single key and a host holds one per admitted
+    /// peer, so a departure notice would be forwarded by the relay and dropped unopened. That
+    /// capability is R-1.3k / A-1.13c; A-1.15 and A-1.16a wait on it. Adding a departure section
+    /// here before then would put a message on the wire that nothing can receive.
     /// </para>
     /// <para>
     /// <b>3. A member that VANISHES — a crash or a dropped link — IS NOT REMOVED, AND THAT IS
     /// CORRECT.</b> Not a gap, not a deferral: <b>R-1.5a holds that seat for the reconnect window</b>,
-    /// and a build that removed vanished members would BREAK it. D-8's SQ-20 amendment is explicit
+    /// and a build that removed vanished members would BREAK it. D-8's amendment (now D-17) is explicit
     /// that a DELIBERATE QUIT removes immediately and an ungraceful drop does not — the two are
     /// different events with different answers, and A-1.30 exists to keep them apart.
     /// <b>If you are here to "finish" R-1.3g by removing members who went quiet, stop: that is the
@@ -160,7 +160,7 @@ public sealed class SessionContent
 
     /// <summary>
     /// Stamped content the host has broadcast, in the host's order — the only way anything other
-    /// than membership and liveness reaches a client's log (R-2.12, SQ-116).
+    /// than membership and liveness reaches a client's log (R-2.12).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -177,7 +177,7 @@ public sealed class SessionContent
     /// <c>PeerCode</c> CANNOT SURVIVE THIS WIRE. Measured, not reasoned: it is a readonly struct
     /// whose only members are computed and get-only, so <c>System.Text.Json</c> writes
     /// <c>{"Value":"BCDFGH","IsPresent":true}</c> and reads back <c>default</c> — absent, and equal
-    /// to every other absent code (DMXENG-105). A round trip through <c>StreamEntry</c> would look
+    /// to every other absent code. A round trip through <c>StreamEntry</c> would look
     /// correct on the way out and arrive as the collision.
     /// </para>
     /// <para>
@@ -221,5 +221,5 @@ public sealed class SessionContent
 /// </remarks>
 /// <param name="PeerCode">The participant's session-scoped code.</param>
 /// <param name="DisplayName">What they call themselves. Shown, never acted on.</param>
-/// <param name="Role">What they may do (E-11).</param>
+/// <param name="Role">What they may do.</param>
 public readonly record struct RosterEntry(string PeerCode, string DisplayName, SessionRole Role);

@@ -14,7 +14,7 @@ public static class DeadPatterns
     /// <summary>A hit here is a dead reference, full stop.</summary>
     public static readonly IReadOnlyList<Regex> Guard =
     [
-        new(NotAfterWordChar + "(?:BUG|DMXENG|SQ|PRD|E|T)" + Dash + @"\d+"),
+        new(NotAfterWordChar + "(?:BUG|DMXENG|DMX" + "HUM|SQ|PRD|E|T)" + Dash + @"\d+"),
         new("[Ss]pec" + " [Oo]wner"),
         new("[Dd]eployment" + " [Mm]anager"),
         new("[Pp]roduct" + " [Oo]wner"),
@@ -27,6 +27,8 @@ public static class DeadPatterns
         new("product" + Dash + "directives"),
         new(@"\bbrief" + @"\.md"),
         new(NotAfterWordChar + "[Qq][Aa]" + Dash + @"\d"),
+        new("(?:feature|b" + "reakfix)" + Dash + "engineer" + Dash + @"\d"),
+        new(@"\bfe" + Dash + @"\d"),
     ];
 
     /// <summary>A hit here is rewritten or deliberately kept, and a kept one is listed in the PR.</summary>

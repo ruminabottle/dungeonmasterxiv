@@ -11,14 +11,14 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>COMPOSITION LIVES IN <see cref="SessionWiring"/>, NOT HERE (DMXENG-128).</b> This class stood
+/// <b>COMPOSITION LIVES IN <see cref="SessionWiring"/>, NOT HERE.</b> This class stood
 /// at 400 class lines against a capacity of 400 — margin 0, so the next documented member was a
 /// denial, and #229 had already paid for that by omitting a member doc rather than breaching. The
 /// eleven collaborators, and the order they depend on each other in, now sit in that type.
 /// </para>
 /// <para>
 /// <b>So a twelfth collaborator edits <see cref="SessionWiring"/> and leaves this span unchanged</b>
-/// — the same cut <see cref="InboundWiring"/> made at DMXENG-65, for the reason it states there:
+/// — the same cut <see cref="InboundWiring"/> made, for the reason it states there:
 /// what matters is WHERE THE NEXT ONE LANDS, not the line count on the day it was measured.
 /// </para>
 /// </remarks>
@@ -36,9 +36,9 @@ public sealed class SessionCoordinator
     /// caller can silently fall back to the literal — see <c>SessionInterruption</c>'s remark.
     /// </param>
     /// <param name="log">
-    /// Where content this client accepted but had to strip is reported (BUG-70).
+    /// Where content this client accepted but had to strip is reported.
     /// <para>
-    /// <b>REQUIRED, and it arrived optional (DMXENG-13).</b> #123 introduced it as
+    /// <b>REQUIRED, and it arrived optional.</b> #123 introduced it as
     /// <c>ISessionTransportLog? log = null</c> and argued the default was the silent case. That is
     /// true of what the log DOES and not of who SUPPLIES it: production passes one today because
     /// today's single call site happens to, which is a fact about that call site rather than a
@@ -46,18 +46,18 @@ public sealed class SessionCoordinator
     /// away from production not supplying it, and nothing would fail.</b>
     /// </para>
     /// <para>
-    /// <b>It used to say it sat here because a required parameter cannot follow an optional one.</b>
-    /// That constraint is gone — DMXENG-57 left no optional parameters for it to precede — so the
-    /// position is now free and the requiredness is load-bearing on its own. Kept as a correction
-    /// rather than deleted, because "required for a C# reason" and "required for DMXENG-13's
-    /// reason" look identical in a signature and only one of them survives a reordering.
+    /// <b>It used to say it sat here because a required parameter cannot follow an optional
+    /// one.</b> That constraint is gone — SessionCapabilities left no optional parameters for it to
+    /// precede — so the position is now free and the requiredness is load-bearing on its own. Kept
+    /// as a correction rather than deleted, because "required for a C# reason" and "required for
+    /// the reason above" look identical in a signature and only one of them survives a reordering.
     /// </para>
     /// </param>
     /// <param name="capabilities">
-    /// What Core cannot do for itself — key generation and participant minting. <b>Required, and
-    /// a caller wanting the defaults says <see cref="SessionCapabilities.Default"/> out loud</b>
-    /// (DMXENG-13). A record rather than parameters so the NEXT capability costs a member here
-    /// instead of a seventh argument, which is what stopped two chunks at once (DMXENG-57).
+    /// What Core cannot do for itself — key generation and participant minting. <b>Required, and a
+    /// caller wanting the defaults says <see cref="SessionCapabilities.Default"/> out loud</b>. A
+    /// record rather than parameters so the NEXT capability costs a member here instead of a
+    /// seventh argument, which is what stopped two chunks at once.
     /// </param>
     public SessionCoordinator(
         ISessionTransport transport,
@@ -69,9 +69,9 @@ public sealed class SessionCoordinator
         ArgumentNullException.ThrowIfNull(log);
         ArgumentNullException.ThrowIfNull(capabilities);
 
-        // Composition moved to SessionWiring (DMXENG-128). The ORDER those collaborators are built
+        // Composition moved to SessionWiring. The ORDER those collaborators are built
         // in is a correctness property, so it now sits beside the code it constrains rather than
-        // beside the code that merely uses them -- the cut InboundWiring made at DMXENG-65.
+        // beside the code that merely uses them -- the cut InboundWiring made.
         _parts = new SessionWiring(transport, relayAddress, window, log, capabilities);
 
         _log = log;
@@ -110,7 +110,7 @@ public sealed class SessionCoordinator
     /// <remarks>
     /// The inverse of <see cref="Roster"/>: that is what a host TOLD this client, this is what
     /// members told the HOST. See <see cref="MemberContentReceipts"/> for the rest, including that
-    /// nothing shipped sends these yet (DMXENG-11 / A-1.15).
+    /// nothing shipped sends these yet (A-1.15).
     /// </remarks>
     public MemberContentReceipts MemberContent => _resources.MemberContent;
     /// <summary>
@@ -119,7 +119,7 @@ public sealed class SessionCoordinator
     /// <remarks>
     /// The composition root cannot reach the recording itself, which is <c>internal</c>, as is the
     /// resources object holding it — so without this forward the offer could be built and never fed.
-    /// <b>Every client records its own log</b> (R-2.12, SQ-116), so this is what THIS client
+    /// <b>Every client records its own log</b> (R-2.12), so this is what THIS client
     /// received and never an assembled superset; that is what makes the log owner-scoped by
     /// construction and A-2.16 satisfiable with no filter anywhere. Projection into written form is
     /// <c>StreamLogProjection</c>'s, in <c>Core/Data</c>.
@@ -190,7 +190,7 @@ public sealed class SessionCoordinator
     /// </param>
     /// <remarks>
     /// <b>The notice goes out BEFORE the delegation, and the order is load-bearing.</b> Teardown
-    /// lives inside <see cref="HostRunner.Stop"/> since DMXENG-51 and empties the admissions, so
+    /// lives inside <see cref="HostRunner.Stop"/> and empties the admissions, so
     /// publishing afterwards seals to nobody and fails silently. Both that and the call's absence
     /// are pinned by <c>EndingASessionAnnouncesItTests</c>, which exists because each mutation left
     /// the whole suite green.
@@ -227,10 +227,10 @@ public sealed class SessionCoordinator
     /// Requests to join <paramref name="code"/>, claiming a participant we believe is ours (R-1.5).
     /// </summary>
     /// <remarks>
-    /// <b>A forwarder since DMXENG-31, and deliberately still HERE.</b> The sequence lives on
-    /// <see cref="JoinRequester"/>; this signature stays because PR #75's A-1.12a table drives
-    /// production through it and carries an approve-blocking gate. A split is not a licence to move
-    /// somebody else's entry point.
+    /// <b>A forwarder since the join-request extraction, and deliberately still HERE.</b> The
+    /// sequence lives on <see cref="JoinRequester"/>; this signature stays because PR #75's A-1.12a
+    /// table drives production through it and carries an approve-blocking gate. A split is not a
+    /// licence to move somebody else's entry point.
     /// </remarks>
     /// <param name="code">The session to ask to join.</param>
     /// <param name="name">What to call ourselves. Never authenticates.</param>
@@ -278,7 +278,7 @@ public sealed class SessionCoordinator
     /// R-1.1's invariant lives in <see cref="SessionWiring.SynchroniseTransport"/> and
     /// <see cref="SessionLiveness.RequiresRelayConnection"/> and nowhere else, so there is one
     /// answer to "should we be connected" rather than a rule each call site is trusted to remember.
-    /// It moved beside the collaborators it reconciles at DMXENG-128; this remains the public door.
+    /// It moved beside the collaborators it reconciles; this remains the public door.
     /// </remarks>
     public void SynchroniseTransport() => _parts.SynchroniseTransport();
 
@@ -346,12 +346,12 @@ public sealed class SessionCoordinator
 
     /// <summary>
     /// Whether this client is in a joined session, including one whose link dropped but whose seat
-    /// is still resumable (R-1.3h, BUG-53). The window asks this rather than reading a phase.
+    /// is still resumable (R-1.3h). The window asks this rather than reading a phase.
     /// </summary>
     public bool InAJoinedSession => _interruption.InAJoinedSession;
 
     /// <summary>
-    /// Whether this client is hosting a session someone could still be in (R-1.3h, BUG-115).
+    /// Whether this client is hosting a session someone could still be in (R-1.3h).
     /// </summary>
     /// <remarks>
     /// The sibling of <see cref="InAJoinedSession"/>, and it exists because the window's exclusivity

@@ -1,10 +1,10 @@
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// What a participant may do. Taken from Foundry core via E-11.
+/// What a participant may do. Taken from Foundry core.
 /// </summary>
 /// <remarks>
-/// The distinction E-11 draws is that <b>an Assistant runs the table; only the DM controls who is at
+/// The distinction R-1.3 draws is that <b>an Assistant runs the table; only the DM controls who is at
 /// it.</b> So an Assistant can drive an encounter, but ending the session, admitting or removing a
 /// participant, and approving a relink stay with the DM — which is why admission logic in this chunk
 /// is DM-only and does not branch on role.

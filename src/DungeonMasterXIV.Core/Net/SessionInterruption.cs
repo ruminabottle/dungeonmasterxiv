@@ -73,7 +73,7 @@ internal sealed class SessionInterruption
     public GraceWindow Grace { get; }
 
     /// <summary>
-    /// How long this client's own seat stays resumable after its link drops (R-1.5a, BUG-53).
+    /// How long this client's own seat stays resumable after its link drops (R-1.5a).
     /// </summary>
     /// <remarks>
     /// <b>A different clock from <see cref="Grace"/>, measuring a different thing.</b> Grace is what
@@ -86,7 +86,7 @@ internal sealed class SessionInterruption
 
     /// <summary>
     /// Whether this client is in a joined session, INCLUDING one whose link has dropped but whose
-    /// seat could still be resumed (R-1.3h, BUG-53, A-1.17a).
+    /// seat could still be resumed (R-1.3h, A-1.17a).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -180,7 +180,7 @@ internal sealed class SessionInterruption
             _host.Fail(failure);
         }
 
-        // BUG-53. Started BEFORE the phase moves, because Admitted is the only predecessor that
+        // Started BEFORE the phase moves, because Admitted is the only predecessor that
         // holds a seat and the phase is about to stop saying so. GraceWindow's method is named for
         // its first caller; what it means here is "the thing we were waiting on went away, start
         // counting".

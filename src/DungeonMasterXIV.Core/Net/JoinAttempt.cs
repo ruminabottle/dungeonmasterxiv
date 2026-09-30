@@ -50,7 +50,7 @@ public sealed class JoinAttempt
     /// </summary>
     /// <remarks>
     /// Null is the honest answer and the UI must render it as one. A joiner shown a fingerprint they
-    /// could not actually have compared is the failure BUG-31 was filed for, one screen over.
+    /// could not actually have compared is a promised comparison that cannot happen, one screen over.
     /// </remarks>
     public string? Fingerprint { get; private set; }
 
@@ -82,15 +82,15 @@ public sealed class JoinAttempt
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>IN MEMORY ONLY, AND THAT IS A RULING RATHER THAN AN OMISSION.</b> SQ-53 ruled an
-    /// in-memory receipt <b>CONFORMING</b> and left the split to the Engineering Lead, <b>which
-    /// chose this cut</b> — SQ-53 does not forbid persistence, and saying it does would put somebody
-    /// else's name on the Lead's decision. R-1.5b's
+    /// <b>IN MEMORY ONLY, AND THAT IS A RULING RATHER THAN AN OMISSION.</b> An in-memory receipt is
+    /// <b>CONFORMING</b>, and the split was left to engineering, <b>which chose this cut</b> — the
+    /// ruling does not forbid persistence, and saying it does would present an engineering choice as
+    /// a requirement. R-1.5b's
     /// obligations — the player can SEE what is stored and DELETE it per campaign, without the DM's
     /// involvement — attach to <b>persistence</b>, not to conveyance, because retention and deletion
     /// are meaningless for a value that dies with the process. So a receipt that lives only in this
     /// object conforms, and <b>the moment anything writes it to disk those obligations attach IN THE
-    /// SAME CHANGE</b>, not in a follow-up ticket.
+    /// SAME CHANGE</b>, not in a follow-up.
     /// </para>
     /// <para>
     /// <b>So this does NOT deliver R-1.5, and A-1.9g stays RED.</b> That criterion was tightened the
@@ -137,7 +137,7 @@ public sealed class JoinAttempt
     /// <para>
     /// <b>AND THAT LAST STEP IS AN INFERENCE, NOT A CITATION.</b> R-1.3c forbids reporting a LAPSE
     /// as a REFUSAL; it does not name a leave. Reading it as also forbidding "a leave reported as a
-    /// lapse" is mine, and the Spec Owner has not ruled on it. Recorded here rather than only in a
+    /// lapse" is mine, and it has not been ruled on. Recorded here rather than only in a
     /// PR body, because a prediction written in the past tense inside merged code becomes a premise
     /// and the next reader cannot tell which it was.
     /// </para>

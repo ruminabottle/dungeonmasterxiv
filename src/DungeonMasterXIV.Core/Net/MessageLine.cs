@@ -17,7 +17,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>THE HOST IS MARKED FROM <see cref="SessionRole"/>, WHICH THE SENDER CANNOT SET (R-2.7a).</b>
 /// The role is assigned by the session. An earlier reading held that the speaker parenthetical was
-/// itself the defence against someone labelling themselves "DM" — <b>the Product Owner withdrew that
+/// itself the defence against someone labelling themselves "DM" — <b>that was withdrawn
 /// as false</b>, because a member could set speaker <c>Renn</c> and display name <c>DM</c> and the
 /// panel would render <c>Renn (DM)</c>: the defence rendering the impersonation.
 /// </para>

@@ -42,7 +42,7 @@ public sealed class SessionAudience
     /// <remarks>
     /// A genuine read-only wrapper, not the backing list typed as an interface. Returning
     /// <c>_admitted</c> directly would let a caller downcast to <see cref="List{T}"/> and mutate it,
-    /// and would hand C2's receive loop a collection that can change under enumeration.
+    /// and would hand the receive loop a collection that can change under enumeration.
     /// </remarks>
     public IReadOnlyList<AdmittedPeer> Recipients => _admitted.AsReadOnly();
 
@@ -61,7 +61,7 @@ public sealed class SessionAudience
     /// entry, so a retried admission cannot inflate the host's count or duplicate a recipient.
     /// </remarks>
     /// <param name="peerCode">The participant's session-scoped code.</param>
-    /// <param name="role">What they may do (E-11). Defaults to a plain player.</param>
+    /// <param name="role">What they may do. Defaults to a plain player.</param>
     /// <param name="verification">
     /// Whether the DM compared the fingerprint (R-1.3a). Defaults to <b>not compared</b>, so an
     /// admission is only ever recorded as verified when a caller says so explicitly.

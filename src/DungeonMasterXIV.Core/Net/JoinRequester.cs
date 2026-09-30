@@ -7,10 +7,10 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="SessionCoordinator"/> by DMXENG-31, and it is a PURE MOVE.</b> No
-/// behaviour changes here, no criterion is claimed, and nothing was fixed on the way past. The seam
-/// is the one the ticket names: <c>RequestJoin</c>'s overloads and the key-pair helper, cut before
-/// six queued tickets add to a class that stood at 395 against a block of 400.
+/// <b>Split out of <see cref="SessionCoordinator"/>, and it is a PURE MOVE.</b> No behaviour
+/// changes here, no criterion is claimed, and nothing was fixed on the way past. The seam is
+/// <c>RequestJoin</c>'s overloads and the key-pair helper, cut before six queued changes add to a
+/// class that stood at 395 against a block of 400.
 /// </para>
 /// <para>
 /// <b>The KEYS came with the sequence, and that is the seam rather than a widening.</b>
@@ -22,7 +22,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b><see cref="SessionCoordinator.RequestJoin(SessionCode, DisplayName, Guid?)"/> and its
 /// siblings REMAIN CALLABLE with their current signatures</b>,
-/// as thin forwarders. That fence is not about size: PR #75's A-1.12a table drives production
+/// as thin forwarders. That fence is not about size: the A-1.12a table drives production
 /// through those entry points and carries an approve-blocking gate, so moving them off the type
 /// would break a table this split has no business touching.
 /// </para>
@@ -42,7 +42,7 @@ internal sealed class JoinRequester
     /// <param name="handshake">What actually puts the request on the wire.</param>
     /// <param name="interruption">Holds the seat; told when a deliberate re-ask releases it.</param>
     /// <param name="join">The join phase machine this drives.</param>
-    /// <param name="newKeys">How a key pair is made (BUG-61).</param>
+    /// <param name="newKeys">How a key pair is made.</param>
     /// <param name="synchronise">Brings the socket into line once the phase has moved.</param>
     public JoinRequester(
         OutboundHandshake handshake,
@@ -51,7 +51,7 @@ internal sealed class JoinRequester
         Func<SessionKeyExchange> newKeys,
         Action synchronise)
     {
-        // DMXENG-45. THE CONSTRUCTION ORDER IN SessionCoordinator IS LOAD-BEARING AND WAS UNDETECTED.
+        // THE CONSTRUCTION ORDER IN SessionCoordinator IS LOAD-BEARING AND WAS UNDETECTED.
         //
         // Three of these arrive from FIELDS assigned earlier in that constructor -- handshake,
         // interruption and newKeys -- so building this type before them passes a NULL. Nothing
@@ -119,7 +119,7 @@ internal sealed class JoinRequester
         ReleaseTheSeatAndKeys();
 
         // The same guard, because joining fails identically to hosting: both make a key pair, which
-        // is why an affected machine has nothing left that works (BUG-61).
+        // is why an affected machine has nothing left that works.
         if (!SessionKeyPair.TryMake(_newKeys, out var joinerKeys))
         {
             _join.Fail(SessionFailure.SessionKeysUnavailable);
@@ -154,8 +154,8 @@ internal sealed class JoinRequester
     /// <para>
     /// <b>And an undelivered notice is not a defect — R-1.5a is why.</b> From the host's side a
     /// joiner whose notice never arrived is a client that VANISHED, and holding its seat for five
-    /// minutes is then CORRECT. PRD-1:733 says in terms that removing vanished members to close that
-    /// apparent gap breaks R-1.5a.
+    /// minutes is then CORRECT. The session-layer spec says in terms that removing vanished members
+    /// to close that apparent gap breaks R-1.5a.
     /// </para>
     /// </remarks>
     public void Left()

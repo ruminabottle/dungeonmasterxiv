@@ -8,15 +8,15 @@ namespace DungeonMasterXIV.Net;
 /// <remarks>
 /// <para>
 /// <b>This type exists so that adding a capability stops costing a constructor parameter.</b>
-/// <see cref="SessionCoordinator"/>'s constructor was at six against a block of six
-/// (<c>engineering-standards.md</c>: <c>| Parameters | 4 | 6 |</c>), so the next chunk that needed
-/// one more thing from outside could not be cut at all — two were stopped on it at once, DMXENG-33
-/// for the host's display name and DMXENG-8 for a campaign it could resolve a relink against.
-/// <b>Growing this record costs the constructor nothing.</b> That is the whole of the fix.
+/// <see cref="SessionCoordinator"/>'s constructor was at six against a block of six (the size
+/// gate's parameter row: flag 4, block 6), so the next chunk that needed one more thing from
+/// outside could not be cut at all — two were stopped on it at once, one for the host's display
+/// name and one for a campaign it could resolve a relink against. <b>Growing this record costs the
+/// constructor nothing.</b> That is the whole of the fix.
 /// </para>
 /// <para>
 /// <b>What belongs here is a CAPABILITY: something Core calls to have done what it cannot do.</b>
-/// Making a key pair is one because the platform owns the entropy path (BUG-61); minting a
+/// Making a key pair is one because the platform owns the entropy path; minting a
 /// participant is one because Core has no campaign store. What does NOT belong is configuration —
 /// <c>relayAddress</c> and <c>window</c> are values read from settings, not things Core asks
 /// anybody to do, and folding them in here would make this "arguments that were in the way".
@@ -35,7 +35,7 @@ namespace DungeonMasterXIV.Net;
 /// <b>A named and UNBUILT option, so the next person does not have to rediscover it:</b> the two
 /// remaining settings-sourced arguments, <c>relayAddress</c> and <c>window</c>, are one concept and
 /// could become a second record, taking the constructor to four honestly. Not built here, because
-/// this ticket is a move rather than a redesign and two parameter objects at once is a redesign.
+/// this change is a move rather than a redesign and two parameter objects at once is a redesign.
 /// </para>
 /// <para>
 /// <b>FOUR MEMBERS IS COMPLIANT AND SILENT — the flag is ABOVE four, not at it — so this
@@ -49,11 +49,10 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>They arrived separately and that is not an argument for merging any of them.</b>
-/// <c>HostDisplayName</c> (DMXENG-33) and <c>ResolveRelink</c> (DMXENG-8) landed within an hour of
-/// each other and collided textually on this parameter list. <b>Adjacency is not kinship</b> —
-/// folding two members together because they arrived next to each other is a grouping chosen for
-/// its arithmetic, which is what DMXENG-57 refused when it declined to move the log in here to
-/// reach four.
+/// <c>HostDisplayName</c> and <c>ResolveRelink</c> landed within an hour of each other and collided
+/// textually on this parameter list. <b>Adjacency is not kinship</b> — folding two members together
+/// because they arrived next to each other is a grouping chosen for its arithmetic, which is why
+/// the log was left out rather than moved in here to reach four.
 /// </para>
 /// <para>
 /// <b>NOT named for the plugin, though the plugin is what supplies it today.</b> A test supplies
@@ -62,8 +61,8 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// </remarks>
 /// <param name="NewKeys">
-/// How a session key pair is made. A seam so that a failure to make one can be driven from a test
-/// (BUG-61): on the machine that reported it, this throws, and there was no seam between that throw
+/// How a session key pair is made. A seam so that a failure to make one can be driven from a test:
+/// on the machine that reported it, this throws, and there was no seam between that throw
 /// and the frame loop. <b>Null takes the platform default</b> rather than disabling anything.
 /// </param>
 /// <param name="HostDisplayName">
@@ -80,8 +79,8 @@ namespace DungeonMasterXIV.Net;
 /// parameter of the same name, where it is consumed.</b>
 /// </param>
 /// <param name="ResolveRelink">
-/// Turns the participant id a joining client claims into what this host knows about it (R-1.5,
-/// T-37), or null to resolve nothing. See <see cref="RelinkSource"/> for why the default is correct
+/// Turns the participant id a joining client claims into what this host knows about it (R-1.5),
+/// or null to resolve nothing. See <see cref="RelinkSource"/> for why the default is correct
 /// for a joiner and reported for a host.
 /// </param>
 public sealed record SessionCapabilities(
@@ -94,12 +93,11 @@ public sealed record SessionCapabilities(
     /// What a caller that supplies nothing gets: platform key generation, and no campaign.
     /// </summary>
     /// <remarks>
-    /// <b>A default for the RECORD, never for the PARAMETER.</b> DMXENG-13's ruling is that an
-    /// optional dependency production happens to supply is one refactor away from production not
+    /// <b>A default for the RECORD, never for the PARAMETER.</b> An optional
+    /// dependency production happens to supply is one refactor away from production not
     /// supplying it — so <see cref="SessionCoordinator"/> takes this record as a REQUIRED argument
     /// and a caller that wants the defaults must say <c>SessionCapabilities.Default</c> out loud.
-    /// Defaulting the parameter itself would move exactly the guarantee DMXENG-13 bought back to
-    /// where it was.
+    /// Defaulting the parameter itself would undo exactly that guarantee.
     /// </remarks>
     public static SessionCapabilities Default { get; } = new();
 

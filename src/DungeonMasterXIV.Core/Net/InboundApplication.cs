@@ -16,18 +16,17 @@ namespace DungeonMasterXIV.Net;
 /// behind</b>, which is why this extraction is a move rather than a redesign.
 /// </para>
 /// <para>
-/// <b>WHY NOT <c>Drain</c> — the decision, stated because the ticket asked for it rather than for
-/// the result.</b> <c>Drain</c> is 173 lines against a 60-line method block and is the obvious
-/// candidate. <b>It is also BUG-103's largest entry, and BUG-87 is held on it.</b> Splitting it here
-/// would resolve a <c>lane-bug</c> item inside a <c>lane-feature</c> chunk — no QA triage, no
-/// breakfix owner — and would incidentally unblock a second one.
+/// <b>WHY NOT <c>Drain</c> — the decision, stated rather than only the result.</b> <c>Drain</c> is
+/// 173 lines against a 60-line method block and is the obvious candidate. <b>It is also the largest
+/// of the block breaches already on <c>main</c>, and a separate fix waits on it.</b> Splitting it
+/// here would resolve that breach inside other work and would incidentally unblock the fix.
 /// <b>THIS EXTRACTION ADDRESSES NEITHER. <c>Drain</c>'s length is unchanged.</b>
 /// </para>
 /// <para>
-/// <b>And it did not have to.</b> Moving these three frees 142 lines where DMXENG-58 needs 7, so the
-/// bug-lane region never had to be touched to unblock the feature lane. <b>That the boundary-
+/// <b>And it did not have to.</b> Moving these three frees 142 lines where the A-1.28 work needs 7,
+/// so <c>Drain</c> never had to be touched to unblock that work. <b>That the boundary-
 /// respecting cut was also the sufficient one is luck, not design</b> — had it not been, the answer
-/// would have been to report that and stop, rather than to cross the lane quietly.
+/// would have been to report that and stop, rather than to cross the boundary quietly.
 /// </para>
 /// </remarks>
 internal static class InboundApplication
@@ -43,7 +42,7 @@ internal static class InboundApplication
     internal static bool ApplyRegistration(WireEnvelope envelope, HostSession host)
     {
         // Only a host that is REGISTERING is waiting on one of these, and saying "handled" when it
-        // is not was BUG-43: a JOINER's CodeRefused matched the arm below, was discarded by
+        // is not was a real defect: a JOINER's CodeRefused matched the arm below, was discarded by
         // CodeAlreadyLive's own phase guard, and the `return true` then stopped it ever reaching a
         // joiner arm. The frame was consumed by a branch that did nothing with it.
         if (host.Phase != HostingPhase.Registering)
@@ -51,13 +50,13 @@ internal static class InboundApplication
             return false;
         }
 
-        // BUG-89: THE ANSWER MUST NAME THE CODE THIS HOST ASKED ABOUT. The phase alone does not say
+        // THE ANSWER MUST NAME THE CODE THIS HOST ASKED ABOUT. The phase alone does not say
         // that, so an answer queued from an EARLIER request was applied to a later one -- a new
         // session registered under the relay's answer about an old code. Only _inbox.Clear() in
         // StopHosting prevented it: a guard in one method covering an unchecked assumption in
         // another. The refusal arm needs it more, not less: a stale refusal makes the host abandon a
         // code nobody refused. FALSE rather than a drop, so the frame falls through instead of being
-        // CONSUMED by a branch that did nothing with it -- which is BUG-43 exactly.
+        // CONSUMED by a branch that did nothing with it.
         if (host.Code is not { } outstanding
             || !string.Equals(envelope.SessionCode, outstanding.Value, StringComparison.Ordinal))
         {
@@ -102,8 +101,8 @@ internal static class InboundApplication
             return;
         }
 
-        // PR #86 FINDING 4, AND IT IS PLACED HERE RATHER THAN INSIDE TryDecode ON PURPOSE.
-        // The distinction the finding rests on is only knowable at THIS call site: Open SUCCEEDED
+        // THE DECODE FAILURE IS LOGGED HERE, RATHER THAN INSIDE TryDecode, ON PURPOSE.
+        // The distinction this rests on is only knowable at THIS call site: Open SUCCEEDED
         // just above, so the AEAD authenticated and this payload was sealed for us by a keyholder.
         // A decode failure after that point can never be "traffic for somebody else" -- it is
         // version skew or an encoding defect, and both are faults worth a line. Inside TryDecode
@@ -123,8 +122,8 @@ internal static class InboundApplication
         onContent(content);
     }
 
-    // Every outcome C6 defines is handled. Match takes a delegate per case, so omitting one is a
-    // compile error rather than a branch that silently does nothing.
+    // Every outcome the admission vocabulary defines is handled. Match takes a delegate per case,
+    // so omitting one is a compile error rather than a branch that silently does nothing.
     internal static byte[]? Apply(
         AdmissionOutcome outcome,
         JoinAttempt attempt,
@@ -133,12 +132,12 @@ internal static class InboundApplication
         outcome.Match(
             onAccepted: hostPublicKey =>
             {
-                // BUG-59, AND THE GUARD IS BEFORE Admitted() ON PURPOSE. The host's key is as
-                // untrusted as the joiner's was in BUG-56, and it reaches here by controlling the
+                // THE HOST'S KEY IS CHECKED, AND BEFORE Admitted() ON PURPOSE. The host's key is as
+                // untrusted as a joiner's is at the wire, and it reaches here by controlling the
                 // RELAY — the position D-11 assumes an attacker may occupy. Guarding the derive
                 // alone was measured and is wrong: Admitted() would still run, leaving
                 // Phase=Admitted with a null SessionKey and MayReceiveSessionState true, which is
-                // the silently-unreachable participant BUG-56 exists to remove, rebuilt here.
+                // the silently-unreachable participant the joiner-key check exists to remove, rebuilt here.
                 //
                 // Failing rather than dropping is a ruling, not a default. Dropping cannot be
                 // neutral because NOTHING LAPSES A JOINER LOCALLY: the only Lapsed() call is the

@@ -9,8 +9,8 @@ namespace DungeonMasterXIV.Net;
 /// <remarks>
 /// <para>
 /// <b>THIS IS THE HALF <see cref="JoinRequester"/> LEFT BEHIND, AND THAT TYPE SAYS SO IN ITS OWN
-/// WORDS.</b> DMXENG-31 cut the joining side out of <see cref="SessionCoordinator"/> and recorded
-/// why the key-pair helper did not travel with it: <i>"hosting needs it too. It is
+/// WORDS.</b> Its extraction cut the joining side out of <see cref="SessionCoordinator"/> and
+/// recorded why the key-pair helper did not travel with it: <i>"hosting needs it too. It is
 /// <see cref="SessionKeyPair"/>, reachable by both and owned by neither."</i> The joining side got a
 /// type; the hosting side stayed inline, and has sat in the coordinator by default rather than by
 /// design ever since. <b>The asymmetry was the anomaly — this removes it rather than inventing a
@@ -25,8 +25,8 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>A PURE MOVE. No behaviour changes here, no criterion is claimed, and nothing was fixed on the
 /// way past</b> — including the asymmetry named below, which is real and is deliberately left
-/// alone. DMXENG-51 exists because <see cref="SessionCoordinator"/> reaches exactly its 400-line
-/// block once DMXENG-47 and DMXENG-50 both land, neither of which breaches alone; a refactor that
+/// alone. This move exists because <see cref="SessionCoordinator"/> reaches exactly its 400-line
+/// block once the R-1.5c and R-1.3k work both land, neither of which breaches alone; a refactor that
 /// also changed behaviour would make the size question and the behaviour question one review.
 /// </para>
 /// <para>
@@ -35,16 +35,15 @@ namespace DungeonMasterXIV.Net;
 /// are <b>not symmetric</b>: <c>Stop</c> tears down seven things and <c>Start</c> resets two.
 /// Calling <c>Start</c> without <c>Stop</c> — which nothing forbids — leaves the previous session's
 /// admissions, queued frames and grace window in place under a new key pair and a new code. That is
-/// reported on DMXENG-51 rather than repaired here, and
-/// <c>MemberContentKeys.ForgetIfTheSessionMoved</c> exists because of it. <b>The set of things a
-/// hosted session owns had no name anywhere until this type; each method was trusted to remember
-/// it.</b>
+/// reported rather than repaired here, and <c>MemberContentKeys.ForgetIfTheSessionMoved</c> exists
+/// because of it. <b>The set of things a hosted session owns had no name anywhere until this type;
+/// each method was trusted to remember it.</b>
 /// </para>
 /// <para>
 /// <b><see cref="SessionCoordinator.StartHosting"/> and <see cref="SessionCoordinator.StopHosting"/>
-/// remain callable with their current signatures</b>, as thin forwarders — the same fence
-/// DMXENG-31 kept, and for a stronger reason here: the plugin's teardown and both session windows
-/// call them, and this ticket's boundary does not include the plugin.
+/// remain callable with their current signatures</b>, as thin forwarders — the same fence the
+/// joining side's extraction kept, and for a stronger reason here: the plugin's teardown and both
+/// session windows call them, and this move's boundary does not include the plugin.
 /// </para>
 /// </remarks>
 internal sealed class HostRunner
@@ -62,7 +61,7 @@ internal sealed class HostRunner
     /// block of six — see <see cref="SessionResources"/> for why that was invisible.
     /// </param>
     /// <param name="handshake">What puts the code request on the wire, and what remembers it was sent.</param>
-    /// <param name="newKeys">How a key pair is made (BUG-61).</param>
+    /// <param name="newKeys">How a key pair is made.</param>
     /// <param name="synchronise">Brings the socket into line once the phase has moved.</param>
     public HostRunner(
         HostSession host,
@@ -71,7 +70,7 @@ internal sealed class HostRunner
         Func<SessionKeyExchange> newKeys,
         Action synchronise)
     {
-        // DMXENG-45's rule, applied to a new constructor rather than rediscovered by it. Several of
+        // JoinRequester's guard, applied to a new constructor rather than rediscovered. Several of
         // these arrive from fields assigned earlier in SessionCoordinator's constructor, so building
         // this type too early passes a null that nothing would refuse -- the assignment succeeds and
         // the failure surfaces later, on a hosting path, or never in a test that does not host.
@@ -110,7 +109,7 @@ internal sealed class HostRunner
         Keys?.Dispose();
         Keys = null;
 
-        // BUG-61. This throws on at least one real machine, and it used to unwind out of the button
+        // Key generation throws on at least one real machine, and it used to unwind out of the button
         // handler and out of Draw -- so the user got an exception every frame rather than an answer
         // once. Caught HERE rather than at the button, because both of the product's two entry
         // points construct a key pair and a guard at one of them leaves the other open.

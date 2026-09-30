@@ -36,20 +36,19 @@ public readonly record struct MemberContentReceipt(PeerCode Peer, int Order, Ses
 /// </para>
 /// <para>
 /// <b>IT IS NOT THE ROLL LOG A-2.5 SPECIFIES AND MUST NOT BE MISTAKEN FOR ONE.</b> That log needs
-/// every event a member ever sends, in order, and belongs to PRD-2. This keeps <b>the most recent
-/// receipt per peer</b> so it stays bounded by the size of the session rather than by how long the
-/// session has been running — an unbounded list fed from the network is a defect, not a feature.
-/// The <see cref="MemberContentReceipt.Order"/> counter is the piece PRD-2 will want, and it counts
-/// every receipt rather than every entry kept.
+/// every event a member ever sends, in order, and belongs to the rolls spec. This keeps <b>the most
+/// recent receipt per peer</b> so it stays bounded by the size of the session rather than by how
+/// long the session has been running — an unbounded list fed from the network is a defect, not a
+/// feature. The <see cref="MemberContentReceipt.Order"/> counter is the piece the rolls spec will
+/// want, and it counts every receipt rather than every entry kept.
 /// </para>
 /// <para>
 /// <b>NO PRODUCTION CODE SENDS MEMBER-AUTHORED CONTENT YET, SO THIS IS EMPTY IN THE SHIPPED
 /// PRODUCT.</b> <see cref="WireEnvelope.ForSessionPayload"/> has one production caller,
-/// <c>RosterBroadcast</c>, which is the host. <b>The sending half is DMXENG-11 / A-1.15</b>, a live
-/// ticket held by another engineer and blocked on this one. The capability is real and reachable —
-/// <c>RelayRouter.ForwardPayload</c> already routes a member's payload to the other members — but
-/// <b>a model with no production caller is not a shipped behaviour</b>, and a reader who takes this
-/// for one has been misled.
+/// <c>RosterBroadcast</c>, which is the host. <b>The sending half is A-1.15</b>, and it is blocked
+/// on this one. The capability is real and reachable — <c>RelayRouter.ForwardPayload</c> already
+/// routes a member's payload to the other members — but <b>a model with no production caller is not
+/// a shipped behaviour</b>, and a reader who takes this for one has been misled.
 /// </para>
 /// </remarks>
 public sealed class MemberContentReceipts
@@ -105,7 +104,7 @@ public sealed class MemberContentReceipts
         _latest[peer.Value] = new MemberContentReceipt(peer, _received, Retainable(content));
     }
 
-    /// <summary>What this host is prepared to keep from a member-authored payload (DMXENG-137).</summary>
+    /// <summary>What this host is prepared to keep from a member-authored payload.</summary>
     /// <remarks>
     /// <para>
     /// <b>THE BOUND LIVES HERE RATHER THAN AT THE CALL SITE, so a second caller cannot reintroduce
@@ -132,8 +131,8 @@ public sealed class MemberContentReceipts
     /// <b>WHAT THIS DOES NOT BOUND.</b> Nothing between the socket and here caps anything:
     /// <c>WebSocketSessionTransport</c>'s receive loop accumulates a frame with no length check,
     /// unlike the relay's loop which refuses past <c>MaxMessageBytes</c>. The frame is still
-    /// materialised in full before this runs. That is a transport-layer decision and a separate
-    /// ticket; this bounds what is RETAINED, not what is READ.
+    /// materialised in full before this runs. That is a separate, transport-layer decision; this
+    /// bounds what is RETAINED, not what is READ.
     /// </para>
     /// </remarks>
     private SessionContent Retainable(SessionContent content)

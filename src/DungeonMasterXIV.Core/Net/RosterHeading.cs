@@ -5,12 +5,12 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>A heading is a CLAIM about what is below it, which is why this is a value and not a literal in
-/// the window.</b> The roster a player receives structurally omits the DM — the host is not on its
-/// own <c>Recipients</c>, so it is never in what it sends, and DMXENG-33 is the other half. A region
-/// reading <i>"everyone in this session"</i> would therefore not merely omit the DM: it would TELL A
-/// PLAYER THE DM IS NOT HERE. That is a false statement to a user rather than a missing feature —
-/// the same defect as a control labelled with a promise it does not keep.
+/// <b>A heading is a CLAIM about what is below it, which is why this is a value and not a literal
+/// in the window.</b> The roster a player receives structurally omits the DM — the host is not on
+/// its own <c>Recipients</c>, so it is never in what it sends, and the host's own entry is the
+/// other half. A region reading <i>"everyone in this session"</i> would therefore not merely omit
+/// the DM: it would TELL A PLAYER THE DM IS NOT HERE. That is a false statement to a user rather
+/// than a missing feature — the same defect as a control labelled with a promise it does not keep.
 /// </para>
 /// <para>
 /// <b>It lives in Core because a decision that cannot be tested is a comment.</b> The test project
@@ -21,9 +21,9 @@ namespace DungeonMasterXIV.Net;
 /// nothing guarded that the value was USED. As a Core value there is nothing to bypass.
 /// </para>
 /// <para>
-/// <b>Narrow on purpose, and it should be WIDENED by DMXENG-33 rather than defended forever.</b> Once
-/// the roster carries the host, the broader claim becomes true and the tests pinning this wording
-/// are supposed to fail.
+/// <b>Narrow on purpose, and it should be WIDENED by the host's own entry rather than defended
+/// forever.</b> Once the roster carries the host, the broader claim becomes true and the tests
+/// pinning this wording are supposed to fail.
 /// </para>
 /// </remarks>
 public static class RosterHeading

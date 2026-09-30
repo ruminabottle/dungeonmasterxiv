@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The second of the two doors, and the one whose separation is load-bearing (R-1.3k, DMXENG-59).</b>
+/// <b>The second of the two doors, and the one whose separation is load-bearing (R-1.3k).</b>
 /// Both members are null on every joiner-only client, which has nobody to hear from. See
 /// <see cref="HostAuthoredContent"/> for why the two types name their members identically, and
 /// <see cref="InboundHandlers"/> for the D-3 boundary they make structural.

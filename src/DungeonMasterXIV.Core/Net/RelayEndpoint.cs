@@ -37,7 +37,7 @@ public static class RelayEndpoint
     /// <b>This must be a hostname that actually resolves, and for one release it was not.</b> It
     /// shipped as <c>relay.dungeonmasterxiv.invalid</c> — <c>.invalid</c> is reserved by RFC 2606
     /// and can never resolve, by design — so every install dialled an address that cannot exist
-    /// while the deployed relay was running and correct (BUG-35). Nothing said it was a placeholder:
+    /// while the deployed relay was running and correct. Nothing said it was a placeholder:
     /// the summary above describes the <i>role</i> and gives a reader no reason to check the
     /// <i>value</i>, which is why it survived a release.
     /// <c>TheShippedDefaultRelayCanResolveTests</c> now fails the build on any reserved TLD,

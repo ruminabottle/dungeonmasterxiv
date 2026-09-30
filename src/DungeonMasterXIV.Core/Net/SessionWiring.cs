@@ -7,8 +7,8 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>COMPOSING THE COLLABORATORS IS NOT COORDINATING THEM (DMXENG-128).</b> This is the same cut
-/// <see cref="InboundWiring"/> made at DMXENG-65 and for the same stated reason: the point is WHERE
+/// <b>COMPOSING THE COLLABORATORS IS NOT COORDINATING THEM.</b> This is the same cut
+/// <see cref="InboundWiring"/> made, and for the same stated reason: the point is WHERE
 /// THE NEXT COLLABORATOR LANDS. A twelfth collaborator now edits <i>this</i> type and leaves
 /// <see cref="SessionCoordinator"/>'s class span unchanged — where before, every one of the eleven
 /// below enlarged it, which is how it reached margin 0 and blocked the chunk behind it.
@@ -16,7 +16,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>THE ORDER HERE IS LOAD-BEARING AND IS THE REASON THIS IS A TYPE RATHER THAN A METHOD.</b>
 /// Several collaborators close over ones built further down, so the sequence is a correctness
-/// property rather than a style. It is not merely commented: DMXENG-45 made it DETECTED —
+/// property rather than a style. It is not merely commented: it is DETECTED —
 /// <see cref="JoinRequester"/> guards its collaborators, so building it early throws rather than
 /// passing a null nothing refuses. The per-line notes below record which reads are deferred and why.
 /// </para>
@@ -33,7 +33,7 @@ internal sealed class SessionWiring
     /// <param name="relayAddress">Reads the configured relay at the moment of connecting.</param>
     /// <param name="window">How long a session survives an interruption (A-1.23, A-1.27).</param>
     /// <param name="log">Where transport decisions are recorded.</param>
-    /// <param name="capabilities">What Core cannot do for itself (DMXENG-13).</param>
+    /// <param name="capabilities">What Core cannot do for itself.</param>
     internal SessionWiring(
         ISessionTransport transport,
         Func<string> relayAddress,
@@ -55,7 +55,7 @@ internal sealed class SessionWiring
         // not INVOKED until after construction, but the compiler cannot know that. Suppressing with
         // ! would assert something this constructor does not yet guarantee. That reasoning stands.
         //
-        // The order itself is now DETECTED (DMXENG-45): JoinRequester guards its collaborators, so
+        // The order itself is now DETECTED: JoinRequester guards its collaborators, so
         // building it before these throws rather than passing a null nothing refuses. Measured --
         // with the order swapped and no guard, the suite passed clean.
         Handshake = new OutboundHandshake(Link, Host, Join, () => Joiner?.Keys);
@@ -77,7 +77,7 @@ internal sealed class SessionWiring
         // rather than over the coordinator, which is one fewer escaped reference.
         Membership = new SessionMembership(Link, Joiner, () => Join.Code);
         // AFTER Interruption, which owns the Grace window this reads. The Func defers that read to
-        // use time, so the ordering hazard DMXENG-45 detected does not extend to it -- but HostRunner
+        // use time, so the detected ordering hazard does not extend to it -- but HostRunner
         // guards every argument anyway, which is the point of those guards.
         Hosting = new HostRunner(Host, Resources, Handshake, newKeys, SynchroniseTransport);
     }
@@ -163,7 +163,7 @@ internal sealed class SessionWiring
     /// Deliberately NOT null-conditional, matching what <see cref="SessionCoordinator.HostKeys"/>
     /// has always done: every caller above defers the read behind a <c>Func</c>, so a throw here
     /// would mean a collaborator read it during construction, which is the ordering defect
-    /// DMXENG-45 exists to surface rather than to hide.
+    /// the constructors' null guards exist to surface rather than to hide.
     /// </remarks>
     private SessionKeyExchange? HostKeys => Hosting.Keys;
 }

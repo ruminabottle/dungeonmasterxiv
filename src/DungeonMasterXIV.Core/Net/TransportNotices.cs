@@ -47,17 +47,17 @@ public readonly record struct TransportNotices(
     /// <remarks>
     /// <para>
     /// <b>Here rather than in <c>AdmissionInbox.Drain</c>, and the reason is a measurement.</b>
-    /// <c>Drain</c> is 173 lines against a 60 capacity — BUG-103's largest entry — and the other
-    /// 173 are not this chunk's to repair. But where its OWN lines go is its to choose, so the arm
-    /// there is three lines and the reasoning is here. <b>Declining to enlarge a breach is not the
-    /// same as fixing one.</b>
+    /// <c>Drain</c> is 173 lines against a 60 capacity — the largest block breach when measured —
+    /// and the other 173 are not this chunk's to repair. But where its OWN lines go is its to
+    /// choose, so the arm there is three lines and the reasoning is here. <b>Declining to enlarge a
+    /// breach is not the same as fixing one.</b>
     /// </para>
     /// <para>
     /// <b>NO GUARD ON WHO SENT IT, and that is not an oversight.</b> Anyone can put bytes on this
-    /// channel, so a notice naming a stranger must be HARMLESS rather than refused here — and it
-    /// is: <c>AdmissionControl.RecordDrop</c> resolves the key to a peer code and records nothing
-    /// unless that member is admitted to THIS session. <b>The check belongs where the roster is,
-    /// not where the bytes arrive</b> — the same placement BUG-57 settled for peer-code vetting.
+    /// channel, so a notice naming a stranger must be HARMLESS rather than refused here — and it is:
+    /// <c>AdmissionControl.RecordDrop</c> resolves the key to a peer code and records nothing unless
+    /// that member is admitted to THIS session. <b>The check belongs where the roster is, not where the
+    /// bytes arrive</b> — the same placement the roster-gate hotfix settled for peer-code vetting.
     /// </para>
     /// <para>
     /// <b>A notice with no key is dropped silently</b>, like any frame on this path that does not

@@ -9,11 +9,11 @@ namespace DungeonMasterXIV.Net;
 /// <remarks>
 /// <para>
 /// <b>A validated type must be the only door.</b> This is the third time that rule has been applied
-/// here — C19's tag into <c>ReleaseInputs</c>, then <see cref="DisplayName"/> on the content wire,
-/// now this — and the first time the unvalidated value already had a consumer. BUG-57's hotfix vets
-/// a peer code at <see cref="SessionContentCodec"/>, which is the right shape for a hotfix and the
-/// wrong end state: a point-vet at one door leaves every other door open, and the code was a raw
-/// <c>string</c> on the pending request, on the admitted peer and on the roster.
+/// here — the tag into <c>ReleaseInputs</c>, then <see cref="DisplayName"/> on the content wire,
+/// now this — and the first time the unvalidated value already had a consumer. The roster-gate
+/// hotfix vets a peer code at <see cref="SessionContentCodec"/>, which is the right shape for a
+/// hotfix and the wrong end state: a point-vet at one door leaves every other door open, and the
+/// code was a raw <c>string</c> on the pending request, on the admitted peer and on the roster.
 /// </para>
 /// <para>
 /// <b>It is an IDENTITY, and that is the whole reason this type differs from
@@ -26,10 +26,10 @@ namespace DungeonMasterXIV.Net;
 /// refusal, which is why the only entry point is <see cref="TryParse"/>.
 /// </para>
 /// <para>
-/// <b>That asymmetry is Breakfix-Engineer-1's, argued at <see cref="SessionContentCodec"/> when the
-/// hotfix shipped, and this type carries it rather than re-deciding it.</b> The roster is
-/// host-authored and sealed, so a malformed code means our own encoder is broken or a keyholder is
-/// forging — and dropping is the safe answer to both.
+/// <b>That asymmetry was argued at <see cref="SessionContentCodec"/> when the hotfix shipped, and
+/// this type carries it rather than re-deciding it.</b> The roster is host-authored and sealed, so
+/// a malformed code means our own encoder is broken or a keyholder is forging — and dropping is the
+/// safe answer to both.
 /// </para>
 /// <para>
 /// <b>The shape, and deliberately not <see cref="SessionCode.TryParse"/>.</b> That method strips

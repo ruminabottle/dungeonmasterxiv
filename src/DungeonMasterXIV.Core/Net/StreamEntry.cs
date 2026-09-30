@@ -16,7 +16,7 @@ namespace DungeonMasterXIV.Net;
 /// compiles.
 ///
 /// <b>THAT IS NOT THE SAME AS UNCONSTRUCTABLE, AND THE SENTENCE THAT SAID SO WAS THE THIRD OVER-CLAIM
-/// IN THIS FILE (BUG-161).</b> <see cref="StreamStamp"/> is a readonly record struct, so
+/// IN THIS FILE.</b> <see cref="StreamStamp"/> is a readonly record struct, so
 /// <c>default(StreamStamp)</c> exists and <c>new StreamEntry(default, kind, peer, text)</c> COMPILES,
 /// carrying <c>Sequence 0</c>. Verified by compiling it, not by reasoning. The class fix moved the
 /// hazard down one level rather than removing it.

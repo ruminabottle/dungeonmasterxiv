@@ -7,11 +7,11 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="SessionCoordinator"/> because it is one job, and because that file was
-/// over its limit.</b> Both requests here follow the same rule and got it wrong the same way twice:
-/// BUG-36 for the host's code request, BUG-40 for the joiner's, each a factory with no production
-/// call site. Keeping them in one type means the next message a client owes the relay is written
-/// beside the two that were forgotten, rather than somewhere a third omission could hide.
+/// <b>Split out of <see cref="SessionCoordinator"/> because it is one job, and because that file
+/// was over its limit.</b> Both requests here follow the same rule and got it wrong the same way
+/// twice: once for the host's code request and once for the joiner's, each a factory with no
+/// production call site. Keeping them in one type means the next message a client owes the relay is
+/// written beside the two that were forgotten, rather than somewhere a third omission could hide.
 /// </para>
 /// <para>
 /// <b>It sends; it decides nothing.</b> Phases, keys and failures belong to
@@ -55,7 +55,7 @@ internal sealed class OutboundHandshake
     /// <remarks>
     /// Set only after the socket reported ready and the request left, so it is the record of whether
     /// we ever got to speak. Without it a registration timeout cannot tell "the relay heard us and
-    /// said nothing" from "we never reached the relay", and reported the first for both (BUG-38).
+    /// said nothing" from "we never reached the relay", and reported the first for both.
     /// </remarks>
     public bool RegistrationWasSent => _requestedCode is not null;
 
@@ -110,9 +110,9 @@ internal sealed class OutboundHandshake
     /// <b>Gated on the fingerprint EXISTING, which is what makes it a receipt.</b> The simpler
     /// design declares the capability in the original join request — but the deployed relay was
     /// v0.1.0 and dropped <see cref="WireMessageType.JoinPending"/>, so a declaring client would
-    /// have told the host "they can compare" while the notice was silently eaten. That is BUG-33,
-    /// and it is why this reads <see cref="JoinAttempt.Fingerprint"/> rather than a flag set when
-    /// the request went out.
+    /// have told the host "they can compare" while the notice was silently eaten. That is a
+    /// confirmation for an exchange that cannot happen, and it is why this reads
+    /// <see cref="JoinAttempt.Fingerprint"/> rather than a flag set when the request went out.
     /// </para>
     /// <para>
     /// <b>Capability only.</b> Nothing here says a human compared anything — R-1.3a-iii forbids
@@ -146,7 +146,7 @@ internal sealed class OutboundHandshake
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>This is the step BUG-36 was missing entirely.</b> <c>WireEnvelope.ForCodeRequest</c> had no
+    /// <b>This is the step that was missing entirely.</b> <c>WireEnvelope.ForCodeRequest</c> had no
     /// production call site at all: the host connected, sent nothing, and sat in
     /// <see cref="HostingPhase.Registering"/> until it timed out and told the DM the relay was
     /// unreachable — while the relay held the connection open waiting for the client to speak first.
@@ -186,7 +186,7 @@ internal sealed class OutboundHandshake
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>BUG-40, and it is BUG-36's twin one message along.</b> <c>WireEnvelope.ForJoinRequest</c>
+    /// <b>The code request's twin, one message along.</b> <c>WireEnvelope.ForJoinRequest</c>
     /// had no production call site at all: the joiner connected, sent nothing, and sat in
     /// <see cref="JoinPhase.Contacting"/> until it timed out and told the player the relay was
     /// unreachable — while the relay held the connection open waiting for the client to speak. The
@@ -197,13 +197,13 @@ internal sealed class OutboundHandshake
     /// <see cref="RegisterWithRelayWhenReady"/> records: <see cref="ISessionTransport.Send"/>
     /// discards a frame that arrives before the socket opens, and <c>IsConnected</c> is already true
     /// while a connect is in flight. Sending from <c>SessionCoordinator.RequestJoin</c> would look right and
-    /// reproduce BUG-40 with a fix in place.
+    /// reproduce the missing request with a fix in place.
     /// </para>
     /// <para>
     /// <b>This sends <see cref="WireEnvelope.ForRelinkRequest"/> when a claim was supplied and
-    /// <see cref="WireEnvelope.ForJoinRequest(SessionCode, byte[], DisplayName)"/> when none was.</b>
-    /// Until T-30 it sent the plain join unconditionally, and the comment here said so — correctly at
-    /// the time, because nothing could supply a claim.
+    /// <see cref="WireEnvelope.ForJoinRequest(SessionCode, byte[], DisplayName)"/> when none
+    /// was.</b> Until the claim path was made reachable it sent the plain join unconditionally, and
+    /// the comment here said so — correctly at the time, because nothing could supply a claim.
     /// </para>
     /// <para>
     /// <b>The branch exists; it is not yet taken in the product.</b> Nothing on this side remembers a

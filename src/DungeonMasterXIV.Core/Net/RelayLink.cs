@@ -8,11 +8,11 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="SessionCoordinator"/> on the standard's own test — the number of
-/// reasons the file could change.</b> Two changes were made to that class in one evening, C22's
-/// pending-notice work and BUG-36's registration handshake, and <b>neither touched a line that is
-/// now in this file.</b> Both were about what a session does; nothing here is. That is the evidence
-/// the seam is real rather than a trim to fit a line count.
+/// <b>Split out of <see cref="SessionCoordinator"/> on the one-reason-to-change test — the number
+/// of reasons the file could change.</b> Two changes were made to that class in one evening, the
+/// pending-notice work and the registration handshake, and <b>neither touched a line that is now in
+/// this file.</b> Both were about what a session does; nothing here is. That is the evidence the
+/// seam is real rather than a trim to fit a line count.
 /// </para>
 /// <para>
 /// <b>The lock is the sharpest tell.</b> Marshalling a callback from the socket thread onto the
@@ -55,8 +55,7 @@ public sealed class RelayLink
     /// <summary>Whether a frame sent right now would actually go out.</summary>
     /// <remarks>
     /// Distinct from being connected, and the distinction is load-bearing: the socket reports itself
-    /// connected while a connect is still in flight, and a frame sent then is discarded silently
-    /// (BUG-36).
+    /// connected while a connect is still in flight, and a frame sent then is discarded silently.
     /// </remarks>
     public bool IsReadyToSend => _transport.IsReadyToSend;
 
@@ -88,7 +87,6 @@ public sealed class RelayLink
                 // NOT RelayUnreachable. The address never parsed, so no socket was opened and
                 // nothing was contacted — this build has learned nothing about the relay, and
                 // saying it is unreachable blames a third party for the operator's own typo.
-                // See BUG-37.
                 return SessionFailure.RelayAddressUnreadable;
             }
 

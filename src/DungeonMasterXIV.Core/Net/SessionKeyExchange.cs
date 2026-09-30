@@ -31,9 +31,9 @@ namespace DungeonMasterXIV.Net;
 /// speakable, so a key derived from one would protect nothing.
 /// </para>
 /// <para>
-/// <b>The EC half is BouncyCastle rather than the BCL, and that is BUG-61 (D-19).</b> On the
-/// affected machines the plugin runs Windows binaries under a Wine prefix, and DMXHUM-4 measured
-/// that the BCL's EC paths cannot work there <i>at all</i>: generate, import and agree all fail
+/// <b>The EC half is BouncyCastle rather than the BCL, and that is D-19.</b> On the affected
+/// machines the plugin runs Windows binaries under a Wine prefix, and a probe measured that the
+/// BCL's EC paths cannot work there <i>at all</i>: generate, import and agree all fail
 /// with <c>0x80090029</c>/<c>0x80090027</c> out of the key-storage provider. The gap is not
 /// confined to key STORAGE — the layer underneath cannot do EC through the provider — so no
 /// arrangement of BCL calls fixes it, which is why D-11 preference (a) is eliminated by
@@ -77,8 +77,8 @@ public sealed class SessionKeyExchange : IDisposable
     /// <b>Getting this wrong presents as a wire incompatibility and is actually an export call.</b>
     /// The client generates keys nobody can read, and the search starts at the protocol, the relay
     /// and the peer — none of which is at fault.
-    /// <c>TheExportedPublicKeyCarriesANamedCurveTests</c> is what stops it coming back: the Product
-    /// Owner made that a release condition on the grounds that <i>a comment records this knowledge
+    /// <c>TheExportedPublicKeyCarriesANamedCurveTests</c> is what stops it coming back: that was
+    /// made a release condition on the grounds that <i>a comment records this knowledge
     /// and only a test defends it</i>, since it otherwise dies at the first refactor.
     /// </para>
     /// <para>
@@ -133,7 +133,7 @@ public sealed class SessionKeyExchange : IDisposable
         SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(_keyPair.Public).GetDerEncoded();
 
     /// <summary>
-    /// Whether <see cref="DeriveSharedKey"/> could actually agree with this public key (BUG-56).
+    /// Whether <see cref="DeriveSharedKey"/> could actually agree with this public key.
     /// </summary>
     /// <param name="otherPartyPublicKey">Bytes that arrived from the wire, trusted for nothing.</param>
     /// <returns><c>true</c> only if an agreement against these bytes succeeds.</returns>
@@ -145,13 +145,13 @@ public sealed class SessionKeyExchange : IDisposable
     /// Performing the operation is the only check that cannot disagree with the thing it predicts.
     /// </para>
     /// <para>
-    /// <b>The guarded region covers the INPUT only, and that split is BUG-61's second half.</b>
-    /// The previous version wrapped the probe-key CONSTRUCTION in the same <c>try</c> as the import,
-    /// under a <c>catch</c> reading <i>"not an SPKI blob at all: junk bytes, a truncated key, an RSA
-    /// key, a corrupted one"</i>. A platform failure raises the same exception type, so on an
-    /// affected machine this returned <c>false</c> for <b>every key, including valid ones</b>, and
-    /// logged nothing — a crash turned into a silent refusal of every peer. The crash at
-    /// construction masked it, so fixing only that would have exposed it.
+    /// <b>The guarded region covers the INPUT only, and that split is the key-generation failure's
+    /// second half.</b> The previous version wrapped the probe-key CONSTRUCTION in the same
+    /// <c>try</c> as the import, under a <c>catch</c> reading <i>"not an SPKI blob at all: junk
+    /// bytes, a truncated key, an RSA key, a corrupted one"</i>. A platform failure raises the same
+    /// exception type, so on an affected machine this returned <c>false</c> for <b>every key,
+    /// including valid ones</b>, and logged nothing — a crash turned into a silent refusal of every
+    /// peer. The crash at construction masked it, so fixing only that would have exposed it.
     /// </para>
     /// <para>
     /// So the probe key is generated <b>outside</b> the guard: a failure there is not a bad key and
@@ -195,8 +195,8 @@ public sealed class SessionKeyExchange : IDisposable
     /// </summary>
     /// <remarks>
     /// A seam rather than a mutable static: the latter would hand one test's stub to whatever thread
-    /// drained next. BUG-61 is precisely the case where a platform failure was indistinguishable
-    /// from bad input, so the distinction needs a test that can produce one.
+    /// drained next. The key-generation failure is precisely the case where a platform failure was
+    /// indistinguishable from bad input, so the distinction needs a test that can produce one.
     /// </remarks>
     internal static bool CanAgreeWith(
         byte[]? otherPartyPublicKey, Func<AsymmetricCipherKeyPair> generateProbeKey)
@@ -313,7 +313,7 @@ public sealed class SessionKeyExchange : IDisposable
     /// <b>The width of this catch is safe here and was not safe before.</b> Every operation inside
     /// it parses ATTACKER-SUPPLIED BYTES, so any failure means those bytes are not a public key —
     /// which is exactly what <c>null</c> says. Nothing platform-dependent happens in here, so the
-    /// failure BUG-61 is about cannot be swallowed by it.
+    /// key-generation failure cannot be swallowed by it.
     /// </para>
     /// <para>
     /// Enumerating the types would be a check that grows a hole per unlisted exception, and the

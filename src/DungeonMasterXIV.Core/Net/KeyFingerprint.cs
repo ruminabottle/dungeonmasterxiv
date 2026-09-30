@@ -24,18 +24,18 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>One value, not a pair, and the reason is the whole point (A-1.3f).</b> The alternative was to
-/// show each side the other's fingerprint. The Product Owner rejected it because with two values to
-/// check, <b>checking the first and skipping the second is the obvious shortcut — and it looks like
-/// it worked.</b> A single value is symmetric, halves what has to be read aloud, and leaves no
-/// second check to skip.
+/// show each side the other's fingerprint. It was rejected because with two values to check,
+/// <b>checking the first and skipping the second is the obvious shortcut — and it looks like it
+/// worked.</b> A single value is symmetric, halves what has to be read aloud, and leaves no second
+/// check to skip.
 /// </para>
 /// <para>
 /// <b>Computing one value from both keys is a rendering decision. Getting both keys to both sides
 /// in time is not, and this comment used to say otherwise.</b> It read: "No wire field carries it:
 /// after the exchange both sides already hold both keys, so both can compute it." That is true and
 /// useless — the exchange completes at <i>acceptance</i>, so the joiner held both keys only after
-/// the decision the comparison exists to inform, and could not compare anything. It shipped as
-/// BUG-31, and PRD-1 R-1.3a's matching bullet is struck for the same reason.
+/// the decision the comparison exists to inform, and could not compare anything. It shipped that
+/// way, and the original requirement's matching bullet was struck for the same reason.
 /// </para>
 /// <para>
 /// The host's key now reaches the joiner before admission, in
@@ -52,7 +52,7 @@ public static class KeyFingerprint
     /// <b>Do not change this alone.</b> R-1.3a decided eleven only because the admission prompt
     /// expires: against a bounded window, a ten-month second-preimage search is hopeless rather
     /// than merely expensive. <b>If the prompt's expiry is ever removed this must become 14</b>
-    /// (~64 bits, the Code Reviewer's floor for a prompt that can sit open indefinitely). The two
+    /// (~64 bits, the floor for a prompt that can sit open indefinitely). The two
     /// are a decided pair. Eleven is also a usability judgement — a DM will read aloud eight to
     /// twelve characters before people start skipping the step, and a skipped check is worse than
     /// an absent one because the UI records that it happened.

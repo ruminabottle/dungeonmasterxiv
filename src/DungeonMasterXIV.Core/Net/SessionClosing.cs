@@ -29,28 +29,28 @@ namespace DungeonMasterXIV.Net;
 /// </para>
     /// <para>
     /// <b>IT CARRIES R-1.3g's SIXTY SECONDS BECAUSE R-1.3g NOW NAMES THEM.</b> It did not, and this
-    /// type deliberately held no duration while the question was open — a literal would have answered
-    /// a product question silently. The Product Owner has since ruled the window, so the number
+    /// type deliberately held no duration while the question was open — a literal would have
+    /// answered a product question silently. R-1.3g has since fixed the window, so the number
     /// belongs here on its own authority: R-1.3g names it, so the type expressing R-1.3g holds it.
     /// </para>
     /// <para>
     /// <b>A CITATION CORRECTED RATHER THAN RENAMED.</b> This paragraph used to justify itself by
-    /// saying <see cref="AdmissionDeadline"/> carries "R-1.3a's fifteen minutes". <b>R-1.3a is about
-    /// comparing a fingerprint and has never mentioned time at all.</b> The fifteen minutes has a home
-    /// at <b>R-1.3l</b> as of 2026-08-29 — and that is not where it moved to, it is where it was
-    /// FIRST WRITTEN DOWN. The old reference was not a stale pointer; it pointed at a requirement that
-    /// never said it, and three places in the PRD cited it that way, each anchored and none followed
-    /// back. <b>Three citations of one requirement is not corroboration — it is one unchecked claim
-    /// with copies.</b>
+    /// saying <see cref="AdmissionDeadline"/> carries "R-1.3a's fifteen minutes". <b>R-1.3a is
+    /// about comparing a fingerprint and has never mentioned time at all.</b> The fifteen minutes
+    /// has a home at <b>R-1.3l</b> as of 2026-08-29 — and that is not where it moved to, it is
+    /// where it was FIRST WRITTEN DOWN. The old reference was not a stale pointer; it pointed at a
+    /// requirement that never said it, and three places in the original requirements cited it that
+    /// way, each anchored and none followed back. <b>Three citations of one requirement is not
+    /// corroboration — it is one unchecked claim with copies.</b>
     /// </para>
     /// <para>
     /// <b>THE FIFTEEN MINUTES IS NOW RULED TOO</b> — R-1.3l was REPLACED on 2026-08-29, not amended:
-    /// it used to record a value it explicitly did not decide, and the Product Owner has since ruled
-    /// it. Worth knowing how close that was: a grep of every directive returned ZERO hits for it. The
+    /// it used to record a value it explicitly did not decide, and the replacement now fixes it.
+    /// Worth knowing how close that was: a grep of every directive returned ZERO hits for it. The
     /// value was in force, cited in three places and shipped, and <b>nobody had ever chosen it</b>.
     /// </para>
     /// <para>
-    /// <b>NOT CONFIGURABLE, and that is the ruling rather than an omission.</b> The window's job is
+    /// <b>NOT CONFIGURABLE, and that is R-1.3g rather than an omission.</b> The window's job is
     /// TIME TO NOTICE — long enough to survive a glance away, short enough that nobody sits in a room
     /// that is over, and <b>a round number a DM can say out loud</b>, so "you have a minute" and the
     /// software agree rather than contradicting the person running the game. A DM winding up a long
@@ -77,7 +77,7 @@ public readonly struct SessionClosing : IEquatable<SessionClosing>
     /// <remarks>
     /// <b>This is NOT R-1.4's grace window and the two must not be reconciled.</b> R-1.4 is time for
     /// an UNREACHABLE host to come back; a deliberate quit has no coming back, and this is time to
-    /// NOTICE. Different event, different purpose — and R-1.4's number sitting in the same PRD makes
+    /// NOTICE. Different event, different purpose — and R-1.4's number sitting in the same spec makes
     /// it the default nobody would think to argue about, which is why this says so here.
     /// </remarks>
     public static readonly TimeSpan Window = TimeSpan.FromSeconds(60);

@@ -35,7 +35,7 @@ public sealed class GraceWindow
     /// <b>Still a literal, and A-1.27 wants it not to be.</b> Note for whoever builds that: the
     /// constructor above already takes a <see cref="TimeSpan"/>, so the window is injectable
     /// today — it is only this DEFAULT that is hard-coded, and only a settable value to feed it
-    /// that is missing. A-1.27 also needs a seat window, which does not exist at all. See BUG-55.
+    /// that is missing. A-1.27 also needs a seat window, which does not exist at all.
     /// </para>
     /// </remarks>
     public static readonly TimeSpan Default = TimeSpan.FromMinutes(5);

@@ -40,10 +40,10 @@ public static class ParticipantReceipt
     /// to hold a credential it can present later and have the DM see a plausible returning player.
     /// <para>
     /// <b>THE ADMISSION IS NOW CHECKED TOO, AND THIS PARAGRAPH USED TO SAY IT WAS NOT.</b> While
-    /// DMXENG-47 was in review this read <i>"what this does not fix"</i> — the admission accepted on
-    /// any acceptance carrying a host key, whoever it named, so a joiner awaiting a decision was
-    /// admitted by a stranger's acceptance and derived a session key. That was BUG-85, found by this
-    /// feature's own two-joiner harness, fixed in
+    /// this feature was in review this read <i>"what this does not fix"</i> — the admission
+    /// accepted on any acceptance carrying a host key, whoever it named, so a joiner awaiting a
+    /// decision was admitted by a stranger's acceptance and derived a session key. That defect was
+    /// found by this feature's own two-joiner harness, fixed in
     /// <see cref="WireEnvelopeReading.TryGetAdmissionOutcome"/>, and merged before this.
     /// <b>Updated here because the change that falsifies a comment owns it</b>, and a stale
     /// <i>"this is not fixed"</i> sitting beside the fix is worse than the caveat was ever worth.
@@ -58,7 +58,7 @@ public static class ParticipantReceipt
     /// <para>
     /// <b>PARSE</b> — a host controls these characters and a value that is not a GUID is not a
     /// participant. Dropped here rather than carried inward as a string for something further in to
-    /// fail on, which is BUG-56's lesson applied to a different field.
+    /// fail on — the lesson that a joiner's key is checked at the door, on another field.
     /// </para>
     /// </remarks>
     /// <param name="envelope">What arrived.</param>
