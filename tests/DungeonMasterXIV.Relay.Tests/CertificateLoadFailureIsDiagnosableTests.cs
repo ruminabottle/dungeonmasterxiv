@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 namespace DungeonMasterXIV.Relay.Tests;
 
 /// <summary>
-/// BUG-15: a certificate the relay cannot load must produce an error naming the file, the cause,
+/// A certificate the relay cannot load must produce an error naming the file, the cause,
 /// and — where that is what went wrong — the identity that could not read it.
 /// </summary>
 public sealed class CertificateLoadFailureIsDiagnosableTests(ITestOutputHelper output)
@@ -21,20 +21,20 @@ public sealed class CertificateLoadFailureIsDiagnosableTests(ITestOutputHelper o
     /// <para>
     /// The certificate here is <b>malformed, not unreadable</b>, and the difference is load-bearing.
     /// An unreadable file raises <c>UnauthorizedAccessException</c> on macOS — which names the path
-    /// already — while on Linux it is the bare <c>BIO routines::system lib</c> BUG-15 reports. A
+    /// already — while on Linux it is the bare <c>BIO routines::system lib</c> error. A
     /// test built on chmod would therefore pass on a developer's machine without the fix and prove
     /// nothing. A malformed file fails the same way everywhere: no path, no reason.
     /// </para>
     /// <para>
-    /// <b>It no longer asserts the uid, and that is BUG-17.</b> This file is readable, so a message
-    /// naming a uid here would be the misleading output BUG-17 was filed about. The uid belongs to
-    /// the permissions case and is asserted in the test below, on a file that really is unreadable.
+    /// <b>It no longer asserts the uid, and that is deliberate.</b> This file is readable, so a message
+    /// naming a uid here would be the misleading permissions advice. The uid belongs to the permissions
+    /// case and is asserted in the test below, on a file that really is unreadable.
     /// </para>
     /// </remarks>
     [Fact]
     public void AFailedLoadNamesTheFileAndTheCause()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug15");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-malformed");
         var certificate = Path.Combine(directory.FullName, "relay-certificate.pfx");
         File.WriteAllBytes(certificate, [0x00, 0x01, 0x02, 0x03]);
 
@@ -62,15 +62,15 @@ public sealed class CertificateLoadFailureIsDiagnosableTests(ITestOutputHelper o
     /// number the operator types into <c>chown</c>.
     /// </summary>
     /// <remarks>
-    /// This is the branch BUG-15 exists for, now that BUG-17 has confined it to the case it is true
-    /// of. Neither path through this test is a no-op: where file modes cannot be made to bite — on
-    /// Windows, or as a user that bypasses them — the wording is asserted directly instead, so the
-    /// test never reports a pass for a check that did not run.
+    /// This is the branch the unreadable-file diagnosis exists for, now confined to the case it is
+    /// true of. Neither path through this test is a no-op: where file modes cannot be made to bite —
+    /// on Windows, or as a user that bypasses them — the wording is asserted directly instead, so
+    /// the test never reports a pass for a check that did not run.
     /// </remarks>
     [Fact]
     public void AnUnreadableCertificateNamesTheUid()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug15");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-unreadable");
         var certificate = Path.Combine(directory.FullName, "relay-certificate.pfx");
         File.WriteAllBytes(certificate, [0x00, 0x01, 0x02, 0x03]);
 

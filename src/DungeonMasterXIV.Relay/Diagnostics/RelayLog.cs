@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace DungeonMasterXIV.Relay.Diagnostics;
 
 /// <summary>
-/// The relay's forensic log: enough for QA to read the outcome of a connection attempt, and the
+/// The relay's forensic log: enough for a tester to read the outcome of a connection attempt, and the
 /// reason for a failure, without a human present (A-1.5a-r).
 /// </summary>
 /// <remarks>
@@ -13,7 +13,7 @@ namespace DungeonMasterXIV.Relay.Diagnostics;
 /// nowhere else. The relay opens no log file, and the container definition configures no file sink,
 /// so nothing the relay runs writes to disk — which is what A-1.5e asserts. A container runtime
 /// that captures stdout is a separate party retaining its own capture, on the operator's side of
-/// the line, and E-8 requires the service policy to state retention. The distinction is real but it
+/// the line, and R-1.8 requires the service policy to state retention. The distinction is real but it
 /// is thin, so it is written here rather than left for someone to discover: <b>if this type ever
 /// gains a file sink, A-1.5e is false and so is R-1.7a's shipped copy.</b>
 /// </para>
@@ -26,11 +26,11 @@ namespace DungeonMasterXIV.Relay.Diagnostics;
 /// A-1.5a-r needs is worth carrying that risk to get.
 /// </para>
 /// <para>
-/// A connection is named by an id generated fresh when it opens and thrown away when it closes.
-/// It correlates lines within one connection, which is what diagnosing a failed join takes, and
-/// correlates nothing across two session codes. Session codes DO appear: the standards direct that
-/// a log line names the session-scoped code in place of a person, and R-1.2a scopes a code to a
-/// live session rather than to a player.
+/// A connection is named by an id generated fresh when it opens and thrown away when it closes. It
+/// correlates lines within one connection, which is what diagnosing a failed join takes, and
+/// correlates nothing across two session codes. Session codes DO appear: a log line names the
+/// session-scoped code in place of a person, and R-1.2a scopes a code to a live session rather than
+/// to a player.
 /// </para>
 /// <para>
 /// Message routing is logged at Debug and is off by default. Every forwarded payload at
@@ -60,7 +60,7 @@ public sealed class RelayLog(ILogger<RelayLog> logger)
         }
 
         // One line per session, because a connection can be the host of one and a joiner in another
-        // and a single line would have to pick which to report. QA reading this after a failed
+        // and a single line would have to pick which to report. A tester reading this after a failed
         // attempt needs every session the connection was in, not the first one it happened to hold.
         foreach (var departure in removal.Departures)
         {
@@ -102,8 +102,8 @@ public sealed class RelayLog(ILogger<RelayLog> logger)
     }
 
     /// <summary>
-    /// Something threw while handling a connection. Logged with context rather than swallowed, per
-    /// the standards; the exception message is transport-level and carries no payload.
+    /// Something threw while handling a connection. Logged with context rather than swallowed;
+    /// the exception message is transport-level and carries no payload.
     /// </summary>
     public void ConnectionFaulted(string connectionId, Exception exception) =>
         _logger.LogError(exception, "connection {ConnectionId} faulted", connectionId);

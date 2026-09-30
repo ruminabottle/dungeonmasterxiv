@@ -35,10 +35,10 @@ public sealed class AnUnadmittedClientReceivesNoRosterTests
     /// </summary>
     /// <remarks>
     /// <b>Derived, not typed.</b> These fixtures used <c>"PRBCD2"</c>, which
-    /// <c>AdmissionControl.PeerCodeFor</c> can never emit — <c>E</c>, <c>-</c> and <c>1</c> are not
-    /// in <see cref="SpeakableAlphabet.Characters"/>. That was invisible while nothing checked, and
-    /// BUG-57 added the check. Built from the same two constants the codec validates against, so it
-    /// cannot become impossible again if the alphabet or the length ever moves.
+    /// <c>AdmissionControl.PeerCodeFor</c> can never emit — <c>E</c>, <c>-</c> and <c>1</c> are not in
+    /// <see cref="SpeakableAlphabet.Characters"/>. That was invisible while nothing checked, and making
+    /// PeerCode a validated type added the check. Built from the same two constants the codec validates
+    /// against, so it cannot become impossible again if the alphabet or the length ever moves.
     /// <para>
     /// <b>The TAIL of the alphabet, not the head, and that is load-bearing.</b> The head is
     /// <c>"BCDFGH"</c>, which is also the session code these fixtures use — and a session code

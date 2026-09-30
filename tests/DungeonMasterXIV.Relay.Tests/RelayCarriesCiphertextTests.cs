@@ -56,7 +56,7 @@ public sealed class RelayCarriesCiphertextTests
     /// fail. Without this, both tests above would pass against a relay forwarding plaintext.
     /// </summary>
     /// <remarks>
-    /// <b>This validates the suite against THIS substitution and nothing else.</b> The Code Reviewer
+    /// <b>This validates the suite against THIS substitution and nothing else.</b> It was
     /// measured on PR #4 that a crude null cipher trips five tests while a careful one preserving
     /// tag length evades some of them, so the honest claim is narrow: a payload that is exactly the
     /// plaintext is caught. A substitution that padded to the tag length would defeat a

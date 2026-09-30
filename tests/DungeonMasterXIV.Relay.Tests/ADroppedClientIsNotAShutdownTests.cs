@@ -14,7 +14,7 @@ using Xunit;
 namespace DungeonMasterXIV.Relay.Tests;
 
 /// <summary>
-/// BUG-78: one exception type carried two causes and the handler named only the rarer one.
+/// One exception type carried two causes and the handler named only the rarer one.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,7 +27,7 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// <para>
 /// <b>Both directions are asserted.</b> A test that only proved the client case would pass against a
 /// handler that had simply swapped the string, leaving a real shutdown mislabelled the other way —
-/// which is the same one-directional shape the bug itself has.
+/// which is the same one-directional shape the defect itself has.
 /// </para>
 /// <para>
 /// <b>Measured against a running image before this was written.</b> The abrupt-drop case is a RACE

@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Relay.Tests;
 
 /// <summary>
-/// BUG-88: an admission answer is forwarded to the joiner it names and to nobody else — the
+/// An admission answer is forwarded to the joiner it names and to nobody else — the
 /// confidentiality half of R-1.5c, at the one place the recipient list is chosen.
 /// </summary>
 /// <remarks>
@@ -13,7 +13,7 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// <b>THE HARNESS NEEDS A BYSTANDER, AND THAT IS THE WHOLE POINT OF THIS FILE.</b> An assertion on
 /// <c>Recipients</c> already existed for an acceptance —
 /// <c>ThePendingNoticeReachesTheJoinerTests.AnAcceptanceOnTheSamePathIsForwarded</c> asserts
-/// <c>["joiner-1"]</c>. It did not catch the mutation that prompted this bug, and the reason is not
+/// <c>["joiner-1"]</c>. It did not catch the mutation this file exists to stop, and the reason is not
 /// that it is a weak assertion: <b>its session contains exactly one joiner, so the correct
 /// single-recipient list and a broadcast to the whole session are THE SAME LIST.</b> The gap was
 /// never a missing assertion. It was an assertion with nothing to distinguish.
@@ -29,14 +29,14 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// <see cref="SessionRegistry.MembersExcept"/> is the CORRECT routing for a payload — there is a test
 /// called <c>PayloadRecipientsAreEveryoneButTheSender</c>. "Forward the acceptance to the session,
 /// the way we do payloads" is a one-line refactor toward consistency, written by somebody being
-/// tidy. Since DMXENG-47 an acceptance carries a <c>ParticipantId</c>, which is the relink claim, so
+/// tidy. An acceptance carries a <c>ParticipantId</c>, which is the relink claim, so
 /// that refactor would hand every joiner's claim to every other joiner.
 /// </para>
 /// <para>
 /// <b>All three arms, not just the reported one.</b> <c>JoinDenied</c> and <c>JoinLapsed</c> take the
 /// same <c>RouteAdmission</c> path and had no recipient assertion of any kind. Guarding only the arm
-/// that was reported is the denylist shape — on BUG-85 that turned out to be load-bearing for a
-/// reason nobody had predicted, and the cost of covering the siblings here is three lines.
+/// that was reported is the denylist shape — on the client's addressee check that turned out to be
+/// load-bearing for a reason nobody had predicted, and covering the siblings here costs three lines.
 /// </para>
 /// </remarks>
 public sealed class AnAdmissionAnswerReachesOnlyItsJoinerTests
@@ -69,7 +69,7 @@ public sealed class AnAdmissionAnswerReachesOnlyItsJoinerTests
     }
 
     // THE REPORTED ARM. Fails if: the acceptance is forwarded to session membership rather than to the
-    // joiner it names -- qa-2's mutation, _registry.MembersExcept(code.Value, senderConnectionId).
+    // joiner it names -- the reported mutation, _registry.MembersExcept(code.Value, senderConnectionId).
     [Fact]
     public void AnAcceptanceReachesOnlyTheJoinerItNames()
     {
@@ -83,7 +83,7 @@ public sealed class AnAdmissionAnswerReachesOnlyItsJoinerTests
         Assert.Equal(["joiner-2"], decision.Recipients);
 
         // Said again as the property rather than as the list, because this is the sentence that
-        // matters: since DMXENG-47 the acceptance carries joiner-2's ParticipantId, which is its
+        // matters: the acceptance carries joiner-2's ParticipantId, which is its
         // relink claim, and joiner-1 is a stranger who must never see it.
         Assert.DoesNotContain("joiner-1", decision.Recipients);
     }

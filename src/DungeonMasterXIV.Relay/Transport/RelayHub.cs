@@ -82,9 +82,9 @@ public sealed class RelayHub(
     /// <remarks>
     /// <para>
     /// <b>A POSITIVE NOTICE, which is required rather than tidy.</b> Deciding a member has gone
-    /// because nothing has arrived from them starts a clock from an absence — SQ-43's defect, and
-    /// what A-1.28 forbids in terms. The relay is the only party that can observe the drop, so if it
-    /// says nothing then nobody can know without inferring.
+    /// because nothing has arrived from them starts a clock from an absence — silence taken as
+    /// evidence, which is what A-1.28 forbids in terms. The relay is the only party that can observe
+    /// the drop, so if it says nothing then nobody can know without inferring.
     /// </para>
     /// <para>
     /// <b>Only for a MEMBER's departure, never the host's.</b> A departure with no

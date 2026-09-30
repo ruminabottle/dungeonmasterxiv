@@ -2,11 +2,11 @@
 #
 # Why this file exists at all: A-1.5e proves that the relay we BUILD stores nothing, and that says
 # nothing about the instance users actually connect to unless what runs there came out of the repo
-# rather than being assembled by hand on the box. E-9 withdrew self-hosting as a tested guarantee
-# but explicitly did NOT withdraw this artifact — it is the only thing tying the deployed process
-# back to a commit, and PRD-1 names the remaining gap rather than claiming this closes it.
+# rather than being assembled by hand on the box. Withdrawing self-hosting as a tested guarantee
+# (R-1.8) explicitly did NOT withdraw this artifact — it is the only thing tying the deployed
+# process back to a commit, and R-1.8 names the remaining gap rather than claiming this closes it.
 #
-# There is deliberately no self-hosting documentation here (C2's do-not list). This is our
+# There is deliberately no self-hosting documentation here (R-1.8). This is our
 # deployment, not a guide to running your own.
 
 # TWO values, not one, because the SDK and the runtime are numbered in DIFFERENT NAMESPACES and a
@@ -21,7 +21,7 @@
 #
 # WHAT THIS PROTECTS, not just what it sets: the relay is the deployed artefact and was the last
 # unpinned half of the build after global.json pinned the plugin. It also closes a trap —
-# the .dockerignore added for BUG-77 excludes build output ONLY, and compose builds with context "..",
+# the .dockerignore excludes build output ONLY, and compose builds with context "..",
 # so global.json is still in the context. The moment anyone widens the COPY list below, or adds
 # `COPY global.json ./` thinking they are being tidy, a FLOATING sdk tag that is not exactly 10.0.400
 # fails at SDK resolution with no obvious connection to the commit that caused it. Pinned, global.json
@@ -57,7 +57,7 @@ RUN dotnet publish src/DungeonMasterXIV.Relay/DungeonMasterXIV.Relay.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS runtime
 
 # Stamped at build time so a running relay can be traced to the commit it was built from. This is
-# the mitigation PRD-1 asks for, and it is weaker than a proof — say so rather than implying more.
+# the mitigation R-1.8 asks for, and it is weaker than a proof — say so rather than implying more.
 ARG GIT_COMMIT=unknown
 LABEL org.opencontainers.image.title="DungeonMasterXIV relay" \
       org.opencontainers.image.revision="${GIT_COMMIT}" \

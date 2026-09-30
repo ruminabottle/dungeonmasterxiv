@@ -19,7 +19,7 @@
 #
 # DELIBERATELY NARROW. This excludes build output and nothing else. It is not a
 # make-the-context-smaller file: every additional pattern is a chance to exclude something the image
-# turns out to need, and that failure looks exactly like this bug did. Nothing tracked lives under
+# turns out to need, and that failure looks exactly like the one above did. Nothing tracked lives under
 # bin/ or obj/ (verified: `git ls-files` matches zero such paths), so these two lines cannot remove
 # an input the build requires.
 **/bin/

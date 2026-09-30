@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 namespace DungeonMasterXIV.Relay.Tests;
 
 /// <summary>
-/// BUG-17: a load failure must name the cause it has evidence for, and no other.
+/// A load failure must name the cause it has evidence for, and no other.
 /// </summary>
 public sealed class CertificateFailuresNameTheirOwnCauseTests(ITestOutputHelper output)
 {
@@ -21,7 +21,7 @@ public sealed class CertificateFailuresNameTheirOwnCauseTests(ITestOutputHelper 
     [Fact]
     public async Task TheRightPasswordLoadsTheCertificate()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug17");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-password");
         var certificate = MintPasswordProtected(directory.FullName, "correct");
 
         var app = RelayApp.Build(new RelayOptions
@@ -41,15 +41,15 @@ public sealed class CertificateFailuresNameTheirOwnCauseTests(ITestOutputHelper 
     /// a permissions problem.
     /// </summary>
     /// <remarks>
-    /// An assertion of ABSENCE, which is the shape BUG-15's tests could not have. They assert the
-    /// message contains the path, the uid and the underlying error — and asserting that a message
-    /// contains the right things cannot detect that it also asserts a wrong thing. All three passed
-    /// on output telling the operator to chown a file whose ownership was already correct.
+    /// An assertion of ABSENCE, which is the shape the unreadable-file tests could not have. They
+    /// assert the message contains the path, the uid and the underlying error — and asserting that a
+    /// message contains the right things cannot detect that it also asserts a wrong thing. All three
+    /// passed on output telling the operator to chown a file whose ownership was already correct.
     /// </remarks>
     [Fact]
     public void AWrongPasswordIsNotReportedAsAPermissionsProblem()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug17");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-password");
         var certificate = MintPasswordProtected(directory.FullName, "correct");
 
         var thrown = Assert.ThrowsAny<Exception>(() => RelayApp.Build(new RelayOptions
@@ -70,13 +70,13 @@ public sealed class CertificateFailuresNameTheirOwnCauseTests(ITestOutputHelper 
     }
 
     /// <summary>
-    /// The corrupt-file half of BUG-17. A malformed certificate this process can read perfectly
-    /// well is not a permissions problem either, and the shipped message said it was.
+    /// The corrupt-file half of the same rule. A malformed certificate this process can read
+    /// perfectly well is not a permissions problem either, and the shipped message said it was.
     /// </summary>
     [Fact]
     public void AMalformedButReadableCertificateIsNotReportedAsAPermissionsProblem()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug17");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-malformed");
         var certificate = Path.Combine(directory.FullName, "relay-certificate.pfx");
         File.WriteAllBytes(certificate, [0x00, 0x01, 0x02, 0x03]);
 
@@ -98,8 +98,8 @@ public sealed class CertificateFailuresNameTheirOwnCauseTests(ITestOutputHelper 
     /// Where the permissions advice DOES belong, the cause still comes first.
     /// </summary>
     /// <remarks>
-    /// Position, not presence, is what BUG-17 was about: the accurate clause was in the message all
-    /// along, sixty-five words down, and an operator who reads top-down had already acted.
+    /// Position, not presence, was the defect: the accurate clause was in the message all along,
+    /// sixty-five words down, and an operator who reads top-down had already acted.
     /// </remarks>
     [Fact]
     public void EvenInThePermissionsCaseTheCauseLeads()

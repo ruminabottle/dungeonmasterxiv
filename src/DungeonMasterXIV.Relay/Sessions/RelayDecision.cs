@@ -19,7 +19,7 @@ public enum RelayAction
 /// The outcome of one routing decision, in the vocabulary the forensic log uses (A-1.5a-r).
 /// </summary>
 /// <remarks>
-/// These are the reasons QA reads after an attempt with no human present, so they name what
+/// These are the reasons a tester reads after an attempt with no human present, so they name what
 /// happened rather than where in the code it happened.
 /// </remarks>
 public enum RelayOutcome

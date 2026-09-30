@@ -107,9 +107,9 @@ public sealed class RelayOptions
     /// </para>
     /// <para>
     /// <b>It must not assume clients close cleanly, and some will not.</b> A process can always die
-    /// without a close frame, and BUG-5 is a live instance of a client that disposes its socket
-    /// without one. This reaper is the thing that has to be right when the other end is not — the
-    /// same reason it does not reap on traffic.
+    /// without a close frame, and the plugin's own transport has been a live instance of a client that
+    /// disposes its socket without one. This reaper is the thing that has to be right when the other
+    /// end is not — the same reason it does not reap on traffic.
     /// </para>
     /// </remarks>
     public TimeSpan KeepAliveTimeout

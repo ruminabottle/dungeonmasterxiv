@@ -43,12 +43,12 @@ public sealed class RelaySandbox : IDisposable
     /// </summary>
     /// <remarks>
     /// <para>
-    /// BUG-11, and the comment is the fix rather than a wiring change. <b>Nothing in this solution uses
-    /// ASP.NET DataProtection</b> — there is no <c>AddDataProtection</c> and no <c>PersistKeysTo</c>
-    /// anywhere in <c>src</c> or <c>tests</c>, and no package reference to it. So this is a directory
-    /// nothing will ever write to, which makes watching it a check that cannot fail. It was previously
-    /// described as "the key ring under the user profile", which read as coverage of a real key ring to
-    /// anyone auditing the watch list; it never was.
+    /// This comment, not a wiring change, is the fix for a root wired to nothing. <b>Nothing in this
+    /// solution uses ASP.NET DataProtection</b> — there is no <c>AddDataProtection</c> and no
+    /// <c>PersistKeysTo</c> anywhere in <c>src</c> or <c>tests</c>, and no package reference to it. So
+    /// this is a directory nothing will ever write to, which makes watching it a check that cannot
+    /// fail. It was previously described as "the key ring under the user profile", which read as
+    /// coverage of a real key ring to anyone auditing the watch list; it never was.
     /// </para>
     /// <para>
     /// <b>Where the real one would be, and why it is still unwatched.</b> A relay that called
@@ -75,7 +75,7 @@ public sealed class RelaySandbox : IDisposable
     /// </summary>
     /// <remarks>
     /// <para>
-    /// BUG-10. The sandbox roots alone cover the exotic case and miss the likely one. A <b>bare relative
+    /// The sandbox roots alone cover the exotic case and miss the likely one. A <b>bare relative
     /// path</b> — <c>File.WriteAllText("relay.log", …)</c>, which is exactly what a sink writes when
     /// nobody names a directory — resolves against <see cref="Environment.CurrentDirectory"/>, and
     /// <see cref="AppContext.BaseDirectory"/> is the other place a naive write lands. Neither is under

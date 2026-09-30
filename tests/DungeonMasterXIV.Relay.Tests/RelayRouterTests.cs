@@ -39,7 +39,7 @@ public sealed class RelayRouterTests
     }
 
     /// <summary>
-    /// The narrowing the Engineering Lead confirmed: a join request reaches the host and nobody
+    /// The confirmed narrowing: a join request reaches the host and nobody
     /// else, so a joiner's public key and the fact of an attempt stay off other members' wires.
     /// </summary>
     [Fact]
