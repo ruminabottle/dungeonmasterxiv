@@ -7,8 +7,8 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-61's second half: <c>CanAgreeWith</c> must tell "this key is bad" from "this platform cannot
-/// do this".
+/// On a platform that cannot generate keys, <c>CanAgreeWith</c> must tell "this key is bad" from
+/// "this platform cannot do this".
 /// </summary>
 /// <remarks>
 /// <para>
@@ -57,9 +57,9 @@ public class APlatformFailureIsNotReportedAsABadKeyTests
         Assert.True(SessionKeyExchange.CanAgreeWith(AValidPublicKey()));
     }
 
-    // And bad input is still refused quietly rather than thrown, which is BUG-56's requirement and
-    // must survive the narrowing. A throwing validator on the inbound join path is a denial of
-    // service that any stranger can trigger.
+    // And bad input is still refused quietly rather than thrown, which validating a joiner's key
+    // requires and must survive the narrowing. A throwing validator on the inbound join path is a
+    // denial of service that any stranger can trigger.
     [Theory]
     [InlineData(new byte[] { 1, 2, 3 })]                 // junk: measured to raise EndOfStreamException
     [InlineData(new byte[] { 0 })]                       // one byte: measured to raise IOException

@@ -91,7 +91,7 @@ public class AdmissionDeadlineTests
         Assert.Equal(deadline, received!.TryGetDeadline());
     }
 
-    // THE BLOCKING FINDING FROM PR #10, and it is tested through the FULL DECODE PATH rather than
+    // THE BLOCKING REVIEW FINDING, and it is tested through the FULL DECODE PATH rather than
     // against the factory. Asserting TryFromWire in isolation proves the factory; the defect was
     // that a hostile envelope decoded SUCCESSFULLY and produced a deadline that threw when read, so
     // only bytes-in-to-countdown-out shows that stopped.

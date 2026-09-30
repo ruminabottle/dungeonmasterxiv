@@ -74,7 +74,7 @@ public class DisplayNameTests
 
     // Fails if: the bound goes away. A very long name pushes the fingerprint off the visible prompt,
     // which is the de-emphasis D-8 forbids — achieved with no UI change at all.
-    // A-1.2j (R-1.3j.1). Fails if: a name that renders as nothing is accepted. BUG-50 — these are
+    // A-1.2j (R-1.3j.1). Fails if: a name that renders as nothing is accepted. These are
     // the two the denylist could never have reached: U+3164 HANGUL FILLER is categorised as a
     // LETTER and U+2800 BRAILLE PATTERN BLANK as a SYMBOL, so no list of forbidden categories
     // would name them without also refusing Korean or ordinary symbols.
@@ -96,7 +96,7 @@ public class DisplayNameTests
     // inside the data — the D-11 substitution attack arriving through the one field an attacker
     // controls.
     //
-    // U+2028 is the case that made BUG-50: the validator refused the ASCII line break (U+000A, a
+    // U+2028 is the case that exposed the gap: the validator refused the ASCII line break (U+000A, a
     // Control) and ACCEPTED the Unicode one (Zl), which is the same break one encoding along.
     [Theory]
     [InlineData("Ada\u2028Lovelace")]       // LINE SEPARATOR, category Zl -- neither Cc nor Cf
@@ -267,7 +267,7 @@ public class DisplayNameTests
         Assert.NotEqual(DisplayName.OrNone("Bob"), DisplayName.OrNone("Rob"));
     }
 
-    // A-1.2w (R-1.3j.6, ruled by the HUMAN). The four role words belong to the host.
+    // A-1.2w (R-1.3j.6). The four role words belong to the host.
     [Theory]
     [InlineData("DM")]
     [InlineData("GM")]
@@ -307,7 +307,7 @@ public class DisplayNameTests
     //
     // In particular `D M` distinguishes COLLAPSING whitespace runs from REMOVING whitespace. An
     // implementation that strips instead of collapses turns it into "DM" and refuses it, passing
-    // every refusal row above while breaking the PRD's own statement about what this rule permits.
+    // every refusal row above while breaking R-1.3j.6's own statement about what this rule permits.
     [Theory]
     [InlineData("D.M.")]
     [InlineData("D M")]

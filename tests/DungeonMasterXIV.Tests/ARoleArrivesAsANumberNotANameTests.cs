@@ -17,8 +17,8 @@ namespace DungeonMasterXIV.Tests;
 /// the finding false with nothing failing and nobody re-reading it.
 /// </para>
 /// <para>
-/// <b>The question that produced it is worth more than the answer.</b> qa-1 checked four recorded
-/// decisions and all four were TRUE; what they found is that the four are not equally DURABLE.
+/// <b>The question that produced it is worth more than the answer.</b> Four recorded decisions were
+/// checked and all four were TRUE; what the check found is that the four are not equally DURABLE.
 /// Three describe code in the same method as the decision, so the sentence and its subject travel
 /// together and it cannot rot unread. This one's truth lives in a declaration elsewhere and is a
 /// claim about a third-party library's default. So the question to ask of a recorded decision is not

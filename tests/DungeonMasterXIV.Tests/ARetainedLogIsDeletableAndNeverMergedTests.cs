@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Tests;
 /// <summary>
 /// R-2.12: a retained log is deletable from the place the product says everything is deletable
 /// (A-2.21); a player's log does not survive and the DM's does (A-2.22); and <b>the writer takes
-/// exactly one log</b> (A-2.16's merge prohibition, the half SQ-109 left live).
+/// exactly one log</b> (A-2.16's merge prohibition).
 /// <para>
 /// <b>This summary used to end "and is never automatic (A-2.17)", which was false of its own
 /// subject.</b> A-2.17 governs the EXPORT; a retained log is written automatically at session end,
@@ -28,8 +28,8 @@ namespace DungeonMasterXIV.Tests;
 /// unrelated path leaves alone.</b>
 /// </para>
 /// <para>
-/// <b>A-2.16 is tested by ABSENCE and it is the only way it can be.</b> The Spec Owner ruled the
-/// structural reading: a filtering exporter would have to be handed a view wider than its owner's
+/// <b>A-2.16 is tested by ABSENCE and it is the only way it can be.</b> The reading is
+/// structural: a filtering exporter would have to be handed a view wider than its owner's
 /// in order to narrow it, which builds the shape D-13 forbids. So there is nothing to assert about
 /// filtering — the guarantee is that <see cref="RetainedLogFormat.Write"/> takes one log and that no
 /// overload, collection parameter or merge exists. That is checked here by reflection, because a

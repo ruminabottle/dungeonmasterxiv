@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A-1.17a and BUG-53: exclusivity ends when the SEAT ends, never when the link does.
+/// A-1.17a: exclusivity ends when the SEAT ends, never when the link does.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,8 +15,8 @@ namespace DungeonMasterXIV.Tests;
 /// the machine criterion for it and <b>nothing referenced it before this file</b>.
 /// </para>
 /// <para>
-/// <b>Driven through the COORDINATOR, deliberately.</b> QA-3's repro drives <see cref="JoinAttempt"/>
-/// in isolation, which is enough to demonstrate the bug and not enough to test the fix: at that level
+/// <b>Driven through the COORDINATOR, deliberately.</b> Driving <see cref="JoinAttempt"/> alone
+/// is enough to demonstrate the wrong offer and not enough to test the fix: at that level
 /// the seat clock does not exist, so a build that keyed the decision on the coordinator would pass
 /// while a build that keyed it on the attempt's phase would too. The predicate under test is the one
 /// the window actually calls.
@@ -24,7 +24,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>Both halves, and the second is not optional.</b> Suppression alone locks a user out of hosting
 /// forever, because nothing would ever expire the seat — a safe-looking partial that removes a
-/// working control, which is worse than the bug.
+/// working control, which is worse than the wrong offer.
 /// </para>
 /// </remarks>
 public class ADroppedJoinerKeepsItsSeatTests
@@ -112,7 +112,7 @@ public class ADroppedJoinerKeepsItsSeatTests
 
     // THE SUPERSET PROPERTY, which is what the release ruling rests on and nothing pinned.
     //
-    // BUG-53 ships without A-1.24 only because the new predicate is a strict SUPERSET of the old
+    // The fix ships without A-1.24 only because the new predicate is a strict SUPERSET of the old
     // one: the host affordance can never appear SOONER than it does today, so the missing host-side
     // clock cannot make anything worse than it already is. That holds because the first disjunct is
     // textually identical to the predicate it replaced — and "textually identical" is not a property

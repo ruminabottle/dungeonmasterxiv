@@ -13,8 +13,8 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>The exclusivity guard was join-side only.</b> It asked whether this client had JOINED a
 /// session and never whether it was HOSTING one, so the button that starts a session was one click
-/// away from a host mid-session. Both outcomes of that click are bad and the Product Owner declined
-/// to choose between them: either the audience persists while the host re-keys, leaving the table
+/// away from a host mid-session. Both outcomes of that click are bad and neither was picked
+/// over the other: either the audience persists while the host re-keys, leaving the table
 /// live against a key pair it was never admitted under, or one click ejects the whole table
 /// mid-combat with no confirmation. <b>The mis-click is removable, so it was removed instead.</b>
 /// </para>

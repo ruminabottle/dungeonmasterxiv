@@ -80,8 +80,8 @@ public class CampaignStoreLoadTests
         Assert.Equal(CampaignFileProblem.WillNotParse, Assert.Single(store.Unreadable).Problem);
     }
 
-    // First run and failed load must stay distinguishable — the standards say so, and a restructure
-    // is exactly where that gets lost.
+    // First run and failed load must stay distinguishable, or a user who silently loses everything
+    // gets no signal — and a restructure is exactly where that gets lost.
     [Fact]
     public void AFolderOfUnreadableFilesIsNotReportedAsAFirstRun()
     {

@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-38. A connect that hangs — a firewall that DROPS rather than refuses — left the host in
+/// A connect that hangs — a firewall that DROPS rather than refuses — left the host in
 /// <see cref="HostingPhase.Registering"/> until the clock ran out, and it was then reported as
 /// <see cref="SessionFailure.RegistrationNotAnswered"/>: "the relay accepted the connection… the
 /// relay is reachable, so this is not your network."
@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>Both halves of that sentence are false here, and the second is the harmful one</b> — a
 /// dropping firewall <i>is</i> the user's network, and the message rules it out by name. That is
-/// BUG-37's class in its worst form: not merely blaming a third party, but exonerating the actual
+/// misattribution in its worst form: not merely blaming a third party, but exonerating the actual
 /// cause.
 /// </para>
 /// <para>
@@ -54,9 +54,9 @@ public class AHungConnectDoesNotExonerateTheNetworkTests
         Assert.DoesNotContain("relay is reachable", message, StringComparison.OrdinalIgnoreCase);
     }
 
-    // The ACCEPT side, and it is what stops this fix swallowing the case BUG-36 created. A socket
-    // that DID open and then heard nothing is still RegistrationNotAnswered, whose sentence is
-    // correct for it.
+    // The ACCEPT side, and it is what stops this fix swallowing the unanswered-registration case.
+    // A socket that DID open and then heard nothing is still RegistrationNotAnswered, whose
+    // sentence is correct for it.
     [Fact]
     public void ASocketThatOpenedAndWasNeverAnsweredIsStillAnUnansweredRegistration()
     {
@@ -83,7 +83,7 @@ public class AHungConnectDoesNotExonerateTheNetworkTests
     }
 
     // Separates "connected" from "able to send", which is the distinction a dropping firewall makes
-    // and the one BUG-38 hid.
+    // and the one the old "this is not your network" report hid.
     private sealed class ControllableTransport : ISessionTransport
     {
         public event Action<SessionFailure>? Failed;

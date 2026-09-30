@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// <b>A-2.35 IS NOT HERE. It is <see cref="TheMessageBoundRefusesRatherThanTruncatesTests"/>.</b>
-/// DMXENG-133: this class covered two criteria, which are two reasons to change, and was born over
+/// This class covered two criteria, which are two reasons to change, and was born over
 /// both size flags — a delta gate compares a new file against nothing, so it crossed them silently.
 /// </para>
 /// <para>
@@ -110,7 +110,7 @@ public sealed class BaseChatReachesEveryMemberTests
     //
     // Vetted REBUILDS the document from an enumerated member list, so a section added to
     // SessionContent and forgotten there is silently dropped on decode -- sender sets it, wire
-    // carries it, receiver never sees it, and nothing fails. Measured on DMXENG-118: there is no
+    // carries it, receiver never sees it, and nothing fails. Measured on PR #226: there is no
     // general guard for deletion, every section needs its own.
     //
     // ASSERTED WITH NO ROSTER PRESENT, for the reason the Entries guard is: a member's message

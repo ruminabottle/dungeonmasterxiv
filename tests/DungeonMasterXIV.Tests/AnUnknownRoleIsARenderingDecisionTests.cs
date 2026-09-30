@@ -11,7 +11,7 @@ namespace DungeonMasterXIV.Tests;
 /// <remarks>
 /// <para>
 /// <b><c>SessionRole</c> crosses the wire as an enum, so it can carry an int matching no defined
-/// case.</b> BUG-57 closed the text case — a role can no longer arrive as arbitrary text — but not
+/// case.</b> The text case is closed — a role can no longer arrive as arbitrary text — but not
 /// this one. A newer client, a role added later, or a corrupted value all arrive identically, and a
 /// <c>switch</c> with no arm for them throws inside a draw call, which is the worst place to find
 /// out.

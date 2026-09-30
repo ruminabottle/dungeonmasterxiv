@@ -27,8 +27,8 @@ public class CampaignListViewTests
     // THESE THREE REPLACE TESTS THAT ASSERTED THE OPPOSITE, and the reason is that the REQUIREMENT
     // changed rather than the behaviour drifting. R-1.6 used to call the stored code the campaign's
     // "preferred LABEL"; CampaignListView displayed it, and these tests pinned that faithfully. The
-    // Spec Owner corrected the requirement rather than the code — "the implementation is faithful
-    // and my requirement was wrong" — so the old assertions now encode a rule that no longer exists.
+    // requirement was corrected rather than the code — the implementation was faithful and the
+    // requirement wrong — so the old assertions now encode a rule that no longer exists.
     // Deleting a green test is normally the wrong move; here the test was the record of a mistake.
 
     // A-1.9k-3. The code must not appear as a name AT ALL, including in the form it is read aloud.

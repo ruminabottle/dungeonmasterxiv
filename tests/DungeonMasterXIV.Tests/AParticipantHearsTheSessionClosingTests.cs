@@ -9,10 +9,10 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>This is the receiving half of a notice the product has sent since DMXENG-58 and nobody read.</b>
+/// <b>This is the receiving half of a notice the product was already sending and nobody read.</b>
 /// Measured before this file: <c>SessionClosing</c> had zero occurrences under <c>Windows/</c> or
 /// <c>Plugin.cs</c>, so the host published a closing instant into silence. The countdown is a
-/// REQUIREMENT and not a courtesy (PRD-1:698) — "the session is closing" without "how long remains"
+/// REQUIREMENT and not a courtesy (A-1.16) — "the session is closing" without "how long remains"
 /// is the indefinite wait R-1.3c and R-1.8 both forbid.
 /// </para>
 /// <para>

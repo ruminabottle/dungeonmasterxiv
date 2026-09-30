@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-89: the relay's answer to a code request is applied only if it names the code that was asked.
+/// The relay's answer to a code request is applied only if it names the code that was asked.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>What was preventing it was <c>_inbox.Clear()</c> in <c>StopHosting</c>, and nothing else</b> —
 /// a guard in one method protecting an unchecked assumption in another, which is a coupling nobody
-/// declared. feature-engineer-3 deleted each of <c>StopHosting</c>'s five teardown steps in turn and
+/// declared. Each of <c>StopHosting</c>'s five teardown steps was deleted in turn and
 /// three left the suite green, that line among them. The mitigation is now tested; this pins the
 /// defect instead.
 /// </para>
@@ -26,7 +26,7 @@ namespace DungeonMasterXIV.Tests;
 /// <b>The stale answer is delivered while the host is registering a DIFFERENT code, rather than
 /// across a teardown.</b> That reaches the same defect without depending on <c>StopHosting</c>
 /// running first — which is the point, since the coupling is exactly what should not be relied on.
-/// It is also the shape BUG-90 says is reachable by another path.
+/// It is also the shape reachable by another path, <c>StartHosting</c> without <c>StopHosting</c>.
 /// </para>
 /// <para>
 /// <b>Both arms, because both had the gap.</b> A stale <c>CodeRefused</c> is worse than useless: it
@@ -43,7 +43,7 @@ public class ARegistrationAnswerIsForItsOwnRequestTests
 
     // THE PRECONDITION, asserted rather than assumed. If the host were not Registering, every
     // negative below would pass because the phase guard refused the frame -- not because the code
-    // was compared. That is the shape that made the first probe on BUG-85 worthless.
+    // was compared. That is the shape that made a first probe of admission addressing worthless.
     [Fact]
     public void TheHostIsRegisteringADifferentCodeBeforeAnyAnswerArrives()
     {

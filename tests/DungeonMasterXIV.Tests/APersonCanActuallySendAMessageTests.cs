@@ -11,8 +11,8 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THE REQUIREMENT THIS PINS IS REACHABILITY, NOT BEHAVIOUR.</b> DMXENG-121 shipped the send
-/// path and its refusal correctly, and every one of its tests still passed while <b>nothing outside
+/// <b>THE REQUIREMENT THIS PINS IS REACHABILITY, NOT BEHAVIOUR.</b> The send path and its
+/// refusal shipped correctly, and every one of their tests still passed while <b>nothing outside
 /// Core constructed a message</b> — nine types built, merged and green with no way for a player to
 /// use them. So what is asserted here is the existence of a call FROM the window layer, which no
 /// behavioural test of the message types can see.
@@ -29,7 +29,7 @@ namespace DungeonMasterXIV.Tests;
 /// TIDINESS.</b> <c>MessageComposeView</c>'s own documentation names <c>SessionMembership.Say</c>
 /// in prose. A scan that read the raw file would go green on that sentence alone — <b>the wiring
 /// could be deleted entirely and this test would still pass, which is the exact vacuous shape this
-/// ticket exists to close.</b> The precedent's helper strips only <c>/* */</c> blocks; these files
+/// file exists to close.</b> The precedent's helper strips only <c>/* */</c> blocks; these files
 /// document in <c>///</c> lines, so those are stripped too.
 /// <see cref="TheScanIgnoresDocumentationAndWouldNotPassOnACommentAlone"/> proves the stripping
 /// works rather than assuming it.

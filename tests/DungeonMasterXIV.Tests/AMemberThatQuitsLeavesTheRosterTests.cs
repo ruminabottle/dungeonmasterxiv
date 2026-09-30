@@ -15,10 +15,10 @@ namespace DungeonMasterXIV.Tests;
 /// <b>The two halves are two inbound paths with no code in common, and these tests are what keeps
 /// them apart.</b> A quit arrives as a member-authored document and REMOVES. A vanish arrives as a
 /// relay notice and RECORDS while the seat is held (A-1.28). Conflating them closes a false gap by
-/// breaking R-1.5a, which is the failure SQ-60 and SQ-62 both stopped.
+/// breaking R-1.5a, which is the failure A-1.16a rules out.
 /// </para>
 /// <para>
-/// <b>The quoted form of A-1.30 in DMXENG-60 is the STRUCK one</b>: <i>"assert the seat is
+/// <b>A-1.30's earlier wording is the STRUCK one</b>: <i>"assert the seat is
 /// held"</i> is satisfiable by doing nothing, and passed on a build where the host never learned of
 /// the kill at all. <b>So the vanish direction here does not assert an absence.</b> It asserts that
 /// the drop was RECORDED and the member is STILL ADMITTED — a do-nothing build fails the first half.
@@ -31,7 +31,7 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
     private const string Other = "JNKBCD";
 
     // A-1.16a ITSELF, end to end over the real wire: a member seals a departure, the host opens it
-    // on the path DMXENG-50 built, and the member is gone from the roster.
+    // on the member-content path (R-1.3k), and the member is gone from the roster.
     //
     // Fails if: the field is dropped by the codec, the wiring does not act on it, or removal is
     // deferred. "Immediately" is the criterion's own word -- there is no tick between the notice
@@ -53,7 +53,7 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
     // A-1.30, THE LINE. A member that vanishes sends nothing; the relay reports it and the host
     // RECORDS the drop while holding the seat.
     //
-    // ASSERTED AS A POSITIVE, NOT AN ABSENCE, because SQ-73 struck the absence form: "assert the
+    // ASSERTED AS A POSITIVE, NOT AN ABSENCE, because A-1.30 dropped the absence form: "assert the
     // seat is held" passes on a build where nothing happens at all. Here the drop must be RECORDED
     // and the member must still be admitted -- a do-nothing build fails the first clause.
     [Fact]
@@ -122,7 +122,7 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
 
     // THE DEPARTURE IS STILL RECORDED AS A RECEIPT. Fails if removal short-circuits the record: the
     // DM's surface reads receipts, and a member vanishing from the roster with nothing anywhere
-    // saying why is PR #86 finding 5 in a new place.
+    // saying why is a participant silently omitted, in a new place.
     [Fact]
     public void TheDepartureLeavesATraceRatherThanOnlyAnAbsence()
     {
@@ -194,8 +194,8 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
     // rebuild is never executed.
     //
     // ANOTHER PROBE FINDING. Setting Leaving = null inside Vetted left the suite green, because
-    // nothing put a roster and a departure in the same document. feature-engineer-2 warned about
-    // exactly this shape hours ago -- "if you test your section in isolation you will prove nothing;
+    // nothing put a roster and a departure in the same document. A warning hours earlier named
+    // exactly this shape -- "if you test your section in isolation you will prove nothing;
     // put a valid roster entry alongside it" -- and it was right.
     //
     // Fails if a future edit drops Leaving from the rebuild list. Today no producer sends both, so

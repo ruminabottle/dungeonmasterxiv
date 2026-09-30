@@ -21,7 +21,7 @@ public class CampaignStoreIdentityTests
     [Fact]
     public void TwoCampaignsMayShareAPreferredCodeAndRemainSeparateCampaigns()
     {
-        // The defect this whole chunk was flagged for. If anything keyed on the code, the second
+        // The defect this whole change was flagged for. If anything keyed on the code, the second
         // Create would collide with, overwrite or return the first.
         var store = NewStore(out _);
         var code = SessionCode.FromValid("BKD7RM");
@@ -118,8 +118,8 @@ public class CampaignStoreIdentityTests
     // ASharedLabelStillLinksAPersonAcrossTwoSessionCodes asserted the limitation that one
     // campaigns.json held every campaign, so a person appearing twice under the same label was
     // correlatable across two codes from a single file. It was written to fail when that was fixed,
-    // and it carried a note saying that its failure would be the notification rather than a
-    // regression. C10 is that fix, so the pin comes out and this asserts the new property instead.
+    // and carried a note saying its failure would be the notification rather than a regression.
+    // Per-campaign files are that fix; the pin comes out and this asserts the new property instead.
     //
     // What is asserted is A-1.11b: no single campaign file contains more than one session code.
     // Note what is deliberately NOT claimed. This does not deliver A-1.11 -- two files in one

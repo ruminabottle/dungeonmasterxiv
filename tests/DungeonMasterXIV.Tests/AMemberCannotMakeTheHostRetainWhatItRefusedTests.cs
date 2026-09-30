@@ -8,7 +8,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// DMXENG-137: <c>MemberContentReceipts.Record</c> bounds what it keeps from a member-authored
+/// <c>MemberContentReceipts.Record</c> bounds what it keeps from a member-authored
 /// payload, so a member cannot make the host retain something the host refused.
 /// </summary>
 /// <remarks>
@@ -103,7 +103,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
         Assert.True(Assert.Single(resources.MemberContent.Latest).Content.Leaving);
     }
 
-    // qa-1's probe F, preserved. Retention is REPLACED, not ACCUMULATED — a change that made it
+    // A review probe, preserved. Retention is REPLACED, not ACCUMULATED — a change that made it
     // accumulate would be worse than the defect this fixes.
     [Fact]
     public void RetentionIsStillReplacedRatherThanAccumulated()
@@ -241,7 +241,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
         //
         // THREE LAYERS, NOT TWO, AND EACH IS SEPARATELY PROVABLE. Mutate Retainable to keep part of
         // the refused payload and delete the Null trio to unshadow; the surviving assert NAMES what
-        // it caught. All three rows measured on DMXENG-140, not quoted:
+        // it caught. All three rows measured on PR #243, not quoted:
         //
         //     keep a 40-char PREFIX     -> Found:  "qqq"                the qqq assert alone
         //     keep the LAST 16 (SUFFIX) -> Found:  "Zq7-SENTINEL-4vX"   the sentinel alone
@@ -255,12 +255,12 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
         // ALWAYS QUOTE THE `Found:` LINE. Both searches are Assert.DoesNotContain, so the failure
         // line is byte-identical either way; the recipe that stood here cited a PREFIX mutation as
         // proof of the SENTINEL and survived three confirmations because nobody read which value
-        // fired (BUG-188 -- qa-2 caught it by ISOLATING, which reproducing could not).
+        // fired (it was caught by ISOLATING, which reproducing could not).
         //
         // WHAT EACH ONE BUYS, which is the part a reader cannot get from looking at them:
         //   the Null asserts  -- the fast, direct check that the three retained fields are empty.
         //   the sentinel      -- the coverage of refused content leaking into some OTHER stored
-        //                        field, and DMXENG-140 is what MADE that true rather than claimed.
+        //                        field, and the derived surface MADE that true rather than claimed.
         //                        It used to read "the ONLY coverage" while the surface it searched
         //                        was a hand-written list that omitted Roster and Entries entirely --
         //                        claiming reach it did not have. The surface is now DERIVED from the
@@ -311,7 +311,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     /// <c>DoesNotContain</c> assertions would pass while measuring nothing.
     /// </para>
     /// <para>
-    /// <b>It also catches the derivation that looks right and is not.</b> Measured on DMXENG-140:
+    /// <b>It also catches the derivation that looks right and is not.</b> Measured on PR #243:
     /// a reflect-then-<c>ToString</c> surface renders each container as its TYPE NAME, so no stored
     /// string reaches the search at all — and this control goes red on it, while the
     /// <c>DoesNotContain</c> assertions stay green and read as coverage.
@@ -334,7 +334,7 @@ public class AMemberCannotMakeTheHostRetainWhatItRefusedTests
     /// </summary>
     /// <remarks>
     /// <para>
-    /// DMXENG-140. This was a <c>string.Join</c> over six hand-named fields, which could only ever
+    /// This was a <c>string.Join</c> over six hand-named fields, which could only ever
     /// cover what its author knew about: <b>a stored field added later was silently not searched and
     /// the guard stayed green while covering less.</b> It had already drifted — carrying
     /// <c>RefusedSayings</c> while omitting <c>RefusedRosters</c> and <c>RefusedEntries</c>, and

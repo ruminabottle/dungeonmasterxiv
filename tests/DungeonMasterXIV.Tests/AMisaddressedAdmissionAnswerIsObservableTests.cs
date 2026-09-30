@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-87. An admission answer addressed to a different client is dropped — correctly — and said
+/// An admission answer addressed to a different client is dropped — correctly — and said
 /// nothing about it, so the one place D-11's addressing rule actually refuses something left no
 /// trace of having done so.
 /// </summary>
@@ -21,8 +21,7 @@ namespace DungeonMasterXIV.Tests;
 /// <b>DRIVEN THROUGH THE PUBLIC SURFACE, WHICH IS WHAT KEEPS THE PROOF ALIVE.</b> A coordinator, a
 /// real envelope on a real transport, a recording log. The alternative — reaching into
 /// <c>Drain</c> — would pin the proof to an internal shape, and this method was restructured twice
-/// in one evening. That is also the argument that retired this ticket's deferrability hold: a proof
-/// through the public surface survives a behaviour-preserving restructure.
+/// in one evening. A proof through the public surface survives a behaviour-preserving restructure.
 /// </para>
 /// <para>
 /// <b>The signal is driven by an ACTUALLY-DROPPED answer, not asserted alongside one.</b> Every case
@@ -102,7 +101,7 @@ public class AMisaddressedAdmissionAnswerIsObservableTests
     }
 
     // EVERY ANSWER TYPE, not the one that exposed it. Accepted, denied and lapsed are three arms of
-    // one switch, and a fix that reached only the arm in the bug report would leave two drops silent
+    // one switch, and a fix that reached only the arm that exposed it would leave two drops silent
     // behind a suite reporting success.
     [Theory]
     [InlineData(WireMessageType.JoinDenied)]
@@ -121,7 +120,7 @@ public class AMisaddressedAdmissionAnswerIsObservableTests
     }
 
     // D-8, and it is a requirement rather than tidiness: the addressee IS a public key, which is the
-    // cross-session identifier BUG-117 established the relay must not be able to link a person by.
+    // cross-session identifier the relay must not be able to link a person by.
     // A log line is the artifact most likely to be pasted into a bug report.
     [Fact]
     public void TheLineNamesNoKey()

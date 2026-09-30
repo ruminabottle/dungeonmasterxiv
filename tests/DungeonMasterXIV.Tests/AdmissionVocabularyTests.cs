@@ -9,7 +9,7 @@ public class AdmissionVocabularyTests
 {
     private static readonly SessionCode Code = SessionCode.FromValid("BKD7RM");
 
-    // The defect this chunk exists to prevent, and the one the consumer found rather than the
+    // The defect this file exists to prevent, and the one the consumer found rather than the
     // author. Fails if: acceptance carries only one key. Without the HOST's key the joiner is
     // admitted, routed, and permanently unable to derive anything — which presents as an encryption
     // bug rather than a missing field, so it would be looked for in the wrong place.

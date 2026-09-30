@@ -12,7 +12,7 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>SHARED SO THE SPLIT COSTS NO ASSERTIONS.</b> DMXENG-133 separates A-2.34 (the message reaches
+/// <b>SHARED SO THE SPLIT COSTS NO ASSERTIONS.</b> The split separates A-2.34 (the message reaches
 /// a different member) from A-2.35 (the bound refuses rather than truncates), and <b>both need a
 /// real session</b>: A-2.35's host arm asserts that an over-long arrival is not rebroadcast, which
 /// can only be said about a host with somebody to rebroadcast to. Copying these helpers into two
