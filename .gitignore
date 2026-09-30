@@ -1,11 +1,5 @@
-# Claude Code multi-role team harness — local orchestration, not part of the plugin.
-# To version the *system* while still ignoring the transient queue state, replace the
-# single line below with the three lines in the block under it.
+# Local Claude Code settings; not part of the plugin.
 .claude/
-
-# .claude/team/queues/*/inbox/*.md
-# .claude/team/queues/*/wip/*.md
-# .claude/team/queues/*/done/*.md
 
 # --- .NET / Dalamud (this repo had no .gitignore; delete if you keep your own) ---
 bin/
