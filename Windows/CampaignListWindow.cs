@@ -119,7 +119,7 @@ public sealed class CampaignListWindow : Window
             ImGui.TextWrapped(row.Detail);
 
             // Was a direct DeleteUnreadable call: one click, irreversible, on the row the user can
-            // reason about least (BUG-9). Same confirmation as the readable rows above, because the
+            // reason about least. Same confirmation as the readable rows above, because the
             // point is that they have already taught the user what deleting looks like here.
             if (_prompt.IsAwaiting(row.FileName))
             {

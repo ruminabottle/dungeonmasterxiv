@@ -135,9 +135,9 @@ internal sealed class SessionEndingView
                 : $"This session recorded nothing to keep. {remaining:mm\\:ss}");
 
         // A-2.23a: accepting must not present an act the build does not perform. It performs one
-        // now -- DMXENG-123 shipped the writer, so the disclosure that stood in for it is gone
-        // rather than left to age into a lie. The log is gone a second after the click, so this is
-        // the only moment the write can happen.
+        // now -- the export writer shipped, so the disclosure that stood in for it is gone rather
+        // than left to age into a lie. The log is gone a second after the click, so this is the
+        // only moment the write can happen.
         if (ImGui.Button("Keep"))
         {
             SessionExport.Produce(offer, _keepOrLose.Export);

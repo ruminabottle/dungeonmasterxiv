@@ -62,7 +62,7 @@ public sealed class ConfigWindow : Window
         "This box is full and will not take any more. If you were still typing, the rest did not go "
         + "in - use a shorter name.";
 
-    // A-1.2z (BUG-141). Says WHY the box is disabled and WHAT will be used instead, because the
+    // A-1.2z. Says WHY the box is disabled and WHAT will be used instead, because the
     // failure this replaces was not silence -- it was a contradiction the user had to resolve. It
     // names the campaign as where a name lives, so the reader knows the action that changes it.
     //
@@ -190,17 +190,17 @@ public sealed class ConfigWindow : Window
         // 32-character Devanagari name is 192 bytes and would have been truncated at the boundary
         // this box exists to let the user cross deliberately.
         var campaign = _currentCampaign();
-        // A-1.2z (BUG-141) and SQ-87 (#217) both live in this one control, in DIFFERENT STATES:
-        // the disable applies with NO campaign, the carried-over pre-fill applies WITH one. Both
-        // sit in DrawNameBox because the rule that joins them -- an offer is only made where it can
-        // be accepted -- is one decision, and splitting it would let the halves drift apart.
+        // A-1.2z and A-2.32's carried-over pre-fill both live in this one control, in DIFFERENT
+        // STATES: the disable applies with NO campaign, the carried-over pre-fill applies WITH one.
+        // Both sit in DrawNameBox because the rule that joins them -- an offer is only made where
+        // it can be accepted -- is one decision, and splitting it would let the halves drift apart.
         var typed = DrawNameBox(campaign, settings.DisplayNameAlias, characterName);
 
         // Deliberately the SAME call the join uses, not a re-derivation of it. Two expressions that
         // are meant to agree drift; one that is shared cannot disagree with itself. A-1.2g asserts
         // on what LEAVES THE CLIENT rather than on what this line says, which is the right way
         // round — this is a preview, and a preview is not evidence.
-        // A-1.2v (BUG-92). Said BEFORE the "you will join as" line, because it is about the box the
+        // A-1.2v. Said BEFORE the "you will join as" line, because it is about the box the
         // user is still looking at rather than about the outcome -- and it is separate from the
         // unusable-name warning below on purpose: a full box is not an invalid name. What is in the
         // field may parse perfectly; the point is that the field stopped taking input and until now
@@ -226,14 +226,14 @@ public sealed class ConfigWindow : Window
     /// The "Name others see" box and, without a campaign, the explanation of why it is disabled.
     /// </summary>
     /// <remarks>
-    /// Its own method because <c>DrawDisplayNameSetting</c> reached 89 lines against a cap of 60
-    /// once BUG-141 landed. CODE moved rather than the explanation trimmed: the reasoning below is
+    /// Its own method because <c>DrawDisplayNameSetting</c> reached 89 lines against a cap of 60 once the
+    /// no-campaign disable landed. CODE moved rather than the explanation trimmed: the reasoning below is
     /// what stops the next reader re-enabling a box that cannot store, which is the whole defect.
     /// </remarks>
     /// <param name="campaign">The open campaign, or null when there is none.</param>
     /// <param name="characterName">The name used when nothing is stored.</param>
     /// <param name="carriedOverDefault">
-    /// A name stored before campaign-scoping (SQ-87), offered as a pre-fill.
+    /// A name stored before campaign-scoping, offered as a pre-fill.
     /// </param>
     /// <returns>What the box holds after the user has had their turn with it.</returns>
     private string DrawNameBox(Campaign? campaign, string? carriedOverDefault, DisplayName characterName)
@@ -243,30 +243,30 @@ public sealed class ConfigWindow : Window
         // >>> THE OFFER IS ONLY MADE WHERE IT CAN BE ACCEPTED (A-2.33's twin) -- AND THE DECISION
         // IS NO LONGER MADE HERE. <<<
         //
-        // It moved into CampaignDisplayName.ToPreFill (DMXENG-120), where it is a linkable boolean
-        // rule and can be asserted BEHAVIOURALLY. While it was a ternary in this method the only
-        // available guard was an assertion on this file's TEXT -- and qa-1 showed that a text
-        // assertion is defeated by ONE EXTRA LINE that leaves the asserted string untouched.
+        // It moved into CampaignDisplayName.ToPreFill, where it is a linkable boolean rule and can
+        // be asserted BEHAVIOURALLY. While it was a ternary in this method the only available guard
+        // was an assertion on this file's TEXT -- and a text assertion was shown to be defeated by
+        // ONE EXTRA LINE that leaves the asserted string untouched.
         //
         // What this window still owes is the WIRING: that it consults the helper at all. That part
         // genuinely is under the renderer ceiling and is still asserted textually.
         var typed = CampaignDisplayName.ToPreFill(campaign, carriedOverDefault, characterName);
 
-        // A-1.2z (BUG-141). WITH NO CAMPAIGN THIS BOX USED TO TAKE INPUT AND KEEP NONE OF IT, and the
+        // A-1.2z. WITH NO CAMPAIGN THIS BOX USED TO TAKE INPUT AND KEEP NONE OF IT, and the
         // "You will join as" line below then showed the character name instead. The two disagreed with
         // no explanation, which is worse than saying nothing: a box showing one name above a preview
         // showing another reads as a broken PREVIEW rather than as a refusal to store, so the user was
         // misinformed about which half was wrong.
         //
-        // DISABLED RATHER THAN ANNOUNCED, because the Spec Owner ruled that A CONTROL OFFERED WHERE IT
-        // CANNOT WORK IS ITSELF THE DEFECT. Announcing the discard while still accepting keystrokes
-        // would leave the box taking text it will never keep -- the same defect with a caption. A
-        // disabled box shows the name that WILL be used, so the box and the preview cannot disagree.
+        // DISABLED RATHER THAN ANNOUNCED, because A CONTROL OFFERED WHERE IT CANNOT WORK IS ITSELF
+        // THE DEFECT (R-1.3e). Announcing the discard while still accepting keystrokes would leave
+        // the box taking text it will never keep -- the same defect with a caption. A disabled box
+        // shows the name that WILL be used, so the box and the preview cannot disagree.
         //
-        // NOTHING IS STORED AND NOTHING NEW CAN BE. A-2.31 as amended by SQ-112 permits exactly ONE
-        // globally-stored name-shaped value, read only by the pre-fill path; giving the no-campaign
-        // name somewhere to live is the cheap fix and it is the forbidden one. This remedy needs no
-        // storage at all, which is why it is a telling.
+        // NOTHING IS STORED AND NOTHING NEW CAN BE. A-2.31 permits exactly ONE globally-stored
+        // name-shaped value, read only by the pre-fill path; giving the no-campaign name somewhere
+        // to live is the cheap fix and it is the forbidden one. This remedy needs no storage at
+        // all, which is why it is a telling.
         if (noCampaign)
         {
             ImGui.BeginDisabled();

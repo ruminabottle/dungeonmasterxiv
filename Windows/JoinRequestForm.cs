@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Windows;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="JoinFlowView"/> by DMXENG-75, and it is a PURE MOVE.</b> No behaviour
+/// <b>Split out of <see cref="JoinFlowView"/>, and it is a PURE MOVE.</b> No behaviour
 /// changes here and no criterion is claimed. <c>JoinFlowView.Draw</c> was 121 lines against a
 /// 60-line method block — grandfathered by the delta gate, which forbids making it worse — and
 /// R-1.3g's client half has to add to that surface.
@@ -20,7 +20,7 @@ namespace DungeonMasterXIV.Windows;
 /// <see cref="JoinFlowView"/> had — the code box, the name box and the seed marker — belonged to
 /// this form and to nothing else; what remains there reads the attempt and renders it, holding no
 /// state at all. A view that owns no input and a form that owns nothing but is the same split
-/// PR #89 made when the DM's side left for <see cref="AdmissionPromptView"/>.
+/// made when the DM's side left for <see cref="AdmissionPromptView"/>.
 /// </para>
 /// <para>
 /// <b>Whether this may be shown at all is NOT decided here.</b> R-1.3h — a hosting client offers no
@@ -31,7 +31,7 @@ namespace DungeonMasterXIV.Windows;
 /// </remarks>
 internal sealed class JoinRequestForm
 {
-    // A-1.2v (BUG-92). SAID IN BOTH PLACES A NAME IS TYPED, deliberately: a joiner who never opens
+    // A-1.2v. SAID IN BOTH PLACES A NAME IS TYPED, deliberately: a joiner who never opens
     // settings meets this box and no other, so a message that lived only in ConfigWindow would leave
     // the criterion unmet on the surface most people actually use — the same argument A-1.2n makes
     // for the name control itself being here.
@@ -107,7 +107,7 @@ internal sealed class JoinRequestForm
         // remembering to keep them in step.
         var willSend = DisplayName.OrNone(_nameEntry);
 
-        // A-1.2v (BUG-92): the field stopping is told, not left to be noticed. SEPARATE from the
+        // A-1.2v: the field stopping is told, not left to be noticed. SEPARATE from the
         // line below, which is about whether the name can be SENT -- a full box is not an
         // invalid name, and what is in it may resolve perfectly. Both can be true at once and
         // they answer different questions, so neither is an else-branch of the other.
@@ -121,7 +121,7 @@ internal sealed class JoinRequestForm
             : $"That name cannot be sent, so they will see \"{DisplayName.Unstated}\". Letters, "
               + "digits, spaces, apostrophes and hyphens work.");
 
-        // JoinFlowCode.Accepts, not SessionCode.TryParse inline (DMXENG-15). The decision about
+        // JoinFlowCode.Accepts, not SessionCode.TryParse inline. The decision about
         // what this field takes is Core's, so a test can call the same thing this button calls
         // instead of re-deriving it and claiming the two agree in a comment.
         if (ImGui.Button("Request to join") && JoinFlowCode.Accepts(_codeEntry, out var code))
@@ -132,7 +132,7 @@ internal sealed class JoinRequestForm
             //
             // Sent from the same resolved value that was SHOWN, not re-resolved here: a second
             // call would be a second chance to disagree with the line above.
-            // R-1.5b's CARRYING half, and the line DMXENG-1 exists for: until now the only
+            // R-1.5b's CARRYING half, and the line that makes relink reachable: until now the only
             // production caller passed two arguments, so claimedParticipantId was null on every
             // join the shipped build made and relink was unreachable however much of it existed.
             //
