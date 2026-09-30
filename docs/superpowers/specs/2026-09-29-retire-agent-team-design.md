@@ -19,7 +19,7 @@ Success means:
 - `.claude/` is gitignored by the outer repo and is **its own git repo with no remote**. It holds uncommitted changes (brief, directives, bugs 178/180, several handoffs).
 - `.claude/skills/`: 9 role skills. `deployment-manager/` also holds `engineering-standards.md` (26,154 lines) and `product-directives.md` (2,386 lines).
 - `.claude/team/product/`: `brief.md`, `prd/` (PRD-0, 1, 2, 3, 7, `README.md`, `SQ-LEDGER.md`), `policy/relay-service-policy.md`, `research/` (2 notes).
-- `.claude/worktrees/`: 10 role worktrees registered with the outer repo (3 on detached HEADs), plus `sim/`, which has 52 uncommitted entries.
+- `.claude/worktrees/`: 10 role worktrees registered with the outer repo (3 on detached HEADs), plus `sim/`, an empty plain directory. The nested repo's pending changes (52 `git status` entries) are what step 1 commits.
 - The outer repo has 72 registered worktrees (most are prunable scratchpad checkouts) and 225 local branches not merged into `origin/main`.
 - Nothing in the build, tests or tools reads `.claude/`. Three code comments mention it.
 - Code comments carry about 866 requirement and ticket IDs across 262 files. These are **out of scope** here (see sub-project 2).
@@ -61,12 +61,12 @@ The root `RELAY-SERVICE-POLICY.md` stays where it is, since the README links to 
 Archive destination: `~/archive/dungeonmasterxiv-agent-team-2026-09-29/`.
 
 0. **Nothing running.** List the running `claude` processes with their working directories, plus scheduled tasks and crons, and present them to the user. The user stops the role sessions. Nothing is killed by the implementer, and no step below starts until only the implementing session remains.
-1. **Freeze.** In the nested `.claude` repo, commit all pending changes (`chore: final state before retiring the agent team`) and tag `agent-era-final`. Inspect `worktrees/sim`'s changes, then save them to `sim.patch` (including untracked files).
+1. **Freeze.** In the nested `.claude` repo, commit all pending changes (`chore: final state before retiring the agent team`) and tag `agent-era-final`.
 2. **Keep the code work safe.**
    - Keep all local branches. None are deleted.
    - Write a `git bundle` of every commit reachable from a `.claude/worktrees/*` HEAD that is on no local branch and not on `origin`. That covers at least the 3 detached-HEAD QA worktrees.
    - Then `git worktree remove` each `.claude/worktrees/*` entry and `git worktree prune` the stale scratchpad entries.
-3. **Move.** Move `.claude/` (nested `.git`, `team/`, `skills/`, `roles/`, the bundle and `sim.patch`) to the archive destination. Recreate `.claude/` in the project containing only `settings.local.json`.
+3. **Move.** Move `.claude/` (nested `.git`, `team/`, `skills/`, `roles/`, and the bundle) to the archive destination. Recreate `.claude/` in the project containing only `settings.local.json`.
 4. **Outer repo tidy.** Replace the "multi-role team harness" comment block in `.gitignore`. `.claude/` stays ignored.
 
 **Not touched:** Jira (DMXENG), GitHub PRs and remote branches. Open agent-era PRs are listed for the user to decide on.
@@ -88,7 +88,7 @@ Archive destination: `~/archive/dungeonmasterxiv-agent-team-2026-09-29/`.
 
 ## §4 Verification
 
-- **Spec coverage:** a script extracts every requirement ID from `prd/*.md` and checks that each one appears in a new spec or on an explicit "dropped" list. There are no `TBD`s in the spec files.
+- **Spec coverage:** a script extracts every requirement, criterion and directive ID (`R-`, `A-`, `D-`) from `prd/PRD-*.md`, `brief.md` and `product-directives.md`, and checks that each one appears in an area spec, either in its body or in that spec's closing `## Retired IDs` list with a one-line reason. There are no `TBD`s in the spec files.
 - **Archive integrity:** the tag `agent-era-final` exists, `git -C <archive> status` is clean, and `git bundle verify` passes.
 - **Project clean:** `.claude/` contains only `settings.local.json`, and `git worktree list` shows only the main checkout.
 - **Build unaffected:** `dotnet build` and `dotnet test` on the branch report the same Total, passed and skipped counts as the pre-change baseline taken on `main` at the start.
