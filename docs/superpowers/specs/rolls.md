@@ -452,10 +452,11 @@ echoing nothing by default fails, and echoing everything by default fails.
   keep a second window in view to follow their table. Mechanics are terse and are the part worth never
   missing; dialogue would dominate a main chat log that has no tab to contain it.
 - **The plugin never writes the player's game UI configuration** (product-overview D-1): not by
-  default, not on first run, not as an opt-in. The only way to isolate plugin output into its own tab
-  is to rename and refilter one of the player's two configurable tabs, which appropriates a scarce
-  resource the player owns. An opt-in is not offered either, because a consent dialog for a mechanism
-  nobody has executed promises something the product cannot keep.
+  default, not on first run, and not yet as an opt-in. The only way to isolate plugin output into its
+  own tab is to rename and refilter one of the player's two configurable tabs, which appropriates a
+  scarce resource the player owns. An opt-in is not offered yet, because a consent dialog for a
+  mechanism nobody has executed promises something the product cannot keep. An opt-in may follow once
+  the mechanism has been run in the game, not on the strength of reading its API.
 - **The echo prints with a chat type the player's own filter UI can select**, so a player can build
   their own tab with the game's UI. Otherwise "you can make your own tab" is advice the product cannot
   honour.
