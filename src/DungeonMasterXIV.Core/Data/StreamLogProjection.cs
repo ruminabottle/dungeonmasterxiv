@@ -46,7 +46,7 @@ namespace DungeonMasterXIV.Data;
 /// lands first, the tripwire is green on the kinds of the day, the next PR turns CI red, and fixing
 /// it would require <b>that</b> PR to edit <b>this</b> file — a cross-boundary edit that both
 /// boundaries were drawn to prevent, manufactured by the ordering rather than by anyone's mistake.
-/// <b>The ordering is held at merge time; two engineers agreeing it between their own
+/// <b>The ordering is the merger's to hold; two engineers agreeing it between their own
 /// PRs is a decision neither of them owns.</b>
 /// </para>
 /// </remarks>

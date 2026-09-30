@@ -6,8 +6,8 @@ namespace DungeonMasterXIV.Data;
 /// The settings themselves, as a plain serializable type with no Dalamud dependency.
 /// <c>Configuration</c>, over in the plugin project, is the thin adapter that hands this to
 /// Dalamud's config mechanism — it cannot be named in a cref from here, because this project
-/// deliberately cannot see it. The skeleton stores window state and nothing else; the session,
-/// campaign and character data are not part of it.
+/// deliberately cannot see it. The skeleton stores window state and nothing else; the product's
+/// session, campaign and character data are not part of it.
 /// </summary>
 public sealed class PluginSettings
 {
@@ -140,7 +140,7 @@ public sealed class PluginSettings
     /// </para>
     /// <para>
     /// <b>A READER WHO GREPS THIS AND CONCLUDES THE CAMPAIGN-SCOPING WAS REVERTED IS READING IT
-    /// EXACTLY AS WAS PREDICTED, AND IS WRONG.</b> A-2.31 forbids a display name persisting
+    /// REASONABLY, AND IS WRONG.</b> A-2.31 forbids a display name persisting
     /// outside a campaign and now carries ONE exception: this value. <b>Exactly one, whose only
     /// permitted reader is the pre-fill path, and which never travels as itself</b> (A-2.32).
     /// <c>Campaigns.CampaignDisplayName.Or</c> — the send path — has no overload that can see it,

@@ -136,7 +136,7 @@ public sealed class SessionLogOffer
     /// </summary>
     /// <remarks>
     /// <b>A lapse is a decline, not a third outcome</b> — product-overview Session panel item 4 has an
-    /// ignored offer lose the log, so an <c>Expired</c> case is a distinction the product does not make.
+    /// ignored offer lose the log, so <c>Expired</c> would be a distinction the product does not make.
     /// </remarks>
     /// <returns>True when this call is what closed it.</returns>
     public bool ElapseTo(long nowUtcTicks)

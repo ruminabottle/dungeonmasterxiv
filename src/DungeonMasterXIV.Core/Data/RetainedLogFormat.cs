@@ -26,7 +26,7 @@ namespace DungeonMasterXIV.Data;
 /// That prohibition survives A-2.16's rewrite unchanged and is the live half of A-2.16.
 /// </para>
 /// <para>
-/// <b>There is no owner filter, and that is correct rather than missing (A-2.16).</b> A
+/// <b>There is no owner filter, and that is correct rather than missing (A-2.16a).</b> A
 /// participant who may not see a result never RECEIVES one under D-13 (A-2.15), so it was never in
 /// this client's log to be removed — <i>"the old row implied a FILTER and there is nothing to
 /// filter."</i> A filtering writer would have to be handed a view wider than its owner's in order to
@@ -53,7 +53,7 @@ public static class RetainedLogFormat
     /// <b>A written format without a version cannot be changed safely once a file exists on a
     /// user's machine</b> — a reader meeting an unfamiliar layout has no way to tell "written by a
     /// newer build" from "corrupt", and must guess. Costing one line now buys the ability to know
-    /// later, which is the whole reason the format mattered more than the wiring.
+    /// later, which is the whole reason this PR was held for the format rather than for the wiring.
     /// </remarks>
     public const int FormatVersion = 1;
 

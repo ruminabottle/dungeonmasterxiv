@@ -38,7 +38,7 @@
   <!--
     BouncyCastle: the managed EC implementation a platform key-generation failure forced us to.
     Measurement showed the .NET-native paths CANNOT do EC at all through the Wine prefix's provider
-    - rows 1, 2, 4, 5 and 6 all fail with 0x80090029/0x80090027 - so this is D-11 preference (b),
+    - the probed native paths all fail with 0x80090029/0x80090027 - so this is D-11 preference (b),
     reached only because (a) was eliminated by measurement rather than disfavoured by taste.
 
     PINNED EXACTLY, and that is a condition of the approval rather than a style preference: this ships
