@@ -1,107 +1,16 @@
 <Project>
 
   <!--
-    The TLS fence. The relay's container smoke test has to dial wss:// at a throwaway self-signed
-    certificate, so it disables certificate validation on its client socket. That line is the risk,
-    not the certificate: a client that accepts any certificate has no transport authentication and
-    still LOOKS protected, which is worse than plain ws:// and is what D-11 exists to prevent.
-
-    Before that smoke test this repository contained no such line anywhere. That is the only moment
-    fencing one off is free, so it is fenced now rather than after the second copy exists. It is the
-    most copy-pasted line in .NET networking, and the next person debugging a self-hosted relay
-    would otherwise find it in our own test project and carry it into the plugin — where it would
-    silently undo the transport guarantee RelayEndpoint's TLS requirement is there to make.
-
-    A comment saying "test only" is not a control; it is the thing that gets copied along with the
-    line. This is a control, and the next paragraph is the rest of the sentence.
-
-    WHAT IT ACTUALLY CATCHES, AND WHAT IT DOES NOT. It matches the NAMES below, textually, line by
-    line. It does not understand C#, so a POSITIONAL callback — an SslStream constructed with a
-    validation delegate passed as an argument rather than assigned to a named property — is NOT
-    caught, and neither is a delegate reached through a variable or a helper. Closing that needs a
-    Roslyn analyser with the semantic model; it is not a longer token list, and adding tokens will
-    keep looking like progress while the hole stays exactly where it is.
-
-    Say so here, because a guard people trust further than it reaches is the failure mode — worse
-    than the gap itself. What this buys is the copy-paste route, which is the one that actually
-    happens.
-
-    More edges, recorded rather than fixed:
-
-      - The allowlist's granularity is the PROJECT. All of DungeonMasterXIV.Relay.Tests is unfenced,
-        not just the one method that needs it, so a second test there could reach for the same line —
-        including the process-global ServicePointManager form, which would affect every test in the
-        run. A file-level allowlist would match the actual intent.
-
-      - The comment stripper is a REGEX, not a C# lexer. It protects raw, verbatim, ordinary and
-        character literals so that a comment marker inside one cannot open a fake comment, which is
-        the failure that matters: an over-eager strip removes real code and the fence goes SILENT
-        over it. Measured against nine specimens (see TlsBypassFenceTests) — a naive strip of just
-        '/\*[\s\S]*?\*/' blinds the fence on four of them, this one on none.
-
-        WHAT IT DOES NOT MODEL, and the shape to look for is an ODD number of double-quote
-        characters inside an interpolated hole — a char literal '"' is the way it happens — which
-        leaves the regex's quote pairing misaligned and can expose a '/*'. Everything from there to
-        the next '*/' anywhere in the file is then stripped, and any bypass in that span goes
-        unseen. Nested raw string literals ('""""') misalign it the same way. Both were demonstrated
-        by construction rather than by reasoning.
-
-        Counted on 2026-08-27, against the files rather than from memory:
-
-          - Nested raw string literals: NONE.
-          - Interpolated holes containing quotes: THREE, all benign because their quote count is
-            EVEN. Relay/Transport/ProtocolVersionGate.cs (shipped relay source),
-            Relay.Tests/ConnectionRolesAreASetTests.cs, and
-            Release.Tests/EveryFieldTheManifestCarriesIsComparedTests.cs.
-          - And the direct measurement, which is what actually settles it: a bypass line was
-            inserted at EVERY line position of EVERY .cs file in the solution — 19,035 insertion
-            points across 176 files — and stripped with this pattern. It survived all of them.
-            Nothing here is blind.
-
-        Do not restate that as "the stripper leaves these files unchanged". It does not: they hold
-        '//' and '///' comments, which it removes correctly. Unchanged is the wrong claim and it is
-        the one that sounds right.
-
-        This paragraph previously said the construct did not appear here and to re-check before
-        writing one. It appeared three times while that sentence sat above it. So do not
-        read the count as current — read the SHAPE, and if you are adding a double-quote inside an
-        interpolated hole, count them.
-
-        NOT ENFORCED BY A TEST, deliberately, and the attempt is worth recording so nobody rebuilds
-        it. Appending a bypass to each file and checking it survives the strip does NOT work: the
-        danger depends on the bypass's POSITION relative to the fake comment span, and a file whose
-        own '*/' closes that span before the appended line lets it survive. That test passes against
-        a file constructed to blind the fence, so it is a test that cannot fail. The position-aware
-        version — checking that marker-free code lines are still present after stripping — does
-        detect it and flags none of this solution's files, but it FAILS on any file holding a
-        genuine '/* */' block comment, because a real comment's interior lines legitimately vanish.
-        Telling a genuine block opener from one inside a string literal is the same lexing question
-        this stripper only approximates. A guard that false-FAILs on a '/* */' comment documenting
-        the rule would be worse than this paragraph.
-
-      - %(Compile) is silent on anything that is not compiled C# from disk, notably source-generated
-        files. There are no generators in this solution today.
+    TLS fence: any project other than the allowlisted one fails the build if its code names a
+    certificate-validation callback. It matches names textually; a positional or indirect callback is not caught.
   -->
 
   <PropertyGroup>
-    <!--
-      An ALLOWLIST of the projects permitted to hold a bypass, as in the relay's D-15 check: naming
-      what is forbidden goes stale the first time somebody adds a project, and the new project
-      passes cleanly. Naming what is permitted means a project added tomorrow is scanned by default.
-    -->
+    <!-- The one project permitted to disable certificate validation. -->
     <TlsValidationBypassPermittedIn>DungeonMasterXIV.Relay.Tests</TlsValidationBypassPermittedIn>
   </PropertyGroup>
 
-  <!--
-    The comment stripper. Alternation order is the whole design: the four literal forms are tried
-    FIRST and captured, so '$1$2$3$4' puts them back; the two comment forms are tried last and
-    capture nothing, so they substitute to empty and vanish. That is how a comment gets removed and
-    a string containing "wss://" or "/*" survives, without needing a MatchEvaluator MSBuild cannot
-    give us.
-
-    Kept as a property rather than inlined so it can be read. A guard nobody can read is a guard
-    nobody maintains.
-  -->
+  <!-- Removes comments but keeps literals: the four literal forms are captured and restored by '$1$2$3$4'. -->
   <PropertyGroup>
     <TlsFenceCommentPattern>("""[\s\S]*?""")|(@"(?:[^"]|"")*")|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|/\*[\s\S]*?\*/|//[^\r\n]*</TlsFenceCommentPattern>
   </PropertyGroup>
@@ -111,43 +20,17 @@
           Outputs="%(Compile.Identity)"
           Condition="'$(MSBuildProjectName)' != '$(TlsValidationBypassPermittedIn)'">
 
-    <!--
-      ONE BATCH PER FILE, and the false failure below turned on it. The scan used to flatten every
-      line of every file into one list, so a line had no way to ask whether it sat inside a block
-      comment — and an interior line of plain indented prose was scanned as though it were code,
-      failing the build for a comment that told people NOT to do the thing.
-
-      Batching per Compile item means the file's own text is in hand, so the question is answered
-      once for the file instead of guessed at per line.
-    -->
+    <!-- One batch per source file. -->
     <ItemGroup>
       <_ScannedSourceLine Remove="@(_ScannedSourceLine)" />
     </ItemGroup>
 
-    <!--
-      THE DECISION. Comments removed, literals kept. A token that survives this is in code or in a
-      string, and both of those fire: a bypass name in a string literal is either reflection reaching
-      for it or documentation that should have been a comment, and the conservative reading is the
-      safe one for a guard whose failure mode is silence.
-    -->
+    <!-- The file's text without comments. Literals are kept, so a callback name inside a string also fails. -->
     <PropertyGroup>
       <_CodeOutsideComments>$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('%(Compile.FullPath)')), '$(TlsFenceCommentPattern)', '$1$2$3$4'))</_CodeOutsideComments>
     </PropertyGroup>
 
-    <!--
-      Reads the source rather than the reference graph, unlike ForbidDalamud and NoDurableStorage:
-      a bypass arrives as a line somebody typed, not as a dependency somebody added.
-
-      EVERY NAME HERE IS ONE YOU ASSIGN A CALLBACK TO IN ORDER TO STOP VALIDATING. None of them is a
-      substring of a hardening spelling, and that is a property to re-check before adding one:
-      CheckCertificateRevocation was in this list, and it is a contiguous substring of
-      CheckCertificateRevocationList — the property you set TRUE to make revocation checking
-      STRICTER. So the guard failed the build on code that hardened TLS, with a message asserting
-      the author had disabled it. An instrument that produces false FAILs is worse than one that
-      cannot fail: the first person to hit it concludes the guard is noise, and a noisy guard gets
-      relaxed. The weakening spelling is deliberately NOT matched as a bare name; catching it would
-      mean matching an assignment of false, and a token list cannot see an assignment.
-    -->
+    <!-- Names assigned a callback to stop validation. None may be a substring of a hardening name (e.g. CheckCertificateRevocationList). -->
     <ReadLinesFromFile File="%(Compile.FullPath)" Condition="$(_CodeOutsideComments.Contains('RemoteCertificateValidationCallback'))
                                                           Or $(_CodeOutsideComments.Contains('ServerCertificateCustomValidationCallback'))
                                                           Or $(_CodeOutsideComments.Contains('ServerCertificateValidationCallback'))
@@ -156,12 +39,7 @@
       <Output TaskParameter="Lines" ItemName="_ScannedSourceLine" />
     </ReadLinesFromFile>
 
-    <!--
-      The line is quoted, not decided on. The decision was made above, over the whole file; this
-      only picks which line to show the reader, and the comment prefixes are here so it does not
-      pick a comment line in a file that also holds a real bypass. Do not mistake this for a second
-      gate — widening it cannot unfence anything, and narrowing it cannot fence anything.
-    -->
+    <!-- Picks the offending line to quote; the decision was made above. -->
     <Error Condition="!$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('//'))
                   And !$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('/*'))
                   And !$([System.String]::Copy('%(_ScannedSourceLine.Identity)').TrimStart().StartsWith('* '))

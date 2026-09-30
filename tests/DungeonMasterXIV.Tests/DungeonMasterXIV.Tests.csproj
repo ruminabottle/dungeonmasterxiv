@@ -11,10 +11,6 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <!-- Dalamud persists config with Newtonsoft, so the round-trip test uses the same serializer.
-         Referenced as a package rather than from the Dalamud folder: nothing under Dalamud may
-         enter this assembly's reference graph. -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <!--

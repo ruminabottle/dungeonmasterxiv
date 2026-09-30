@@ -11,24 +11,6 @@ namespace DungeonMasterXIV.Tests;
 /// <summary>
 /// A real WebSocket server, for tests that need an actual socket rather than a fake transport.
 /// </summary>
-/// <remarks>
-/// <para>
-/// <b>Nothing about the protocol is written here.</b> <see cref="HttpListener"/> performs the
-/// upgrade handshake and <see cref="WebSocket"/> does the framing — this type only starts a
-/// listener and moves bytes.
-/// </para>
-/// <para>
-/// The first version of this file hand-rolled the handshake, and its <c>Sec-WebSocket-Accept</c>
-/// computation was wrong: the client refused every connection. Kept as a note because the failure
-/// is the point — a test harness that reimplements a protocol can be wrong in the same direction as
-/// nothing else, and then it is the harness under test rather than the code. Checked against RFC
-/// 6455's published example, which is how the error was found rather than guessed at.
-/// </para>
-/// <para>
-/// This is not the relay. It proves the plugin's transport speaks WebSocket to something real;
-/// whether the relay behaves is the relay's own suite's job.
-/// </para>
-/// </remarks>
 internal sealed class TestWebSocketServer : IAsyncDisposable
 {
     private readonly HttpListener _listener = new();
