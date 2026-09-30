@@ -31,8 +31,8 @@ namespace DungeonMasterXIV.Data;
 /// "(A-2.31, D-8)" — but A-2.31's <i>"outside a campaign"</i> qualifier is the one clause that does
 /// NOT govern here, and I had written a contested reading as though it were settled. Raising it
 /// found a genuine conflict: <b>A-2.24 required the <c>Character (Player)</c> parenthetical IN an
-/// export while R-2.7 states that parenthetical IS a display name.</b> The Spec Owner ruled that
-/// A-2.24's export clause <b>could not be satisfied by any conforming build, and struck it.</b> The
+/// export while R-2.7 states that parenthetical IS a display name.</b> A-2.24's export clause
+/// <b>could not be satisfied by any conforming build, and was struck.</b> The
 /// outcome here was right; the reason given for it was half wrong.
 /// </para>
 /// </para>

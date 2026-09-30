@@ -14,11 +14,11 @@ namespace DungeonMasterXIV.Data;
 /// disk. Without this composition the delete control would reach the campaign and leave the log
 /// behind, and the shipped copy would assert a property the build lacks — <b>which misleads a user
 /// who cannot check, about deletion, in a privacy notice.</b> The remedy is to make the sentence
-/// true, not to edit it: the copy is R-1.7a verbatim and changing it is the Spec Owner's.
+/// true, not to edit it: the copy is R-1.7a verbatim and changing it means changing R-1.7a.
 /// </para>
 /// <para>
 /// <b>DELIBERATELY NOT A METHOD ON <see cref="Campaigns.CampaignStore"/>.</b> A campaign persists a
-/// roster, which is metadata; a log is what people said and did. DMXENG-103 rules that <b>a roll log
+/// roster, which is metadata; a log is what people said and did. R-2.12 rules that <b>a roll log
 /// is NOT campaign data</b> and that moving one into the other is a PRODUCT decision rather than an
 /// implementation one. Teaching the campaign store to own logs would settle that by writing it. Two
 /// stores, one caller that deletes from both.

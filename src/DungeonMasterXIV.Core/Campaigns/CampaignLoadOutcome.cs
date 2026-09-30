@@ -2,7 +2,7 @@ namespace DungeonMasterXIV.Campaigns;
 
 /// <summary>
 /// How the campaign document arrived. First run and failed-to-load are separate values because
-/// the standards require a user who lost everything to get a different signal from one who never
+/// a user who lost everything must get a different signal from one who never
 /// had anything.
 /// </summary>
 public enum CampaignLoadOutcome

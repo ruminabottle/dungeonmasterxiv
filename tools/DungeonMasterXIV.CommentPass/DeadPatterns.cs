@@ -40,6 +40,8 @@ public static class DeadPatterns
         new(@"\bticket"),
         new(@"\b(?:the|that|this) (?:bug|ticket|ruling|escalation|brief)\b"),
         new(@"[Bb]ug ?\d+"),
+        new(@"(?i)\bthe (?:standards|PRD)\b"),
+        new(@"\bC\d{1,2}\b"),
     ];
 
     /// <summary>Every match of any pattern in the set, with its one-based line.</summary>

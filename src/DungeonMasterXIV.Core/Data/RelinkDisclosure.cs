@@ -6,7 +6,7 @@ namespace DungeonMasterXIV.Data;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>ENGINEERING-AUTHORED UNDER R-1.7a's CONSTRAINTS (SQ-38, D-8, ruled SQ-67). NOT a placeholder,
+/// <b>ENGINEERING-AUTHORED UNDER R-1.7a's CONSTRAINTS (D-8). NOT a placeholder,
 /// and not product-ruled copy.</b> R-1.7a governs exactly the strings it QUOTES; this is not one of
 /// them, so it is mine to write and it is the shipping text. <b>Anyone wanting to change it is
 /// arguing with the constraints below, not filling in a blank.</b>
@@ -40,8 +40,8 @@ public static class RelinkDisclosure
 
     /// <summary>The first, non-destructive step. Opens the warning rather than deleting.</summary>
     /// <remarks>
-    /// <b>A-1.9c: a one-click irreversible delete FAILS, to the standard BUG-9 set.</b> BUG-9 was
-    /// that the file a user understood LEAST was destroyed on one click while a readable one asked
+    /// <b>A-1.9c: a one-click irreversible delete FAILS, to the standard an earlier defect set.</b> In
+    /// it, the file a user understood LEAST was destroyed on one click while a readable one asked
     /// twice. A stored participant id is squarely in the first category — it is a number the player
     /// never chose and cannot read — so it gets the friction, not less of it.
     /// </remarks>

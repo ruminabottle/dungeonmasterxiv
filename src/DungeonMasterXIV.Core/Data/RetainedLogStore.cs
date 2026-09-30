@@ -20,7 +20,7 @@ namespace DungeonMasterXIV.Data;
 /// <para>
 /// <b>THE SENTENCE IS NOT MINE TO CHANGE.</b> <c>ConfigWindow.cs</c> carries the note <i>"R-1.7a,
 /// verbatim … If this needs to change, R-1.7a changes first."</i> So building the control is
-/// engineering; altering the wording is the Spec Owner's. This type exists so the sentence can stay
+/// engineering; altering the wording means altering R-1.7a. This type exists so the sentence can stay
 /// exactly as it is.
 /// </para>
 /// <para>

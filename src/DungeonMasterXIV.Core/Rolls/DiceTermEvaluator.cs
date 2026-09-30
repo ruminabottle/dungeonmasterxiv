@@ -92,7 +92,7 @@ internal static class DiceTermEvaluator
         return true;
     }
 
-    // BUG-144: the bare-x case is now asked as a QUESTION ABOUT THE MODIFIER rather than recognised
+    // The bare-x case is now asked as a QUESTION ABOUT THE MODIFIER rather than recognised
     // by comparing against a value, so an identical-looking value the user typed cannot answer yes.
     private static bool Explodes(DiceModifiers modifiers, RolledDie die) =>
         modifiers.ExplodeOnMaximum

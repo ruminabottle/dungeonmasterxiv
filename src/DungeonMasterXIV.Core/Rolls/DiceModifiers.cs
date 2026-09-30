@@ -51,7 +51,7 @@ public sealed record DiceModifiers
     /// not known until the die size is.
     /// </summary>
     /// <remarks>
-    /// <b>A FLAG RATHER THAN A MAGIC COMPARISON, because the magic one was writable (BUG-144).</b>
+    /// <b>A FLAG RATHER THAN A MAGIC COMPARISON, because the magic one was writable.</b>
     /// This used to be carried as <c>Explode = RollComparison(Equal, 0)</c>, which a user can type:
     /// <c>1d6x0</c> and <c>1d6x=0</c> both produced that exact value and so exploded on the maximum,
     /// when they ask to explode on a zero and a die never shows one. That is the collision this

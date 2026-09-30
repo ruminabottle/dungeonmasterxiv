@@ -21,20 +21,20 @@ public enum SessionLogOfferOutcome
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>IT HOLDS THE LOG SO THAT TEARDOWN DOES NOT HAVE TO WAIT.</b> SQ-115 ruled that the offer does
-/// NOT block teardown, and that what binds instead is that <i>the log survives until the choice
+/// <b>IT HOLDS THE LOG SO THAT TEARDOWN DOES NOT HAVE TO WAIT.</b> The offer does NOT block
+/// teardown; what binds instead is that <i>the log survives until the choice
 /// resolves</i> — <i>"a keep-or-lose choice presented after the thing is gone is not a choice."</i>
-/// The ruling named three ways to arrange that and left the choice to engineering; this is the
+/// R-2.12 names three ways to arrange that and leaves the choice to engineering; this is the
 /// third, <b>a hold on one object rather than on the teardown sequence</b>. The session can unwind
 /// underneath an open offer, because the entries were copied into the log this object holds.
 /// </para>
 /// <para>
 /// <b>DECLINING BY INACTION IS DECLINING, AND THAT IS WHY THE LOG IS ACTUALLY DROPPED.</b> Under
-/// decision 4 an ignored offer means the log dies with the session, and A-1.2z is not breached
-/// because <b>the offer is what makes the discard not-silent</b>. So <see cref="Decline"/> and a
-/// lapse both release the log, and the prompt facts stop being readable — a build that kept the
-/// entries around after a decline would satisfy every assertion about the OUTCOME while leaving the
-/// thing the outcome was about still sitting there.
+/// product-overview Session panel item 4 an ignored offer means the log dies with the session, and
+/// A-1.2z is not breached because <b>the offer is what makes the discard not-silent</b>. So
+/// <see cref="Decline"/> and a lapse both release the log, and the prompt facts stop being readable
+/// — a build that kept the entries around after a decline would satisfy every assertion about the
+/// OUTCOME while leaving the thing the outcome was about still sitting there.
 /// </para>
 /// <para>
 /// <b>THE WINDOW IS TAKEN, NOT CHOSEN HERE</b> (R-1.3c: no unbounded wait, anywhere). The closing
@@ -46,14 +46,14 @@ public enum SessionLogOfferOutcome
 /// <para>
 /// <b>ONE LOG, AND A SECOND IS NOT EXPRESSIBLE</b> (A-2.16). There is no overload, no collection
 /// parameter, and nothing here reaches for a log it was not handed. That is the live half of A-2.16
-/// after SQ-109, and it is asserted by shape rather than by behaviour, <b>because a merging overload
-/// passes every behavioural test written against the single-log one.</b>
+/// after its rewrite, and it is asserted by shape rather than by behaviour, <b>because a merging
+/// overload passes every behavioural test written against the single-log one.</b>
 /// </para>
 /// <para>
 /// <b>WHAT KEEPING DOES NOT DO, AND IT STILL DOES NOT DO IT</b> (A-2.23a).
 /// <see cref="Keep"/> resolves the choice and hands back the log; <b>it writes nothing.</b>
-/// A-2.23a is now satisfied by the FIRST of its dispositions rather than the third — DMXENG-123
-/// shipped the writer, so the disclosure that stood in for it is gone and the caller performs the
+/// A-2.23a is now satisfied by the FIRST of its dispositions rather than the third — the writer
+/// has shipped, so the disclosure that stood in for it is gone and the caller performs the
 /// act at the moment of the click.
 /// <b>Both halves of A-2.23a fail separately:</b> silently writing nothing fails, and writing a
 /// file carrying a participant identifier fails A-1.11a — <b>which is why this type still holds no
@@ -135,8 +135,8 @@ public sealed class SessionLogOffer
     /// Ends the window when <paramref name="nowUtcTicks"/> has reached it, and does nothing before.
     /// </summary>
     /// <remarks>
-    /// <b>A lapse is a decline and not a third outcome</b> — decision 4 rules that an ignored offer
-    /// loses the log, so an <c>Expired</c> case would be a distinction the product does not make.
+    /// <b>A lapse is a decline, not a third outcome</b> — product-overview Session panel item 4 has an
+    /// ignored offer lose the log, so <c>Expired</c> would be a distinction the product does not make.
     /// </remarks>
     /// <returns>True when this call is what closed it.</returns>
     public bool ElapseTo(long nowUtcTicks)
@@ -156,7 +156,7 @@ public sealed class SessionLogOffer
     /// <b>THE LOG IS THE WRONG THING TO GUARD ON, BECAUSE A KEEP DELIBERATELY LEAVES IT HELD</b> —
     /// that is what makes <see cref="LineCount"/> readable after keeping, which callers rely on.
     /// So <see cref="Held"/> still passed after a keep, and <see cref="Decline"/> would destroy the
-    /// kept log and rewrite the outcome to say the player had declined (BUG-182). <b>Whether the
+    /// kept log and rewrite the outcome to say the player had declined. <b>Whether the
     /// choice has been ANSWERED and whether the log is still HERE are two different questions</b>,
     /// and only the first one decides this.
     /// </remarks>

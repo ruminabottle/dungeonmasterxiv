@@ -25,7 +25,7 @@ public class DeadPatternsTests
     public static TheoryData<string> Review => new()
     {
         "Decision 10", "QA", "since #120", "at 2719162", "the bug above", "that ticket", "this ruling",
-        "dmx-bug17", "the human",
+        "dmx-bug17", "the human", "the standards", "the PRD", "THE PRD", "C19",
     };
 
     [Theory, MemberData(nameof(Dead))]

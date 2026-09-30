@@ -37,7 +37,7 @@ internal sealed class RollCursor(string text)
     /// <c>2d6 d20</c> must not read as <c>2d6</c> with a drop; the space ends the term.
     /// This exists so the modifier loop can ask that question, and nothing else should need it.
     /// <para>
-    /// <b>NAMED FOR WHAT IT TESTS, NOT FOR THE CASE THAT PROMPTED IT (DMXENG-96 item 5).</b> It was
+    /// <b>NAMED FOR WHAT IT TESTS, NOT FOR THE CASE THAT PROMPTED IT.</b> It was
     /// <c>NextIsSpace</c>, which under-states a <c>char.IsWhiteSpace</c> check that also catches a
     /// tab, a newline and a non-breaking space. A-2.3c reaches <b>U+0020 only</b>, so the wider
     /// behaviour is this build's choice rather than a requirement — <b>the rename makes the name

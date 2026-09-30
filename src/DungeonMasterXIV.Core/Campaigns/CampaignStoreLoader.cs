@@ -9,7 +9,7 @@ namespace DungeonMasterXIV.Campaigns;
 /// file and classify what would not read.
 /// </summary>
 /// <remarks>
-/// Migration lives here because the standards put it on the load path — the only point that knows
+/// Migration lives here because it belongs on the load path — the only point that knows
 /// what shape arrived. Nothing else in the store may write the old file, and nothing outside this
 /// type needs to know it ever existed.
 /// </remarks>
