@@ -277,9 +277,8 @@ when it ends.** "It didn't work" is not an answer a person can act on.
 
 | Wait | Bounded by | When it ends without success, the player is told |
 | --- | --- | --- |
-| Reaching the relay | short, seconds | The relay could not be reached, distinct from the next rows (R-1.8) |
+| Reaching the relay | short, seconds | The relay could not be reached, distinct from the next two (R-1.8) |
 | Looking up the session code | short, seconds | That code is not an active session. Not "denied", not "failed" |
-| Version check at connect | immediate | Which side is out of date (R-1.7b) |
 | Waiting for the DM to answer | the window R-1.3l sets | The request lapsed. The DM never answered and may be mid-encounter. You can ask again |
 | Host loss mid-session | the grace window R-1.4 sets | The session ended |
 | DM closes the session deliberately | the closing window R-1.3g sets | The session ended |
@@ -328,7 +327,7 @@ when it ends.** "It didn't work" is not an answer a person can act on.
   learns what is about to be sent on their behalf. Settings may hold a persistent default that
   pre-fills the join-flow field; they may not replace it. The general rule: *a control that protects
   against something the user does not know about must appear on the path they are already taking.*
-- Persistence across sessions and per-campaign aliases belong to the rolls area (rolls R-2.5); the
+- Persistence across sessions and per-campaign aliases belong to the rolls area (rolls R-2.17); the
   minimum here is see it, change it, before it is sent.
 - **The limitation is stated in the UI** and never papered over (product-overview D-8).
 - **The name is never what the DM authenticates on.** It is self-declared, unverified and trivially
@@ -983,7 +982,8 @@ D-8, the last even with encryption.
   contract versions into a refusal at connect; and the relay will be updated while old plugins are
   still in the wild, which is the normal state of any deployed client/server pair. Without it an
   outdated plugin fails in whatever way the change happens to break it.
-- A version refusal is its own ending under R-1.3c: neither relay-unreachable nor code-not-active.
+- This is a fourth ending under R-1.3c: a connection attempt that fails on version is neither
+  relay-unreachable nor code-not-active, and must say so in its own words.
 - The contract only grows (product-overview D-14): an old build keeps working against a new one, which
   is why D-14 is a product property and not only a coding standard.
 
@@ -1088,7 +1088,11 @@ D-8, the last even with encryption.
   and A-1.13b fails any second statement of it. So A-1.7c (the shipped paragraph is byte-identical to
   the ruled one) and A-1.13b cannot both pass for this paragraph. Whether the copy should reference
   R-1.9 instead, or carry the full list, is a product decision; it blocks A-1.7c and A-1.13b holding
-  together, and any settings copy change.
+  together, and any settings copy change. The same pinned copy says "names are never written to a
+  log": true today, because the retained log writes peer codes, but it becomes false if the DM's
+  retained log uses its permission to hold names (product-overview D-8, rolls R-2.12).
+- Open question: a version refusal is a fourth ending under R-1.3c (R-1.7b); its timing bound is not
+  specified, so it has no row in R-1.3c's table.
 - Open question: admission creates a participant for every admitted joiner (A-1.9f), and without
   relink (A-1.9g) a returning person arrives as a new participant, so a campaign's stored roster grows
   by one entry per join. That is the duplicate growth R-1.5d forbids for a resumed roster. Which answer
@@ -1122,3 +1126,4 @@ D-8, the last even with encryption.
   not a product property), A-1.9k-5-note (into A-1.9k-5), A-1.9m-note and A-1.9m-vacuity (into
   A-1.9m), A-1.12a-note and A-1.12a-note-2 (into A-1.12a), A-1.16a-note (into A-1.16a), A-1.24-note
   (into A-1.24), A-1.27-r (into A-1.27), A-1.30-note (into A-1.30).
+- A-1.2w-note: became A-1.2x.

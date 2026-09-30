@@ -118,9 +118,8 @@ A deliberate, load-bearing design choice; see D-8.
 2. **The relay observes every session by construction.** End-to-end encryption (D-11) makes "no
    identifier links a player across two session codes" a property of the architecture rather than a
    promise about our logging. The relay carries ciphertext. What it can still observe must be stated
-   plainly: that a connection exists, roughly when and how much traffic, from what address, and the
-   display name sent in the clear at join (D-8). Encryption hides content, not the fact of a
-   conversation.
+   plainly; session-layer R-1.9 is the single statement of that list. Encryption hides content, not
+   the fact of a conversation.
 
 ## Principles
 
@@ -131,9 +130,11 @@ and **no chat**. The only thing it writes to the game client is a local echo lin
 chat log, which nobody else can see. The plugin never hooks, detours or otherwise drives the game's
 chat-send path, whatever triggers it.
 
-The plugin also **never writes the player's game UI configuration**, including chat-tab names and
-filters. The echo prints to a filterable channel. A player who wants a dedicated tab builds it with
-the game's own UI.
+The plugin also **does not write the player's game UI configuration**, including chat-tab names and
+filters: not by default, not on first run, and not yet as an opt-in, because an opt-in for a
+mechanism nobody has executed is a promise the product cannot keep. An opt-in may follow once the
+mechanism has been run in the game (rolls R-2.13). The echo prints to a filterable channel. A player
+who wants a dedicated tab builds it with the game's own UI.
 
 Reason: anything that acts for the player risks their account and stops this being a tracker.
 Dalamud has no supported API for sending chat to other players, so any "send chat" feature would
@@ -194,7 +195,8 @@ built yet, and it is not a non-goal.
 The product is modelled on **Foundry VTT core, never a Foundry system.** Foundry core ships no game
 rules; Pathfinder 2e, D&D 5e and the rest are separate packages layered on top. That split is this
 rule's line. Taken from core: the four-level access model (D-13), the combat tracker's shape, the
-four roll modes (Public, GM, Blind, Self), and the Assistant co-DM role. Not taken, and it is most
+roll modes (Public, GM, Blind; Foundry's fourth, Self, was not taken, see rolls R-2.15), and the
+Assistant co-DM role. Not taken, and it is most
 of what Foundry is: scenes, tokens, canvas, vision, lighting, walls, movement. FFXIV is the map.
 
 Reason: encoding one system's rules picks a game for our users and takes on its content licensing.
@@ -251,8 +253,10 @@ product refuses to build.
 - **Length is counted in grapheme clusters**, so the limit does not vary by script. The limit is 32,
   and the rule behind the number is that it accepts any name FFXIV itself permits, because the
   character name is the default.
-- **Reserved names:** `DM`, `GM`, `Dungeon Master` and `Game Master` may not be taken as a
-  participant display name, matched case-insensitively after whitespace normalisation. A blocklist
+- **Reserved names:** `DM`, `GM`, `Dungeon Master` and `Game Master` may not be chosen as an alias,
+  matched case-insensitively after whitespace normalisation. The reservation reaches only a chosen
+  alias: a player whose actual character name is one of them is accepted, because a character name
+  comes from the game and imitates nobody (session-layer R-1.3j). A blocklist
   leaks (`D.M.`, homoglyphs), so reserved names cover the obvious case cheaply, and the structural
   host marker (the session role, assigned by the session and never by the sender) carries the
   guarantee: in every rendering, including the one-line echo, a member cannot produce a line that
@@ -293,8 +297,8 @@ human decision point is already there.
 No UI offers a confirmation control for something the other party cannot take part in: a checkbox
 affirming a comparison only one side could make is a false control that records success.
 
-Reason: a relay without encryption sees character names, source addresses and session membership, so
-it could link a player across two codes using none of our identifiers. Without E2E, D-8 protects a
+Reason: without encryption the relay could read session content, so it could link a player across
+two codes using none of our identifiers. Without E2E, D-8 protects a
 user from every other participant and from nobody else.
 
 ### D-12 A testing channel is not a release
@@ -416,12 +420,13 @@ Relink is defined there and applied here.
 - A relink under a new key **replaces and clears** any stale seat for that player. A player is never
   locked out by their own ghost.
 
-**Durations.** The player seat window and the host-loss grace window are both **five minutes** and
-both settable. Five minutes gives a DM one FFXIV relaunch, and "you have five minutes" is easy to
-hold in mind mid-combat. The admission prompt lapses after **fifteen minutes**, long enough to survive
-one combat. If DMs routinely miss prompts, the fix is making the prompt more visible, not a longer
-deadline. A closing session gives participants **sixty seconds**, not configurable. The host sets
-the value and sends it, and every participant's displayed countdown comes from what was sent.
+**Durations.** The player seat window and the host-loss grace window are both **five minutes**, and
+one settable value serves both (session-layer A-1.27). Five minutes gives a DM one FFXIV relaunch,
+and "you have five minutes" is easy to hold in mind mid-combat. The admission prompt lapses after
+**fifteen minutes**, long enough to survive one combat. If DMs routinely miss prompts, the fix is
+making the prompt more visible, not a longer deadline. A closing session gives participants **sixty
+seconds**, not configurable. The host sets the value and sends it, and every participant's displayed
+countdown comes from what was sent.
 
 **A timer that infers intent from inaction runs only while the action was possible.** The seat clock
 pauses while the host is unreachable. Otherwise it would be measuring the host's outage and evicting
@@ -731,8 +736,8 @@ chat, which renders only text, so the panel cannot live there. Game chat is an e
     person behind the speaker.** Roles (Host, Assistant, Player) are therefore rendered some other way
     (a badge, prefix or column), including in the roster. The host is rendered distinctly by session
     role, so a member cannot produce a line that looks host-authored (D-8). Assistant is not Host.
-    The parenthetical is never dropped: not in a compact view, not in an export, not in a narrow
-    window.
+    The parenthetical is never dropped from a rendered surface: not in a compact view, not in a
+    narrow window. An export carries no names at all (D-20).
 13. **The host sequences and timestamps every message.** One order and one clock give everyone the
     same log, so two exports of a session agree on order and time, and a "message removed" marker
     lands in the same place for every reader. If the DM is unreachable, conversation stops; that is

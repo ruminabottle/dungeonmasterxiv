@@ -172,8 +172,8 @@ the feature is that the players do not know the thing is there.
 
 - Open question: should a participant control more than one combatant — a player running a companion
   or summon? Common in Pathfinder. Not decided; blocks nothing built so far.
-- Open question: does initiative persist between encounters in the same session, or reset? Assume
-  reset until decided.
+- Open question: does initiative persist between encounters in the same session, or reset? Not
+  decided.
 - Open question: does a DM-controlled combatant need to be attributable to a specific character the
   DM is playing, for a session-log entry to read well? Also raised in the rolls area. Blocks the
   session-log area.

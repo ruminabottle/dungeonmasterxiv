@@ -241,8 +241,9 @@ names are aliasable and need not be distinct (session-layer R-1.3e).
 - **Host specifically, not "anyone DM-ish".** The host is the sole author of shared state
   (product-overview D-3); an Assistant runs the table but is not that. Marking an Assistant as host
   makes the marker mean something vaguer than it claims.
-- In `Renn (DM)` the parenthetical is a role; in `Eli (Tuka)` it is a display name. The asymmetry is
-  correct: the host needs a marker, a player needs identification.
+- Open question: how the host's own speaker line renders is not decided. A parenthetical role such as
+  `Renn (DM)` would contradict the one-meaning rule for parentheses below; a player's line keeps
+  `Eli (Tuka)`, the person behind the speaker.
 - **Parentheses carry exactly one meaning product-wide: the person behind the speaker.** The roster
   changes to make that true, not the message format: roles are not rendered in parentheses
   (session-layer R-1.3f, A-1.13d). A marker that must beat a convention every session reinforces only
@@ -478,9 +479,11 @@ echoing nothing by default fails, and echoing everything by default fails.
 - **A-2.9b** The echo prints with a chat type that appears as a selectable option in the game's
   chat-filter UI. A build printing with a type the player cannot filter on fails. Needs the game
   running.
-- **A-2.9c** The plugin writes no game UI configuration, at any time, by any route: no setting of any
-  UI configuration option, not on first run, not behind a setting, not behind a consent dialog. A build
-  offering the player a choice to let it do so fails.
+- **A-2.9c** The plugin writes no game UI configuration by any route: no setting of any UI
+  configuration option by default, not on first run, not behind a setting, not behind a consent
+  dialog. A build offering the player a choice to let it do so fails while the mechanism has not been
+  run in the game, because an opt-in for a mechanism nobody has executed is a promise the product
+  cannot keep. An opt-in offered after that run is R-2.13's reopen, not a failure of this criterion.
 - **A-2.9d** By default, rolls and membership events echo, and narration and conversation do not. **On a
   fresh install with nothing configured**, a roll and a join/leave produce echo lines; a narration line
   and a **public** chat message do not. Public matters: a private message does produce an echo line
@@ -763,7 +766,7 @@ collection semantics (ordering, filtering, paging, retention in memory).
 
 - A-2.9a (the echo lands in its own tab, not ordinary Echo-channel output): superseded by A-2.9b and
   A-2.9c. The only mechanism that could isolate it rewrites the player's game UI configuration, which
-  is forbidden (product-overview D-1).
+  the plugin does not do, by default or yet as an opt-in (product-overview D-1, R-2.13).
 - Annotation rows folded into the criterion or requirement they annotate, with their product content
   kept there and their history dropped: A-2.35-note (into A-2.35 and R-2.19), A-2.41-note (into A-2.41
   and R-2.19), A-2.9d-note (into R-2.13, A-2.9f and A-2.9g), A-2.24-note (into R-2.7 and A-2.24),

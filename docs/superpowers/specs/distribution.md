@@ -33,8 +33,8 @@ which channel it publishes on, where the manifest lives, and when a build become
   enabled testing builds.
 - **Two gates, and they are independent.** The unadvertised URL is one. The testing flag is the
   other. Neither is sufficient; both are cheap.
-- Moving to the stable channel is the act that makes this a release, and it is approve-blocking
-  under `product-overview D-12` until both of that principle's conditions are met.
+- Moving to the stable channel is the act that makes this a release (`product-overview D-12`);
+  official listing is not being pursued.
 
 **Acceptance criteria**
 - **A-7.1a** A Dalamud client with testing builds enabled, given the manifest URL, is **offered** the
@@ -110,7 +110,7 @@ instance of `product-overview D-16` (a build's API level is one of the values D-
 
 If the value cannot be read from the built manifest, the release **stops**. The fallback is "the
 build did not produce what was expected", a real failure, rather than "a human has not told us a
-number", a queue.
+number".
 
 ### R-7.4 A release is a versioned artifact, not a branch
 
@@ -144,11 +144,11 @@ exactly one place a human authors it, and the tag and the assembly version are n
   timestamp, or a fresh GUID would give two different values from two different tags and pass this
   while advertising something that is not the version at all. The property is that the advertised
   version **is the tag's version**, so the check must compare the advertised value against the tag,
-  not the two releases against each other. Verified in-repo: `machine`.
+  not the two releases against each other.
 - **A-7.2b** A tag that disagrees with the version the artefact reports causes the release to stop,
   rather than producing a manifest. Passing an arbitrary tag string does not yield exit 0 and a
-  generated manifest. Verified: `machine`, forced-failure case.
-- **A-7.6** The installed plugin's version matches what the manifest advertised. Verified: `in-game`.
+  generated manifest, in a forced-failure case.
+- **A-7.6** The installed plugin's version matches what the manifest advertised, checked in-game.
 
 ## Out of scope
 
@@ -190,3 +190,4 @@ other anti-abandonment guarantee (`product-overview` Non-goals section, "No mone
   the built assembly it links to") it could not fail against the defect it existed to catch — a
   manifest and an assembly can both independently be typed as `0.0.0.1`, match each other exactly,
   and still describe a broken release.
+- A-7.2a-note: folded into A-7.2a.

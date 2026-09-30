@@ -1,7 +1,7 @@
 # Retire the agent team; move from PRDs to specs
 
 **Date:** 2026-09-29
-**Status:** Approved design, awaiting implementation plan
+**Status:** Implemented 2026-09-30
 **Scope:** Sub-project 1 of 2 ("the switch"). Sub-project 2, the code-comment rewrite, gets its own spec later.
 
 ## Goal
