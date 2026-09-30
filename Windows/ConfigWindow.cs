@@ -226,8 +226,8 @@ public sealed class ConfigWindow : Window
     /// The "Name others see" box and, without a campaign, the explanation of why it is disabled.
     /// </summary>
     /// <remarks>
-    /// Its own method because <c>DrawDisplayNameSetting</c> reached 89 lines against a cap of 60 once
-    /// the disable landed. CODE moved rather than the explanation trimmed: the reasoning below is
+    /// Its own method because <c>DrawDisplayNameSetting</c> reached 89 lines against a cap of 60 once the
+    /// no-campaign disable landed. CODE moved rather than the explanation trimmed: the reasoning below is
     /// what stops the next reader re-enabling a box that cannot store, which is the whole defect.
     /// </remarks>
     /// <param name="campaign">The open campaign, or null when there is none.</param>
@@ -245,8 +245,8 @@ public sealed class ConfigWindow : Window
         //
         // It moved into CampaignDisplayName.ToPreFill, where it is a linkable boolean rule and can
         // be asserted BEHAVIOURALLY. While it was a ternary in this method the only available guard
-        // was an assertion on this file's TEXT -- and a text assertion is defeated by ONE EXTRA
-        // LINE that leaves the asserted string untouched.
+        // was an assertion on this file's TEXT -- and a text assertion was shown to be defeated by
+        // ONE EXTRA LINE that leaves the asserted string untouched.
         //
         // What this window still owes is the WIRING: that it consults the helper at all. That part
         // genuinely is under the renderer ceiling and is still asserted textually.

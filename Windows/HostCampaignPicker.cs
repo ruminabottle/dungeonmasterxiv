@@ -46,10 +46,10 @@ internal sealed class HostCampaignPicker
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>Substitute nothing and do not "improve" it (R-1.7a).</b> Three claims, one per sentence:
-    /// resumption will not restore participants; the state is empty AND temporary; the campaign is
-    /// intact — a missing feature, not lost data. Punctuation is not load-bearing; the claims are,
-    /// and all three must survive any re-wrapping.
+    /// <b>Substitute nothing and do not "improve" it (R-1.7a).</b> Three claims, one per sentence,
+    /// each a product ruling: resumption will not restore participants; the state is empty AND
+    /// temporary; the campaign is intact — a missing feature, not lost data. Punctuation is not
+    /// load-bearing; the claims are, and all three must survive any re-wrapping.
     /// </para>
     /// <para>
     /// <b>It is here rather than in a release note because THIS IS WHERE THE FALSE BELIEF FORMS.</b>

@@ -70,8 +70,8 @@ public sealed class Plugin : IDalamudPlugin
         _hostingCampaign = new HostingCampaign(_campaignStore);
         _configWindow = SettingsWindowFor(characterName);
         // ONE adapter, TWO consumers. The coordinator needs it so that a roster entry dropped on
-        // the way in is observable to a developer rather than silent -- the codec has said
-        // so since #120, but nothing production-side was listening until this line existed.
+        // the way in is observable to a developer rather than silent -- the codec already reports a
+        // dropped entry, but nothing production-side was listening until this line existed.
         var sessionLog = new SessionTransportLog(log);
         _relayTransport = new WebSocketSessionTransport(sessionLog);
         // A-1.23/A-1.27: the ONE settable value, read from settings and validated on the way out
@@ -153,7 +153,7 @@ public sealed class Plugin : IDalamudPlugin
     /// <c>Plugin</c>'s constructor is 91 lines against a 60 capacity — a breach that predates this
     /// method. Putting new code inline would have taken it to 97.
     /// <b>Declining to enlarge a breach is not the same as repairing one</b>: the other 91 lines
-    /// are not this chunk's to touch, but where its own lines go is its to choose.
+    /// are not this change's to touch, but where its own lines go is its to choose.
     /// </para>
     /// </remarks>
     private Func<DisplayName> NameWeSendAs(Func<DisplayName> characterName) =>

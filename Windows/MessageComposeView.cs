@@ -58,9 +58,9 @@ internal sealed class MessageComposeView
     /// <b>Built here rather than threaded from the composition root, and the reason is
     /// measured.</b> <c>SessionWindow</c>'s constructor takes FIVE parameters against a block of
     /// six — margin 1 — so threading an evaluator through it would put a window constructor at
-    /// parameter margin 0 to deliver a dice feature, which is the condition the
-    /// <c>SessionWiring</c> split removed from <c>SessionCoordinator</c>. <c>SystemDieRoller</c> is
-    /// the production roller and takes no configuration, so there is nothing here for a composition
+    /// parameter margin 0 to deliver a dice feature, the zero margin the <c>SessionWiring</c> split
+    /// removed from <c>SessionCoordinator</c>'s class lines. <c>SystemDieRoller</c> is the
+    /// production roller and takes no configuration, so there is nothing here for a composition
     /// root to decide. <b>A-2.1's independent-check seam is <c>IDieRoller</c> and it is
     /// untouched</b> — the evaluator still takes one, and its own tests still supply their own.
     /// </remarks>
@@ -143,7 +143,7 @@ internal sealed class MessageComposeView
     /// <para>
     /// <b>The wording is READ, never composed here.</b> A-2.3b and A-2.3c constrain how a result
     /// reads and <c>RollSurvival</c> already words it; inventing a sentence at this call site would
-    /// re-derive a criterion this surface is fenced away from.
+    /// re-derive a criterion this view does not own.
     /// </para>
     /// </remarks>
     private void Roll(string expression)

@@ -183,10 +183,11 @@ public sealed class SessionWindow : Window
         //
         // AND A CLIENT THAT IS ALREADY HOSTING IS NOT OFFERED IT EITHER. This guard read the JOIN
         // side only, so a live host was one click from starting a second session on top of the
-        // first. Both outcomes of that click are bad: either the audience persists while the host
-        // re-keys, leaving the table live against a key pair it was never admitted under, or one
-        // click ejects the table mid-combat with no confirmation. The mis-click was removable, so
-        // it was removed rather than made to hurt in a chosen direction.
+        // first. Both outcomes of that click are bad and neither was chosen: either the audience
+        // persists while the host re-keys, leaving the table live against a key pair it was never
+        // admitted under, or one click ejects the table mid-combat with no confirmation. The
+        // mis-click was removable, so it was removed rather than made to hurt in a chosen
+        // direction.
         if (!InAJoinedSession() && !InAHostedSession())
         {
             // A-1.9j: the resume offer sits BEFORE the button and never gates it. Drawn only when
