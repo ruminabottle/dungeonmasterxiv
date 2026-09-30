@@ -25,7 +25,7 @@ namespace DungeonMasterXIV.Data;
 /// <para>
 /// <b>One log, one owner, always.</b> There is no constructor, method or codec here that takes two
 /// logs or merges them. That absence is load-bearing: A-2.16 fails a build that merges logs, and
-/// the Spec Owner's ruling is that a filtered export would <i>build the shape D-13 forbids</i> —
+/// a filtered export would <i>build the shape D-13 forbids</i> —
 /// so the guarantee is that a log only ever contains what its own client received, and an export
 /// is a function of exactly one of them.
 /// </para>

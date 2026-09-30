@@ -12,7 +12,7 @@ namespace DungeonMasterXIV.Data;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>ONE FILE TOUCHES THE STREAM TYPES ON PURPOSE.</b> The ticket's boundary is a WRITE separation
+/// <b>ONE FILE TOUCHES THE STREAM TYPES ON PURPOSE.</b> The boundary here is a WRITE separation
 /// — I may not edit <c>Net/</c> — and <b>a write separation does not make a read safe.</b> Two live
 /// branches are editing <c>StreamEntry</c> and <c>StreamEvent</c> right now. Confining the
 /// dependency here means that when their shape moves, exactly one file fails to compile, loudly,
@@ -46,7 +46,7 @@ namespace DungeonMasterXIV.Data;
 /// lands first, the tripwire is green on the kinds of the day, the next PR turns CI red, and fixing
 /// it would require <b>that</b> PR to edit <b>this</b> file — a cross-boundary edit that both
 /// boundaries were drawn to prevent, manufactured by the ordering rather than by anyone's mistake.
-/// <b>The ordering is the Deployment Manager's to hold; two engineers agreeing it between their own
+/// <b>The ordering is held at merge time; two engineers agreeing it between their own
 /// PRs is a decision neither of them owns.</b>
 /// </para>
 /// </remarks>

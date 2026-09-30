@@ -8,8 +8,8 @@ namespace DungeonMasterXIV.Campaigns;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Rendered at READ TIME, not stored as text, and that is the ruling rather than a preference
-/// (SQ-54).</b> The name is shown "in the DM's own culture at the moment they read it", and a
+/// <b>Rendered at READ TIME, not stored as text, and that is a requirement rather than a preference
+/// (A-1.9k-2).</b> The name is shown "in the DM's own culture at the moment they read it", and a
 /// culture-formatted string written into a file cannot do that — it would be frozen in whatever
 /// culture the machine had when the campaign was created. So the auto name is composed here, from
 /// the instant, every time it is displayed.
@@ -22,7 +22,7 @@ namespace DungeonMasterXIV.Campaigns;
 /// <para>
 /// <b>NEVER the session code (A-1.9k-3, and R-1.6 as corrected).</b> R-1.6 used to call the stored
 /// code the campaign's "preferred label", and <c>CampaignListView</c> faithfully displayed it — the
-/// Spec Owner's words were <i>"the implementation is faithful and my requirement was wrong"</i>.
+/// implementation was faithful and the requirement was wrong.
 /// A code fails three ways: it is as unrecognisable as a GUID, its absence renders an empty label,
 /// and R-1.2a lets it change while the campaign does not — so it goes stale and can come to name a
 /// DIFFERENT campaign. That last one is why <see cref="Campaign.CreatedUtc"/> is the right source: an instant
@@ -60,7 +60,7 @@ public static class CampaignName
     /// <param name="culture">Whose conventions to render in. Defaults to the reader's.</param>
     /// <remarks>
     /// <para>
-    /// <b>No "Session of" prefix, and the reason is not brevity.</b> A campaign is not a
+    /// <b>No "Session of" prefix, and the reason is not brevity (A-1.9k-5).</b> A campaign is not a
     /// session — this product spends real effort keeping them apart — so the prefix would be the one
     /// place the product calls a campaign a session. And it is accurate only at creation: it becomes
     /// a misnomer the moment the campaign is RESUMED, which is exactly when the feature has worked.
@@ -71,10 +71,10 @@ public static class CampaignName
     /// way a clock does not.
     /// </para>
     /// <para>
-    /// <b>The weekday is dropped, and this is the one judgement call in here.</b> The ruling drafted
-    /// <c>28 August 2026, 8:14 PM</c> and said the COMPONENTS AND THEIR ORDER are load-bearing while
-    /// punctuation is not. That draft carries no weekday, and several cultures put one in their long
-    /// date pattern, so it is removed rather than allowed in for some readers and not others.
+    /// <b>The weekday is dropped, and this is the one judgement call in here.</b> The requirement
+    /// drafted <c>28 August 2026, 8:14 PM</c> and said the COMPONENTS AND THEIR ORDER are load-bearing
+    /// while punctuation is not. That draft carries no weekday, and several cultures put one in their
+    /// long date pattern, so it is removed rather than allowed in for some readers and not others.
     /// </para>
     /// </remarks>
     public static string Auto(DateTimeOffset createdUtc, CultureInfo? culture = null)

@@ -19,7 +19,7 @@ namespace DungeonMasterXIV.Rolls;
 /// EXAMPLE.</b> A clause reading <i>"a build that returns a total of zero without stating that
 /// nothing survived fails"</i> was struck within the hour, because <c>4d6dl4+100</c> <b>drops every
 /// die and totals 100</b> — by the rule it must say so, by the struck clause it did not fail. Keying
-/// this on <c>Total == 0</c> would reproduce exactly the substitution the Spec Owner struck, and it
+/// this on <c>Total == 0</c> would reproduce exactly the substitution that was struck, and it
 /// is the case a reader is least likely to notice, because the total looks ordinary.
 /// </para>
 /// <para>

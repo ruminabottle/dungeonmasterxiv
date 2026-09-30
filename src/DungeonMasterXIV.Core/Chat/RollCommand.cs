@@ -23,8 +23,8 @@ namespace DungeonMasterXIV.Chat;
 /// <para>
 /// <b>WHY THIS IS READ FROM THE PRODUCT'S OWN INPUT RATHER THAN REGISTERED AS A GAME-WIDE
 /// COMMAND.</b> A-2.33c requires that <c>/roll</c> being free in FFXIV is VERIFIED FIRST if it is
-/// registered game-wide, and marks that check <b>in-game, human</b> — the Product Owner named it
-/// unverified rather than assuming it. The same row states the boundary in terms: the criterion is
+/// registered game-wide, and marks that check <b>in-game, human</b> — it is recorded as
+/// unverified rather than assumed. The same row states the boundary in terms: the criterion is
 /// <i>"VACUOUS AND CORRECTLY SO WHILE THE TOKEN IS TYPED ONLY INTO THE PRODUCT'S OWN INPUT — the
 /// trigger is a game-wide registration."</i> <b>Reading it here keeps A-2.33c correctly vacuous;
 /// registering it would owe a check nobody on this team can run.</b>

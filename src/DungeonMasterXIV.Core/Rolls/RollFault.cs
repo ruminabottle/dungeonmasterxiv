@@ -13,7 +13,7 @@ namespace DungeonMasterXIV.Rolls;
 /// </para>
 /// <para>
 /// <b>NOTHING HERE MEANS "THE ROLL FAILED".</b> Every member is a fault in the EXPRESSION — the
-/// product deciding whether a roll succeeded is deferred by the human (R-2.1, D-4), and the
+/// product deciding whether a roll succeeded is deferred (R-2.1, D-4), and the
 /// evaluator is precisely where that would first become expressible. A member such as
 /// <c>RollFailed</c> would be that decision arriving through the back door.
 /// </para>
@@ -41,8 +41,8 @@ public enum RollFault
     /// inside a parenthesis and the character is simply unexpected, exactly like <c>&amp;</c>.
     /// </summary>
     /// <remarks>
-    /// The second half of that sentence used to be missing and the summary claimed both directions
-    /// (BUG-145). Nothing produced the closed-and-never-opened case, so a caller writing a handler
+    /// The second half of that sentence used to be missing and the summary claimed both directions.
+    /// Nothing produced the closed-and-never-opened case, so a caller writing a handler
     /// from these summaries would put a stray <c>)</c> under this branch and never reach it — and
     /// would not find out, because the code compiles and the branch is simply never taken.
     /// </remarks>

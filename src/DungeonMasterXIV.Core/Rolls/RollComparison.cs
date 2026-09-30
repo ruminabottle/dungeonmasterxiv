@@ -34,7 +34,7 @@ public enum ComparisonOperator
 /// So <see cref="Value"/> comes from the expression text and from nowhere else. <b>Nothing in this
 /// assembly may supply a default, infer one, or look one up</b> — the moment a comparison can get
 /// its threshold from anywhere but the typed characters, the plugin has begun to know what a roll
-/// MEANS, which D-4 forbids and which the human has deferred.
+/// MEANS, which D-4 forbids and which has been deferred.
 /// </para>
 /// <para>
 /// <b>And a comparison yields a COUNT, never a verdict.</b> <c>4d6&gt;3</c> is "how many dice beat

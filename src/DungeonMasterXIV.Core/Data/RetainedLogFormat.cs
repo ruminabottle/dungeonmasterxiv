@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Data;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>IT WAS CALLED <c>LogExport</c> UNTIL SQ-114, AND THE NAME WAS THE HAZARD.</b> An export is
+/// <b>IT WAS ONCE CALLED <c>LogExport</c>, AND THE NAME WAS THE HAZARD.</b> An export is
 /// <b>AN ACT</b> — something a person asks for — not a path (A-2.17); a retained log is written
 /// automatically, so it is not one. The old name would have led whoever builds R-2.12's real export
 /// straight here, to a type whose <see cref="Write"/> already produces the right-looking output.
@@ -23,10 +23,10 @@ namespace DungeonMasterXIV.Data;
 /// <b>ONE LOG. THERE IS NO OVERLOAD, NO COLLECTION PARAMETER AND NO MERGE</b>, and the absence is
 /// deliberate rather than unfinished: A-2.16 fails a build that merges logs, and <b>a merge is not
 /// something to be prevented by a check — it is something that must have no way to be expressed.</b>
-/// That prohibition survives SQ-109 unchanged and is the live half of A-2.16.
+/// That prohibition survives A-2.16's rewrite unchanged and is the live half of A-2.16.
 /// </para>
 /// <para>
-/// <b>There is no owner filter, and SQ-109 ruled that is correct rather than missing.</b> A
+/// <b>There is no owner filter, and that is correct rather than missing (A-2.16).</b> A
 /// participant who may not see a result never RECEIVES one under D-13 (A-2.15), so it was never in
 /// this client's log to be removed — <i>"the old row implied a FILTER and there is nothing to
 /// filter."</i> A filtering writer would have to be handed a view wider than its owner's in order to
@@ -53,8 +53,7 @@ public static class RetainedLogFormat
     /// <b>A written format without a version cannot be changed safely once a file exists on a
     /// user's machine</b> — a reader meeting an unfamiliar layout has no way to tell "written by a
     /// newer build" from "corrupt", and must guess. Costing one line now buys the ability to know
-    /// later, which is the whole reason the Deployment Manager held this PR for the format rather
-    /// than for the wiring.
+    /// later, which is the whole reason the format mattered more than the wiring.
     /// </remarks>
     public const int FormatVersion = 1;
 
@@ -91,8 +90,7 @@ public static class RetainedLogFormat
     /// file escaped nothing, so a message containing a newline followed by tab-separated fields
     /// produced MORE LINES THAN THERE WERE ENTRIES — and anything reading the file back saw an entry
     /// carrying a sequence number and an author the host never issued. That is the R-2.7
-    /// impersonation surface arriving through the export instead of the panel, and it was found by
-    /// the code reviewer rather than by me.
+    /// impersonation surface arriving through the export instead of the panel.
     /// <para>
     /// <b>The backslash is escaped FIRST and unescaped LAST.</b> Any other order lets a typed
     /// <c>\n</c> survive the round trip as a real newline, which reopens the hole through the escape

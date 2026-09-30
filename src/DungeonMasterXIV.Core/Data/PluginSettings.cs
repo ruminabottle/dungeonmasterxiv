@@ -7,7 +7,7 @@ namespace DungeonMasterXIV.Data;
 /// <c>Configuration</c>, over in the plugin project, is the thin adapter that hands this to
 /// Dalamud's config mechanism — it cannot be named in a cref from here, because this project
 /// deliberately cannot see it. The skeleton stores window state and nothing else; the session,
-/// campaign and character data described in the brief are not part of it.
+/// campaign and character data are not part of it.
 /// </summary>
 public sealed class PluginSettings
 {
@@ -62,7 +62,7 @@ public sealed class PluginSettings
     /// <para>
     /// <b>Settable, not knobbed.</b> A-1.23 requires the length be changeable without a protocol
     /// decision; it does not require a control. Whether the two should be unified for
-    /// comprehensibility is an open Product Owner question, and a UI control here would settle it
+    /// comprehensibility is an open product question, and a UI control here would settle it
     /// by implementation.
     /// </para>
     /// <para>
@@ -100,7 +100,7 @@ public sealed class PluginSettings
 
     /// <summary>
     /// A display name this client stored BEFORE names were campaign-scoped, kept as a local
-    /// pre-fill default and nothing else (and A-2.31's single exception added by SQ-112).
+    /// pre-fill default and nothing else (A-2.31's single exception).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -116,16 +116,15 @@ public sealed class PluginSettings
     /// RATHER THAN DELETED BECAUSE IT WAS CITED AS AUTHORITY.</b> This used to read: <i>"adding one
     /// so that a field could be spelt better would risk AN ASSEMBLY MISMATCH that fails in the game
     /// and that nothing in this repository can detect."</i> <b>That was false in both halves</b>,
-    /// and DMXENG-117 quoted it to tell a ticket-taker an option was unavailable on evidence.
-    /// Measured three times independently — feature-engineer-3, feature-engineer-1, the Deployment
-    /// Manager — with <c>AssemblyName.GetAssemblyName</c>, the API that governs binding: Dalamud's
+    /// and it was later quoted as evidence that an option was unavailable. Measured three times
+    /// independently with <c>AssemblyName.GetAssemblyName</c>, the API that governs binding: Dalamud's
     /// shipped Newtonsoft and the 13.0.3 package are <b>AssemblyVersion 13.0.0.0, PublicKeyToken
     /// 30ad4fe6b2a6aeed, identical</b>. Only <c>FileVersion</c> differs (13.0.4.30916 against
     /// 13.0.3.27908), <b>and FileVersion does not govern binding</b> — the trap that produced two
     /// confident wrong answers before the right one.
     /// </para>
     /// <para>
-    /// <b>THE REAL MECHANISM, MEASURED BY feature-engineer-3 RATHER THAN INFERRED.</b> Adding a
+    /// <b>THE REAL MECHANISM, MEASURED RATHER THAN INFERRED.</b> Adding a
     /// <c>PackageReference</c> to <c>Core</c> makes the build deposit a <b>second physical
     /// <c>Newtonsoft.Json.dll</c></b> into the plugin output, which unmodified <c>main</c> does not:
     /// <c>DungeonMasterXIV.csproj</c> sets <c>CopyLocalLockFileAssemblies=true</c>, and the
@@ -135,13 +134,13 @@ public sealed class PluginSettings
     /// <para>
     /// <b>WHAT WAS MEASURED AND WHAT WAS NOT, KEPT APART.</b> That the second file is deposited
     /// <b>was measured here, by building</b>. <b>Which copy Dalamud's loader then prefers was NOT
-    /// measured, and cannot be here — it needs FFXIV.</b> That question is recorded with its control
-    /// in <c>.claude/team/IN-GAME-BACKLOG.md</c>, so it has a home rather than sitting in this
-    /// remark as an indefinite hold.
+    /// measured, and cannot be here — it needs FFXIV.</b> That question needs an in-game check and is
+    /// not answered here. Its control: the same check on a build without the <c>PackageReference</c>
+    /// must show only the host's copy.
     /// </para>
     /// <para>
     /// <b>A READER WHO GREPS THIS AND CONCLUDES THE CAMPAIGN-SCOPING WAS REVERTED IS READING IT
-    /// EXACTLY AS THE PRD PREDICTED, AND IS WRONG.</b> A-2.31 forbids a display name persisting
+    /// EXACTLY AS WAS PREDICTED, AND IS WRONG.</b> A-2.31 forbids a display name persisting
     /// outside a campaign and now carries ONE exception: this value. <b>Exactly one, whose only
     /// permitted reader is the pre-fill path, and which never travels as itself</b> (A-2.32).
     /// <c>Campaigns.CampaignDisplayName.Or</c> — the send path — has no overload that can see it,

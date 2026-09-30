@@ -71,7 +71,7 @@ public sealed class RelinkMemory
     /// what you cannot see."</i> So this exists for the UI to render and is not an afterthought of
     /// the delete path.
     /// <para>
-    /// <b>BUG-146: A METHOD, NOT A PROPERTY, AND THAT IS THE WHOLE FIX.</b> As a property this was a
+    /// <b>A METHOD, NOT A PROPERTY, AND THAT IS THE WHOLE FIX.</b> As a property this was a
     /// second PUBLIC GETTABLE view of <see cref="Remembered"/>, so the serialiser wrote the list
     /// twice — and on load Newtonsoft populates a read-only collection property by ADDING to it, into
     /// the same list. Every save/load DOUBLED the memory: 1, 2, 4, 8, 16, 32, and about a million

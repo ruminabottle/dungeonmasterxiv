@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Rolls;
 /// <b>Separate from <see cref="RollParser"/> because the two grammars are different shapes.</b>
 /// Arithmetic is precedence and recursion; a dice term is a flat run of suffixes with no precedence
 /// among them. Keeping them in one type would have produced a single class carrying both, which is
-/// the size problem this chunk was warned about before a line was written.
+/// the size problem that was foreseen before a line was written.
 /// </remarks>
 internal static class RollDiceParser
 {
@@ -148,7 +148,7 @@ internal static class RollDiceParser
     /// <summary>Reads a drop suffix — <c>dl1</c>, <c>dh1</c>, or a bare <c>d1</c>.</summary>
     /// <remarks>
     /// <para>
-    /// <b>BUG-142: this half was built and unreachable.</b> <see cref="DiceModifiers.DropLowest"/>,
+    /// <b>This half was built and unreachable.</b> <see cref="DiceModifiers.DropLowest"/>,
     /// <see cref="DiceModifiers.DropHighest"/> and the evaluator's handling of both already existed;
     /// there was simply no arm here, so <c>4d6dl1</c> — the single most common notation in tabletop,
     /// and the one <c>DropLowest</c> names in its own summary — was refused as <c>Malformed</c>.
@@ -190,7 +190,7 @@ internal static class RollDiceParser
     /// choose between.
     /// </para>
     /// <para>
-    /// <b>BUG-148: the four fields were independent and the evaluator read two of them for different
+    /// <b>The four fields were independent and the evaluator read two of them for different
     /// questions.</b> <c>Keeping</c> took the COUNT from the first non-null in a fixed order, while
     /// the sort direction was decided by a SEPARATE test — so <c>4d6kh3dh1</c> took its count from
     /// <c>KeepHighest</c> and its direction from <c>DropHighest</c> and kept the three LOWEST. No
@@ -199,7 +199,7 @@ internal static class RollDiceParser
     /// </para>
     /// <para>
     /// <b>Pre-existing, and reachable through the <c>k</c> arm alone</b> — <c>4d6kh3kl2</c> hits it
-    /// without any of BUG-142's new <c>d</c> parsing. That fix widened the reachable surface; it did
+    /// without any of the drop arm's <c>d</c> parsing. That arm widened the reachable surface; it did
     /// not create this.
     /// </para>
     /// </remarks>

@@ -4,16 +4,15 @@ namespace DungeonMasterXIV.Rolls;
 
 /// <summary>
 /// Turns roll expression text into a total with the dice behind it, or a refusal naming the fault.
-/// <b>The whole of PRD-2 R-2.1 and R-2.1a, and nothing else.</b>
+/// <b>The whole of R-2.1 and R-2.1a, and nothing else.</b>
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>THIS IS A LEAF AND MUST STAY ONE.</b> It has no caller, no command, no window and no
-/// transport, and that is deliberate rather than unfinished. The Spec Owner's ruling is that
-/// "base chat first" governs what a USER can do, and a pure evaluator nobody can reach cannot make
-/// the product roll-first. <b>The moment it acquires a surface a user can reach, the build order
-/// applies in full</b> — and <i>"the evaluator is already done"</i> is exactly how the pressure to
-/// skip that will be phrased.
+/// transport, and that is deliberate rather than unfinished. "Base chat first" governs what a USER
+/// can do, and a pure evaluator nobody can reach cannot make the product roll-first. <b>The moment
+/// it acquires a surface a user can reach, the build order applies in full</b> — and <i>"the
+/// evaluator is already done"</i> is exactly how the pressure to skip that will be phrased.
 /// </para>
 /// <para>
 /// <b>Text in, a result or a named refusal out.</b> No exceptions escape for bad input: R-2.1a makes
@@ -22,7 +21,7 @@ namespace DungeonMasterXIV.Rolls;
 /// </para>
 /// <para>
 /// <b>It never knows what a roll MEANS</b> (D-4). It sums, it counts against numbers the user typed,
-/// and it stops there. Success/failure resolution is deferred by the human and would first become
+/// and it stops there. Success/failure resolution is deferred and would first become
 /// expressible here — see <see cref="RollComparison"/>, where that line is written on the type that
 /// would carry it.
 /// </para>

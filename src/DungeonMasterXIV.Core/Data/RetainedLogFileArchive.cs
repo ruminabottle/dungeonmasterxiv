@@ -82,7 +82,7 @@ public sealed class RetainedLogFileArchive(string directory) : IRetainedLogArchi
     /// <b><see cref="Campaigns"/> silently skipped these, and that is what made the shipped sentence
     /// false.</b> <c>ConfigWindow</c> says <i>"nothing to delete anywhere but here"</i> — a file this
     /// archive cannot name is a file the control cannot list, and a file it cannot list is one it
-    /// cannot delete. Found by the code reviewer. The remedy is the same shape
+    /// cannot delete. The remedy is the same shape
     /// <c>CampaignStore</c> already uses for a file that will not parse: surface it separately
     /// rather than dropping it.
     /// <para>
@@ -92,8 +92,7 @@ public sealed class RetainedLogFileArchive(string directory) : IRetainedLogArchi
     /// enumerations globbed <c>*.log.txt</c> — which requires the name to END with the extension, so
     /// <b>the pending file matched neither.</b> A crash between the write and the move stranded a
     /// COMPLETE session log that nothing could list and no delete path could remove, while
-    /// <c>ConfigWindow</c> told the user there was <i>"nothing to delete anywhere but here"</i>
-    /// (found by the code reviewer).
+    /// <c>ConfigWindow</c> told the user there was <i>"nothing to delete anywhere but here"</i>.
     /// </para>
     /// <para>
     /// <b>So this enumerates the DIRECTORY rather than a pattern.</b> A glob is a guess about what

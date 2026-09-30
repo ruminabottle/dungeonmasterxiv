@@ -95,7 +95,7 @@ public static class CampaignDisplayName
     /// unusable; the join does not silently become nameless because of it.
     /// </para>
     /// <para>
-    /// <b>THERE IS DELIBERATELY NO OVERLOAD OF THIS METHOD TAKING THE SQ-87 CARRIED-OVER
+    /// <b>THERE IS DELIBERATELY NO OVERLOAD OF THIS METHOD TAKING THE CARRIED-OVER
     /// DEFAULT, AND THE ABSENCE IS LOAD-BEARING.</b> A-2.31 permits exactly one globally
     /// stored name <i>"whose ONLY permitted reader is the pre-fill path"</i>, and A-2.32 fails
     /// any build that sends it unaccepted. Both hold here because this method — the send path —
@@ -139,9 +139,9 @@ public static class CampaignDisplayName
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>THE CARRIED-OVER VALUE IS OFFERED, NEVER APPLIED.</b> SQ-87 rules that a name stored
-    /// before campaign-scoping <i>"becomes a LOCAL PRE-FILL DEFAULT — not migrated, not dropped,
-    /// not asked about at upgrade"</i>, because an upgrade-time prompt would ask the player to
+    /// <b>THE CARRIED-OVER VALUE IS OFFERED, NEVER APPLIED.</b> A name stored before
+    /// campaign-scoping <i>becomes a LOCAL PRE-FILL DEFAULT — not migrated, not dropped,
+    /// not asked about at upgrade</i>, because an upgrade-time prompt would ask the player to
     /// decide about campaign-scoped names before they have met the concept. It reaches the player
     /// here, in the box, at the point where the decision is legible.
     /// </para>
@@ -190,12 +190,12 @@ public static class CampaignDisplayName
     /// <para>
     /// <b>THE OFFER IS ONLY MADE WHERE IT CAN BE ACCEPTED.</b> With no campaign there is nowhere to
     /// store a name, so offering the carried-over value puts a name in the box that the preview below
-    /// it does not show — <b>the two lines of BUG-141 disagreeing again, in a box the user cannot
+    /// it does not show — <b>the box and the preview disagreeing again, in a box the user cannot
     /// correct.</b> Withholding it is what keeps them equal.
     /// </para>
     /// <para>
     /// <b>THIS EXISTS BECAUSE THE DECISION WAS A TERNARY INSIDE A WINDOW METHOD, AND COULD THEREFORE
-    /// ONLY BE ASSERTED AS TEXT.</b> qa-1 showed the cost: the guard asserted the expression's
+    /// ONLY BE ASSERTED AS TEXT.</b> A probe showed the cost: the guard asserted the expression's
     /// source, so restoring the contradiction needed <b>one extra line after it</b> — the asserted
     /// string untouched, 1442 passed, 0 failed. <b>The proxy followed from WHERE THE DECISION SAT,
     /// not from the renderer ceiling.</b> A boolean decision is pure logic and does not need a
@@ -204,7 +204,7 @@ public static class CampaignDisplayName
     /// <para>
     /// <b>SEPARATE FROM <see cref="ToEdit(Campaign?, string?, Net.DisplayName)"/> RATHER THAN FOLDED
     /// INTO IT, AND THAT IS DELIBERATE.</b> <c>ToEdit</c>'s three-step fallback is documented,
-    /// SQ-87-grounded, and <b>pinned by a test that exists to DEMONSTRATE this very hazard</b>
+    /// A-2.31-grounded, and <b>pinned by a test that exists to DEMONSTRATE this very hazard</b>
     /// (<c>ACarriedOverNameWouldContradictThePreviewWhenThereIsNoCampaign</c>). Changing it would
     /// delete that evidence and silently reverse a split its author made on purpose. <b>Two
     /// questions, two methods:</b> <c>ToEdit</c> answers <i>what does the box show</i>;
