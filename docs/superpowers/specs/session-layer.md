@@ -714,7 +714,7 @@ Two questions, two mechanisms (product-overview D-17):
 - **Retention is unbounded: no expiry, no timer.** The rule guards against linkage across campaigns,
   not duration within one; a clock protects nothing and breaks relink for a campaign that meets
   monthly. A number appearing in this requirement means something has gone wrong.
-- **The player may delete their own participant UUID, per entry, without the DM's involvement and
+- **The player may delete their own participant UUID, per campaign, without the DM's involvement and
   without the DM being told.** The DM can delete a campaign outright (R-1.6); the subject of an
   identifier needs the same control over their own copy.
 - **No notification to the DM.** One would manufacture a signal linking a deletion to a player. The DM
@@ -722,12 +722,12 @@ Two questions, two mechanisms (product-overview D-17):
 - **Deleting ends the possibility of relink, and the player is told so before the deletion**: they
   will rejoin as a new participant needing fresh approval. The less a user understands what they are
   destroying, the more friction the destruction gets, so this is never a one-click delete.
-- **A player can see what they are storing, per entry, before deleting it.** You cannot meaningfully
+- **A player can see what they are storing, per campaign, before deleting it.** You cannot meaningfully
   delete what you cannot see.
 
 **Acceptance criteria**
-- **A-1.9b** A player can list what their client stores, and delete one entry's participant UUID
-  without the DM's involvement. Afterwards no file on their disk contains that UUID. Offering deletion
+- **A-1.9b** A player can list what their client stores per campaign, and delete one campaign's
+  participant UUID without the DM's involvement. Afterwards no file on their disk contains that UUID. Offering deletion
   without first showing what is stored fails.
 - **A-1.9c** The player is told, before the deletion completes, that relink will no longer be possible
   and that they will rejoin as a new participant needing fresh DM approval. A one-click irreversible
@@ -1082,17 +1082,26 @@ D-8, the last even with encryption.
 - Open question: the settings copy in R-1.7a says "Today that name is your character name, and changing
   it is not yet built". The join flow now lets a player see and change the name (R-1.3e), so that
   sentence has reached its own expiry. Replacement wording is a product decision; until it is made,
-  A-1.7c and A-1.7e pull in different directions for that paragraph.
+  A-1.7c and A-1.7e pull in different directions for that paragraph. The same paragraph also
+  restates what the relay can see ("a connection exists, roughly when and how much, and the network
+  address it came from") and omits the session code, while R-1.9 is the single source for that list
+  and A-1.13b fails any second statement of it. So A-1.7c (the shipped paragraph is byte-identical to
+  the ruled one) and A-1.13b cannot both pass for this paragraph. Whether the copy should reference
+  R-1.9 instead, or carry the full list, is a product decision; it blocks A-1.7c and A-1.13b holding
+  together, and any settings copy change.
 - Open question: admission creates a participant for every admitted joiner (A-1.9f), and without
   relink (A-1.9g) a returning person arrives as a new participant, so a campaign's stored roster grows
   by one entry per join. That is the duplicate growth R-1.5d forbids for a resumed roster. Which answer
   applies (the DM mapping a joiner onto an existing entry, the roster marking repeats, or deferring
   admission-time creation until relink works) is undecided. It blocks A-1.9f and R-1.5d holding
   together.
-- Open question: a joiner stores its participant UUID under the session code it was admitted on
-  (R-1.5b), but a campaign's code can change at resume (R-1.2a). Whether a returning player is still
-  offered relink when the DM's code has changed is undecided. It blocks A-1.9 for campaigns whose code
-  moved.
+- Open question: the see-and-delete right is per campaign (R-1.5b, A-1.9b), but the joiner cannot
+  know a campaign's identity and stores its participant UUID under the session code it was admitted on
+  (R-1.5b); the code keys this store by session code, one entry per code. A campaign's code can change
+  at resume (R-1.2a), so one campaign may leave several entries under different codes, and an entry
+  is not the same unit as a campaign. How a per-campaign listing and deletion map onto per-code
+  storage, and whether a returning player is still offered relink when the DM's code has changed, are
+  undecided. It blocks A-1.9b's per-campaign unit and A-1.9 for campaigns whose code moved.
 
 ## Retired IDs
 
