@@ -28,8 +28,8 @@ namespace DungeonMasterXIV.Tests;
 /// without showing satisfies A-2.32 and fails this.
 /// </para>
 /// <para>
-/// <b>What is machine-checkable here and what is not, stated rather than implied.</b> A-2.33 puts
-/// the send on the machine and the player having seen it in the game. These tests cover the
+/// <b>What is machine-checkable here and what is not, stated rather than implied.</b> A-2.33: the
+/// send is machine-checkable; the player having seen it needs the game. These tests cover the
 /// SEND half — that merely offering a name cannot cause it to be sent. <b>Whether the box was
 /// actually drawn is not observable from this project</b>, because no test project links the plugin.
 /// </para>

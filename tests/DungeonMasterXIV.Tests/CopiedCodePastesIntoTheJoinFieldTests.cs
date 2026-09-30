@@ -102,11 +102,11 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// <remarks>
     /// <para>
     /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason.</b>
-    /// The obvious implementation is
-    /// <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c> — which is the call
-    /// <see cref="WindowSources"/> makes. Comparing a function against itself is what left the old
-    /// control blind: both sides missed subdirectories, missed them EQUALLY, and the equality
-    /// passed. TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS NOT EVIDENCE.
+    /// The obvious implementation is <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c>
+    /// — which is the call <see cref="WindowSources"/> makes. Comparing a function against itself is
+    /// what left the old control blind: both sides missed subdirectories, missed them EQUALLY, and
+    /// the equality passed. TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS
+    /// NOT EVIDENCE.
     /// </para>
     /// <para>
     /// <b>Measured, not argued.</b> With one subdirectory added under <c>Windows/</c>: with
@@ -246,9 +246,9 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     // AND A GREEN RUN HERE IS NOT EVIDENCE THAT THE JOIN FIELD HAS ONE WAY IN.
     // ===================================================================================
     //
-    // DECLARED BEFORE MERGE, because this is the
-    // FIFTH member of a family already ruled on three times, and it would otherwise have
-    // arrived undeclared and become tomorrow's bug against finished work.
+    // DECLARED BEFORE MERGE, because this is the FIFTH member of a family already ruled on three
+    // times, and it would otherwise have arrived undeclared and become tomorrow's bug against
+    // finished work.
     //
     // THE TWO PROPERTIES ARE DIFFERENT KINDS OF THING AND ONLY ONE IS A PROOF:
     //

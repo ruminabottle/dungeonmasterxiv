@@ -35,8 +35,8 @@ public class ADroppedJoinerKeepsItsSeatTests
     /// <summary>Longer than any window this client holds, so expiry is reached in one tick.</summary>
     private static readonly TimeSpan PastEveryWindow = TimeSpan.FromHours(1);
 
-    // The bug. Fails on origin/main before this fix: the phase moves to Failed and the window offers
-    // a host affordance while the seat is still resumable.
+    // The defect. Fails on origin/main before this fix: the phase moves to Failed and the window
+    // offers a host affordance while the seat is still resumable.
     [Fact]
     public void AnAdmittedJoinerWhoseLinkDropsIsStillInASession()
     {

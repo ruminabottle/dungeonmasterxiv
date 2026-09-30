@@ -49,9 +49,9 @@ public class CampaignNameTests
         Assert.DoesNotContain("campaign", name, StringComparison.OrdinalIgnoreCase);
     }
 
-    // The judgement call, pinned so it is visible rather than assumed arbitrary. The original
-    // requirement carries no weekday and several cultures put one in their long date pattern, so it
-    // is removed — otherwise the name would carry a component for some readers and not others.
+    // The judgement call, pinned so it is visible rather than assumed arbitrary. A-1.9k-5's draft
+    // carries no weekday and several cultures put one in their long date pattern, so it is removed
+    // — otherwise the name would carry a component for some readers and not others.
     [Fact]
     public void TheAutoNameCarriesNoWeekday()
     {

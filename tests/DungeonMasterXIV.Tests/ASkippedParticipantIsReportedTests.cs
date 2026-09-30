@@ -21,7 +21,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>These tests assert the LINE FIRES, not that the code exists.</b> A log call somebody deletes
 /// while refactoring is invisible to a test that only checks the session survived — which is exactly
-/// how the silence survived review in the first place. Each test here drives the PRODUCTION path
+/// how the silence shipped in the first place. Each test here drives the PRODUCTION path
 /// and reads what reached the log.
 /// </para>
 /// <para>

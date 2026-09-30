@@ -122,7 +122,7 @@ public sealed class AMemberThatQuitsLeavesTheRosterTests
 
     // THE DEPARTURE IS STILL RECORDED AS A RECEIPT. Fails if removal short-circuits the record: the
     // DM's surface reads receipts, and a member vanishing from the roster with nothing anywhere
-    // saying why is a participant silently omitted, in a new place.
+    // saying why repeats the silent omission, in a new place.
     [Fact]
     public void TheDepartureLeavesATraceRatherThanOnlyAnAbsence()
     {

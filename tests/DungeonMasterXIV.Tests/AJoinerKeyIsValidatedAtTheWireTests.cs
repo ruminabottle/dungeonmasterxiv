@@ -48,8 +48,8 @@ public class AJoinerKeyIsValidatedAtTheWireTests
         return other.PublicKey.ExportSubjectPublicKeyInfo();
     }
 
-    // The bug. Before the fix the request became a prompt, the DM could admit it, and the resulting
-    // participant was addressable by the relay and unreachable by the host with nothing logged.
+    // The defect. Before the fix the request became a prompt, the DM could admit it, and the
+    // resulting participant was addressable by the relay and unreachable by the host with nothing logged.
     [Fact]
     public void AJoinRequestWithAnUnusableKeyNeverBecomesAPendingAdmission()
     {

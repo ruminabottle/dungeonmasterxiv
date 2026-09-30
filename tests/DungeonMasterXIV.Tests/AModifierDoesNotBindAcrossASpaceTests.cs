@@ -19,7 +19,7 @@ namespace DungeonMasterXIV.Tests;
 /// Foundry's <c>MODIFIERS_REGEXP_STRING</c>, which is a NEGATED CHARACTER CLASS excluding the space
 /// — so no modifier can contain one: <c>k</c>, <c>d</c>, <c>r</c>, <c>x</c> and a bare comparison
 /// alike. The population below is the parser's whole modifier set, taken from
-/// <c>RollDiceParser.ParseOne</c> rather than from the one case that exposed the row.
+/// <c>RollDiceParser.ParseOne</c> rather than from the one reported case.
 /// </para>
 /// <para>
 /// <b>Each row is paired with its adjacent twin, and that pairing is the test.</b> A guard that only
