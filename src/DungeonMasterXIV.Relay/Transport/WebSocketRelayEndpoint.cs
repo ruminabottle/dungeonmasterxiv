@@ -26,7 +26,7 @@ public sealed class WebSocketRelayEndpoint(
 
     /// <summary>
     /// Whether the RELAY is stopping, which is the only thing that tells two causes of one exception
-    /// apart (BUG-78). The token passed to <see cref="ServeAsync"/> is the request's, and it fires
+    /// apart. The token passed to <see cref="ServeAsync"/> is the request's, and it fires
     /// when the CLIENT goes away; this one fires when the process is going down.
     /// </summary>
     private readonly IHostApplicationLifetime _lifetime = lifetime;
@@ -49,7 +49,7 @@ public sealed class WebSocketRelayEndpoint(
         }
         catch (OperationCanceledException)
         {
-            // BUG-78. ONE EXCEPTION TYPE, TWO CAUSES, and the handler used to name only the rarer.
+            // ONE EXCEPTION TYPE, TWO CAUSES, and the handler used to name only the rarer.
             // RelayApp passes context.RequestAborted, which fires when the CLIENT vanishes without a
             // close frame — a dropped network, a crashed game client, a force-quit. Measured against
             // a running image, that is what this arm catches in practice; a genuine shutdown reaches

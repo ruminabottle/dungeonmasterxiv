@@ -81,7 +81,7 @@ public sealed class KeepAliveContractTests
 
     /// <summary>
     /// The reaper must work when the far end does not close cleanly — a dead process sends no close
-    /// frame, and BUG-5 is a live instance of a client that disposes its socket without one. So it
+    /// frame, and a transport that disposes its socket without one is a live instance of that. So it
     /// is measured on ping/pong liveness, which the WebSocket layer owns, and never on message
     /// traffic, which would reap the quiet sessions it exists to protect.
     /// </summary>

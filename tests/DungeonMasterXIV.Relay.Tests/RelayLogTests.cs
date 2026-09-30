@@ -9,8 +9,8 @@ using Xunit;
 namespace DungeonMasterXIV.Relay.Tests;
 
 /// <summary>
-/// A-1.5a-r: the relay's log shows the outcome of a connection and the reason for a failure,
-/// readable by QA with no human present — and shows neither a character name nor an address (D-8).
+/// A-1.5a-r: the relay's log shows the outcome of a connection and the reason for a failure, readable
+/// afterwards, with nobody watching the attempt — and shows neither a character name nor an address (D-8).
 /// </summary>
 public sealed class RelayLogTests
 {
@@ -51,8 +51,8 @@ public sealed class RelayLogTests
     /// </summary>
     /// <summary>
     /// A connection that hosted one session and joined another gets a line for each. A single line
-    /// would have to choose which session to name, and QA reading this after a failed attempt needs
-    /// every session the connection was in rather than whichever it happened to hold first.
+    /// would have to choose which session to name, and a tester reading this after a failed attempt
+    /// needs every session the connection was in rather than whichever it happened to hold first.
     /// </summary>
     [Fact]
     public void AConnectionInTwoSessionsIsReportedForBoth()

@@ -6,18 +6,18 @@ namespace DungeonMasterXIV.Relay.Diagnostics;
 /// Turns a failure to load the TLS certificate into something an operator can act on.
 /// </summary>
 /// <remarks>
-/// BUG-15: the platform crypto layer reports an unreadable certificate as a bare library error —
+/// The platform crypto layer reports an unreadable certificate as a bare library error —
 /// <c>error:10080002:BIO routines::system lib</c> on Linux — which names neither the file nor the
 /// reason, so it reads like a corrupt or wrong-password PKCS#12 and sends the operator to inspect
 /// the one thing that is not wrong. The container runs unprivileged and a bind-mounted secret keeps
 /// its ownership from the host, so "the process may not read it" is a likely cause and is a thing
 /// the message has to be able to say out loud.
 /// <para>
-/// BUG-17: <b>and it must say it only when it is true.</b> The first version of this said it for
+/// <b>And it must say it only when it is true.</b> The first version of this said it for
 /// every load failure, so a wrong <c>CERT_PASSWORD</c> on a perfectly readable file produced sixty-
-/// five words instructing the operator to <c>chown</c> it — BUG-15 pointing the other way, sending
-/// them to inspect the one thing that was not wrong. The underlying cause now leads, and the
-/// permissions advice is a suffix conditioned on <see cref="CannotBeRead"/>.
+/// five words instructing the operator to <c>chown</c> it — the same misdirection pointing the other
+/// way, sending them to inspect the one thing that was not wrong. The underlying cause now leads, and
+/// the permissions advice is a suffix conditioned on <see cref="CannotBeRead"/>.
 /// </para>
 /// </remarks>
 public static class CertificateLoadFailure
@@ -67,8 +67,7 @@ public static class CertificateLoadFailure
     /// <para>
     /// A file that is missing, locked or a directory is not a permissions finding and must not be
     /// reported as one; only an outright refusal counts. The directory case is checked explicitly
-    /// rather than left to the exception type, which cannot tell it apart from a refusal — this
-    /// paragraph described an intention the code did not have until BUG-21.
+    /// rather than left to the exception type, which cannot tell it apart from a refusal.
     /// </para>
     /// </remarks>
     public static bool CannotBeRead(string path)
@@ -78,7 +77,6 @@ public static class CertificateLoadFailure
         // type cannot separate "you may not read this" from "this is not a file" and a directory
         // reached the permissions arm. An operator who wrote /run/secrets where they meant
         // /run/secrets/relay-certificate was told to chown a directory whose ownership was fine.
-        // BUG-21.
         if (Directory.Exists(path))
         {
             return false;

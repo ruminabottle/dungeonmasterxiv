@@ -13,12 +13,12 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The fourth instance of one defect, and the first the suite could not see.</b> BUG-40 was a
-/// message with no sender; BUG-42 was one with no consumer; #86 was one with no arm in the client's
-/// inbox. Each was caught inside the client. This one lives across the relay seam: the joiner sends
-/// the receipt, the host has somewhere to put it, and every client-side test passes while the relay
-/// silently drops it in between — which is precisely what happened to
-/// <see cref="WireMessageType.JoinPending"/> and became BUG-33.
+/// <b>The fourth instance of one defect, and the first the suite could not see.</b> The join request
+/// was a message with no sender, then one with no consumer; <c>SessionPayload</c> was one with no
+/// arm in the client's inbox. Each was caught inside the client. This one lives across the relay
+/// seam: the joiner sends the receipt, the host has somewhere to put it, and every client-side test
+/// passes while the relay silently drops it in between — which is precisely what happened to
+/// <see cref="WireMessageType.JoinPending"/>.
 /// </para>
 /// <para>
 /// <b>Derived from the enum, not from a list of types.</b> There is no table here to fall out of
@@ -42,7 +42,7 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// <b>And it covers one hop of three.</b> A client send is covered by
 /// <c>EveryMessageAClientSendsIsSentTests</c>, the relay route by this file, and the client's own
 /// dispatch of what arrives — <c>AdmissionInbox</c> — by <b>no completeness sweep at all</b>. That
-/// third hop is the one with both incidents: BUG-42 was a consumer nothing routed to, BUG-43 a
+/// third hop is the one with both incidents: a JoinRequest consumer nothing routed to, and a code
 /// refusal swallowed in that same table. So this licenses "every type has a relay arm", never
 /// "every type is routed".
 /// </para>
@@ -58,7 +58,7 @@ public sealed class EveryMessageTypeHasARoutingArmTests
 
     // THE UNIVERSAL. Fails on any type that reaches the catch-all -- which is what a new client-sent
     // message looks like before somebody adds its arm, and what JoinerHoldsFingerprint would have
-    // looked like the moment PR #88 merged.
+    // looked like the moment its client side merged.
     //
     // Asserts NOT-the-catch-all rather than "forwards", deliberately. Different types legitimately
     // drop for their own reasons -- a relay-only message from a client, an unknown joiner, a

@@ -58,7 +58,7 @@ public static class RelayApp
                     // Every exception type, deliberately: the load failure surfaces as a different
                     // platform-specific crypto exception on each host, and the one that matters here
                     // is the one nobody would think to name. Nothing is swallowed — the original is
-                    // the inner exception, and its text is quoted in the message. See BUG-15.
+                    // the inner exception, and its text is quoted in the message.
                     throw new InvalidOperationException(
                         CertificateLoadFailure.Describe(options.CertificatePath, failure.Message),
                         failure);

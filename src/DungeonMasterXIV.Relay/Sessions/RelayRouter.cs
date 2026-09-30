@@ -238,7 +238,7 @@ public sealed class RelayRouter(SessionRegistry registry)
     /// relay in between would have dropped it to
     /// <see cref="RelayOutcome.UnrecognisedMessageType"/> under D-14's catch-all, which is correct
     /// behaviour for a message from the future and silent ruin for one from the present. That is
-    /// exactly what happened to <see cref="WireMessageType.JoinPending"/> and became BUG-33.
+    /// exactly what happened to <see cref="WireMessageType.JoinPending"/>.
     /// </para>
     /// <para>
     /// <b>Narrowed to the host, like a join request.</b> Who is trying to join and what their client

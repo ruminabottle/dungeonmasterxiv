@@ -13,7 +13,7 @@ public class DeadPatternsTests
         "Product" + " Owner", "Engineering" + " Lead", "found by the code" + " reviewer",
         "the Code" + " Reviewer", "a b" + "reakfix engineer", "ruled by the " + "HUMAN",
         "in ." + "claude/team/X.md", "engineering" + D + "standards.md", "product" + D + "directives",
-        "the " + "brief.md", "found by qa" + D + "3",
+        "the " + "brief.md", "found by qa" + D + "3", "found by QA" + D + "3",
     };
 
     public static TheoryData<string> Alive => new()

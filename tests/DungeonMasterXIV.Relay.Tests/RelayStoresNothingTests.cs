@@ -9,9 +9,9 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// PRD-1 says this is the criterion most likely to be skipped and the one that matters most in two
-/// years, because R-1.7a ships users the words "no server storing your sessions" and this is the
-/// only thing that keeps them true.
+/// This is the criterion most likely to be skipped and the one that matters most in two years,
+/// because R-1.7a ships users the words "no server storing your sessions" and this is the only thing
+/// that keeps them true.
 /// </para>
 /// <para>
 /// <b>Two assertions, because neither alone is enough.</b> The filesystem snapshot catches a write;
@@ -20,11 +20,11 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// </para>
 /// <para>
 /// <b>Two tenses, deliberately.</b> The snapshot answers "does a file remain"; the
-/// <see cref="WriteObserver"/> answers "was anything ever written". Only the second sees a file that
-/// is created and deleted again — a temp file, a lock, a key ring cleaned up on shutdown — and
-/// "the relay stores nothing" is a claim about writing, not about what survives. The instrument was
-/// originally scoped to the end state, which is the wrong tense for the criterion the PRD says
-/// matters most in two years.
+/// <see cref="WriteObserver"/> answers "was anything ever written". Only the second sees a file that is
+/// created and deleted again — a temp file, a lock, a key ring cleaned up on shutdown — and "the
+/// relay stores nothing" is a claim about writing, not about what survives. The instrument was
+/// originally scoped to the end state, which is the wrong tense for the criterion that matters most
+/// in two years.
 /// </para>
 /// <para>
 /// <b>What it watches</b>, per <see cref="RelaySandbox.WatchedRoots"/>: the content root; the relay's
@@ -33,9 +33,9 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// <c>AppContext.BaseDirectory</c></b>, which is where a write that names no directory actually lands.
 /// </para>
 /// <para>
-/// <b>Those last two are BUG-10 and they were the likely case, not an exotic one.</b> This comment
-/// used to say only that the instrument could not see "an unrelated absolute path". That understated
-/// it: <c>File.WriteAllText("relay.log", …)</c> names no directory at all, resolves against the
+/// <b>Those last two were the likely case, not an exotic one.</b> This comment used to say only that
+/// the instrument could not see "an unrelated absolute path". That understated it:
+/// <c>File.WriteAllText("relay.log", …)</c> names no directory at all, resolves against the
 /// process's current directory, and was unwatched. Measured — a bare append in
 /// <c>RelayLog.ConnectionOpened</c> put ten lines on disk while these six tests passed green. The
 /// instrument was not broken; it was aimed slightly away from where the shot would come from.
@@ -121,9 +121,9 @@ public sealed class RelayStoresNothingTests
     /// written during the session, the same comparison must fail.
     /// </summary>
     /// <remarks>
-    /// Run because "describe the input that makes this fail" is the standards' test for whether
-    /// something is a check, and because a snapshot comparison that silently watched the wrong
-    /// directory would pass forever. This is that input, executed rather than argued.
+    /// Run because "describe the input that makes this fail" is how to tell whether something is a
+    /// check, and because a snapshot comparison that silently watched the wrong directory would pass
+    /// forever. This is that input, executed rather than argued.
     /// </remarks>
     [Fact]
     public async Task RelayWritesAreDetected()
@@ -195,7 +195,7 @@ public sealed class RelayStoresNothingTests
     }
 
     /// <summary>
-    /// BUG-10: a write that names no directory at all is seen. <b>This is the likely sink, not an
+    /// A write that names no directory at all is seen. <b>This is the likely sink, not an
     /// exotic one</b> — it is what <c>File.WriteAllText("relay.log", …)</c> does when nobody names a
     /// directory, and it resolves against the process's current directory rather than anywhere under
     /// the sandbox.
@@ -209,10 +209,10 @@ public sealed class RelayStoresNothingTests
     /// </remarks>
     [Fact]
     public Task AWriteThatNamesNoDirectoryIsDetected() =>
-        AssertAmbientWriteIsSeen("bug10-bare-relative.log");
+        AssertAmbientWriteIsSeen("probe-bare-relative.log");
 
     /// <summary>
-    /// BUG-10: the other place a naive write lands — beside the test assembly, via
+    /// The other place a naive write lands — beside the test assembly, via
     /// <see cref="AppContext.BaseDirectory"/>.
     /// </summary>
     /// <remarks>
@@ -222,7 +222,7 @@ public sealed class RelayStoresNothingTests
     /// </remarks>
     [Fact]
     public Task AWriteBesideTheTestAssemblyIsDetected() =>
-        AssertAmbientWriteIsSeen(Path.Combine(AppContext.BaseDirectory, "bug10-base-directory.log"));
+        AssertAmbientWriteIsSeen(Path.Combine(AppContext.BaseDirectory, "probe-base-directory.log"));
 
     private static async Task AssertAmbientWriteIsSeen(string path)
     {

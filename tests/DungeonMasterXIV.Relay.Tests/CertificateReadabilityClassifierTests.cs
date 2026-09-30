@@ -12,8 +12,8 @@ namespace DungeonMasterXIV.Relay.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>BUG-20: nothing tested this against a real file, and the suite could not fail without it.</b>
-/// The end-to-end test of BUG-15's guarantee reaches its real branch only when the classifier
+/// <b>Nothing tested this against a real file, and the suite could not fail without it.</b> The
+/// end-to-end test of the unreadable-file guarantee reaches its real branch only when the classifier
 /// returns <c>true</c> — so the function under test chose which branch tested it, and blinding the
 /// classifier made that test quietly take a fallback that asserts a pure function called with the
 /// answer hard-coded. One line changed, and the whole relay suite stayed byte-identical to green
@@ -27,7 +27,7 @@ namespace DungeonMasterXIV.Relay.Tests;
 public sealed class CertificateReadabilityClassifierTests
 {
     /// <summary>
-    /// <b>The gate BUG-20 found missing.</b> A file this process genuinely may not read is
+    /// <b>The gate that was missing.</b> A file this process genuinely may not read is
     /// classified as unreadable.
     /// </summary>
     /// <remarks>
@@ -43,25 +43,25 @@ public sealed class CertificateReadabilityClassifierTests
     [UnsupportedOSPlatform("windows")]
     public void AnUnreadableFileIsClassifiedAsUnreadable()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug20");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-unreadable");
         var file = Path.Combine(directory.FullName, "relay-certificate.pfx");
         File.WriteAllBytes(file, [0x00]);
         File.SetUnixFileMode(file, UnixFileMode.None);
 
         Assert.True(
             CertificateLoadFailure.CannotBeRead(file),
-            "A file with no mode bits set must be classified unreadable, or BUG-15's advice never prints.");
+            "A file with no mode bits set must be classified unreadable, or the permissions advice never prints.");
     }
 
     /// <summary>
     /// The control for the test above, and it is not optional: a classifier hard-wired to
     /// <c>true</c> would satisfy that assertion and print the chown advice for everything, which is
-    /// BUG-17 all over again.
+    /// the advice-on-every-failure defect all over again.
     /// </summary>
     [Fact]
     public void AReadableFileIsNotClassifiedAsUnreadable()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug20");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-readable");
         var file = Path.Combine(directory.FullName, "relay-certificate.pfx");
         File.WriteAllBytes(file, [0x00]);
 
@@ -69,7 +69,7 @@ public sealed class CertificateReadabilityClassifierTests
     }
 
     /// <summary>
-    /// BUG-21. A path pointing at a directory is the wrong kind of thing, not a refusal.
+    /// A path pointing at a directory is the wrong kind of thing, not a refusal.
     /// </summary>
     /// <remarks>
     /// The realistic trigger is <c>/run/secrets</c> where <c>/run/secrets/relay-certificate</c> was
@@ -80,7 +80,7 @@ public sealed class CertificateReadabilityClassifierTests
     [Fact]
     public void ADirectoryIsNotAPermissionsFinding()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug21");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-directory");
 
         Assert.False(CertificateLoadFailure.CannotBeRead(directory.FullName));
     }
@@ -89,7 +89,7 @@ public sealed class CertificateReadabilityClassifierTests
     [Fact]
     public void AMissingFileIsNotAPermissionsFinding()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug21");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-missing");
 
         Assert.False(CertificateLoadFailure.CannotBeRead(Path.Combine(directory.FullName, "absent.pfx")));
     }
@@ -100,7 +100,7 @@ public sealed class CertificateReadabilityClassifierTests
     [Fact]
     public void ADirectoryDoesNotGetThePermissionsAdvice()
     {
-        var directory = Directory.CreateTempSubdirectory("dmx-bug21");
+        var directory = Directory.CreateTempSubdirectory("dmx-cert-directory");
 
         var thrown = Assert.ThrowsAny<Exception>(() => RelayApp.Build(new RelayOptions
         {
@@ -122,9 +122,9 @@ public sealed class CertificateReadabilityClassifierTests
 /// </summary>
 /// <remarks>
 /// Not a silent early return. A test that quietly does nothing where it cannot do the real check
-/// still reports as a pass and is counted as coverage — which is the shape of BUG-20 itself. Modes
-/// do not bite on Windows, and do not bite for a user that bypasses them, so the condition is
-/// measured rather than assumed from the platform.
+/// still reports as a pass and is counted as coverage — which is the shape of the classifier gap
+/// above. Modes do not bite on Windows, and do not bite for a user that bypasses them, so the
+/// condition is measured rather than assumed from the platform.
 /// </remarks>
 public sealed class FileModesBiteFactAttribute : FactAttribute
 {
