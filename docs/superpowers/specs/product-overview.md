@@ -102,7 +102,7 @@ This constrains every feature.
 A deliberate, load-bearing design choice; see D-8.
 
 - A client's identifier is generated fresh **every time the plugin launches**.
-- It may bind to a persistent UUID stored **under a campaign**, so a returning player can relink to
+- It may bind to a persistent UUID stored **under a session code**, so a returning player can relink to
   their character in that campaign. **The DM approves every relink, every session.** Relinking is
   never silent and never automatic.
 - No identifier is stable across campaigns, derivable from a character name or account, or present
@@ -188,7 +188,8 @@ accept/deny meaningful, because an unadmitted client has no route into anyone's 
 
 The plugin contains no rules content for any tabletop system and enforces no legality of any action.
 It does not compute the outcome of a roll beyond evaluating the dice expression a participant wrote.
-It records what the humans decided. Success/failure resolution is not built.
+It records what the humans decided. Success/failure resolution was raised and deferred: it is not
+built yet, and it is not a non-goal.
 
 The product is modelled on **Foundry VTT core, never a Foundry system.** Foundry core ships no game
 rules; Pathfinder 2e, D&D 5e and the rest are separate packages layered on top. That split is this
@@ -219,7 +220,7 @@ plugin. Foundry has the same property.
 ### D-8 Identity is campaign-scoped and never portable
 
 A client's identifier is generated fresh on every plugin launch. It may be bound to a persistent UUID
-stored under a campaign, so a returning player can relink to their character in that campaign. The DM
+stored under a session code, so a returning player can relink to their character in that campaign. The DM
 approves every relink, every session, and an approved relink is never silent or automatic. No
 identifier may be stable across campaigns, derivable from a character name or account, or present in
 any exported artefact. Local history on the DM's own machine may hold real character names; exports
@@ -376,9 +377,8 @@ their build on a Dalamud reference. Known gap: the current check matches on refe
 identity only, so a `HintPath` pointing into a Dalamud installation passes it. The requirement is
 that any reference resolving into a Dalamud installation fails the build in both projects.
 
-Packages in the contract project ship into other people's game client, so each one is pinned to an
-exact version and scoped to its stated use. `BouncyCastle.Cryptography` is scoped to the key
-exchange. A second use of a package is a new decision.
+`BouncyCastle.Cryptography` ships into other people's game client, so it is pinned to an exact
+version and scoped to the key-exchange path; a second use of it is a second decision (D-19).
 
 Reason: the option to split the repository is real only while the coupling stays absent, and coupling
 arrives one convenient reference at a time. Keeping the option is what would make an independent relay
@@ -579,7 +579,6 @@ What the plugin will not do, and why.
   exactly the durable, cross-context, character-derived identifier D-8 refuses. Impersonation is
   handled socially: the DM admits people they arranged with, using a code they gave out.
 - **No user accounts, no cloud storage.**
-- **No success/failure resolution** on rolls (D-4).
 
 ## Cross-cutting acceptance criteria
 
