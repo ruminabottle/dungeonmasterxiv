@@ -13,13 +13,14 @@ public class DeadPatternsTests
         "Product" + " Owner", "Engineering" + " Lead", "found by the code" + " reviewer",
         "the Code" + " Reviewer", "a b" + "reakfix engineer", "ruled by the " + "HUMAN",
         "in ." + "claude/team/X.md", "engineering" + D + "standards.md", "product" + D + "directives",
-        "the " + "brief.md", "found by qa" + D + "3", "found by QA" + D + "3",
+        "the " + "brief.md", "found by qa" + D + "3", "found by QA" + D + "3", "DMXHUM" + D + "4",
+        "feature" + D + "engineer" + D + "2", "breakfix" + D + "engineer" + D + "1", "found by fe" + D + "3",
     };
 
     public static TheoryData<string> Alive => new()
     {
         "R" + D + "1.3h", "A" + D + "2.40", "D" + D + "11", "1E" + D + "10", "SHA" + D + "256", "UTF" + D + "8",
-        "#89", "the human reading the roster", "a ticket", "QA",
+        "#89", "the human reading the roster", "a ticket", "QA", "safe" + D + "1",
     };
 
     public static TheoryData<string> Review => new()
