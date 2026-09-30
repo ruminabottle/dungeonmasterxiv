@@ -79,13 +79,13 @@ public sealed class SessionContent
     /// a capability rather than an omission here:</b> a host cannot READ member-authored content at
     /// all. <c>InboundHandlers.OpenWith</c> is a single key and a host holds one per admitted peer,
     /// so a departure notice would be forwarded by the relay and dropped unopened. That capability is
-    /// R-1.3k / A-1.13c and it is <b>DMXENG-50</b>; A-1.15 and A-1.16a wait on it. Adding a departure
+    /// R-1.3k / A-1.13c; A-1.15 and A-1.16a wait on it. Adding a departure
     /// section here before then would put a message on the wire that nothing can receive.
     /// </para>
     /// <para>
     /// <b>3. A member that VANISHES — a crash or a dropped link — IS NOT REMOVED, AND THAT IS
     /// CORRECT.</b> Not a gap, not a deferral: <b>R-1.5a holds that seat for the reconnect window</b>,
-    /// and a build that removed vanished members would BREAK it. D-8's SQ-20 amendment is explicit
+    /// and a build that removed vanished members would BREAK it. D-8's amendment (now D-17) is explicit
     /// that a DELIBERATE QUIT removes immediately and an ungraceful drop does not — the two are
     /// different events with different answers, and A-1.30 exists to keep them apart.
     /// <b>If you are here to "finish" R-1.3g by removing members who went quiet, stop: that is the

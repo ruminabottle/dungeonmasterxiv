@@ -17,7 +17,7 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// It carries the fields as properties rather than as arguments to a factory because the field list
-/// grows: <see cref="WireEnvelope.FromWire"/> had reached seven parameters, past the standards'
+/// grows: <see cref="WireEnvelope.FromWire"/> had reached seven parameters, past the size gate's
 /// blocking limit of six, and one more optional field would have made that worse rather than
 /// better. A new optional field is a property here and changes no signature.
 /// </para>

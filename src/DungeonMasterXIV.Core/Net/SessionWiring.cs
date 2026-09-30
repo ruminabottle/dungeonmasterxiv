@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Net;
 /// <remarks>
 /// <para>
 /// <b>COMPOSING THE COLLABORATORS IS NOT COORDINATING THEM.</b> This is the same cut
-/// <see cref="InboundWiring"/> made at DMXENG-65 and for the same stated reason: the point is WHERE
+/// <see cref="InboundWiring"/> made, and for the same stated reason: the point is WHERE
 /// THE NEXT COLLABORATOR LANDS. A twelfth collaborator now edits <i>this</i> type and leaves
 /// <see cref="SessionCoordinator"/>'s class span unchanged — where before, every one of the eleven
 /// below enlarged it, which is how it reached margin 0 and blocked the chunk behind it.
@@ -16,7 +16,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>THE ORDER HERE IS LOAD-BEARING AND IS THE REASON THIS IS A TYPE RATHER THAN A METHOD.</b>
 /// Several collaborators close over ones built further down, so the sequence is a correctness
-/// property rather than a style. It is not merely commented: DMXENG-45 made it DETECTED —
+/// property rather than a style. It is not merely commented: it is DETECTED —
 /// <see cref="JoinRequester"/> guards its collaborators, so building it early throws rather than
 /// passing a null nothing refuses. The per-line notes below record which reads are deferred and why.
 /// </para>
@@ -77,7 +77,7 @@ internal sealed class SessionWiring
         // rather than over the coordinator, which is one fewer escaped reference.
         Membership = new SessionMembership(Link, Joiner, () => Join.Code);
         // AFTER Interruption, which owns the Grace window this reads. The Func defers that read to
-        // use time, so the ordering hazard DMXENG-45 detected does not extend to it -- but HostRunner
+        // use time, so the detected ordering hazard does not extend to it -- but HostRunner
         // guards every argument anyway, which is the point of those guards.
         Hosting = new HostRunner(Host, Resources, Handshake, newKeys, SynchroniseTransport);
     }
@@ -163,7 +163,7 @@ internal sealed class SessionWiring
     /// Deliberately NOT null-conditional, matching what <see cref="SessionCoordinator.HostKeys"/>
     /// has always done: every caller above defers the read behind a <c>Func</c>, so a throw here
     /// would mean a collaborator read it during construction, which is the ordering defect
-    /// DMXENG-45 exists to surface rather than to hide.
+    /// those guards exist to surface rather than to hide.
     /// </remarks>
     private SessionKeyExchange? HostKeys => Hosting.Keys;
 }

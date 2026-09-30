@@ -25,11 +25,11 @@ namespace DungeonMasterXIV.Net;
 /// STYLISTIC ONE.</b> A-2.16 — <i>an export contains only what its owner could see</i> — is
 /// <b>entailed</b> rather than filtered, and the entailment holds ONLY because the log is built from
 /// what THIS client received. Record from anything the host assembles and the entailment is false,
-/// which resurrects the visibility filter measured as absent at SQ-115.
+/// which resurrects the visibility filter that was measured as absent.
 /// </para>
 /// <para>
-/// <b>RECORDING DOES NOT REQUIRE A SEQUENCER, AND THAT IS DELIBERATE (amended DMXENG-116
-/// obligation 3).</b> <see cref="Record(StreamEntry)"/> takes an entry that ARRIVED already stamped;
+/// <b>RECORDING DOES NOT REQUIRE A SEQUENCER, AND THAT IS DELIBERATE.</b>
+/// <see cref="Record(StreamEntry)"/> takes an entry that ARRIVED already stamped;
 /// <see cref="RecordAsHost"/> mints first and is a convenience for the one client that is the
 /// authority on order. <b>The host owning a sequencer is a fact about the host, not a precondition
 /// of writing something down</b> — so when stamps travel, admitting the member path is a wiring
@@ -47,9 +47,7 @@ namespace DungeonMasterXIV.Net;
 /// <c>cb334c9</c>: <see cref="SessionContent"/> carries a roster, a closing instant and a leaving
 /// flag — <b>no message, no roll, and no stamp.</b> So a NON-HOST client cannot record at all: it
 /// has no host-minted stamp and cannot mint one, and <see cref="SessionStream.Record"/> refuses an
-/// unminted stamp by construction. <b>That is the wire's gap, not this type's, and it has
-/// its own ticket — an absence on a board survives, and a comment in a file nobody opens does
-/// not.</b>
+/// unminted stamp by construction. <b>That is the wire's gap, not this type's.</b>
 /// </para>
 /// </remarks>
 internal sealed class SessionRecording
@@ -122,8 +120,8 @@ internal sealed class SessionRecording
     /// order (R-2.4), layered on top rather than built in.
     /// </para>
     /// <para>
-    /// <b>SO THE MEMBER PATH IS A WIRING CHANGE, NOT A REDESIGN.</b> When stamps travel — DMXENG-118
-    /// — a non-host client decodes an already-stamped entry and calls THIS. No new type, no new
+    /// <b>SO THE MEMBER PATH IS A WIRING CHANGE, NOT A REDESIGN.</b> When stamps travel, a non-host
+    /// client decodes an already-stamped entry and calls THIS. No new type, no new
     /// method, and nothing here to unpick. <b>A recorder that could only mint would have had to be
     /// taken apart to admit the member, which is the host-only assumption this shape refuses.</b>
     /// </para>

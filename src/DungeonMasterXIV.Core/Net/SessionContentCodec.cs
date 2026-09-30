@@ -53,7 +53,7 @@ namespace DungeonMasterXIV.Net;
 /// <c>"DungeonMaster\nCode to compare: FORGED"</c>, is refused at decode outright because the
 /// deserialiser throws and <c>TryDecode</c> returns false. So Role cannot carry text and cannot
 /// forge a line. What it can do is present a value matching no case, which is a rendering question
-/// for whoever builds T-14 and not an injection one.
+/// for whoever builds the roster and not an injection one.
 /// </para>
 /// </remarks>
 public static class SessionContentCodec
@@ -84,10 +84,10 @@ public static class SessionContentCodec
     /// <see cref="DisplayName.OrNone"/> exists.
     /// </para>
     /// <para>
-    /// <b>The shape rule moved to <see cref="PeerCode.TryParse"/> and is no longer restated here.</b>
-    /// BUG-57's hotfix vetted the code at this one door, which was right for a hotfix and wrong as
-    /// the end state — a point-vet leaves every other door open. The rule it applied is unchanged:
-    /// the shape <c>AdmissionControl.PeerCodeFor</c> emits, deliberately not
+    /// <b>The shape rule moved to <see cref="PeerCode.TryParse"/> and is no longer restated
+    /// here.</b> The roster-gate hotfix vetted the code at this one door, which was right for a
+    /// hotfix and wrong as the end state — a point-vet leaves every other door open. The rule it
+    /// applied is unchanged: the shape <c>AdmissionControl.PeerCodeFor</c> emits, deliberately not
     /// <see cref="SessionCode.TryParse"/>, which strips hyphens and upper-cases so a pasted code
     /// works and would therefore accept <c>"PEE-R3"</c> that the product never generated.
     /// </para>
@@ -242,7 +242,7 @@ public static class SessionContentCodec
 
         content = Vetted(content, out var dropped, out var droppedEntries);
 
-        // BUG-70. The drop itself is right for both of its causes; the SILENCE was right for only
+        // The drop itself is right for both of its causes; the SILENCE was right for only
         // one. A forged entry rejected is nothing to announce — but the other cause is that OUR OWN
         // ENCODER wrote a code it cannot parse back, and then we delete a genuine participant to
         // hide our own bug and nothing anywhere says so. This cannot tell the two apart at the point

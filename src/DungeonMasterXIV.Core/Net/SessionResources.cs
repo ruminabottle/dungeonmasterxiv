@@ -7,8 +7,8 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THIS NAMES A SET THAT HAD NO NAME, AND ITS NAMELESSNESS WAS THE ROOT OF BUG-90.</b> Until
-/// now, "the things a hosted session owns" existed only as the body of
+/// <b>THIS NAMES A SET THAT HAD NO NAME, AND ITS NAMELESSNESS WAS THE ROOT OF THE START/STOP
+/// ASYMMETRY.</b> Until now, "the things a hosted session owns" existed only as the body of
 /// <see cref="HostRunner.Stop"/> — so every method that needed the set was trusted to remember it,
 /// and <see cref="HostRunner.Start"/> did not: it resets two of them where <c>Stop</c> releases
 /// five. That asymmetry is not a missing line, it is what happens to a list nobody wrote down.
@@ -16,10 +16,10 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>Why it exists NOW rather than as tidying.</b> <see cref="HostRunner"/>'s constructor reached
 /// <b>seven parameters against a block of six</b> — the only such breach in production code — and
-/// DMXENG-50's two teardown calls would have taken it to nine. <b>This codebase has already made
+/// the R-1.3k work's two teardown calls would have taken it to nine. <b>This codebase has already made
 /// exactly this move for exactly this row:</b> <see cref="InboundHandlers"/> exists because
-/// <c>AdmissionInbox.Drain</c> "had reached six parameters — the block row in the engineering
-/// standards". Same row, same remedy, cited rather than invented.
+/// <c>AdmissionInbox.Drain</c> "had reached six parameters — the parameter block the size
+/// gate enforces". Same row, same remedy, cited rather than invented.
 /// </para>
 /// <para>
 /// <b>It bundles references; it does not take ownership.</b> The coordinator still hands
@@ -59,7 +59,7 @@ internal sealed class SessionResources
         MemberContentKeys memberKeys,
         MemberContentReceipts memberContent)
     {
-        // DMXENG-45's rule. Every argument here arrives from a field assigned earlier in
+        // The construction-order rule. Every argument here arrives from a field assigned earlier in
         // SessionCoordinator's constructor, so building this type too early passes a null nothing
         // would refuse -- the assignment succeeds and the failure surfaces on a hosting path, or
         // never in a test that does not host.

@@ -17,7 +17,7 @@ namespace DungeonMasterXIV.Net;
 /// <item>its join twin on <see cref="SessionInterruption.InAJoinedSession"/>.</item>
 /// </list>
 /// <para>
-/// BUG-115 is what that shape produces: the window's exclusivity guard was gated on the JOIN side
+/// This is what that shape produces: the window's exclusivity guard was gated on the JOIN side
 /// alone, so a live host was one click from starting a second session. Nobody noticed the host half
 /// was missing, because there was no one place where its absence would have been visible.
 /// </para>

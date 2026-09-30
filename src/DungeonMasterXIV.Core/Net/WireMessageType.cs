@@ -76,12 +76,12 @@ public enum WireMessageType
     /// <remarks>
     /// <para>
     /// <b>A receipt, not a declaration, and the difference is load-bearing.</b> It would be simpler
-    /// for the joiner to say "I understand JoinPending" in its original
-    /// <see cref="JoinRequest"/> — one field, no round trip. That would have been WRONG, and this
-    /// project proved it: the deployed relay was v0.1.0 and DROPPED JoinPending, which is what made
-    /// BUG-33 every session rather than a rare version skew. A declaring client would have told the
-    /// host "they can compare" while the relay silently ate the notice. This is sent only once the
-    /// key has actually arrived, so it reports a fact rather than a promise.
+    /// for the joiner to say "I understand JoinPending" in its original <see cref="JoinRequest"/> —
+    /// one field, no round trip. That would have been WRONG, and this project proved it: the deployed
+    /// relay was v0.1.0 and DROPPED JoinPending, which is what made the impossible-confirmation defect
+    /// every session rather than a rare version skew. A declaring client would have told the host
+    /// "they can compare" while the relay silently ate the notice. This is sent only once the key has
+    /// actually arrived, so it reports a fact rather than a promise.
     /// </para>
     /// <para>
     /// <b>What it may never carry.</b> R-1.3a-iii forbids signalling that the joining human DID
@@ -107,7 +107,7 @@ public enum WireMessageType
     /// <para>
     /// <b>A positive notice rather than an inference from silence, and that is required rather than
     /// tidy.</b> Deciding a member has gone because nothing has arrived starts a clock from an
-    /// absence — SQ-43's defect, and what A-1.28 forbids in terms.
+    /// absence — the defect A-1.28 forbids in terms.
     /// </para>
     /// <para>
     /// <b>A CLIENT SENDING ONE IS REFUSED AT THE RELAY, and that guard is load-bearing.</b>

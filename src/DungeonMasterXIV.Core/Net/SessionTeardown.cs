@@ -9,7 +9,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>BUG-154: THE TEARDOWN RAN THE HOST'S HALF ONLY.</b> It called <c>StopHosting</c>,
+/// <b>THE TEARDOWN RAN THE HOST'S HALF ONLY.</b> It called <c>StopHosting</c>,
 /// <c>Detach</c> and disposed the transport — the first a no-op for a joiner, the other two just
 /// dropping the socket, which is what an UNGRACEFUL DROP looks like from the relay. So a player who
 /// quit FFXIV deliberately was indistinguishable from one whose machine died, and the host held
@@ -48,7 +48,7 @@ public static class SessionTeardown
     /// <b>A HOST ANNOUNCES NOTHING, and is not special-cased to achieve it:</b> a departure needs a
     /// session code AND a shared key from having been admitted, so a host and a never-admitted joiner
     /// both fall out of it silently. Pinned by test rather than inferred from that reasoning, because
-    /// the bug report was right that it was only ever a reading of a comment.
+    /// it was only ever a reading of a comment.
     /// </para>
     /// <para>
     /// <b>This does NOT make a host remove members who vanished.</b> R-1.3g names that as the false
@@ -70,12 +70,12 @@ public static class SessionTeardown
     /// asserting a departure is sent still passed, and only the test asserting the ORDER caught
     /// it.</i> So this position is pinned by an order assertion rather than a happened one.
     /// <para>
-    /// <b>The existing three calls are NOT reordered.</b> Their order is the BUG-154 fix; retention
-    /// is added above them and touches none of it.
+    /// <b>The existing three calls are NOT reordered.</b> Their order is the fix for a teardown
+    /// that ran the host's half only; retention is added above them and touches none of it.
     /// </para>
     /// <para>
     /// <b>Optional because nothing supplies it yet.</b> The composition root is outside this
-    /// ticket's boundary, so the parameter exists and is unwired — which is the safe partial: with
+    /// change's boundary, so the parameter exists and is unwired — which is the safe partial: with
     /// no retention supplied, nothing is retained, and <c>ConfigWindow</c>'s shipped sentence
     /// <i>"nothing to delete anywhere but here"</i> stays exactly as true as it is today.
     /// </para>

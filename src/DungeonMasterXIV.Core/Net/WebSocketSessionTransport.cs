@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// The relay socket. The only place in this product that opens one, per the standards.
+/// The relay socket. The only place in this product that opens one.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -36,7 +36,7 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
     private CancellationTokenSource? _lifetime;
     private bool _connecting;
 
-    // BUG-122. The socket whose ConnectAsync has actually RETURNED. Held as the reference rather
+    // The socket whose ConnectAsync has actually RETURNED. Held as the reference rather
     // than a bool so a reconnect cannot inherit the previous socket's readiness: the check is
     // "the sendable one IS the current one", which a stale flag could not express.
     //
@@ -85,7 +85,7 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
     /// conflation leaves callers no way to ask the different question "is it safe to send yet",
     /// and <see cref="Send"/> drops a frame that arrives before the socket opens.
     /// <para>
-    /// <b>BUG-122: THIS ASKED THE SOCKET AND THE SOCKET ANSWERED TOO EARLY.</b> It used to be
+    /// <b>THIS ASKED THE SOCKET AND THE SOCKET ANSWERED TOO EARLY.</b> It used to be
     /// <c>_socket?.State == WebSocketState.Open</c>, and <see cref="ClientWebSocket.State"/> reports
     /// <see cref="WebSocketState.Open"/> BEFORE <c>ClientWebSocket.ConnectAsync</c> has
     /// returned — at which point <c>ClientWebSocket.SendAsync</c> still throws
@@ -122,9 +122,9 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
         _connecting = true;
 
         // Transport contract clause 2. WebSocket-level ping/pong, not an application heartbeat, so
-        // no envelope and no C1 type is involved. The client initiates rather than relying on the
-        // relay to: a lull long enough for a NAT table to drop the connection is normal play, and
-        // the failure it prevents shows up mid-session rather than at connect time.
+        // no envelope and no WireMessageType is involved. The client initiates rather than relying
+        // on the relay to: a lull long enough for a NAT table to drop the connection is normal
+        // play, and the failure it prevents shows up mid-session rather than at connect time.
         _socket.Options.KeepAliveInterval = TransportContract.KeepAliveInterval;
         _socket.Options.KeepAliveTimeout = TransportContract.KeepAliveTimeout;
 
@@ -187,7 +187,7 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
     /// <inheritdoc />
     public void Dispose() => Disconnect();
 
-    // BUG-5. Disposing a socket never puts a close frame on the wire, so the relay is not told and
+    // Disposing a socket never puts a close frame on the wire, so the relay is not told and
     // holds the connection until its own idle reaper fires -- which then absorbs every ordinary
     // disconnect as though it were a client that vanished. The output-only close is deliberate: this
     // end has nothing further to say and does not need the peer's reply, so there is no round trip
@@ -236,7 +236,7 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
         {
             await socket.ConnectAsync(relay, token).ConfigureAwait(false);
 
-            // BUG-122: THE ONLY MOMENT AT WHICH SENDING IS ACTUALLY SAFE. Recorded here rather than
+            // THE ONLY MOMENT AT WHICH SENDING IS ACTUALLY SAFE. Recorded here rather than
             // inferred from socket state, because the state says Open well before this line runs.
             _connected = socket;
 

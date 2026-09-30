@@ -56,8 +56,8 @@ public readonly record struct StreamLine(
     /// <para>
     /// <b>AND A SEQUENCE BELOW 1 IS REFUSED, BECAUSE THE HOST IS THE SOLE MINTER (R-2.4).</b>
     /// <see cref="HostSequencer"/> issues from 1, so anything lower was not minted by a host —
-    /// and 0 sorts to the FRONT of a populated log, which is the ordering hazard BUG-161 was raised
-    /// for. <b>This is the door; <c>SessionStream.Record</c>'s identical check is the backstop it
+    /// and 0 sorts to the FRONT of a populated log, which is the ordering hazard this guards against.
+    /// <b>This is the door; <c>SessionStream.Record</c>'s identical check is the backstop it
     /// says it is</b>, and the two are deliberate rather than duplicated: this one refuses at the
     /// boundary where the value arrives from another client, that one refuses what the type system
     /// cannot.

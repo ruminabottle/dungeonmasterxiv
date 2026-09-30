@@ -293,7 +293,7 @@ public sealed record WireEnvelope
     /// <para>
     /// <b>THIS IS THE ONLY MESSAGE THAT CARRIES THE DEADLINE, and two things about it survive the
     /// deletion of the second route.</b> A <c>ForJoinRequest</c> overload used to stamp
-    /// one too; it had no production caller and the Spec Owner ruled that R-1.3c names an observable
+    /// one too; it had no production caller and R-1.3c names an observable
     /// state of the joining player rather than a carrier, so it went.
     /// </para>
     /// <list type="number">
@@ -359,7 +359,7 @@ public sealed record WireEnvelope
     /// why that is the whole design and what forwarding a client-sent one would buy an attacker.
     /// <para>
     /// Kept short deliberately: <c>WireEnvelope</c> sits against a DECLARED RAISED FLAG of 360
-    /// (<c>engineering-standards.md:8003</c>), and a flag raised on purpose is one that has to stay
+    /// (the class flag, raised from 250), and a flag raised on purpose is one that has to stay
     /// visible. The reasoning lives on the message type, which is where a reader looking for it
     /// would go.
     /// </para>

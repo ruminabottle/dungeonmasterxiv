@@ -42,7 +42,7 @@ public sealed class SessionAudience
     /// <remarks>
     /// A genuine read-only wrapper, not the backing list typed as an interface. Returning
     /// <c>_admitted</c> directly would let a caller downcast to <see cref="List{T}"/> and mutate it,
-    /// and would hand C2's receive loop a collection that can change under enumeration.
+    /// and would hand the receive loop a collection that can change under enumeration.
     /// </remarks>
     public IReadOnlyList<AdmittedPeer> Recipients => _admitted.AsReadOnly();
 

@@ -180,7 +180,7 @@ internal sealed class SessionInterruption
             _host.Fail(failure);
         }
 
-        // BUG-53. Started BEFORE the phase moves, because Admitted is the only predecessor that
+        // Started BEFORE the phase moves, because Admitted is the only predecessor that
         // holds a seat and the phase is about to stop saying so. GraceWindow's method is named for
         // its first caller; what it means here is "the thing we were waiting on went away, start
         // counting".

@@ -18,15 +18,15 @@ namespace DungeonMasterXIV.Net;
 /// <b>Extension methods so that not one call site moves.</b> Roughly thirty callers across the
 /// product and the suite keep reading <c>envelope.TryGetAdmissionOutcome(key)</c> exactly as before.
 /// A refactor that renames thirty call sites to satisfy a line count would be the churn the limit is
-/// supposed to prevent, and it would bury the two real changes in this PR.
+/// supposed to prevent, and it would bury the two real changes.
 /// </para>
 /// <para>
-/// <b>WHY NOW, HONESTLY.</b> Not because anyone spotted the boundary in advance. DMXENG-47 and
-/// BUG-85 each fit alone and together put the class at <b>426 against a 400 block</b>; the limit
-/// forced a cut and this is where the Code Reviewer measured the cheapest one — 426 to 329, under
-/// the flag rather than merely under the block, with no new concept introduced. <b>The reviewer also
-/// recorded that this partly reverses their own position on #88</b>, where they argued factories and
-/// accessors co-vary; what changed is that the block is now breached rather than approached.
+/// <b>WHY NOW, HONESTLY.</b> Not because anyone spotted the boundary in advance. The participant
+/// receipt and the addressed-answer fix each fit alone and together put the class at <b>426 against
+/// a 400 block</b>; the limit forced a cut and this is where the cheapest one was measured — 426 to
+/// 329, under the flag rather than merely under the block, with no new concept introduced. <b>This
+/// partly reverses the position taken on #88</b>, that factories and accessors co-vary; what
+/// changed is that the block is now breached rather than approached.
 /// </para>
 /// <para>
 /// <b><see cref="ParticipantReceipt"/> is deliberately NOT folded in here, and it is a fair question
@@ -34,7 +34,7 @@ namespace DungeonMasterXIV.Net;
 /// reading, and its three checks carry a requirement's worth of reasoning. Two homes for one category
 /// is a smell; one type named for a concept beside a bag of readers is arguably right. <b>I have left
 /// it and am flagging the choice rather than settling it silently</b> — folding it in is a two-line
-/// change if the reviewer prefers.
+/// change.
 /// </para>
 /// </remarks>
 public static class WireEnvelopeReading
@@ -70,7 +70,7 @@ public static class WireEnvelopeReading
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>BUG-85 (D-11): every admission answer is addressed, and nothing read the address.</b> All
+    /// <b>Every admission answer is addressed, and nothing read the address (D-11).</b> All
     /// three carry the joiner's key so it can be matched to an attempt, and this returned an outcome
     /// without looking — so a client could reach <c>Admitted</c>, with a derived key, on an
     /// acceptance meant for somebody else. An honest relay resolves the addressee and forwards to it
@@ -79,9 +79,9 @@ public static class WireEnvelopeReading
     /// </para>
     /// <para>
     /// <b>All three arms, and the reported one is the least exposed:</b> <c>Admitted()</c> has a
-    /// phase guard that narrows it to a joiner already awaiting a decision, while <c>Denied()</c> and
-    /// <c>Lapsed()</c> have none. Guarding only what was reported is the shape BUG-56 rejects, and
-    /// here it would have left the two EASIER arms open.
+    /// phase guard that narrows it to a joiner already awaiting a decision, while <c>Denied()</c>
+    /// and <c>Lapsed()</c> have none. Guarding only what was reported is the local-guard shape the
+    /// joiner-key fix rejects, and here it would have left the two EASIER arms open.
     /// </para>
     /// <para>
     /// <b>Dropped, not failed — the opposite of the ruling one arm inward, deliberately.</b>

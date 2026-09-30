@@ -13,8 +13,8 @@ namespace DungeonMasterXIV.Net;
 /// in which <i>any client's local clock reaches the log</i>. <see cref="Record"/> accepts a
 /// <see cref="StreamStamp"/> and cannot make one; <see cref="HostSequencer"/> is the only minter.
 /// <para>
-/// <b>WHAT IS NOT GUARANTEED, STATED BECAUSE THE FIRST DRAFT CLAIMED IT WAS.</b> A reviewer planted a
-/// clock FACTORY into this type and both test arms stayed green, so <i>"there is no clock in the
+/// <b>WHAT IS NOT GUARANTEED, STATED BECAUSE THE FIRST DRAFT CLAIMED IT WAS.</b> A clock FACTORY
+/// planted into this type left both test arms green, so <i>"there is no clock in the
 /// receiving path to forget about"</i> was stronger than the code supports. <b>Nothing prevents a
 /// future edit injecting one</b> — what the tests now do is refuse a direct clock read AND a clock
 /// factory in this file, which is a checked property rather than an architectural impossibility.</para>
@@ -29,7 +29,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>A REPEATED SEQUENCE IS IGNORED RATHER THAN APPENDED.</b> A reconnecting client can be sent an
 /// entry it already holds, and a log that showed it twice would disagree with a client that never
-/// dropped. This is not replay — R-2.10 is a separate ticket — it is only the guarantee that
+/// dropped. This is not replay — R-2.10 is a separate requirement — it is only the guarantee that
 /// receiving something twice is indistinguishable from receiving it once.
 /// </para>
 /// <para>
@@ -62,7 +62,7 @@ public sealed class SessionStream
     /// <param name="entry">A stamped entry, from the host or decoded from the wire.</param>
     public bool Record(StreamEntry entry)
     {
-        // BUG-161. AN UNMINTED STAMP IS REFUSED HERE, BECAUSE THE TYPE SYSTEM DOES NOT REFUSE IT.
+        // AN UNMINTED STAMP IS REFUSED HERE, BECAUSE THE TYPE SYSTEM DOES NOT REFUSE IT.
         // StreamStamp is a readonly record struct, so new StreamEntry(default, ...) compiles and
         // carries Sequence 0 -- and 0 sorts to the FRONT of a populated log, which is the original
         // hazard. HostSequencer issues from 1, so Sequence < 1 is definitionally not host-issued.

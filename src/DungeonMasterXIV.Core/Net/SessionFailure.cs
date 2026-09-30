@@ -83,12 +83,12 @@ public enum SessionFailure
     /// The host's acceptance carried a public key this client cannot agree with.
     /// </summary>
     /// <remarks>
-    /// The mirror of BUG-56, at the other end of the exchange: that one stopped a host admitting a
-    /// joiner whose key it could never use, this one stops a joiner deriving from a host key it
-    /// cannot use. Distinct from every value above because <b>nothing about the connection is
-    /// wrong</b> — the relay is reachable, the socket is open, the frame decoded, and the DM said
-    /// yes. Reporting it as any kind of connection failure would send the user to their router over
-    /// a session that was never cryptographically possible.
+    /// The mirror of the joiner-key check, at the other end of the exchange: that one stopped a
+    /// host admitting a joiner whose key it could never use, this one stops a joiner deriving from
+    /// a host key it cannot use. Distinct from every value above because <b>nothing about the
+    /// connection is wrong</b> — the relay is reachable, the socket is open, the frame decoded, and
+    /// the DM said yes. Reporting it as any kind of connection failure would send the user to their
+    /// router over a session that was never cryptographically possible.
     /// <para>
     /// <b>What this client has established, and no more (A-1.5j).</b> It knows the key on the
     /// acceptance cannot be agreed with. It does <b>not</b> know whether the host is broken, the
@@ -134,7 +134,7 @@ public static class SessionFailureMessage
     /// <summary>The sentence shown for <paramref name="failure"/>.</summary>
     public static string For(SessionFailure failure) => failure switch
     {
-        // BUG-49. This said "This is not your connection — the relay itself is unreachable", which
+        // This said "This is not your connection — the relay itself is unreachable", which
         // rules out a cause that produces it: a firewall REFUSING with a TCP RST lands here, and a
         // refusal is evidence something answered — something that can sit on the user's side of the
         // path. The same file's ConnectionNeverOpened text already says as much ("one that refuses
@@ -175,13 +175,13 @@ public static class SessionFailureMessage
             "The relay accepted the connection but never confirmed the session code. The relay is "
             + "reachable, so this is not your network — try starting the session again, and if it "
             + "keeps happening the relay is not answering registrations.",
-        // BUG-59. Constrained rather than transcribed: R-1.7a governs only the strings it QUOTES, so
+        // Constrained rather than transcribed: R-1.7a governs only the strings it QUOTES, so
         // this is engineering-authored under A-1.7e, and A-1.5j bounds what it may assert.
         //
         // It says the answer could not be used, and REFUSES TO SAY WHY, because this client cannot
         // tell a broken host from a tampering relay from a version skew. It names no network — the
-        // relay is reachable, so blaming it would be false and exonerating it is the BUG-49 mistake
-        // in the other direction. It claims no protection (D-8): there is no session to protect.
+        // relay is reachable, so blaming it would be false and exonerating it is RelayUnreachable's
+        // old mistake, reversed. It claims no protection (D-8): there is no session to protect.
         // "You can ask to join again" is true at the moment it is shown — MayRequestAgain includes
         // Failed — and TheRetryOfferIsTrueWhenItIsShown asserts that rather than trusting it.
         SessionFailure.SessionKeysUnavailable =>

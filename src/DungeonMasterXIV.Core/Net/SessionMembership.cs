@@ -27,7 +27,7 @@ namespace DungeonMasterXIV.Net;
 /// <i>coordinator</i>, created part-way through its own constructor, because the key lived on an
 /// object built forty lines further down. Here the same closure captures the
 /// <see cref="JoinRequester"/> passed in, never <c>this</c>. <b>One fewer escaped reference in the
-/// composition root</b>, which is the hazard DMXENG-45 built a detector for and the reason the
+/// composition root</b>, which is the hazard the construction-order check detects and the reason the
 /// constructor itself was ruled unmovable.
 /// </para>
 /// <para>
@@ -122,7 +122,7 @@ public sealed class SessionMembership
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>The joiner's half of a notice the product has published since DMXENG-58 and nobody read.</b>
+    /// <b>The joiner's half of a notice the product has published, and nobody read.</b>
     /// Measured before this: <c>SessionClosing</c> had zero occurrences under <c>Windows/</c> or
     /// <c>Plugin.cs</c>, so the host sealed a closing instant to every participant and every
     /// participant discarded it. R-1.3g requires them to see both THAT it is closing and HOW LONG
@@ -150,7 +150,7 @@ public sealed class SessionMembership
     /// <para>
     /// <b>An undelivered notice is not a defect, and R-1.5a is why.</b> From the host's side a joiner
     /// whose notice never arrived is a client that VANISHED, and holding its seat for five minutes is
-    /// then CORRECT. PRD-1:733 says in terms that removing vanished members to close that apparent
+    /// then CORRECT. A-1.16a says in terms that removing vanished members to close that apparent
     /// gap files a false gap and breaks R-1.5a.
     /// </para>
     /// <para>
@@ -214,7 +214,7 @@ public sealed class SessionMembership
     /// <b>THE LINE THIS WHOLE CHUNK EXISTS FOR.</b> The closing instant was already arriving at the
     /// client and being discarded: the frame handler read <c>content.Roster</c> and nothing else, so
     /// a participant of a session the DM had ended saw a roster that never changed and was told
-    /// nothing at all. The notice had been sent since DMXENG-58 and read by no one.
+    /// nothing at all. The notice had been sent, and read by no one.
     /// </para>
     /// <para>
     /// <b>Both halves come off the SAME <see cref="SessionContent"/></b>, which is why the caller

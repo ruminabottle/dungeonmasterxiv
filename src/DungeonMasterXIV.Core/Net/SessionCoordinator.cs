@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>So a twelfth collaborator edits <see cref="SessionWiring"/> and leaves this span unchanged</b>
-/// — the same cut <see cref="InboundWiring"/> made at DMXENG-65, for the reason it states there:
+/// — the same cut <see cref="InboundWiring"/> made, for the reason it states there:
 /// what matters is WHERE THE NEXT ONE LANDS, not the line count on the day it was measured.
 /// </para>
 /// </remarks>
@@ -46,17 +46,17 @@ public sealed class SessionCoordinator
     /// away from production not supplying it, and nothing would fail.</b>
     /// </para>
     /// <para>
-    /// <b>It used to say it sat here because a required parameter cannot follow an optional one.</b>
-    /// That constraint is gone — DMXENG-57 left no optional parameters for it to precede — so the
-    /// position is now free and the requiredness is load-bearing on its own. Kept as a correction
-    /// rather than deleted, because "required for a C# reason" and "required for DMXENG-13's
-    /// reason" look identical in a signature and only one of them survives a reordering.
+    /// <b>It used to say it sat here because a required parameter cannot follow an optional
+    /// one.</b> That constraint is gone — SessionCapabilities left no optional parameters for it to
+    /// precede — so the position is now free and the requiredness is load-bearing on its own. Kept
+    /// as a correction rather than deleted, because "required for a C# reason" and "required for
+    /// the reason above" look identical in a signature and only one of them survives a reordering.
     /// </para>
     /// </param>
     /// <param name="capabilities">
     /// What Core cannot do for itself — key generation and participant minting. <b>Required, and
-    /// a caller wanting the defaults says <see cref="SessionCapabilities.Default"/> out loud</b>
-    /// (DMXENG-13). A record rather than parameters so the NEXT capability costs a member here
+    /// a caller wanting the defaults says <see cref="SessionCapabilities.Default"/> out loud</b>.
+    /// A record rather than parameters so the NEXT capability costs a member here
     /// instead of a seventh argument, which is what stopped two chunks at once.
     /// </param>
     public SessionCoordinator(
@@ -71,7 +71,7 @@ public sealed class SessionCoordinator
 
         // Composition moved to SessionWiring. The ORDER those collaborators are built
         // in is a correctness property, so it now sits beside the code it constrains rather than
-        // beside the code that merely uses them -- the cut InboundWiring made at DMXENG-65.
+        // beside the code that merely uses them -- the cut InboundWiring made.
         _parts = new SessionWiring(transport, relayAddress, window, log, capabilities);
 
         _log = log;
@@ -110,7 +110,7 @@ public sealed class SessionCoordinator
     /// <remarks>
     /// The inverse of <see cref="Roster"/>: that is what a host TOLD this client, this is what
     /// members told the HOST. See <see cref="MemberContentReceipts"/> for the rest, including that
-    /// nothing shipped sends these yet (DMXENG-11 / A-1.15).
+    /// nothing shipped sends these yet (A-1.15).
     /// </remarks>
     public MemberContentReceipts MemberContent => _resources.MemberContent;
     /// <summary>
@@ -190,7 +190,7 @@ public sealed class SessionCoordinator
     /// </param>
     /// <remarks>
     /// <b>The notice goes out BEFORE the delegation, and the order is load-bearing.</b> Teardown
-    /// lives inside <see cref="HostRunner.Stop"/> since DMXENG-51 and empties the admissions, so
+    /// lives inside <see cref="HostRunner.Stop"/> and empties the admissions, so
     /// publishing afterwards seals to nobody and fails silently. Both that and the call's absence
     /// are pinned by <c>EndingASessionAnnouncesItTests</c>, which exists because each mutation left
     /// the whole suite green.
@@ -227,10 +227,10 @@ public sealed class SessionCoordinator
     /// Requests to join <paramref name="code"/>, claiming a participant we believe is ours (R-1.5).
     /// </summary>
     /// <remarks>
-    /// <b>A forwarder since DMXENG-31, and deliberately still HERE.</b> The sequence lives on
-    /// <see cref="JoinRequester"/>; this signature stays because PR #75's A-1.12a table drives
-    /// production through it and carries an approve-blocking gate. A split is not a licence to move
-    /// somebody else's entry point.
+    /// <b>A forwarder since the join-request extraction, and deliberately still HERE.</b> The
+    /// sequence lives on <see cref="JoinRequester"/>; this signature stays because PR #75's A-1.12a
+    /// table drives production through it and carries an approve-blocking gate. A split is not a
+    /// licence to move somebody else's entry point.
     /// </remarks>
     /// <param name="code">The session to ask to join.</param>
     /// <param name="name">What to call ourselves. Never authenticates.</param>
@@ -278,7 +278,7 @@ public sealed class SessionCoordinator
     /// R-1.1's invariant lives in <see cref="SessionWiring.SynchroniseTransport"/> and
     /// <see cref="SessionLiveness.RequiresRelayConnection"/> and nowhere else, so there is one
     /// answer to "should we be connected" rather than a rule each call site is trusted to remember.
-    /// It moved beside the collaborators it reconciles at DMXENG-128; this remains the public door.
+    /// It moved beside the collaborators it reconciles; this remains the public door.
     /// </remarks>
     public void SynchroniseTransport() => _parts.SynchroniseTransport();
 

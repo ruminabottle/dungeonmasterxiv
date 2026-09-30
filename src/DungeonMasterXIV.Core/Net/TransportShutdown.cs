@@ -20,7 +20,7 @@ namespace DungeonMasterXIV.Net;
 /// Trading a half-open socket for a hung shutdown would be a worse bug than the one being fixed.
 /// </para>
 /// <para>
-/// Expressed over delegates rather than over a socket type deliberately: the standards keep sockets
+/// Expressed over delegates rather than over a socket type deliberately: sockets live
 /// in the plugin's <c>Net/</c> and nowhere else, so the ordering can be tested here without
 /// <c>System.Net.WebSockets</c> entering Core and without a Dalamud-bound type entering the test
 /// assembly.

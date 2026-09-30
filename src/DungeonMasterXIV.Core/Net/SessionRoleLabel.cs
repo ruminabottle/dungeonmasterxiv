@@ -8,9 +8,9 @@ namespace DungeonMasterXIV.Net;
 /// <remarks>
 /// <para>
 /// <b>An unknown role is a rendering decision, and it is made here rather than met at draw time.</b>
-/// <c>SessionRole</c> is an enum over the wire, so it can carry an int matching no defined case —
-/// BUG-57 closed the text case, not this one. A newer client, a future role, or a corrupted value
-/// all arrive the same way, and a <c>switch</c> with no arm for them throws inside a draw call.
+/// <c>SessionRole</c> is an enum over the wire, so it can carry an int matching no defined case — the
+/// roster-gate hotfix closed the text case, not this one. A newer client, a future role, or a corrupted
+/// value all arrive the same way, and a <c>switch</c> with no arm for them throws inside a draw call.
 /// </para>
 /// <para>
 /// <b>The rule: an unrecognised role renders NO label, and the participant still appears.</b> Both

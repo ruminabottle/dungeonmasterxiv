@@ -3,8 +3,8 @@ using System;
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// A session code: six characters from a deliberately restricted alphabet, displayed in two groups
-/// of three. Parameters and their justification are PRD-1 R-1.2a; the exclusions are the decision.
+/// A session code: six characters from a deliberately restricted alphabet, displayed in two groups of
+/// three. Parameters and their justification are session-layer R-1.2a; the exclusions are the decision.
 /// </summary>
 /// <remarks>
 /// This type validates and formats a code. It says nothing about whether a code is <i>free</i> —

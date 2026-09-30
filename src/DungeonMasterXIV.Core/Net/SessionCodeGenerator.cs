@@ -7,10 +7,10 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>This does not check uniqueness, and must not.</b> PRD-1 R-1.2a places collision resolution at
-/// the relay: the relay routes by session code, so the namespace is relay-wide and a host cannot
-/// know what is free. A generator that deduplicated against anything local would be checking the
-/// wrong set — it would pass every local check and still collide on the relay.
+/// <b>This does not check uniqueness, and must not.</b> Session-layer R-1.2a places collision
+/// resolution at the relay: the relay routes by session code, so the namespace is relay-wide and a
+/// host cannot know what is free. A generator that deduplicated against anything local would be
+/// checking the wrong set — it would pass every local check and still collide on the relay.
 /// </para>
 /// <para>
 /// The exchange that does resolve it — request, refusal, regenerate, retry — is carried by
