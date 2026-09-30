@@ -48,7 +48,7 @@ public class HostingCampaignTests
         Assert.Single(hosting.Resumable);
     }
 
-    // Choosing one resumes it rather than creating another — the defect the Spec Owner named:
+    // Choosing one resumes it rather than creating another — the defect the original requirement named:
     // "a DM resuming last week's game silently gets a NEW campaign and loses the roster."
     [Fact]
     public void ChoosingAPriorCampaignResumesItRatherThanCreatingAnother()

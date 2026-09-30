@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// The three format defects the code reviewer found on #213, each pinned: a version in the header,
+/// The three format defects review found on #213, each pinned: a version in the header,
 /// a write that cannot lose the whole history, and <b>nothing on disk that the delete control
 /// cannot see</b>.
 /// </summary>
@@ -16,7 +16,7 @@ namespace DungeonMasterXIV.Tests;
 /// <i>"nothing to delete anywhere but here"</i>. The first version of the archive listed only files
 /// it could parse as a campaign id and <b>silently skipped the rest</b> — so a file it could not name
 /// was a file the control could not list, and one it could not list was one it could not delete.
-/// That is the same failure the whole ticket exists to prevent, arriving through the enumeration
+/// That is the same failure the whole feature exists to prevent, arriving through the enumeration
 /// rather than through the absence of a button.
 /// </remarks>
 public class NothingOnDiskIsInvisibleToTheDeleteControlTests : IDisposable
@@ -130,7 +130,7 @@ public class NothingOnDiskIsInvisibleToTheDeleteControlTests : IDisposable
         }
     }
 
-    // ---- BUG-166: what an INTERRUPTED write leaves behind.
+    // ---- What an INTERRUPTED write leaves behind.
 
     /// <summary>
     /// <b>The case the successful-write test proves the file EXISTS for, and never checks.</b>

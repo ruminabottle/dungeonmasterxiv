@@ -7,21 +7,21 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// PR #86's findings 4 and 5: the two places this client drops something and told nobody.
+/// The two places this client drops something and told nobody.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>Survival and silence are separable, and only survival was ever tested.</b>
 /// <c>AParticipantWithAnUnusableKeyCannotBreakTheBroadcast</c> proves the loop survives a peer whose
 /// key will not import — and it passed on every build where that peer was then dropped from this and
-/// every future broadcast without a word. The Deployment Manager's finding 5 is that second half:
+/// every future broadcast without a word. That second half is the real harm:
 /// <i>"a participant silently omitted from this and every future broadcast is a person sitting in a
 /// session hearing nothing."</i>
 /// </para>
 /// <para>
 /// <b>These tests assert the LINE FIRES, not that the code exists.</b> A log call somebody deletes
 /// while refactoring is invisible to a test that only checks the session survived — which is exactly
-/// how the silence lasted through #86 in the first place. Each test here drives the PRODUCTION path
+/// how the silence shipped in the first place. Each test here drives the PRODUCTION path
 /// and reads what reached the log.
 /// </para>
 /// <para>
@@ -61,7 +61,7 @@ public sealed class ASkippedParticipantIsReportedTests
         Assert.All(lines, line => Assert.Contains("hear nothing", line, StringComparison.OrdinalIgnoreCase));
     }
 
-    // BUG-76. THE SIBLING OF THE TEST ABOVE, AND IT DID NOT EXIST. Every test in this file gave the
+    // THE SIBLING OF THE TEST ABOVE, AND IT DID NOT EXIST. Every test in this file gave the
     // unreachable peer the key [1, 2, 3] -- MALFORMED BUT PRESENT -- so `peer.PublicKey is not { }`
     // was false in all of them and the no-public-key branch was never entered; the failure always
     // landed one branch later, at DeriveSharedKey. The measured contrast: deleting the no-public-key
@@ -72,13 +72,13 @@ public sealed class ASkippedParticipantIsReportedTests
     // That is the public API and not a constructor -- AdmittedPeer's constructor is internal and
     // unreachable from this project, which is precisely why the case had to be reached this way.
     //
-    // ON REACHABILITY, and it is stated rather than assumed: qa-1 recorded it as UNKNOWN and I did
-    // not resolve it either. The only production caller is AdmissionPromptView, which admits a code
+    // ON REACHABILITY, and it is stated rather than assumed: it was recorded as UNKNOWN and is not
+    // resolved here either. The only production caller is AdmissionPromptView, which admits a code
     // taken from a live pending request, so the case looks closed from the UI today -- but that is an
     // argument about one call site, not a proof, and both Admit overloads are PUBLIC. The branch's
     // own comment already calls it "the guard that keeps a FUTURE CALLER from creating a participant
     // who is addressable and unreachable without anyone noticing". This test is what makes that guard
-    // provable rather than asserted, which is the same standing PR #86's local guard has.
+    // provable rather than asserted, which is the same standing the broadcast's key guard has.
     [Fact]
     public void AParticipantWithNoPublicKeyAtAllIsNamedInTheLog()
     {

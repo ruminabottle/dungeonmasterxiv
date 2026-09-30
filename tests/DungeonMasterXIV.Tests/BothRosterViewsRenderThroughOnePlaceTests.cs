@@ -23,14 +23,14 @@ namespace DungeonMasterXIV.Tests;
 /// alone and may never reference the plugin, so <c>SessionWindow</c> cannot be constructed here.
 /// Reading the source is the established way round that — <c>TlsBypassFenceTests</c> is the
 /// precedent — and its limit is stated rather than implied: this asserts the SHAPE of the code, not
-/// that the pixels are right. A-1.13 proper is in-game and this chunk cannot discharge it.
+/// that the pixels are right. A-1.13 proper is in-game and this file cannot discharge it.
 /// </para>
 /// <para>
 /// <b>AND THE SCAN SEES ONLY WHAT LIVES BENEATH <c>Windows/</c>.</b> A window class placed anywhere
 /// else in the project is compiled by the SDK's default glob and is invisible to everything here:
 /// neither side of the completeness control looks outside <c>Windows/</c>, and neither project-file
 /// refusal engages, because putting a window there needs NO csproj change for them to refuse.
-/// Measured by qa-1 (BUG-68) rather than reasoned: csproj touched 0, build errors 0, all 8 guard
+/// Measured rather than reasoned: csproj touched 0, build errors 0, all 8 guard
 /// tests green — with the compile step controlled separately, since "it built" does not prove the
 /// file was compiled. An invalid-C# file in the same place draws 4 compiler references, so files
 /// there genuinely enter the compilation and the green is a real blind spot rather than an unbuilt
@@ -51,12 +51,12 @@ namespace DungeonMasterXIV.Tests;
 /// an axis, not a property.
 /// </para>
 /// <para>
-/// <b>An unexploited residual, and the qualifier is load-bearing.</b> qa-1 went looking for a
-/// pattern-level blind spot and did not find one: an uppercase <c>.CS</c> is compiled AND matched by
+/// <b>An unexploited residual, and the qualifier is load-bearing.</b> A search for a
+/// pattern-level blind spot did not find one: an uppercase <c>.CS</c> is compiled AND matched by
 /// both enumerations, so it is caught. The reason is that MATCHING ON THIS PLATFORM is
 /// case-insensitive — .NET's <c>MatchCasing.PlatformDefault</c> keys off the OPERATING SYSTEM, not
 /// the volume, so even a case-sensitive APFS volume on macOS still matches <c>Upper.CS</c>
-/// (qa-2 built one and measured it, BUG-69). The matcher is applied in-process from that option
+/// (one was built and measured). The matcher is applied in-process from that option
 /// rather than delegated to the filesystem, which is why the volume cannot change the answer: under
 /// <c>MatchCasing.CaseSensitive</c> the same directory yields only <c>lower.cs</c> (measured here).
 /// PlatformDefault is DOCUMENTED as resolving case-sensitive on Linux; nobody on this team has run
@@ -67,9 +67,9 @@ namespace DungeonMasterXIV.Tests;
 /// run on a Linux runner.
 /// </para>
 /// <para>
-/// <b>The level in that sentence was wrong before BUG-69, and how it went wrong is worth more than
+/// <b>The level in that sentence was once wrong, and how it went wrong is worth more than
 /// the correction.</b> It said FILESYSTEM where the cause is the OS, and predicted that a
-/// case-sensitive filesystem would not match. qa-2 made one; it matched. The source said "macOS
+/// case-sensitive filesystem would not match. One was made; it matched. The source said "macOS
 /// matching", which is OS-level and vague; restating it as "a case-sensitive filesystem" was
 /// SHARPER, and sharper is a new claim rather than a clearer old one. A vague true sentence survives
 /// being tested. A sharp false one takes ninety seconds to falsify and discredits the paragraph
@@ -91,7 +91,7 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     [Fact]
     public void BothSidesCallIt()
     {
-        // Two call sites, in two different files since DMXENG-15. Fewer means one of the two views
+        // Two call sites, in two files since the join-flow split. Fewer means one of the two views
         // renders its own way, or does not render at all. The definition is no longer counted here
         // — it is a different string now (RosterView.Draw at the call, static void Draw at the
         // definition), which is why the threshold moved from 3 to 2 rather than the guard weakening.
@@ -134,7 +134,7 @@ public class BothRosterViewsRenderThroughOnePlaceTests
         Assert.Contains("class JoinFlowView", code, StringComparison.Ordinal);
     }
 
-    // BUG-48's lesson, applied to THIS guard (DMXENG-15). Until the split this read one named file,
+    // The copy-path guard's lesson, applied to THIS guard. Until the split this read one named file,
     // so every "exactly one" above was only ever true OF SessionWindow.cs while claiming to be true
     // of the codebase — a second role label or a second renderer one file along would have passed.
     // Nothing was actually wrong on main; the guard was true by accident rather than by coverage.
@@ -150,7 +150,7 @@ public class BothRosterViewsRenderThroughOnePlaceTests
         // down it was not true -- the claim is kept because it is now earned, not because it was
         // written down first.
         //
-        // The two sides now come from DIFFERENT enumerations, which is the whole repair (BUG-67).
+        // The two sides now come from DIFFERENT enumerations, which is the whole repair.
         // The old version compared WindowSources() against the identical EnumerateFiles call, so a
         // file both sides missed was missed equally and this passed: it could only ever detect a
         // disagreement between one function and itself. Nothing beneath Windows/ can be invisible to
@@ -165,14 +165,14 @@ public class BothRosterViewsRenderThroughOnePlaceTests
             + "the roster has one renderer is false one file along.");
     }
 
-    // THE SEPARATE AUTHORITY, and the reason the walk above is allowed to stand for "the windows"
-    // (BUG-67). Both sides of the control read the FILESYSTEM; neither knows what the compiler is
+    // THE SEPARATE AUTHORITY, and the reason the walk above is allowed to stand for "the windows".
+    // Both sides of the control read the FILESYSTEM; neither knows what the compiler is
     // given. The guards' claim is about code that COMPILES INTO THE PLUGIN, so the gap between "a
     // file under Windows/" and "a file the plugin compiles" is assumed by every assertion in this
     // class -- and the project file is the thing with authority over it.
     //
     // Read statically rather than by invoking MSBuild deliberately. Asking the build for its Compile
-    // items is the stronger check and it is what I used to CONFIRM this bug, but running a real build
+    // items is the stronger check and it CONFIRMED the subdirectory gap, but running a real build
     // inside this fast suite has already cost this repository one flaky test through a shared obj/,
     // and the static read answers the same question without a second process.
     //
@@ -200,23 +200,23 @@ public class BothRosterViewsRenderThroughOnePlaceTests
 
     // THE OTHER HALF OF THE HEADING GUARD, and the half whose absence defeated the last one.
     // The value lives in Core and is tested there; what no value test can see is whether the window
-    // USES it. The previous guard read the constant's text and the Code Reviewer beat it in one
+    // USES it. The previous guard read the constant's text and a review beat it in one
     // line -- constant left honest, literal passed to the draw call, all 775 green. So this asserts
     // the draw call renders RosterHeading.Text and that no literal heading sits beside it.
     //
-    // WHAT THIS IS AND IS NOT (BUG-66). The two halves of this guard are different KINDS of thing
+    // WHAT THIS IS AND IS NOT. The two halves of this guard are different KINDS of thing
     // and only one of them is a proof.
     //
     //   VALUE -- a proof. RosterHeading.Text is a Core constant and
     //   TheRosterHeadingClaimsOnlyWhatItShowsTests asserts over the VALUE ITSELF, so there is
-    //   nothing to bypass. Widening the constant to an overclaim fails it, naming the ticket, the
-    //   action and the reason. qa-1 measured that; this bug does not reach it.
+    //   nothing to bypass. Widening the constant to an overclaim fails it, naming the condition,
+    //   the action and the reason. That was measured; the gap below does not reach it.
     //
     //   USE -- a TEXTUAL PROXY. Everything below reads SOURCE TEXT. Contains proves the sanctioned
     //   call is PRESENT. It does not prove it is the ONLY heading drawn, and no scan of this shape
     //   can say that.
     //
-    // TWO LINES DEFEAT IT, recorded so nobody has to rediscover them (qa-1, BUG-66):
+    // TWO LINES DEFEAT IT, recorded so nobody has to rediscover them:
     //
     //     ImGui.TextUnformatted(RosterHeading.Text);        // Contains passes
     //     ImGui.TextUnformatted("Everyone in this game:");  // DoesNotContain passes
@@ -319,12 +319,12 @@ public class BothRosterViewsRenderThroughOnePlaceTests
     /// <summary>Every <c>.cs</c> file beneath <c>Windows/</c>, found by walking rather than by globbing.</summary>
     /// <remarks>
     /// <para>
-    /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason
-    /// (BUG-67).</b> The obvious implementation is
-    /// <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c> — which is the call
-    /// <see cref="WindowSources"/> makes. Comparing a function against itself is what left the old
-    /// control blind: both sides missed subdirectories, missed them EQUALLY, and the equality passed.
-    /// TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS NOT EVIDENCE.
+    /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason.</b>
+    /// The obvious implementation is <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c>
+    /// — which is the call <see cref="WindowSources"/> makes. Comparing a function against itself is
+    /// what left the old control blind: both sides missed subdirectories, missed them EQUALLY, and
+    /// the equality passed. TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS
+    /// NOT EVIDENCE.
     /// </para>
     /// <para>
     /// So this descends explicitly and takes no <c>SearchOption</c>. Narrowing <c>WindowSources</c>

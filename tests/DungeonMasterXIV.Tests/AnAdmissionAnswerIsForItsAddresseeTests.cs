@@ -6,13 +6,13 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-85 (D-11): an admission answer decides this client's attempt only if it is addressed to this
+/// D-11: an admission answer decides this client's attempt only if it is addressed to this
 /// client.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>Every one of these tests asserts <see cref="JoinPhase.AwaitingDecision"/> before it delivers
-/// anything</b>, and that is not ceremony. The first probe written for this bug passed clean and was
+/// anything</b>, and that is not ceremony. The first probe of this check passed clean and was
 /// worthless: it never delivered a pending notice, so the attempt sat in
 /// <see cref="JoinPhase.Contacting"/> and <c>JoinAttempt.Admitted()</c> returned on its own phase
 /// guard. <b>A probe that cannot reach the defect is indistinguishable from a clean result</b>, so
@@ -24,7 +24,7 @@ namespace DungeonMasterXIV.Tests;
 /// joiner already awaiting a decision. <c>Denied()</c> and <c>Lapsed()</c> have <b>no phase guard at
 /// all</b> — they set the phase unconditionally. Fixing only the case that was reported would leave
 /// the two arms that are easier to reach, which is the denylist-of-today's-cases shape
-/// <c>AdmissionInbox</c> already argues against for BUG-56.
+/// <c>AdmissionInbox</c> already argues against for joiner keys.
 /// </para>
 /// <para>
 /// <b>Both directions.</b> A guard that refuses every answer passes all three negative tests and

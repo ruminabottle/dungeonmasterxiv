@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// The standards warn that a round-trip encrypt/decrypt in one process passes over a null cipher.
+/// A round-trip encrypt/decrypt in one process is known to pass over a null cipher.
 /// It would pass the round-trip test here too. It would fail every other test in this class: a null
 /// cipher returns the plaintext, is deterministic, decrypts under any key, and notices no tampering.
 /// </summary>
@@ -94,7 +94,7 @@ public class SessionCipherTests
     // the key it is handed -- 16 bytes gives AES-128 and 24 gives AES-192, with no error, no warning
     // and no log line, while this type documents AES-256. Note what is NOT asserted here: that Seal
     // produced output, or that the output looks encrypted. Both hold under AES-128, which is exactly
-    // why this bug survived review. The rejection is the property.
+    // why accepting a short key survived review. The rejection is the property.
     [Theory]
     [InlineData(16)]
     [InlineData(24)]

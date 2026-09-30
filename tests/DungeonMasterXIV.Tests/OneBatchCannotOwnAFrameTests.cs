@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-58: no batch of inbound frames can own a whole game frame, and none is lost getting there.
+/// No batch of inbound frames can own a whole game frame, and none is lost getting there.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -116,7 +116,7 @@ public class OneBatchCannotOwnAFrameTests
 
         // Required by the interface and never raised: this fake drives the RECEIVE path only, and
         // the accessor form satisfies the contract without declaring a backing field nothing
-        // assigns (BUG-113). The same shape as every other receive-only fake in this suite.
+        // assigns. The same shape as every other receive-only fake in this suite.
         public event Action<SessionFailure>? Failed { add { } remove { } }
 
         public event Action<byte[]>? Received;

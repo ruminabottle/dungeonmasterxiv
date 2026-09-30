@@ -20,19 +20,19 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// <b>Nothing here asserts a failure MESSAGE, deliberately.</b> Only the
-/// <see cref="SessionFailure"/> value. The sentences are owned by
-/// <c>SessionFailureMessageTests</c>, and BUG-37 is rewriting them: a message assertion added here
-/// would pin the text that is being replaced, so it would go red when somebody does the right thing
-/// and look exactly like a caught regression at the moment it is least true. A test that defends the
-/// old behaviour is worse than no test, because it argues against the fix with a straight face.
+/// <see cref="SessionFailure"/> value. The sentences are owned by <c>SessionFailureMessageTests</c>,
+/// and the malformed-address fix is rewriting them: a message assertion added here would pin the
+/// text that is being replaced, so it would go red when somebody does the right thing and look
+/// exactly like a caught regression at the moment it is least true. A test that defends the old
+/// behaviour is worse than no test, because it argues against the fix with a straight face.
 /// </para>
 /// </remarks>
 public class RelayLinkTests
 {
     private const string Usable = "wss://relay.example.org/session";
 
-    // Fails if: wanting a connection does not open one, which is the state BUG-36 produced one layer
-    // up — a session that believes it is connecting and a socket nobody opened.
+    // Fails if: wanting a connection does not open one, which is the state the missing code request
+    // produced one layer up — a session that believes it is connecting and a socket nobody opened.
     [Fact]
     public void WantingAConnectionOpensOne()
     {
@@ -85,7 +85,7 @@ public class RelayLinkTests
         Assert.Equal(0, transport.DisconnectCount);
     }
 
-    // The malformed-address path. ASSERTS THE VALUE AND NOT THE SENTENCE: BUG-37 is rewriting the
+    // The malformed-address path. ASSERTS THE VALUE AND NOT THE SENTENCE: its fix is rewriting the
     // wording behind this failure, and pinning it here would defend the text being replaced.
     // Fails if: an unusable address dials anyway, or reports success and leaves the caller waiting.
     [Theory]
@@ -99,7 +99,7 @@ public class RelayLinkTests
 
         var failure = link.Synchronise(wanted: true);
 
-        // RelayAddressUnreadable, not RelayUnreachable (BUG-37). Nothing was dialled, so nothing was
+        // RelayAddressUnreadable, not RelayUnreachable. Nothing was dialled, so nothing was
         // contacted and this build has learned nothing about the relay — and ConnectCount == 0 on the
         // next line is the proof of exactly that, which is why the two assertions belong together.
         Assert.Equal(SessionFailure.RelayAddressUnreadable, failure);
@@ -258,7 +258,7 @@ public class RelayLinkTests
     }
 
     // Fails if: the link forwards a send the socket cannot carry. Send discards a frame that arrives
-    // before the socket opens, silently, which is how BUG-36 stayed invisible.
+    // before the socket opens, silently, which is how the missing code request stayed invisible.
     [Fact]
     public void ReadinessIsReportedFromTheSocketRatherThanFromBeingConnected()
     {

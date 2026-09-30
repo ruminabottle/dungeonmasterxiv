@@ -83,12 +83,12 @@ public class RelinkOnTheWireTests
     // Nothing was renamed, removed or repurposed -- the other half of D-14-additive. Fails if the
     // new field displaced any field an existing peer relies on.
     //
-    // SPLIT IN TWO BY DMXENG-41, and the split is the honest version rather than a mechanical
-    // repair. This used to assert all three fields on ONE JoinRequest frame, stamped with a
-    // deadline through a ForJoinRequest overload that had NO PRODUCTION CALLER -- so the deadline
-    // half was asserting that a field survived on a message no peer has ever received. Each field
-    // is now checked on the message that actually carries it, which is what "a field an existing
-    // peer relies on" has to mean.
+    // SPLIT IN TWO WHEN THE DEADLINE OVERLOAD WAS DELETED, and the split is the honest version
+    // rather than a mechanical repair. This used to assert all three fields on ONE JoinRequest
+    // frame, stamped with a deadline through a ForJoinRequest overload that had NO PRODUCTION CALLER
+    // -- so the deadline half was asserting that a field survived on a message no peer has ever
+    // received. Each field is now checked on the message that actually carries it, which is what "a
+    // field an existing peer relies on" has to mean.
     [Fact]
     public void TheFieldsAnExistingPeerRelesOnAreUntouched()
     {

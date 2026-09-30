@@ -12,8 +12,7 @@ namespace DungeonMasterXIV.Tests;
 /// <b>This file exists because a mutation survived.</b> The rule was a <c>??</c> inside a closure
 /// passed as an argument inside the frame loop — <c>content =&gt; _receivedRoster = content.Roster ??
 /// _receivedRoster</c> — and replacing the fallback with an empty list, so that any rosterless
-/// payload wiped the roster, left all 1,122 tests green. DMXENG-69 gave the rule an owner; this
-/// gives it a test.
+/// payload wiped the roster, left all 1,122 tests green. This file gives the rule a test.
 /// </para>
 /// <para>
 /// <b>Most payloads carry no roster</b>, which is what makes the surviving mutation expensive rather

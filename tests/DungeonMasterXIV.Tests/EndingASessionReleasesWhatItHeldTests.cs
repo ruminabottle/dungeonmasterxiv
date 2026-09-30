@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THESE EXIST BECAUSE DMXENG-51 MOVED THAT CODE AND "THE WHOLE SUITE PASSES" TURNED OUT TO BE A
+/// <b>THESE EXIST BECAUSE THAT CODE WAS MOVED AND "THE WHOLE SUITE PASSES" TURNED OUT TO BE A
 /// WEAKER CLAIM THAN IT LOOKS.</b> The extraction is a pure move; the way to find out whether a
 /// green suite could tell was to break it on purpose. Deleting each teardown step in turn, against
 /// the suite as it stood before this file existed:
@@ -53,7 +53,7 @@ namespace DungeonMasterXIV.Tests;
 /// <c>_handshake.ForgetHostRegistration()</c> in the stop path is <b>redundant on every path I could
 /// find</b> — <c>Start</c> calls it too, nothing reads <c>RegistrationWasSent</c> while not
 /// Registering, and no session can begin except through <c>Start</c>. It is left in place because
-/// DMXENG-51 is a pure move and removing a line is a behaviour change; it is reported on the ticket
+/// the extraction is a pure move and removing a line is a behaviour change; it is reported here
 /// rather than quietly deleted or covered by a test that would only be asserting that <c>Start</c>
 /// works.
 /// </para>
@@ -129,7 +129,7 @@ public sealed class EndingASessionReleasesWhatItHeldTests
     // Fails if: _handshake.ForgetHostRegistration() is removed from the stop path.
     //
     // THIS IS THE ONE I EXPECTED TO BE MERELY DEFENSIVE AND IT IS NOT. The registration receipt is
-    // a single field -- "did our code request leave?" -- and BUG-38 exists because the answer
+    // a single field -- "did our code request leave?" -- and it matters because the answer
     // separates two failures a DM must be told apart: THE RELAY HEARD US AND SAID NOTHING, versus
     // WE NEVER REACHED THE RELAY.
     //
@@ -187,7 +187,7 @@ public sealed class EndingASessionReleasesWhatItHeldTests
         }
     }
 
-    /// <summary>A transport that can be told the relay is unreachable, which is BUG-38's case.</summary>
+    /// <summary>A transport that can be told the relay is unreachable: the never-connected case.</summary>
     private sealed class ConnectableTransport : ISessionTransport
     {
         private bool _reachable = true;

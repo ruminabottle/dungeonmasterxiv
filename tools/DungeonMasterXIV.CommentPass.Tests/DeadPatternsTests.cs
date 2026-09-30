@@ -15,6 +15,8 @@ public class DeadPatternsTests
         "in ." + "claude/team/X.md", "engineering" + D + "standards.md", "product" + D + "directives",
         "the " + "brief.md", "found by qa" + D + "3", "found by QA" + D + "3", "DMXHUM" + D + "4",
         "feature" + D + "engineer" + D + "2", "breakfix" + D + "engineer" + D + "1", "found by fe" + D + "3",
+        "AT THE DEPLOYMENT" + " MANAGER'S DIRECTION", "THE SPEC" + " OWNER", "THE PRODUCT" + " OWNER",
+        "THE CODE" + " REVIEWER", "THE ENGINEERING" + " LEAD", "a BREAK" + "FIX engineer",
     };
 
     public static TheoryData<string> Alive => new()
@@ -27,6 +29,7 @@ public class DeadPatternsTests
     {
         "Decision 10", "QA", "since #120", "at 2719162", "the bug above", "that ticket", "this ruling",
         "dmx-bug17", "the human", "the standards", "the PRD", "THE PRD", "C19",
+        "this" + " chunk", "THIS" + " CHUNK",
     };
 
     [Theory, MemberData(nameof(Dead))]

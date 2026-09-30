@@ -72,18 +72,18 @@ public class HostSessionTests
 
         Assert.Equal(HostingPhase.Failed, session.Phase);
 
-        // NOT RelayUnreachable (BUG-36) — but note this now says so because the CALLER states the
+        // NOT RelayUnreachable — but note this now says so because the CALLER states the
         // request went out, not because reaching a timeout implies it. The old comment here claimed
         // the latter as a guarantee of the code path, and it was false: a hung connect reached this
-        // line having never connected (BUG-38). The sentence is gone rather than corrected, because
+        // line having never connected. The sentence is gone rather than corrected, because
         // it is the sentence that misled three readers in one evening.
         Assert.Equal(SessionFailure.RegistrationNotAnswered, session.Failure);
         Assert.False(session.RequiresRelayConnection);
     }
 
-    // BUG-38, at the unit the decision is made in. Fails if: a timeout reached WITHOUT the request
-    // ever going out is reported as one the relay heard and ignored — which told a user whose
-    // firewall was dropping the connection that their network was not the problem.
+    // The hung-connect case, at the unit the decision is made in. Fails if: a timeout reached
+    // WITHOUT the request ever going out is reported as one the relay heard and ignored — which told
+    // a user whose firewall was dropping the connection that their network was not the problem.
     [Fact]
     public void ATimeoutReachedWithoutSendingTheRequestIsNotAnUnansweredRegistration()
     {

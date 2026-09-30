@@ -22,10 +22,10 @@ namespace DungeonMasterXIV.Tests;
 /// <b>What this can and cannot hold, stated rather than left to be assumed.</b> It pins the two
 /// Core halves against each other over the whole alphabet. It still cannot <i>execute</i> the
 /// button: <c>DungeonMasterXIV.Tests</c> references Core alone and may never reference the plugin,
-/// so <see cref="WhatTheCopyActionProduces"/> could not call the window. C34 removed the need to:
+/// so <see cref="WhatTheCopyActionProduces"/> could not call the window. It no longer needs to:
 /// it calls <see cref="SessionCode.ToClipboardString"/>, the member the button calls.
 /// <para>
-/// <b>That mirror is no longer unchecked (BUG-44), and the sentence here used to say it was.</b> It
+/// <b>That mirror is no longer unchecked, and the sentence here used to say it was.</b> It
 /// read "the one link a reviewer must still check by eye" — which was true of a linked test and not
 /// of a source-reading one, and an unchecked link turned out to be an undetectable one: changing the
 /// button to add a label left the whole suite green at 534 passed while producing a clipboard value
@@ -47,7 +47,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// What the Copy button puts on the clipboard.
     /// </summary>
     /// <remarks>
-    /// <b>No longer a mirror (C34).</b> This used to restate <c>code.ToDisplayString()</c> and say
+    /// <b>No longer a mirror.</b> This used to restate <c>code.ToDisplayString()</c> and say
     /// so — a second expression that had to be kept in step with the window by hand. It now calls
     /// <see cref="SessionCode.ToClipboardString"/>, the SAME member the button calls, and
     /// <see cref="TheButtonCopiesTheNamedClipboardValueAndNothingElse"/> reads the window's source
@@ -61,7 +61,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// <c>Windows/SessionWindow.cs</c>.
     /// </summary>
     /// <remarks>
-    /// <b>Reading the source is how a Core-only project reaches a plugin line (BUG-44).</b> This
+    /// <b>Reading the source is how a Core-only project reaches a plugin line.</b> This
     /// project references Core alone and may never reference the plugin, so nothing here can execute
     /// <see cref="WhatTheCopyActionProduces"/>'s original. That was taken to mean the link could only
     /// be checked by eye — and an unchecked link is an undetectable one: changing the button to
@@ -82,7 +82,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
             .ToList();
 
         // Exactly one, ACROSS EVERY WINDOW, so a second copy path cannot appear beside this one
-        // unnoticed. BUG-48: this read only SessionWindow.cs while saying that, so the sentence was
+        // unnoticed. This once read only SessionWindow.cs while saying that, so the sentence was
         // true inside one file and false one file along — which is precisely the case it is about.
         // A copy path added to any other window was invisible to it.
         Assert.Single(calls);
@@ -101,16 +101,16 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     /// <summary>Every <c>.cs</c> file beneath <c>Windows/</c>, found by walking rather than by globbing.</summary>
     /// <remarks>
     /// <para>
-    /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason
-    /// (BUG-67, reaching this file as BUG-101).</b> The obvious implementation is
-    /// <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c> — which is the call
-    /// <see cref="WindowSources"/> makes. Comparing a function against itself is what left the old
-    /// control blind: both sides missed subdirectories, missed them EQUALLY, and the equality
-    /// passed. TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS NOT EVIDENCE.
+    /// <b>This exists to be a SECOND SOURCE, and the recursion is written out for that reason.</b>
+    /// The obvious implementation is <c>EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)</c>
+    /// — which is the call <see cref="WindowSources"/> makes. Comparing a function against itself is
+    /// what left the old control blind: both sides missed subdirectories, missed them EQUALLY, and
+    /// the equality passed. TWO CALLS TO ONE FUNCTION AGREE BY CONSTRUCTION, AND THAT AGREEMENT IS
+    /// NOT EVIDENCE.
     /// </para>
     /// <para>
-    /// <b>Measured, not argued.</b> With one subdirectory added under <c>Windows/</c>: before
-    /// BUG-101 both sides were top-level and the guard PASSED while missing the file entirely;
+    /// <b>Measured, not argued.</b> With one subdirectory added under <c>Windows/</c>: with
+    /// both sides top-level, the guard PASSED while missing the file entirely;
     /// with only <see cref="WindowSources"/> made recursive it FAILED with "Collections differ",
     /// blaming the guard rather than its own narrower control. Both sides now see the same tree by
     /// different routes.
@@ -157,7 +157,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
             $"No Windows/ containing SessionWindow.cs above {AppContext.BaseDirectory}; the windows this reads are missing.");
     }
 
-    // BUG-48. Fails if: the guard above is pointed back at one named file. The comment on it claims
+    // Fails if: the guard above is pointed back at one named file. The comment on it claims
     // a property of the CODEBASE — that no second copy path can appear unnoticed — and Assert.Single
     // counts only what it was handed, so a reader looking at one window makes that sentence false
     // one file along while it still reads clean.
@@ -178,7 +178,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
             + "a second copy path cannot appear unnoticed is false one file along.");
     }
 
-    // BUG-44. A-1.18 requires the copied value to be accepted VERBATIM by the join field, and the
+    // A-1.18 requires the copied value to be accepted VERBATIM by the join field, and the
     // mirror above only asserts that of a string this test file invents. This asserts it of the
     // button.
     //
@@ -191,7 +191,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     {
         var argument = WhatTheButtonPutsOnTheClipboard();
 
-        // ToClipboardString, not ToDisplayString (C34). The button must reach for the member that
+        // ToClipboardString, not ToDisplayString. The button must reach for the member that
         // means "what a recipient pastes", not the one that means "how this reads aloud". They
         // return the same text today; the point is that a change made for one stops silently
         // changing the other, which is the drift A-1.18 exists to catch.
@@ -210,7 +210,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     }
 
     /// <summary>
-    /// What the join field accepts — <b>the production decision itself, called (DMXENG-15).</b>
+    /// What the join field accepts — <b>the production decision itself, called.</b>
     /// </summary>
     /// <remarks>
     /// <para>
@@ -246,9 +246,9 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     // AND A GREEN RUN HERE IS NOT EVIDENCE THAT THE JOIN FIELD HAS ONE WAY IN.
     // ===================================================================================
     //
-    // DECLARED AT THE DEPLOYMENT MANAGER'S DIRECTION BEFORE MERGE (DMXENG-15), because this is the
-    // FIFTH member of a family this board has ruled on three times, and it would otherwise have
-    // arrived undeclared and become tomorrow's bug against finished work.
+    // DECLARED BEFORE MERGE, because this is the FIFTH member of a family already ruled on three
+    // times, and it would otherwise have arrived undeclared and become tomorrow's bug against
+    // finished work.
     //
     // THE TWO PROPERTIES ARE DIFFERENT KINDS OF THING AND ONLY ONE IS A PROOF:
     //
@@ -269,7 +269,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     //
     // It never names SessionCode.TryParse, so DoesNotContain is satisfied; the real call is still
     // there, so Contains is satisfied. The join field now accepts codes JoinFlowCode would refuse.
-    // This is structurally BUG-66 -- sanctioned call present, second path added, all green.
+    // Structurally the roster heading gap -- sanctioned call present, second path added, all green.
     //
     // MEASURED AGAINST THE ASSERTIONS BELOW, every row executed rather than reasoned about:
     //     sanctioned call REPLACED by SessionCode.TryParse     -> CAUGHT      (1 failed)
@@ -278,19 +278,19 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     //     SECOND path, hand-rolled, banned identifier absent   -> NOT CAUGHT  (9 passed, 0 failed)
     //     SECOND path in ANOTHER window file entirely          -> NOT CAUGHT  (9 passed, 0 failed)
     //
-    // THE FILE MOVED AND THE SCOPE DID NOT (DMXENG-75): the code box and the button left
+    // THE FILE MOVED AND THE SCOPE DID NOT: the code box and the button left
     // JoinFlowView for JoinRequestForm when JoinFlowView.Draw was cut from 121 lines to 53. This
     // still reads ONE NAMED FILE -- the one that now holds the button -- rather than being widened
     // to the directory on the way past, because the paragraph below argues against widening and a
     // move is not a licence to do it.
     //
-    // THE LAST ROW IS A SECOND GAP AND IS MINE, not the one I was asked to declare: this reads
+    // THE LAST ROW IS A SECOND GAP, not the one this declaration was for: this reads
     // ONE FILE ALONE, so an acceptance path in any other window is invisible to it. Widening
     // to the directory does not fix it either -- it would only move the boundary out one file.
     //
     // NO FOURTH ASSERTION, DELIBERATELY. Banning every other parser call needs an exception list,
     // and an exception list is a denylist wearing an allowlist's name -- already considered and
-    // rejected twice on this board. A REAL FIX ASSERTS OVER BEHAVIOUR OR OVER A PARSE: drive the
+    // rejected twice. A REAL FIX ASSERTS OVER BEHAVIOUR OR OVER A PARSE: drive the
     // window and compare what it accepts against JoinFlowCode, or read the syntax tree and find
     // every call reaching RequestJoin. Both are larger than this file, so THE END-TO-END COVERAGE
     // IS THE IN-GAME CHECK and it is load-bearing rather than supplementary.
@@ -299,7 +299,7 @@ public class CopiedCodePastesIntoTheJoinFieldTests
     // "it is only a proxy" reads as a case for removal right up until the regression has a name.
     // Delete it and the extraction silently reverts to a seam nobody uses -- the window keeping its
     // own parse while WhatTheJoinFieldAccepts calls Core and the two are never compared, which is
-    // the exact state this chunk existed to end. Three of the five shapes above stop being caught.
+    // the exact state this change existed to end. Three of the five shapes above stop being caught.
     [Fact]
     public void TheJoinButtonReachesForTheSharedDecision()
     {

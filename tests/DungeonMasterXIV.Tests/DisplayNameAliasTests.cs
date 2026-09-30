@@ -122,7 +122,7 @@ public class DisplayNameAliasTests
         Assert.Equal("The Cartographer", CampaignDisplayName.Stored(campaign));
     }
 
-    // The alias is persisted (this is the Tier 1 half the ticket carries), so it must survive the
+    // The alias is persisted (this is the feature's Tier 1 half), so it must survive the
     // round trip like every other field. Fails if: it is added to the type and forgotten by the
     // serializer, which the existing round-trip test would not have noticed.
     [Fact]
@@ -138,7 +138,7 @@ public class DisplayNameAliasTests
         Assert.Equal("The Cartographer", CampaignDisplayName.Or(loaded, CharacterName).Value);
     }
 
-    // R-1.3e "PRE-FILLED with their character name". The Spec Owner ruled this a citation that
+    // R-1.3e "PRE-FILLED with their character name". This is a citation that
     // changes what is built: an empty box fails it. Fails if: a fresh install shows a blank field,
     // so the user has to already know what would be sent in order to see it.
     [Fact]
@@ -308,7 +308,7 @@ public class DisplayNameAliasTests
 
         public void Disconnect() => IsConnected = false;
 
-        // Mirrors the real transport: a frame sent before the socket opens is discarded (BUG-36).
+        // Mirrors the real transport: a frame sent before the socket opens is discarded.
         public void Send(byte[] envelope)
         {
             if (IsReadyToSend)

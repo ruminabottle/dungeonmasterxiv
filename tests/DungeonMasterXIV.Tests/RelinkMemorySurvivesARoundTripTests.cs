@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-146: saving and loading the settings does not change what is remembered.
+/// Saving and loading the settings does not change what is remembered.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -18,8 +18,8 @@ namespace DungeonMasterXIV.Tests;
 /// reach about a million entries.
 /// </para>
 /// <para>
-/// <b>THE ASSERTION IS THE COUNT AFTER A ROUND TRIP, NEVER THE SHAPE OF THE DOCUMENT.</b> qa-1's point
-/// when filing it, and it is the difference between a test that holds and one that looks like it
+/// <b>THE ASSERTION IS THE COUNT AFTER A ROUND TRIP, NEVER THE SHAPE OF THE DOCUMENT.</b> The defect
+/// report's point, and it is the difference between a test that holds and one that looks like it
 /// does: a test asserting the JSON has no <c>"All"</c> key passes the moment the property is renamed
 /// while still being serialised. The defect is not a key name, it is that a round trip is not an
 /// identity.

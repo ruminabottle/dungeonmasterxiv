@@ -15,11 +15,11 @@ namespace DungeonMasterXIV.Tests;
 /// <b>THE THIRD HOP, AND THE ONLY ONE WITH NO SWEEP OVER IT.</b> A message crosses three: a client
 /// sends it, the relay routes it, and the receiving client dispatches it.
 /// <c>EveryMessageAClientSendsIsSentTests</c> covers the first and the relay's own table covers the
-/// second. This covers the third — <b>and it is the hop carrying both of the incidents.</b> BUG-42
-/// was a consumer nothing routed to; BUG-43 was a joiner's frame eaten by the host's arm.
+/// second. This covers the third — <b>and it is the hop carrying both of the incidents.</b> One
+/// was a consumer nothing routed to; the other was a joiner's frame eaten by the host's arm.
 /// </para>
 /// <para>
-/// <b>It exists because the gap it catches was found by READING.</b> BUG-75: the joiner sent the
+/// <b>It exists because the gap it catches was found by READING.</b> The joiner sent the
 /// comparability receipt, the relay routed it to the host, and <c>Drain</c> had no arm — so it
 /// arrived and fell through to nothing, on <c>main</c>, with every test green. Nobody was going to
 /// be told. That is the third failure of this shape here and the first two were also found by
@@ -46,12 +46,12 @@ public sealed class EveryMessageTypeReachesAnArmTests
     /// <summary>The state a receiving client must be in for the arm under test to be reachable.</summary>
     /// <remarks>
     /// <para>
-    /// <b>Not a convenience — BUG-43 IS this distinction.</b> One socket carries both roles, and
-    /// <see cref="WireMessageType.CodeRefused"/> means two different things depending on which side
-    /// reads it: <i>your code is taken, pick another</i> to a <see cref="Registering"/> host, and
-    /// <i>no session is live under that code</i> to a <see cref="Contacting"/> joiner. A probe
-    /// arranged as both at once takes the host arm and the joiner never hears — which is the bug,
-    /// not a limitation of the harness.
+    /// <b>Not a convenience — the host-arm collision IS this distinction.</b> One socket
+    /// carries both roles, and <see cref="WireMessageType.CodeRefused"/> means two different
+    /// things depending on which side reads it: <i>your code is taken, pick another</i> to a
+    /// <see cref="Registering"/> host, and <i>no session is live under that code</i> to a
+    /// <see cref="Contacting"/> joiner. A probe arranged as both at once takes the host arm and
+    /// the joiner never hears — which is that collision, not a limitation of the harness.
     /// </para>
     /// <para>
     /// <b><see cref="AwaitingDecision"/> is a real precondition, not a workaround.</b>
@@ -76,7 +76,7 @@ public sealed class EveryMessageTypeReachesAnArmTests
         Func<Probe, bool>? Reached = null);
 
     // EVERY type, accounted for. A row is either an exclusion WITH A REASON or a handler that must
-    // demonstrably fire. Nothing may be silently absent -- silent absence is BUG-75's whole shape.
+    // demonstrably fire. Nothing may be silently absent -- that is the comparability receipt's shape.
     private static readonly Dictionary<WireMessageType, Arm> Expected = new()
     {
         [WireMessageType.Unknown] = new(
@@ -126,9 +126,9 @@ public sealed class EveryMessageTypeReachesAnArmTests
             + "ignored, which is the SILENT path and would pass with the arm deleted."),
     };
 
-    // THE UNIVERSAL, and the one that would have caught BUG-75 on the day the type was added. Fails
-    // BY NAME on any value this file does not account for -- which is what a new message type looks
-    // like before somebody wires its arm.
+    // THE UNIVERSAL, and the one that would have caught the comparability receipt's missing arm on
+    // the day the type was added. Fails BY NAME on any value this file does not account for -- which
+    // is what a new message type looks like before somebody wires its arm.
     [Fact]
     public void EveryMessageTypeIsAccountedFor()
     {
@@ -158,15 +158,15 @@ public sealed class EveryMessageTypeReachesAnArmTests
         Assert.True(
             arm.Reached!(probe),
             $"A {type} frame reached Drain on a client that was {arm.As} and nothing consumed it. "
-            + "That is "
-            + "BUG-75's shape exactly: sent, routed, and silently dropped at the third hop.");
+            + "That is the comparability receipt's "
+            + "shape exactly: sent, routed, and silently dropped at the third hop.");
     }
 
     // THE CONTROL, and without it the Theory above is worth nothing. If Probe could not drive Drain
     // at all -- a frame the codec refuses, a queue never pumped, a phase that blocks every arm --
     // every row would report "not reached" and read as a wall of real defects; worse, somebody would
     // "fix" it by moving rows onto the exclusion list until the file checked nothing. This proves
-    // the harness delivers, using the arm whose absence WAS BUG-42.
+    // the harness delivers, using the arm whose absence once broke every join.
     [Fact]
     public void TheProbeCanActuallyDriveDrainSoAFailureMeansSomething()
     {
@@ -227,8 +227,8 @@ public sealed class EveryMessageTypeReachesAnArmTests
 
         public Probe(Arrangement arrangement)
         {
-            // ONE side, never both. The untouched half stays in its resting phase so it cannot
-            // swallow a frame meant for the other -- which is the collision BUG-43 was, and a probe
+            // ONE side, never both. The untouched half stays in its resting phase so it cannot swallow
+            // a frame meant for the other -- a joiner's frame eaten by the host's arm -- and a probe
             // arranged as both at once would hide it here in the one file meant to catch it.
             switch (arrangement)
             {

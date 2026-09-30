@@ -9,11 +9,11 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A peer code may only enter through <see cref="PeerCode"/> (T-47, the durable half of BUG-57).
+/// A peer code may only enter through <see cref="PeerCode"/> (the durable half of vetting it).
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Derived from the assembly, not from a list of files.</b> The ticket's rule is that a validated
+/// <b>Derived from the assembly, not from a list of files.</b> The rule is that a validated
 /// type must be the ONLY door, and the failure it guards against is somebody adding an eleventh
 /// entrance next month. A test that named the ten known ones would pass on the day it was written
 /// and never fail again. This one reflects over every member in Core and asks a question that a new
@@ -28,15 +28,15 @@ namespace DungeonMasterXIV.Tests;
 /// <item><b>The wire DTO</b> — <c>RosterEntry</c> carries primitives because that is what the JSON
 /// format declares, and changing a serialised field's shape is a wire change, not a refactor (D-14).
 /// This one is permanent.</item>
-/// <item><b>The held-file seam — GONE, and its removal is the point.</b> Six entries lived here
-/// while <c>SessionCoordinator.cs</c> was held by DMXENG-12: its three <c>string</c> methods, and
-/// the three <c>AdmissionControl</c> overloads that existed only to feed them. Those signatures now
-/// take <see cref="PeerCode"/>, the overloads are deleted, and the six entries went with them while
-/// this file stayed green. <b>The control caught the intermediate state</b> — doors closed, entries
-/// left behind — which is what checking an allowlist in BOTH directions buys.</item>
+/// <item><b>The held-file seam — GONE, and its removal is the point.</b> Six entries lived here while
+/// <c>SessionCoordinator.cs</c> was held by another change: its three <c>string</c> methods, and the
+/// three <c>AdmissionControl</c> overloads that existed only to feed them. Those signatures now take
+/// <see cref="PeerCode"/>, the overloads are deleted, and the six entries went with them while this
+/// file stayed green. <b>The control caught the intermediate state</b> — doors closed, entries left
+/// behind — which is what checking an allowlist in BOTH directions buys.</item>
 /// </list>
 /// <para>
-/// <b>ONE SHAPE REMAINS INVISIBLE, AND IT IS OCCUPIED TODAY (found fixing BUG-72).</b> Compiler
+/// <b>ONE SHAPE REMAINS INVISIBLE, AND IT IS OCCUPIED TODAY.</b> Compiler
 /// generated members are skipped, and <c>RosterEntry.Deconstruct</c> is one: it takes
 /// <c>out string PeerCode</c>, which is a raw-string door by exactly the definition below, and it
 /// carries <c>[CompilerGenerated]</c> because the positional record synthesises it. Measured, not
@@ -71,7 +71,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
     private static readonly Dictionary<string, string> DoorsDeliberatelyLeftOpen = new(StringComparer.Ordinal)
     {
         ["DungeonMasterXIV.Net.RosterEntry.PeerCode"] =
-            "WIRE DTO, PER #86 -- not a door we missed. The Deployment Manager ruled on exactly "
+            "WIRE DTO, PER #86 -- not a door we missed. #86's review ruled on exactly "
             + "this question for DisplayName: 'Put the gate at the decode boundary so it is the "
             + "only door' and 'string stays in RosterEntry -- the wire format does not change.' A "
             + "DTO is not a door; it is the SHAPE OF WHAT CROSSED ONE, and the door is Vetted "
@@ -123,7 +123,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
             + string.Join("\n  ", listedButNotFound));
     }
 
-    // BUG-73. A type whose SHORT name collides with an allowlisted one must not inherit the
+    // A type whose SHORT name collides with an allowlisted one must not inherit the
     // exemption. Red before the re-key: the fixture's key is "RosterEntry.PeerCode", which is a
     // live allowlist entry, so the door is filtered out and the sweep reports nothing.
     //
@@ -141,7 +141,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
             door => DoorsDeliberatelyLeftOpen.ContainsKey(door));
     }
 
-    // BUG-72. Four member shapes carry a peer code as a raw string while satisfying none of the
+    // Four member shapes carry a peer code as a raw string while satisfying none of the
     // sweep's three conditions. Each fixture is planted alone, so a failure names one shape rather
     // than a combination.
     [Theory]
@@ -230,7 +230,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
     // string, so the NAME is the only handle available. That is also why the case-insensitive
     // comparison matters here: SessionCoordinator declares no PeerCode property and threads the
     // value through as the camelCase parameter, which is precisely how a case-sensitive grep missed
-    // it when this chunk was scoped.
+    // it when this change was scoped.
     private static IEnumerable<string> RawStringDoors() =>
         RawStringDoorsIn(typeof(PeerCode).Assembly.GetTypes());
 
@@ -248,7 +248,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
 
         foreach (var type in types.Where(t => !IsCompilerGenerated(t)))
         {
-            // KEYED ON THE FULL NAME (BUG-73). The short name is not unique, so a type sharing one
+            // KEYED ON THE FULL NAME. The short name is not unique, so a type sharing one
             // with an allowlisted type inherited its exemption AND its stated reason -- which here
             // reads PERMANENT and cites a wire-format ruling. The control could not catch it: the
             // genuine door is still found, so "every listed door is still found" stayed satisfied.
@@ -263,7 +263,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
                 }
             }
 
-            // FIELDS (BUG-72). GetFields was never called, so a field was not a door no matter what
+            // FIELDS. GetFields was never called, so a field was not a door no matter what
             // it held. Compiler-generated backing fields are excluded by name, as everywhere here.
             foreach (var field in type.GetFields(Everything))
             {
@@ -291,7 +291,7 @@ public sealed class PeerCodeIsTheOnlyDoorTests
     /// <summary>Whether a member of this type hands someone a peer code as a raw <c>string</c>.</summary>
     /// <remarks>
     /// <para>
-    /// <b>Was <c>== typeof(string)</c>, which three shapes walked past (BUG-72).</b> An
+    /// <b>Was <c>== typeof(string)</c>, which three shapes walked past.</b> An
     /// <c>out</c>/<c>ref</c> parameter has type <c>string&amp;</c>, an array holds strings without
     /// being one, and a collection holds them in a type argument. Each carries the value just as
     /// plainly as a bare parameter does.

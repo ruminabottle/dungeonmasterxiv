@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-9. Note what none of these assert: that a confirmation was displayed. A window that shows
+/// Note what none of these assert: that a confirmation was displayed. A window that shows
 /// "Delete permanently?" and deletes on the same click satisfies that perfectly, which is the shape
 /// being fixed rather than the fix. The property is that the file is still there, so every test here
 /// asserts which deletes were and were not performed.

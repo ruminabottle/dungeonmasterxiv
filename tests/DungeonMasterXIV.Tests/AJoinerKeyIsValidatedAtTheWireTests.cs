@@ -8,7 +8,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-56: nothing validated that a joiner's public key was a well-formed SPKI blob, so a peer the
+/// Nothing validated that a joiner's public key was a well-formed SPKI blob, so a peer the
 /// host could never speak to could be admitted.
 /// </summary>
 /// <remarks>
@@ -23,14 +23,14 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>The positive case is load-bearing.</b> A validator that admits nothing passes every negative
 /// test in this file, so <see cref="AWellFormedRequestIsStillAdmittedToTheQueue"/> is what makes the
-/// set falsifiable — see the mutation recorded in the PR.
+/// set falsifiable — see the mutation recorded in PR #90.
 /// </para>
 /// </remarks>
 public class AJoinerKeyIsValidatedAtTheWireTests
 {
     private static readonly DateTimeOffset Now = new(2026, 8, 28, 3, 0, 0, TimeSpan.Zero);
 
-    /// <summary>Bytes that are not an SPKI blob at all — the case in the bug report.</summary>
+    /// <summary>Bytes that are not an SPKI blob at all — the reported case.</summary>
     private static readonly byte[] NotAKey = { 1, 2, 3 };
 
     /// <summary>
@@ -40,7 +40,7 @@ public class AJoinerKeyIsValidatedAtTheWireTests
     /// This is the case a format-only check misses and it is worse than the junk one.
     /// <c>ImportSubjectPublicKeyInfo</c> ACCEPTS it — measured — and the failure surfaces later out
     /// of <c>DeriveRawSecretAgreement</c> as an <see cref="ArgumentException"/>, which is not the
-    /// <see cref="CryptographicException"/> that PR #86's broadcast guard catches.
+    /// <see cref="CryptographicException"/> that <c>RosterBroadcast</c>'s guard catches.
     /// </remarks>
     private static byte[] WrongCurve()
     {
@@ -48,8 +48,8 @@ public class AJoinerKeyIsValidatedAtTheWireTests
         return other.PublicKey.ExportSubjectPublicKeyInfo();
     }
 
-    // The bug. Before the fix the request became a prompt, the DM could admit it, and the resulting
-    // participant was addressable by the relay and unreachable by the host with nothing logged.
+    // The defect. Before the fix the request became a prompt, the DM could admit it, and the
+    // resulting participant was addressable by the relay and unreachable by the host with nothing logged.
     [Fact]
     public void AJoinRequestWithAnUnusableKeyNeverBecomesAPendingAdmission()
     {
@@ -61,8 +61,8 @@ public class AJoinerKeyIsValidatedAtTheWireTests
         Assert.Empty(coordinator.Admissions.Pending);
     }
 
-    // The half a "does it parse as SPKI" check would let through, and the half that escapes #86's
-    // guard as an ArgumentException rather than being skipped.
+    // The half a "does it parse as SPKI" check would let through, and the half that escapes
+    // RosterBroadcast's guard as an ArgumentException rather than being skipped.
     [Fact]
     public void AJoinRequestOnTheWrongCurveNeverBecomesAPendingAdmission()
     {

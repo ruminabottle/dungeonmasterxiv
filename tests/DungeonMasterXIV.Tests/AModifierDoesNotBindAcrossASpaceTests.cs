@@ -4,7 +4,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A-2.3c — a modifier is not bound to its term across <b>a space</b> (R-2.1, DMXENG-93).
+/// A-2.3c — a modifier is not bound to its term across <b>a space</b> (R-2.1).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -19,7 +19,7 @@ namespace DungeonMasterXIV.Tests;
 /// Foundry's <c>MODIFIERS_REGEXP_STRING</c>, which is a NEGATED CHARACTER CLASS excluding the space
 /// — so no modifier can contain one: <c>k</c>, <c>d</c>, <c>r</c>, <c>x</c> and a bare comparison
 /// alike. The population below is the parser's whole modifier set, taken from
-/// <c>RollDiceParser.ParseOne</c> rather than from the one case in the bug report.
+/// <c>RollDiceParser.ParseOne</c> rather than from the one reported case.
 /// </para>
 /// <para>
 /// <b>Each row is paired with its adjacent twin, and that pairing is the test.</b> A guard that only
@@ -30,8 +30,8 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>Evidence class, carried deliberately:</b> the criterion rests on Foundry's published API
 /// reference, <b>documentation of the implementation, UNRUN</b> — there is no Foundry on this machine.
-/// Established by feature-engineer-2 across the v10 and v14 pages, four major versions apart, and
-/// re-fetched independently for this chunk. <b>It cannot later be cited as if someone had watched
+/// Established across the v10 and v14 pages, four major versions apart, and
+/// re-fetched independently for this change. <b>It cannot later be cited as if someone had watched
 /// Foundry do it.</b>
 /// </para>
 /// </remarks>
@@ -85,8 +85,8 @@ public class AModifierDoesNotBindAcrossASpaceTests
     // a reason is what the next reader believes.
     //
     // WHAT THE EVIDENCE ACTUALLY SAYS. Foundry's MODIFIERS_REGEXP_STRING is a negated class that
-    // excludes U+0020 SPECIFICALLY. Measured by feature-engineer-3 by executing the pattern, with a
-    // control, and reproduced here as they recorded it:
+    // excludes U+0020 SPECIFICALLY. Measured by executing the pattern, with a
+    // control, and reproduced here as recorded:
     //
     //     source ([^ (){}[\]+\-*/]+)   accepts a letter, a digit and '>'; rejects ' ', '+' and '('
     //     space  U+0020  excluded: TRUE
@@ -98,8 +98,8 @@ public class AModifierDoesNotBindAcrossASpaceTests
     // ESTABLISHED AS A DIVERGENCE -- only as not established as conformance, and it is taken at
     // exactly that strength.
     //
-    // The behaviour is UNMOVED by DMXENG-96 on purpose: changing it would settle by implementation
-    // the very question this ticket exists to keep open. If this row reddens, the tab question has
+    // The behaviour is UNMOVED on purpose: changing it would settle by implementation
+    // the very question this row exists to keep open. If this row reddens, the tab question has
     // been ruled and this file follows the ruling -- it is not on its own a defect.
     [Fact]
     public void ATabAlsoEndsTheTerm_UNRULED_ThisBuildsChoiceNotARequirement()

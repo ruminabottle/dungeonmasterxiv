@@ -9,12 +9,12 @@ namespace DungeonMasterXIV.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Shared, because DMXENG-13 made the log required and thirty-four test sites suddenly needed
+/// <b>Shared, because the log became required and thirty-four test sites suddenly needed
 /// one.</b> The alternative was a private no-op in each file, which is the duplication this project
 /// keeps finding in other forms — and there were already two copies of a recording log before this.
 /// </para>
 /// <para>
-/// <b>Deliberately NOT in Core, and that is the point of the ticket rather than a layering
+/// <b>Deliberately NOT in Core, and that is the point of a required log rather than a layering
 /// preference.</b> A public no-op log shipped beside the interface is a supported way to construct a
 /// coordinator that logs nothing — which is the silence the required parameter exists to prevent,
 /// re-introduced under a respectable name. Production has exactly one construction site and it

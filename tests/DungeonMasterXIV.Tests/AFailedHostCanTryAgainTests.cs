@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A DM whose hosting attempt failed can actually start another one (DMXENG-68, BUG-120).
+/// A DM whose hosting attempt failed can actually start another one.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,7 +17,7 @@ namespace DungeonMasterXIV.Tests;
 /// they tried.
 /// </para>
 /// <para>
-/// <b>Measured, and this is why the ticket exists:</b> refusing to restart after a failure —
+/// <b>Measured, and this is why this file exists:</b> refusing to restart after a failure —
 /// <c>if (Phase == HostingPhase.Failed) { return; }</c> at the top of <c>HostSession.Start</c> —
 /// left all 1489 tests passing. A bool was pinned and a recovery was not.
 /// </para>

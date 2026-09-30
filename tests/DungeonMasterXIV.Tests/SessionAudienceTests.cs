@@ -83,7 +83,7 @@ public class SessionAudienceTests
     }
 
     // Fails if: Recipients hands back the backing list typed as an interface, which a caller can
-    // downcast and mutate — and which would change under C2's receive loop mid-enumeration.
+    // downcast and mutate — and which would change under the receive loop mid-enumeration.
     [Fact]
     public void RecipientsCannotBeMutatedByItsCaller()
     {

@@ -8,18 +8,18 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// Both windows read one settable value and neither is a literal in the code path (A-1.27, BUG-55).
+/// Both windows read one settable value and neither is a literal in the code path (A-1.27).
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>It asserts the NOT-A-LITERAL clause, and it must, because the agreement clause was already
 /// true while A-1.27 was false.</b> A-1.27 has three parts — both windows / one settable value /
-/// neither is a literal. After #101 merged there were genuinely two windows and they AGREED,
-/// because <c>Grace</c> was <c>new()</c> and <c>Seat</c> was <c>new GraceWindow(null)</c> and both
-/// fell through to <see cref="GraceWindow.Default"/>. A test shaped <i>"the two windows match"</i>
-/// would have gone green at that moment with the third clause still failing.
-/// <b>De-duplicating a literal is not single-sourcing it to a setting</b> — that is BUG-55's insight
-/// one layer along, and it is the whole reason this file asserts what it does.
+/// neither is a literal. After #101 merged there were genuinely two windows and they AGREED, because
+/// <c>Grace</c> was <c>new()</c> and <c>Seat</c> was <c>new GraceWindow(null)</c> and both fell
+/// through to <see cref="GraceWindow.Default"/>. A test shaped <i>"the two windows match"</i> would
+/// have gone green at that moment with the third clause still failing. <b>De-duplicating a literal
+/// is not single-sourcing it to a setting</b> — the earlier lesson that correcting a literal does
+/// not single-source it, one layer along, and it is the whole reason this file asserts what it does.
 /// </para>
 /// <para>
 /// <b>So the assertion is positive, not comparative.</b> The window is set to a DISTINCTIVE value
@@ -95,7 +95,7 @@ public sealed class EveryWindowReadsTheOneSettingTests
             found.Count >= 2,
             $"The sweep found {found.Count} clock(s) [{string.Join(", ", found)}]. A-1.27 is about "
             + "BOTH windows; over a set of one it passes vacuously, which is exactly the failure "
-            + "BUG-55 exists to prevent.");
+            + "this file exists to prevent.");
     }
 
     // THE PROOF THAT THE DISTINCTIVE VALUE DISCRIMINATES. If it happened to equal the default, every

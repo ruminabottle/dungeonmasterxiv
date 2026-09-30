@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// Migrating the pre-C10 single-file store onto the per-campaign layout A-1.11b requires.
+/// Migrating the old single-file store onto the per-campaign layout A-1.11b requires.
 /// </summary>
 /// <remarks>
 /// <b>The v1 fixture is produced by the previous build's own writer, not hand-authored.</b>
@@ -135,7 +135,7 @@ public class CampaignMigrationTests
     // migration leaves it intact and is retried rather than losing the campaigns that had not been
     // written yet. Fails if the delete is moved before or into the write loop.
     //
-    // This asserted Assert.Throws<IOException> until PR #17's second finding: that exception
+    // This asserted Assert.Throws<IOException> until a review found the flaw: that exception
     // escaped the CampaignStore constructor, and this path runs once for every existing user on
     // upgrade, so a transient write failure stopped the plugin loading at all. The write failure is
     // now reported and the load continues. The assertion changed because the required behaviour

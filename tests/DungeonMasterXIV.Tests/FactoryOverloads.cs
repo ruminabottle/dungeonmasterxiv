@@ -29,7 +29,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>Pure over TEXT rather than over a path, so the failing case is a permanent test rather than a
 /// mutation somebody once ran.</b> The gap this guard exists for currently has ZERO instances —
-/// <c>ForJoinRequest</c>'s deadline overload was deleted by DMXENG-41 — so a guard wired only to the
+/// <c>ForJoinRequest</c>'s deadline overload was deleted — so a guard wired only to the
 /// real file would be green with nothing to find, which is indistinguishable from a guard that
 /// cannot find anything. Taking a string means the positive case is asserted every run.
 /// </para>
@@ -89,7 +89,7 @@ internal static class FactoryOverloads
     /// exists to catch, wearing one indirection.</b>
     /// </para>
     /// <para>
-    /// feature-engineer-2 named the shape on a different guard: <i>deleting an entry reddens it;
+    /// The shape was named on a different guard: <i>deleting an entry reddens it;
     /// replacing it with a false one leaves it green.</i> A completeness check that asks whether an
     /// author wrote something, rather than whether what they wrote is true, has this hole by
     /// construction. Asking <b>accounted for</b> rather than <b>constructs</b> closes it.

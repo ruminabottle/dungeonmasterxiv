@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-154: quitting the game is a DELIBERATE quit, so the joiner says so before the socket goes.
+/// Quitting the game is a DELIBERATE quit, so the joiner says so before the socket goes.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Tests;
 /// minutes under R-1.5a.
 /// </para>
 /// <para>
-/// <b>R-1.3g draws the line this bug sits on.</b> An ungraceful drop is NOT a departure and holding
+/// <b>R-1.3g draws the line the quit defect sits on.</b> An ungraceful drop is NOT a departure and holding
 /// its seat is correct — removing vanished members to close that apparent gap is the false fix the
 /// requirement names. Quitting cleanly is on the other side of it: the player said nothing because
 /// the code never said anything, not because they crashed.
@@ -37,7 +37,7 @@ public class QuittingTheGameAnnouncesDepartureTests
 
     // THE DEFECT. Fails if teardown never announces: an admitted joiner quitting the game puts a
     // frame on the wire. Asserted on the FRAME, not on a bool -- a method returning true while
-    // sending nothing is the shape this bug is made of.
+    // sending nothing is the shape the defect is made of.
     [Fact]
     public void AnAdmittedJoinerQuittingTheGameSendsADeparture()
     {
@@ -69,8 +69,7 @@ public class QuittingTheGameAnnouncesDepartureTests
     }
 
     // A HOST MUST NOT ANNOUNCE ONE. The doc on the departure path implies a host is already a no-op;
-    // the bug report is explicit that this is a reading of a comment rather than a measurement, so it
-    // is measured here.
+    // that was read from a comment, never measured, so it is measured here.
     [Fact]
     public void AHostQuittingTheGameSendsNoDeparture()
     {
@@ -157,7 +156,7 @@ public class QuittingTheGameAnnouncesDepartureTests
     /// </summary>
     /// <remarks>
     /// Two separate lists would record that a send and a detach both occurred and could never say
-    /// which was first, which is the only question this bug asks.
+    /// which was first, which is the only question the defect asks.
     /// </remarks>
     private sealed class RecordingTransport : ISessionTransport
     {

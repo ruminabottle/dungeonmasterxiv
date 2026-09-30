@@ -16,11 +16,11 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// <b>Why the fixtures changed when this type landed.</b> Every test here used to identify
-/// participants as <c>"PEER-1"</c>. That is six characters, so it passed the length half of BUG-57's
-/// vet and failed the alphabet half — <c>E</c> is excluded as a vowel and <c>-</c> and <c>1</c> are
-/// not in <see cref="SpeakableAlphabet.Characters"/> at all. <b>The suite was therefore asserting
-/// admission and roster behaviour against codes this product can never emit</b>, and the half of the
-/// rule that rejects them was never exercised by these fixtures. They now use real ones.
+/// participants as <c>"PEER-1"</c>. That is six characters, so it passed the length half of the
+/// roster gate's vet and failed the alphabet half — <c>E</c> is excluded as a vowel and <c>-</c> and
+/// <c>1</c> are not in <see cref="SpeakableAlphabet.Characters"/> at all. <b>The suite was therefore
+/// asserting admission and roster behaviour against codes this product can never emit</b>, and the
+/// half of the rule that rejects them was never exercised by these fixtures. They now use real ones.
 /// </para>
 /// </remarks>
 internal static class PeerCodes

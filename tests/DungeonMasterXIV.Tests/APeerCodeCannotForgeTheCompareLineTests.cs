@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-57. PR #86 gated <see cref="DisplayName"/> at the decode boundary; the forged
+/// <see cref="DisplayName"/> was gated at the decode boundary; the forged
 /// "Code to compare:" line simply moved one field over into <c>PeerCode</c>, which
 /// <c>SessionContentCodec.Vetted</c> passed through untouched.
 /// </summary>
@@ -25,7 +25,7 @@ namespace DungeonMasterXIV.Tests;
 /// </remarks>
 public class APeerCodeCannotForgeTheCompareLineTests
 {
-    // qa-1's probe, turned into a test. Fails on the shipped build, where Vetted() rewrites only
+    // A review probe, turned into a test. Fails on the shipped build, where Vetted() rewrites only
     // DisplayName and returns PeerCode verbatim -- so the multi-line forged fingerprint line the
     // D-8 gate exists to stop arrives intact one field along.
     [Fact]

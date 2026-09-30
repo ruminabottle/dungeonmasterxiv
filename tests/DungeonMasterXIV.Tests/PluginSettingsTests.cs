@@ -103,7 +103,7 @@ public class PluginSettingsTests
     [Fact]
     public void AFirstRunWithNothingOnDiskRequiresAWriteOnLoad()
     {
-        // BUG-1. The load path never wrote, so a user who loaded the plugin and opened no window
+        // The load path never wrote, so a user who loaded the plugin and opened no window
         // had no config file at all, and therefore no schema version on disk. R-0.5 wants the
         // version there from the first load rather than from the first click.
         Assert.True(PluginSettings.RequiresWriteOnLoad(null));

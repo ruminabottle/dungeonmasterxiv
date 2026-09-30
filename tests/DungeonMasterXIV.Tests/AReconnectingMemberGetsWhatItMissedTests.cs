@@ -20,12 +20,12 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>A-2.6 IS A DIFFERENT CASE and is not the reconnect one.</b> A client never admitted receives
 /// nothing from before its admission. It is asserted here because the two are one sentence apart in
-/// the PRD and the mechanism that satisfies one could plausibly leak the other.
+/// rolls and the mechanism that satisfies one could plausibly leak the other.
 /// </para>
 /// <para>
 /// <b>RE-SENDING IS REQUIRED.</b> A-2.6a's clause <i>"a build that restores the log by re-sending
-/// fails"</i> was STRUCK on 2026-08-29 — decision 7 requires exactly that re-send. Nothing here
-/// treats re-sending as a defect, and a reading that does is a reading of the struck version.
+/// fails"</i> was STRUCK on 2026-08-29 — product-overview Session panel item 7 requires exactly
+/// that re-send. Nothing here treats re-sending as a defect; that reading is the struck version's.
 /// </para>
 /// </remarks>
 public class AReconnectingMemberGetsWhatItMissedTests

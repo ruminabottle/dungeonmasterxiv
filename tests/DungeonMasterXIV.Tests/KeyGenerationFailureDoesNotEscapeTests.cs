@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-61, sev1. On the human's machine <c>ECDiffieHellman.Create</c> throws
+/// On the reporter's machine <c>ECDiffieHellman.Create</c> throws
 /// <see cref="CryptographicException"/> <c>0x80090029</c>, and nothing caught it: the throw unwound
 /// out of the button handler, out of <c>Draw</c>, and the client saw it every frame.
 /// </summary>
@@ -102,12 +102,12 @@ public class KeyGenerationFailureDoesNotEscapeTests
         Assert.Equal(SessionFailure.None, coordinator.Host.Failure);
     }
 
-    // BUG-62, AND IT NEEDS BOTH HALVES. TryMakeKeys catches CryptographicException only, and its doc
-    // comment calls that narrowness deliberate: "a broader catch here would hide a genuine defect in
-    // this method's own callers behind a message about keys". Nothing asserted it. Widening the catch
-    // to Exception — the single most likely edit anyone makes to a try/catch — left all 979 tests
-    // green, because a catch-all does not break the success path and nothing here ever threw a
-    // non-cryptographic exception from the seam.
+    // THE NARROW CATCH, AND IT NEEDS BOTH HALVES. TryMakeKeys catches CryptographicException only,
+    // and its doc comment calls that narrowness deliberate: "a broader catch here would hide a
+    // genuine defect in this method's own callers behind a message about keys". Nothing asserted it.
+    // Widening the catch to Exception — the single most likely edit anyone makes to a try/catch —
+    // left all 979 tests green, because a catch-all does not break the success path and nothing here
+    // ever threw a non-cryptographic exception from the seam.
     //
     // The property is "CRYPTOGRAPHIC FAILURES ARE CAUGHT AND NOTHING ELSE IS". Asserting only the
     // first half invites the opposite break — narrowing to CryptographicException EXACTLY and
@@ -172,7 +172,7 @@ public class KeyGenerationFailureDoesNotEscapeTests
         var seen = new System.Collections.Generic.List<int>();
         attempts = seen;
 
-        // 0x80090029 is NTE_NOT_SUPPORTED, the code the human's machine actually produced. The
+        // 0x80090029 is NTE_NOT_SUPPORTED, the code the reporter's machine actually produced. The
         // number is here so the specimen is the reported one rather than a convenient stand-in.
         return new SessionCoordinator(
             new SilentTransport(),

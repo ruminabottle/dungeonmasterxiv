@@ -5,7 +5,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// <c>SessionRole</c> crosses the wire as a number, and a name is refused (BUG-104).
+/// <c>SessionRole</c> crosses the wire as a number, and a name is refused.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,8 +17,8 @@ namespace DungeonMasterXIV.Tests;
 /// the finding false with nothing failing and nobody re-reading it.
 /// </para>
 /// <para>
-/// <b>The question that produced it is worth more than the answer.</b> qa-1 checked four recorded
-/// decisions and all four were TRUE; what they found is that the four are not equally DURABLE.
+/// <b>The question that produced it is worth more than the answer.</b> Four recorded decisions were
+/// checked and all four were TRUE; what the check found is that the four are not equally DURABLE.
 /// Three describe code in the same method as the decision, so the sentence and its subject travel
 /// together and it cannot rot unread. This one's truth lives in a declaration elsewhere and is a
 /// claim about a third-party library's default. So the question to ask of a recorded decision is not
@@ -51,7 +51,7 @@ public class ARoleArrivesAsANumberNotANameTests
             $"A Role of {role} was accepted. SessionContentCodec.Options declares no Converters, so "
             + "enums must arrive as numbers -- if a JsonStringEnumConverter has been added, the "
             + "codec's finding that Role cannot carry text is now false and needs rewriting, not "
-            + "this test relaxing (BUG-104).");
+            + "this test relaxing.");
     }
 
     // THE VACUITY CONTROL, and without it the theory above proves nothing: every one of those

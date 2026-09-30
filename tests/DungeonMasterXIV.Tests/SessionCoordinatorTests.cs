@@ -61,7 +61,7 @@ public class SessionCoordinatorTests
 
         Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
 
-        // RelayAddressUnreadable, not RelayUnreachable (BUG-37). This comment used to defend the
+        // RelayAddressUnreadable, not RelayUnreachable. This comment used to defend the
         // latter on the grounds that "no connection was ever attempted, so the relay really was not
         // reached" — true of the code and false of the sentence the user sees, which asserts the
         // relay is at fault. Nothing was contacted, so nothing is known about the relay.
@@ -70,7 +70,7 @@ public class SessionCoordinatorTests
         Assert.NotEmpty(SessionFailureMessage.For(coordinator.Host.Failure));
     }
 
-    // BUG-37. Fails if: a typo in the relay address is reported as the relay being at fault. The
+    // Fails if: a typo in the relay address is reported as the relay being at fault. The
     // address never parsed, so no socket was opened and nothing was contacted — the plugin cannot
     // know whether the relay is up, and saying it is unreachable blames a third party for the user's
     // typo. Asserted on the SENTENCE rather than only the enum, because the sentence is what makes
@@ -169,7 +169,7 @@ public class SessionCoordinatorTests
         Assert.Equal(HostingPhase.Failed, coordinator.Host.Phase);
 
         // The test's own name already said "the relay never answered". The enum said "unreachable",
-        // which is a different claim and was the false one (BUG-36).
+        // which is a different claim and was the false one.
         Assert.Equal(SessionFailure.RegistrationNotAnswered, coordinator.Host.Failure);
         Assert.False(transport.IsConnected);
     }
@@ -279,7 +279,7 @@ public class SessionCoordinatorTests
         public bool IsConnected { get; private set; }
 
         // A fake socket is open the instant it connects, so readiness follows connection here.
-        // The real WebSocket does not (BUG-36), which is why the coordinator asks this and not
+        // The real WebSocket does not, which is why the coordinator asks this and not
         // IsConnected -- and why TheHostRegistersItsCodeTests drives the two apart deliberately.
         public bool IsReadyToSend => IsConnected;
 

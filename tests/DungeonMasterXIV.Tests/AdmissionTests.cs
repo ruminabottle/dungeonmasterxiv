@@ -173,8 +173,8 @@ public class AdmissionTests
         Assert.False(Request().IsRelink);
     }
 
-    // E-11: an Assistant runs the table, only the DM controls who is at it. Fails if: the role stops
-    // being recorded, which is what a roster needs before PRD-3 can let an Assistant drive combat.
+    // R-1.3: an Assistant runs the table, only the DM controls who is at it. Fails if: the role stops
+    // being recorded, which a roster needs before initiative can let an Assistant drive combat.
     [Fact]
     public void ARolesIsRecordedOnTheAdmittedParticipant()
     {

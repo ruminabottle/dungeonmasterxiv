@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// <c>MissedMessages</c> refuses an absent <see cref="PeerCode"/> at both writers (DMXENG-105).
+/// <c>MissedMessages</c> refuses an absent <see cref="PeerCode"/> at both writers.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -25,8 +25,8 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>TWO WRITERS, AND ONE TEST EACH ON PURPOSE.</b> <c>_held</c> and <c>_gapped</c> are separate
 /// collections with separate writers, and a single test over <c>Hold</c> leaves <c>NoteGap</c>
-/// unguarded and green — which is exactly how the first report of this bug would have been closed
-/// with half of it live.
+/// unguarded and green — exactly how the first report of the absent-code defect would have been
+/// closed with half of it live.
 /// </para>
 /// <para>
 /// <b>Guarded at the WRITERS, so the readers are safe by construction.</b> <c>Replay</c> and

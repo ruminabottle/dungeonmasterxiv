@@ -17,7 +17,7 @@ public class SessionFailureMessageTests
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>An allowlist, deliberately, and not a list of forbidden phrases (BUG-49).</b> The defect
+    /// <b>An allowlist, deliberately, and not a list of forbidden phrases.</b> The defect
     /// this replaces was <c>RelayUnreachable</c> claiming "This is not your connection" — a
     /// statement about cause that a firewall rejecting with a TCP RST disproves, since a refusal is
     /// evidence something answered and that something can sit on the user's side. **No regex finds
@@ -57,7 +57,7 @@ public class SessionFailureMessageTests
                 "No session is running under that code. Check the code with your DM — codes belong to a "
                 + "session that is live now, so one from last week will not work until they start again.",
 
-            // BUG-61, sev1. Read against A-1.7e before it was written: it says WHAT happened and
+            // Read against A-1.7e before it was written: it says WHAT happened and
             // that nothing started, and deliberately does not say WHY — the client has not
             // established why, and "your machine does not support this" is a guess wearing a fact.
             // It neither blames nor exonerates the user's network or configuration, claims nothing
@@ -116,8 +116,8 @@ public class SessionFailureMessageTests
     }
 
     // Fails if any user-facing sentence changes without this table changing with it. That is the
-    // point rather than a cost: BUG-49 was a wording defect that survived because wording could move
-    // without a second reader.
+    // point rather than a cost: a wording defect in RelayUnreachable's sentence survived because
+    // wording could move without a second reader.
     [Fact]
     public void EachSentenceIsTheOneThatWasReviewed()
     {
@@ -172,7 +172,7 @@ public class SessionFailureMessageTests
             Assert.DoesNotContain(forbidden, SessionFailureMessage.For(failure), StringComparison.OrdinalIgnoreCase));
     }
 
-    // BUG-37. Fails if: the sentence for a malformed address asserts something the failure never
+    // Fails if: the sentence for a malformed address asserts something the failure never
     // established. Nothing was contacted, so any claim about the relay's health — in either
     // direction — is invented. Paired against RelayUnreachable's sentence because the defect was
     // that they were the SAME sentence.
@@ -187,10 +187,10 @@ public class SessionFailureMessageTests
         Assert.Contains("nothing was contacted", message, StringComparison.OrdinalIgnoreCase);
     }
 
-    // The same guards the three R-1.8 failures get, applied to the value this bug added. NOTE: the
-    // arrays above still name three of the enum's seven values, so PluginBehindRelay,
-    // RelayBehindPlugin and RegistrationNotAnswered remain unguarded by them. That gap predates
-    // BUG-37 and is reported rather than widened here.
+    // The same guards the three R-1.8 failures get, applied to the value the malformed-address fix
+    // added. NOTE: the arrays above still name three of the enum's seven values, so
+    // PluginBehindRelay, RelayBehindPlugin and RegistrationNotAnswered remain unguarded by them.
+    // That gap predates RelayAddressUnreadable and is reported rather than widened here.
     [Theory]
     [InlineData("connection failed")]
     [InlineData("something went wrong")]
@@ -205,7 +205,7 @@ public class SessionFailureMessageTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    // BUG-59, following the precedent the line above set for BUG-37's value: a new
+    // HostKeyUnusable, following the precedent the line above set for RelayAddressUnreadable: a new
     // engineering-authored sentence gets its own guards rather than relying on arrays that name
     // three of nine. A-1.7e is what this discharges — the forbidden list, applied to copy R-1.7a
     // does not supply.
@@ -229,8 +229,8 @@ public class SessionFailureMessageTests
     // ONE fact — the key on the acceptance cannot be agreed with. It cannot tell a broken host from
     // a tampering relay from a version skew, so naming any of them would be asserting what it has
     // not established. It also names no network in either direction: blaming one would be false
-    // because the relay is plainly reachable, and exonerating one is BUG-49's mistake, which is the
-    // failure mode this whole file exists to prevent.
+    // because the relay is plainly reachable, and exonerating one is the old RelayUnreachable
+    // mistake, which is the failure mode this whole file exists to prevent.
     [Theory]
     [InlineData("firewall")]
     [InlineData("your network")]

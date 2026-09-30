@@ -18,7 +18,7 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// <b>The seam was forced by the size limit and turned out to be real, which is worth saying in that
-/// order.</b> The test class was 408 lines against a 400 block BEFORE DMXENG-40 — already breaching,
+/// order.</b> The test class was 408 lines against a 400 block BEFORE the cut — already breaching,
 /// invisibly, until the sizes tool learned to measure classes. So this file exists because a limit
 /// found it, not because anyone designed it.
 /// </para>
@@ -70,7 +70,7 @@ internal static class ClientSendTable
     internal static readonly Dictionary<string, Classification> Expected = new(StringComparer.Ordinal)
     {
         [nameof(WireEnvelope.ForCodeRequest)] = new(
-            Origin.Client, "the host claims its code (R-1.2a). BUG-36: this had no call site",
+            Origin.Client, "the host claims its code (R-1.2a). This once had no call site",
             s => { s.Coordinator.StartHosting(); s.Ready(); s.Coordinator.Tick(TimeSpan.Zero, Now); },
             e => e.Type == WireMessageType.CodeRequest,
             Sample: () => WireEnvelope.ForCodeRequest(SampleCode)),
@@ -91,7 +91,7 @@ internal static class ClientSendTable
         // relink row cannot be satisfied by a plain join. Before this file derived over factories,
         // one assertion covered both and the weaker one was doing all the work.
         [nameof(WireEnvelope.ForJoinRequest)] = new(
-            Origin.Client, "the joiner asks to be admitted (R-1.3). BUG-40: this had no call site",
+            Origin.Client, "the joiner asks to be admitted (R-1.3). This once had no call site",
             s =>
             {
                 s.Coordinator.RequestJoin(SessionCode.FromValid("BCDFGH"));
@@ -110,19 +110,19 @@ internal static class ClientSendTable
         // absorb it -- a category for being honest about what is not built becomes a place to hide
         // what should be the moment it accepts something the product already requires.
         //
-        // GREEN SINCE DMXENG-1 (#141), AND THE TRIGGER HAD TO CHANGE FOR IT -- said plainly, because
-        // "the row went green when the feature landed" would be a nicer story and is not what
-        // happened. Until #141 nothing in the product could produce a claim: the joiner had no
-        // storage, so passing one here would have fabricated a state production could not reach,
-        // which is why this trigger deliberately called the ONE-ARGUMENT overload and this row
-        // deliberately failed.
+        // GREEN SINCE A JOINER CAN STORE ITS CLAIM, AND THE TRIGGER HAD TO CHANGE FOR IT -- said
+        // plainly, because "the row went green when the feature landed" would be a nicer story and
+        // is not what happened. Until then nothing in the product could produce a claim: the joiner
+        // had no storage, so passing one here would have fabricated a state production could not
+        // reach, which is why this trigger deliberately called the ONE-ARGUMENT overload and this
+        // row deliberately failed.
         //
         // Now a claim exists -- JoinFlowView reads it from RelinkMemory and passes it to the
         // three-argument RequestJoin -- so driving that same entry point with one is no longer a
         // fabrication. IT IS THE PRODUCTION PATH, one layer below the window this assembly cannot
         // reference.
         //
-        // WHAT THIS STILL MEASURES, and it is the original defect: BUG-41 was the middle overload
+        // WHAT THIS STILL MEASURES, and it is the original defect: the middle overload
         // NULLING the claim on its way through. Break that again and this row fails again, because
         // the predicate reads the WIRE and not the argument.
         //
@@ -133,7 +133,7 @@ internal static class ClientSendTable
         // TEXT and asserts the call carries three arguments with a non-null third -- the narrow
         // thing that distinguishes the overload carrying the claim from the two that drop it.
         //
-        // THIS SENTENCE PREVIOUSLY CITED TheJoinerRemembersWhoItIsTests AND THAT WAS FALSE (BUG-100).
+        // THIS SENTENCE PREVIOUSLY CITED TheJoinerRemembersWhoItIsTests AND THAT WAS FALSE.
         // That file tests RelinkMemory storage: no view, no join, no envelope. The citation was
         // written in good faith because AStoredParticipantIsWhatAJoinWouldCarry is named for a claim
         // its body does not make. AN UNCOVERED PATH READS AS UNCOVERED; AN UNCOVERED PATH WITH A
@@ -191,7 +191,7 @@ internal static class ClientSendTable
             Sample: () => WireEnvelope.ForJoinLapsed(SampleCode, SampleKey)),
 
         // Carried forward from main during the rebase, re-keyed to its FACTORY. It arrived on main
-        // (#88/#92) after this branch was cut; dropping it would lose coverage that already existed,
+        // (#88/#92) after the re-keying branch was cut; dropping it would lose existing coverage,
         // and EveryFactoryIsClassified would fail by name for the missing factory regardless.
         [nameof(WireEnvelope.ForJoinerHoldsFingerprint)] = new(
             Origin.Client,

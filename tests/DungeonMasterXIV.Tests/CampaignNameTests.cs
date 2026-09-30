@@ -6,10 +6,10 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// A-1.9k and SQ-54: what an auto-created campaign calls itself.
+/// A-1.9k and A-1.9k-5: what an auto-created campaign calls itself.
 /// </summary>
 /// <remarks>
-/// <b>Every property here was RULED rather than chosen</b>, so each test names the ruling it pins.
+/// <b>Every property here was RULED rather than chosen</b>, so each test names the row it pins.
 /// The one judgement inside the implementation — dropping the weekday — is pinned too, because it
 /// is the part a later reader is most likely to assume was arbitrary.
 /// </remarks>
@@ -20,10 +20,10 @@ public class CampaignNameTests
     private static Campaign At(DateTimeOffset created) =>
         new() { CampaignId = Guid.NewGuid(), CreatedUtc = created };
 
-    // SQ-54: the components and their ORDER are load-bearing; punctuation is not. So this asserts
+    // A-1.9k-5: the components and their ORDER are load-bearing; punctuation is not. So this asserts
     // the date parts and a clock time are present and in that order, rather than a literal string —
     // a literal would fail on a machine whose culture punctuates differently, which is exactly the
-    // property the ruling protects.
+    // property the row protects.
     [Fact]
     public void TheAutoNameIsTheCreationDateThenTheClockTime()
     {
@@ -36,7 +36,7 @@ public class CampaignNameTests
             $"The date must precede the clock time. Got '{name}'.");
     }
 
-    // SQ-54, the Product Owner's ruling and the reason it overruled a prefix: a campaign is NOT a
+    // A-1.9k-5, and the reason it rules out a prefix: a campaign is NOT a
     // session, and "Session of ..." would be the one place the product conflates them — teaching the
     // wrong model to the person who most needs the right one. It is also accurate only at creation,
     // becoming a misnomer the moment the campaign is RESUMED, which is when the feature has worked.
@@ -49,7 +49,7 @@ public class CampaignNameTests
         Assert.DoesNotContain("campaign", name, StringComparison.OrdinalIgnoreCase);
     }
 
-    // The judgement call, pinned so it is visible rather than assumed arbitrary. SQ-54's draft
+    // The judgement call, pinned so it is visible rather than assumed arbitrary. A-1.9k-5's draft
     // carries no weekday and several cultures put one in their long date pattern, so it is removed
     // — otherwise the name would carry a component for some readers and not others.
     [Fact]

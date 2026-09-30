@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>ONLY A TEST THAT PARSES A STRING PROVES THE GRAMMAR.</b> A test that builds a
 /// <see cref="DiceModifiers"/> and calls the evaluator proves the EVALUATOR, which is a different
-/// claim — and the difference is exactly BUG-142. <c>DropHighest</c> and <c>DropLowest</c> were
+/// claim — and the difference is the drop half. <c>DropHighest</c> and <c>DropLowest</c> were
 /// declared, were handled correctly by <c>ApplyKeepAndDrop</c>, and could not be produced by any
 /// expression, because the parser had no <c>d</c> arm. The half was built, evaluated and unreachable.
 /// </para>
@@ -48,7 +48,7 @@ public class EveryGrammarConstructIsReachableFromAStringTests
     // keep -- the half that always worked, here as the control for the four below it
     [InlineData("4d6kh3", 14, new[] { 1, 6, 3, 5 })]
     [InlineData("4d6kl3", 9, new[] { 1, 6, 3, 5 })]
-    // DROP -- BUG-142. Unreachable before this fix; all three forms refused as Malformed.
+    // DROP -- unreachable before the parser had a d arm; all three forms refused as Malformed.
     [InlineData("4d6dl1", 14, new[] { 1, 6, 3, 5 })]
     [InlineData("4d6dh1", 9, new[] { 1, 6, 3, 5 })]
     [InlineData("4d6d1", 14, new[] { 1, 6, 3, 5 })]
@@ -107,7 +107,7 @@ public class EveryGrammarConstructIsReachableFromAStringTests
         Assert.Equal(6, dropped.Value);
     }
 
-    // THE CENSUS, AND IT NOW READS THE THEORY RATHER THAN REPEATING IT (BUG-150). The previous
+    // THE CENSUS, AND IT NOW READS THE THEORY RATHER THAN REPEATING IT. The previous
     // version listed the same eleven expressions a second time and claimed that deleting a row from
     // the theory could not pass silently. It could: a second copy of a list agrees with the first
     // only until one of them changes, and the only trace was the suite total dropping by one, which

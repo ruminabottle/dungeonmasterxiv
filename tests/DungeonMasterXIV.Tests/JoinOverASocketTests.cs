@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// C5's merge bar, transferred here: one completing join and one completing denial <b>over a real
+/// An earlier merge bar, transferred here: one completing join and one completing denial <b>over a real
 /// socket</b>, rather than asserted inside <see cref="SessionCoordinator"/> against a fake.
 /// </summary>
 /// <remarks>

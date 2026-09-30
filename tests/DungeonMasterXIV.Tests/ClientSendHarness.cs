@@ -12,14 +12,14 @@ namespace DungeonMasterXIV.Tests;
 /// <remarks>
 /// <para>
 /// <b>Its own file because the limit forced a cut and this was the honest place for it.</b> The test
-/// class was 408 lines against a 400 block BEFORE DMXENG-40 -- already breaching, invisibly, until
+/// class was 408 lines against a 400 block BEFORE the cut -- already breaching, invisibly, until
 /// the sizes tool learned to measure classes. A test double is not an assertion, so the seam between
 /// them is real rather than convenient.
 /// </para>
 /// <para>
 /// <b>The transport is deliberately not a naive double.</b> It discards a frame sent before the
-/// socket opens, exactly as the real one does -- which is the behaviour BUG-36 hid behind, and a
-/// double that accepted everything would have made that bug untestable.
+/// socket opens, exactly as the real one does -- which is the behaviour the missing code request
+/// hid behind, and a double that accepted everything would have made that defect untestable.
 /// </para>
 /// </remarks>
 internal sealed class ClientSendHarness
@@ -45,7 +45,7 @@ internal sealed class ClientSendHarness
             .Select(e => e!)
             .ToList();
 
-        /// <summary>The socket finished opening. Sending before this is discarded (BUG-36).</summary>
+        /// <summary>The socket finished opening. Sending before this is discarded.</summary>
         public void Ready() => _transport.OpenTheSocket = true;
 
         /// <summary>The host answers with its key, so this client can render a fingerprint.</summary>

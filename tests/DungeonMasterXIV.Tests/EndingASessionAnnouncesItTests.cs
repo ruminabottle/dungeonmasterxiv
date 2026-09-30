@@ -29,7 +29,7 @@ namespace DungeonMasterXIV.Tests;
 /// the broadcast layer cannot fail on a call site that does not exist.
 /// </para>
 /// <para>
-/// <b>This is fe-3's three-of-five finding arriving in my own work.</b> Three of
+/// <b>This is the three-of-five teardown finding arriving in my own work.</b> Three of
 /// <c>StopHosting</c>'s five teardown steps deleted invisibly; my closing notice was the fourth
 /// until this file. "All tests pass" would have been a true sentence and a weak claim.
 /// </para>
@@ -57,7 +57,7 @@ public class EndingASessionAnnouncesItTests
     }
 
     // THE ORDERING, AND IT NEEDS ITS OWN NAME BECAUSE IT IS A SEPARATE MUTATION. Teardown lives
-    // inside HostRunner.Stop since DMXENG-51 and it empties the admissions, so a publish that runs
+    // inside HostRunner.Stop and it empties the admissions, so a publish that runs
     // afterwards seals to an audience of nobody: NOTHING IS SENT AT ALL and no assertion about the
     // notice's contents can fire, because there is no notice.
     //

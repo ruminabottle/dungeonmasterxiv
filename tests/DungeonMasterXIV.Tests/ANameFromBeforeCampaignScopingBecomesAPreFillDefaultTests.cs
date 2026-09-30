@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// SQ-87: a display name stored BEFORE names were campaign-scoped survives the upgrade as a local
+/// A display name stored BEFORE names were campaign-scoped survives the upgrade as a local
 /// pre-fill default — <b>offered, never applied, and never sent unaccepted</b> (A-2.32, A-2.33).
 /// </summary>
 /// <remarks>
@@ -28,8 +28,8 @@ namespace DungeonMasterXIV.Tests;
 /// without showing satisfies A-2.32 and fails this.
 /// </para>
 /// <para>
-/// <b>What is machine-checkable here and what is not, stated rather than implied.</b> The PRD marks
-/// A-2.33 <i>"machine for the send, in-game for the player having seen it"</i>. These tests cover the
+/// <b>What is machine-checkable here and what is not, stated rather than implied.</b> A-2.33: the
+/// send is machine-checkable; the player having seen it needs the game. These tests cover the
 /// SEND half — that merely offering a name cannot cause it to be sent. <b>Whether the box was
 /// actually drawn is not observable from this project</b>, because no test project links the plugin.
 /// </para>
@@ -58,7 +58,7 @@ public class ANameFromBeforeCampaignScopingBecomesAPreFillDefaultTests
     // ---- recovery: the value is still there to be offered.
 
     /// <summary>
-    /// The heart of the ticket: the alias is recovered from the JSON that is ALREADY on disk, by
+    /// The heart of the carry-over: the alias is recovered from the JSON that is ALREADY on disk, by
     /// name, with no version comparison and no migration step.
     /// </summary>
     /// <remarks>
@@ -205,7 +205,7 @@ public class ANameFromBeforeCampaignScopingBecomesAPreFillDefaultTests
     /// <remarks>
     /// <b>The first assertion is what makes the second mean something.</b> Without it, "nothing was
     /// sent under that name" is equally true of a build that never offered the name at all — and that
-    /// build fails SQ-87 while passing a test written only on the send.
+    /// build fails the carry-over while passing a test written only on the send.
     /// </remarks>
     [Fact]
     public void ACarriedOverNameThatWasOnlyOfferedIsNotSent()

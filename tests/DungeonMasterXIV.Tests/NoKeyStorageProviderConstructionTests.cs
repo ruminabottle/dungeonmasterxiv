@@ -10,8 +10,8 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-61's completion condition: no construction in Core may depend on the key-storage provider,
-/// so a fifth site added later fails rather than silently reintroducing the bug.
+/// The provider fix's completion condition: no construction in Core may depend on the key-storage
+/// provider, so a fifth site added later fails rather than silently reintroducing the failure.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,15 +23,15 @@ namespace DungeonMasterXIV.Tests;
 /// file whose own commentary quotes the very names it must refuse.
 /// </para>
 /// <para>
-/// <b>The four construction sites were the ticket's definition of done, and enumerating four is
+/// <b>The four construction sites were the fix's definition of done, and enumerating four is
 /// exactly the shape that goes stale.</b> The requirement is not "those four changed"; it is that
 /// none of them comes back.
 /// </para>
 /// <para>
 /// <b>What this deliberately does NOT forbid: the rest of</b> <c>System.Security.Cryptography</c>.
-/// HKDF, SHA-256, AES and <c>CryptographicOperations</c> are unaffected by BUG-61 — the failure is
+/// HKDF, SHA-256, AES and <c>CryptographicOperations</c> are unaffected — the failure is
 /// specific to EC through the provider — and the KDF is on the wire, so forbidding it would demand
-/// the change the ticket forbids.
+/// a protocol break.
 /// </para>
 /// </remarks>
 public class NoKeyStorageProviderConstructionTests
@@ -49,13 +49,13 @@ public class NoKeyStorageProviderConstructionTests
 
         Assert.True(
             offenders.Count == 0,
-            "DungeonMasterXIV.Core references key-storage-provider-backed types, which BUG-61 "
-            + "showed cannot work under the Wine prefix at all:\n  " + string.Join("\n  ", offenders));
+            "DungeonMasterXIV.Core references key-storage-provider-backed types, which are known "
+            + "not to work under the Wine prefix at all:\n  " + string.Join("\n  ", offenders));
     }
 
     // THE VACUITY CONTROL, and without it every assertion here is worthless: a scanner that read
     // nothing, or read the wrong file, would report zero offenders and pass forever. Core provably
-    // DOES use HKDF -- the KDF the ticket forbids changing -- so the scan must find it.
+    // DOES use HKDF -- the KDF the wire depends on -- so the scan must find it.
     [Fact]
     public void TheScanIsReadingRealMetadata()
     {
@@ -81,7 +81,7 @@ public class NoKeyStorageProviderConstructionTests
         Assert.True(DependsOnTheProvider(name), $"{name} would not have been caught.");
 
     // And the negative control: it must stay silent on the cryptography Core legitimately uses, or
-    // the guard fails for a reason that has nothing to do with BUG-61 and gets weakened in a hurry.
+    // the guard fails for a reason unrelated to the provider and gets weakened in a hurry.
     [Theory]
     [InlineData("HKDF")]
     [InlineData("SHA256")]

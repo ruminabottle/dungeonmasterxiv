@@ -6,7 +6,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-70. <c>Vetted</c> drops a roster entry whose peer code no legitimate sender could have
+/// <c>Vetted</c> drops a roster entry whose peer code no legitimate sender could have
 /// produced, and said nothing about it.
 /// </summary>
 /// <remarks>
