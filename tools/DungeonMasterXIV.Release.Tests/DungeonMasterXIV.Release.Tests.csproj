@@ -20,7 +20,6 @@
   -->
   <ItemGroup>
     <ProjectReference Include="..\DungeonMasterXIV.Release\DungeonMasterXIV.Release.csproj" />
-    <ProjectReference Include="..\DungeonMasterXIV.Sizes\DungeonMasterXIV.Sizes.csproj" />
   </ItemGroup>
 
 </Project>
