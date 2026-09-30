@@ -148,7 +148,7 @@ public sealed class AdmissionControl
     /// requesters apart on one screen. <b>What the DM should actually see here is a product
     /// question</b> — the session-layer spec requires a session-scoped code and does not say how it
     /// is formed, and nothing sends this code to the joiner, so the two of them cannot yet read the
-    /// same label aloud. Raised as a question rather than settled here.
+    /// same label aloud. Raised rather than settled here.
     /// </para>
     /// </remarks>
     public PeerCode PeerCodeFor(byte[] joinerPublicKey)
@@ -303,11 +303,10 @@ public sealed class AdmissionControl
             _announcer.Accepted(code, joinerKey, hostKeys.PublicKey, participantId);
         }
 
-        // A REAL LOSS, REPORTED RATHER THAN PASSED OVER. An
-        // admitted player with no participant can never relink to this campaign: next session the
-        // DM sees a stranger and approves them fresh, and NOTHING anywhere would have said why. The
-        // peer code names WHICH person, because two may share a display name (A-1.2d) and D-8 keeps
-        // a character name out of a log.
+        // A REAL LOSS, REPORTED RATHER THAN PASSED OVER. An admitted player with no participant can
+        // never relink to this campaign: next session the DM sees a stranger and approves them fresh,
+        // and NOTHING anywhere would have said why. The peer code names WHICH person, because two may
+        // share a display name (A-1.2d) and D-8 keeps a character name out of a log.
         if (participantId is null)
         {
             _log.Warning(

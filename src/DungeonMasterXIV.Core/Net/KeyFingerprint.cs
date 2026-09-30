@@ -34,8 +34,8 @@ namespace DungeonMasterXIV.Net;
 /// in time is not, and this comment used to say otherwise.</b> It read: "No wire field carries it:
 /// after the exchange both sides already hold both keys, so both can compute it." That is true and
 /// useless — the exchange completes at <i>acceptance</i>, so the joiner held both keys only after
-/// the decision the comparison exists to inform, and could not compare anything. It shipped as
-/// such, and session-layer R-1.3a's matching bullet is struck for the same reason.
+/// the decision the comparison exists to inform, and could not compare anything. It shipped that
+/// way, and the original requirement's matching bullet was struck for the same reason.
 /// </para>
 /// <para>
 /// The host's key now reaches the joiner before admission, in

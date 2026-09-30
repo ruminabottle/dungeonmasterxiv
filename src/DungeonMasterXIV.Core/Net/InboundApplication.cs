@@ -19,7 +19,7 @@ namespace DungeonMasterXIV.Net;
 /// <b>WHY NOT <c>Drain</c> — the decision, stated rather than only the result.</b> <c>Drain</c> is
 /// 173 lines against a 60-line method block and is the obvious candidate. <b>It is also the largest
 /// of the block breaches already on <c>main</c>, and a separate fix waits on it.</b> Splitting it
-/// here would resolve that breach inside unrelated work and would incidentally unblock the fix.
+/// here would resolve that breach inside other work and would incidentally unblock the fix.
 /// <b>THIS EXTRACTION ADDRESSES NEITHER. <c>Drain</c>'s length is unchanged.</b>
 /// </para>
 /// <para>

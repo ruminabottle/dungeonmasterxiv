@@ -8,11 +8,11 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Split out of <see cref="SessionCoordinator"/> on one test — the number of reasons the file
-/// could change.</b> Two changes were made to that class in one evening, the pending-notice work
-/// and the registration handshake, and <b>neither touched a line that is now in this file.</b> Both
-/// were about what a session does; nothing here is. That is the evidence the seam is real rather
-/// than a trim to fit a line count.
+/// <b>Split out of <see cref="SessionCoordinator"/> on the one-reason-to-change test — the number
+/// of reasons the file could change.</b> Two changes were made to that class in one evening, the
+/// pending-notice work and the registration handshake, and <b>neither touched a line that is now in
+/// this file.</b> Both were about what a session does; nothing here is. That is the evidence the
+/// seam is real rather than a trim to fit a line count.
 /// </para>
 /// <para>
 /// <b>The lock is the sharpest tell.</b> Marshalling a callback from the socket thread onto the

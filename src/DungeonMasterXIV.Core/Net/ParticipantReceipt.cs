@@ -58,7 +58,7 @@ public static class ParticipantReceipt
     /// <para>
     /// <b>PARSE</b> — a host controls these characters and a value that is not a GUID is not a
     /// participant. Dropped here rather than carried inward as a string for something further in to
-    /// fail on, which is the joiner-key lesson applied to a different field.
+    /// fail on — the lesson that a joiner's key is checked at the door, on another field.
     /// </para>
     /// </remarks>
     /// <param name="envelope">What arrived.</param>
