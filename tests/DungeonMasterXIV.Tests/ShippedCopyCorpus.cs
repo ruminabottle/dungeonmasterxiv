@@ -13,8 +13,8 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>Split from <c>ShippedCopyMeetsItsConstraintsTests</c>, which had two reasons to change.</b>
 /// How copy is FOUND — which files are swept, how a literal is matched to its declaration — moves
-/// when the source layout does. What copy must SAY moves when a decision reverses. The standards
-/// name that split directly: <i>"when a file starts needing a section comment to separate its
+/// when the source layout does. What copy must SAY moves when a decision reverses. One rule
+/// names that split directly: <i>"when a file starts needing a section comment to separate its
 /// parts, those parts are two files."</i> The combined file also passed the 450-line blocking
 /// limit once the review findings were fixed, which is what forced the issue rather than taste.
 /// </para>
@@ -40,9 +40,9 @@ internal static IReadOnlyList<(string File, string Name, string Text)> ShippedCo
 
 internal static IEnumerable<(string Name, string Text)> LiteralsIn(string source)
 {
-    // Comment lines are stripped first: this file's own commentary quotes refused phrasings, and
-    // so does the source it reads — SessionFailure.cs explains BUG-49 by quoting the sentence it
-    // removed. Sweeping commentary would refuse the explanation of the fix.
+    // Comment lines are stripped first: this file's own commentary quotes refused phrasings, and so
+    // does the source it reads — SessionFailure.cs explains the RelayUnreachable fix by quoting the
+    // sentence it removed. Sweeping commentary would refuse the explanation of the fix.
     var body = string.Join(
         "\n",
         File.ReadAllLines(source).Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
@@ -69,8 +69,8 @@ internal static IEnumerable<(string Name, string Text)> LiteralsIn(string source
 /// The Core files that carry user-facing copy, relative to the repository root.
 /// </summary>
 /// <remarks>
-/// <b><c>DisplayName</c> was found missing from this list AFTER the sweep shipped</b>, by the
-/// Code Reviewer. <c>Unstated</c> — "a player who gave no name" — is rendered in the admission
+/// <b><c>DisplayName</c> was found missing from this list AFTER the sweep shipped</b>, in
+/// review. <c>Unstated</c> — "a player who gave no name" — is rendered in the admission
 /// prompt and had never been swept. The PR that added this file described an unswept Core file
 /// as a FUTURE risk; the instance already existed. That is the cost of an enumerated list, and
 /// it is why <see cref="TheNamedCoreFilesAreAllSwept"/> now guards it.
@@ -126,7 +126,7 @@ internal static IReadOnlyList<string> SweptSources(string root, IReadOnlyList<st
             + string.Join(", ", missing));
     }
 
-    // BUG-105. Top level only meant a window in a subdirectory of Windows/ COMPILED INTO THE PLUGIN
+    // Top level only meant a window in a subdirectory of Windows/ COMPILED INTO THE PLUGIN
     // AND SHIPPED WITH ITS STRINGS NEVER EXAMINED, while every guard over this corpus stayed green.
     // Measured: with one planted subdirectory the scan saw 9 files where the tree held 10.
     return Directory.EnumerateFiles(Path.Combine(root, "Windows"), "*.cs", SearchOption.AllDirectories)
@@ -140,8 +140,8 @@ internal static string WindowsDirectory() => Path.Combine(RepositoryRoot(), "Win
 /// <summary>Every <c>.cs</c> file beneath <c>Windows/</c>, found by walking rather than by globbing.</summary>
 /// <remarks>
 /// <para>
-/// <b>A SECOND SOURCE for guards over this corpus, and the recursion is written out for that reason
-/// (BUG-105).</b> The obvious implementation is the <c>SearchOption.AllDirectories</c> call
+/// <b>A SECOND SOURCE for guards over this corpus, and the recursion is written out for that
+/// reason.</b> The obvious implementation is the <c>SearchOption.AllDirectories</c> call
 /// <see cref="SourcesSwept"/> makes, and a guard comparing those two would be comparing one function
 /// with itself: both sides would miss a subdirectory, miss it EQUALLY, and the equality would pass.
 /// That is what left <c>TheSweepReadsEveryWindowOnDisk</c> green over a planted window.

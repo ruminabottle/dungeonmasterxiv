@@ -22,8 +22,8 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>Why this shape rather than the two that were tried first.</b> Vetting fields one at a time is
 /// an enumeration standing in for a universal: <c>DisplayName</c> was vetted after PR #86 was
-/// denied, <c>PeerCode</c> after BUG-57, each one after its own defect. The two obvious replacements
-/// do not work and both were measured rather than argued —
+/// denied, <c>PeerCode</c> after a forged line got through it, each one after its own defect. The two
+/// obvious replacements do not work and both were measured rather than argued —
 /// </para>
 /// <list type="bullet">
 /// <item><b>Refusing unknown fields at run time</b> contradicts D-14: the wire only grows and a peer
@@ -117,8 +117,8 @@ public class EveryDecodedMemberHasAVettingDecisionTests
             ["RosterEntry.PeerCode"] =
                 "The whole entry is DROPPED unless PeerCode.TryParse accepts it. Nothing is "
                 + "repaired: the roster is host-authored and sealed, so a malformed code means our "
-                + "own encoder is broken or a keyholder is forging, and dropping answers both"
-                + ".",
+                + "own encoder is broken or a keyholder is forging, and dropping "
+                + "answers both.",
 
             ["RosterEntry.DisplayName"] =
                 "Replaced with DisplayName.OrNone(value).Value, so a name that could forge a line "
@@ -131,8 +131,8 @@ public class EveryDecodedMemberHasAVettingDecisionTests
                 + "NOT INSIDE THE ROSTER'S NULL CHECK: the previous Vetted returned the document "
                 + "untouched when Roster was null, which is why the departure guard is named "
                 + "WhenARosterIsPresent. A stamped broadcast ordinarily carries no roster, so "
-                + "vetting reached only via the roster would be unvetted on the common case"
-                + ".",
+                + "vetting reached only via the roster would be unvetted on the "
+                + "common case.",
 
             ["StreamLine.Sequence"] =
                 "The whole line is DROPPED below 1. HostSequencer issues from 1, so anything lower "
@@ -193,8 +193,8 @@ public class EveryDecodedMemberHasAVettingDecisionTests
                 + "over int with no string converter: every string form is refused at decode, and "
                 + "an out-of-range number arrives as an undefined member whose ToString is digits, "
                 + "so it cannot carry text and cannot forge a line. What it can do is present a "
-                + "value matching no case, which is a rendering question. BUG-91 asks whether that "
-                + "reasoning is still right; THIS TEST GOES GREEN EITHER WAY.",
+                + "value matching no case, which is a rendering question. Whether that reasoning "
+                + "is still right is not this test's question; THIS TEST GOES GREEN EITHER WAY.",
         };
 
     // THE INSTRUMENT. Fails when a member of either decoded type is not named above — including one

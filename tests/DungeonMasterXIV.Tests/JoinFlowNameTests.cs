@@ -89,9 +89,9 @@ public class JoinFlowNameTests
     //
     // The protection here comes from the SECOND assertion, and it duplicates
     // AnUntouchedFieldTakesTheSettingsValue on purpose — that duplication is what makes this test
-    // fail if the pre-fill rule breaks. Recorded by qa-3 against BUG-64; kept rather than deleted
-    // because the sentence above is worth pinning even when the assertion beneath it is not a
-    // check.
+    // fail if the pre-fill rule breaks. Recorded as a limit of the cross-seam name test; kept
+    // rather than deleted because the sentence above is worth pinning even when the assertion
+    // beneath it is not a check.
     [Fact]
     public void ItCannotTellAnUntouchedFieldFromOneTypedBackToTheSeed()
     {

@@ -23,7 +23,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>THE GAP HAS ZERO INSTANCES TODAY, AND THAT IS WHY THIS FILE IS SHAPED THE WAY IT IS.</b>
 /// <c>ForJoinRequest</c> had a third overload taking an <c>AdmissionDeadline</c> that built its own
-/// envelope and had no caller — the motivating instance. <b>DMXENG-41 deleted it.</b> So a guard
+/// envelope and had no caller — the motivating instance. <b>It has been deleted.</b> So a guard
 /// wired only to the real file would be green with nothing to find, which reads identically to a
 /// guard that cannot find anything. <b>Do not build a guard whose only evidence is that the suite
 /// stays green.</b>
@@ -63,7 +63,7 @@ public sealed class OneNameCannotCoverTwoConstructionsTests
             + "names, or make one delegate to the other.");
     }
 
-    // THE MUTATION, AS A PERMANENT CONTROL RATHER THAN A ONE-OFF. This is the shape DMXENG-41
+    // THE MUTATION, AS A PERMANENT CONTROL RATHER THAN A ONE-OFF. This is the shape that was
     // deleted: a third ForJoinRequest that builds its own envelope instead of delegating.
     //
     // Fails if the detector stops finding it -- which is the only way to tell the guard above apart
@@ -93,7 +93,7 @@ public sealed class OneNameCannotCoverTwoConstructionsTests
         Assert.Equal(["ForJoinRequest"], FactoryOverloads.NamesCoveringTwoConstructions(Mutated));
     }
 
-    // THE HOLE feature-engineer-2 NAMED ON A DIFFERENT GUARD, CLOSED HERE BEFORE REVIEW.
+    // THE HOLE NAMED ON A DIFFERENT GUARD, CLOSED HERE BEFORE REVIEW.
     // Fails if two overloads reaching construction THROUGH A HELPER slip past.
     //
     // "Deleting an entry reddens it; replacing it with a false one leaves it green." My first rule

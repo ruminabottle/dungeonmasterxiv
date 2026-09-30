@@ -8,11 +8,11 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// No two persisted members of a stored type hand back the same object (BUG-146's whole class).
+/// No two persisted members of a stored type hand back the same object (the whole aliasing class).
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Built by qa-1 and left uncommitted as a candidate; adapted here.</b> The insight is theirs and
+/// <b>Built first as an uncommitted candidate; adapted here.</b> The insight is the candidate's and
 /// it is the reason this exists rather than another shape check: <c>RelinkMemory</c> exposed the same
 /// <c>List</c> through two public gettable members, the serialiser wrote it twice, and Newtonsoft
 /// appended on load — the memory doubled every save/load, unbounded.
@@ -21,8 +21,8 @@ namespace DungeonMasterXIV.Tests;
 /// <b>THE EXISTING SHAPE GUARD CAUGHT IT AND WAS ANSWERED WRONGLY.</b>
 /// <c>NothingCanBeAddedToAStoredTypeWithoutThisTestSayingSo</c> fired when <c>All</c> was added,
 /// exactly as designed, and the answer given was to add <c>All</c> to its expected list — so every
-/// run afterwards <i>confirmed</i> the bug. A shape guard asks "did the persisted surface change"; it
-/// cannot ask "should it have".
+/// run afterwards <i>confirmed</i> the doubling. A shape guard asks "did the persisted surface
+/// change"; it cannot ask "should it have".
 /// </para>
 /// <para>
 /// <b>The difference is that this has no expected list to corrupt.</b> Two persisted members handing
@@ -32,20 +32,20 @@ namespace DungeonMasterXIV.Tests;
 /// its verdict from the artefact cannot.</b>
 /// </para>
 /// <para>
-/// <b>WHAT I CHANGED FROM THE CANDIDATE, AND WHY IT IS THE SAME ARGUMENT ONE LEVEL UP.</b> qa-1
-/// listed the three stored types by hand. That list is itself a maintained expectation — a stored
-/// type added later is simply not checked, and nothing says so. The types are now DERIVED by walking
-/// outward from the settings root, so the guard escapes the maintained list for types as well as for
-/// member names.
+/// <b>WHAT I CHANGED FROM THE CANDIDATE, AND WHY IT IS THE SAME ARGUMENT ONE LEVEL UP.</b> The
+/// candidate listed the three stored types by hand. That list is itself a maintained expectation — a
+/// stored type added later is simply not checked, and nothing says so. The types are now DERIVED by
+/// walking outward from the settings root, so the guard escapes the maintained list for types as
+/// well as for member names.
 /// </para>
 /// <para>
-/// <b>Three limits, measured rather than assumed. Two are qa-1's and stated as they wrote them.</b>
+/// <b>Three limits, measured rather than assumed. Two are the candidate's, as written.</b>
 /// </para>
 /// <list type="number">
-/// <item><b>Silent on a COPYING second view</b> (<c>=&gt; Remembered.ToList()</c>). qa-1 checked what
-/// that variant actually does: it bloats the document but does NOT reproduce the defect, because a
-/// get-only copy cannot be populated back on load. Aliasing is the mechanism, which is why this aims
-/// at aliasing.</item>
+/// <item><b>Silent on a COPYING second view</b> (<c>=&gt; Remembered.ToList()</c>). The candidate
+/// checked what that variant actually does: it bloats the document but does NOT reproduce the
+/// defect, because a get-only copy cannot be populated back on load. Aliasing is the mechanism,
+/// which is why this aims at aliasing.</item>
 /// <item><b>It sees only aliases present on a FRESHLY CONSTRUCTED instance.</b> Two members that
 /// begin null and alias only once populated would slip past.</item>
 /// <item><b>The root is <see cref="PluginSettings"/>, not <c>Configuration</c> — mine, and forced.</b>
@@ -81,7 +81,7 @@ public class NoTwoPersistedMembersAliasTheSameObjectTests
     // that finds NOTHING checks nothing and passes. That green is indistinguishable from a green
     // earned over every stored type, which is the exact shape this guard exists to refuse.
     //
-    // So the derivation is asserted to reach the types BUG-146 actually lived in. This list is not
+    // So the derivation is asserted to reach the types the defect actually lived in. This list is not
     // an expectation the verdict depends on -- the property above never reads it -- it is a floor
     // under the instrument.
     [Fact]

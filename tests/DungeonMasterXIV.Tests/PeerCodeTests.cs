@@ -10,9 +10,9 @@ namespace DungeonMasterXIV.Tests;
 /// <see cref="PeerCode"/> accepts what this product generates and refuses everything else.
 /// </summary>
 /// <remarks>
-/// The rule is BUG-57's, moved off <c>SessionContentCodec</c> and onto the type so it applies at
-/// every door rather than one. These assert the rule; <c>PeerCodeIsTheOnlyDoorTests</c> asserts that
-/// nothing bypasses it.
+/// The rule is the roster gate's, moved off <c>SessionContentCodec</c> and onto the type so it
+/// applies at every door rather than one. These assert the rule; <c>PeerCodeIsTheOnlyDoorTests</c>
+/// asserts that nothing bypasses it.
 /// </remarks>
 public sealed class PeerCodeTests
 {

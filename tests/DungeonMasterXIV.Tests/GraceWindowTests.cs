@@ -72,7 +72,7 @@ public class GraceWindowTests
         Assert.False(grace.IsRunning);
     }
 
-    // The cross-check C3 found the hard way: the grace window is the side that moves, so it is the
+    // The cross-check found the hard way: the grace window is the side that moves, so it is the
     // side that must refuse. Fails if: a window shorter than three keepalive intervals is accepted,
     // at which point an ordinary lull between rolls ends a live session mid-play.
     [Theory]
@@ -87,7 +87,7 @@ public class GraceWindowTests
     // assertion fails, the question is not "what should the constant be" but "what does R-1.4 say
     // now" — go and read it.
     //
-    // BUG-54: this test already existed, already named R-1.4, and still did not catch the drift.
+    // This test already existed, already named R-1.4, and still did not catch the drift.
     // R-1.4 changed from two minutes to five on 2026-08-27 and nothing swept the copies. A test
     // that names a requirement does not track that requirement — it pins a number that was correct
     // when it was written, and goes green forever afterwards. What this fixed was the DUPLICATION:
@@ -99,8 +99,8 @@ public class GraceWindowTests
     // the code path", and at the time of writing it fails on all three clauses: there is only ONE
     // window — no seat window exists in the code — there is NO settable value, because
     // PluginSettings carries no duration of any kind, and GraceWindow.Default is still a LITERAL.
-    // De-duplicating a literal is not single-sourcing it to a setting. BUG-55 is where that lives,
-    // and it needs a seat window that does not exist yet.
+    // De-duplicating a literal is not single-sourcing it to a setting. Closing that gap
+    // needs a seat window that does not exist yet.
     [Fact]
     public void TheDefaultWindowIsAcceptedAndIsRule14sFiveMinutes()
     {
@@ -179,7 +179,7 @@ public class SupersededCodeTests
 /// </summary>
 public class FingerprintExpiryCouplingTests
 {
-    // THE CROSS-GUARD, C5's half. Its counterpart is
+    // THE CROSS-GUARD, this file's half. Its counterpart is
     // tests/DungeonMasterXIV.Tests/AdmissionDeadlineTests.cs, which pins the fifteen minutes, and
     // tests/DungeonMasterXIV.Tests/KeyFingerprintTests.cs, which pins the eleven characters.
     //
@@ -189,7 +189,7 @@ public class FingerprintExpiryCouplingTests
     // merely expensive. Remove the expiry and eleven must become fourteen.
     //
     // A comment does not discharge this. A decision recorded rather than applied is what stranded
-    // R-1.3a in the first place and produced C8.
+    // R-1.3a in the first place.
     [Fact]
     public void ElevenCharactersHoldsOnlyBecauseTheAdmissionPromptExpires()
     {

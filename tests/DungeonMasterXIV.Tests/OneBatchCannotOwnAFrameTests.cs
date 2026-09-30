@@ -7,7 +7,7 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-58: no batch of inbound frames can own a whole game frame, and none is lost getting there.
+/// No batch of inbound frames can own a whole game frame, and none is lost getting there.
 /// </summary>
 /// <remarks>
 /// <para>

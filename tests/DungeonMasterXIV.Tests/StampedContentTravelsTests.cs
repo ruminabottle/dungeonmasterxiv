@@ -12,7 +12,7 @@ namespace DungeonMasterXIV.Tests;
 /// REQUIRED RATHER THAN TIDY.</b> <c>Vetted</c> REBUILDS the document from an enumerated member
 /// list, so a section added to <c>SessionContent</c> and forgotten there is silently dropped on
 /// decode — sender sets it, wire carries it, receiver never sees it, nothing fails. Measured
-/// (DMXENG-118): there is NO general guard, every section has its own, so this one is what stands
+/// on PR #226: there is NO general guard, every section has its own, so this one is what stands
 /// between a future edit and a silent loss.
 /// </para>
 /// <para>
@@ -80,8 +80,8 @@ public class StampedContentTravelsTests
         Assert.Single(decoded!.Entries!);
     }
 
-    // THE POINT OF THE WHOLE SECTION: what arrives can become a domain entry that SessionStream
-    // will actually accept. A wire member nothing can consume is the gap this ticket exists to close.
+    // THE POINT OF THE WHOLE SECTION: what arrives can become a domain entry that SessionStream will
+    // actually accept. A wire member nothing can consume is the gap this section exists to close.
     [Fact]
     public void AReceivedLineBecomesAnEntryTheStreamAccepts()
     {

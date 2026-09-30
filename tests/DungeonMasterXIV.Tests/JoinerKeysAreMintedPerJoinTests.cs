@@ -6,12 +6,12 @@ using Xunit;
 namespace DungeonMasterXIV.Tests;
 
 /// <summary>
-/// BUG-117: a joining client mints a FRESH key pair on every join, so a retained joiner key names one
+/// A joining client mints a FRESH key pair on every join, so a retained joiner key names one
 /// attempt rather than one person.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>This guards a CLEARANCE, not current behaviour.</b> DMXENG-58 has the relay retain a joiner's
+/// <b>This guards a CLEARANCE, not current behaviour.</b> The relay retains a joiner's
 /// public key so it can name a departed member, and that was cleared under D-8 on the ground that the
 /// key is <i>ephemeral by construction</i> — a fresh pair per join, so the retained value is
 /// per-attempt and no more linkable than a connection id. <b>The behaviour held and nothing enforced

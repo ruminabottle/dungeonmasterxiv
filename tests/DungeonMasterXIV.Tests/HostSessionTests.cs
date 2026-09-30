@@ -81,7 +81,7 @@ public class HostSessionTests
         Assert.False(session.RequiresRelayConnection);
     }
 
-    // BUG-38, at the unit the decision is made in. Fails if: a timeout reached WITHOUT the request
+    // The hung-connect case, at the unit the decision is made in. Fails if: a timeout reached WITHOUT the request
     // ever going out is reported as one the relay heard and ignored — which told a user whose
     // firewall was dropping the connection that their network was not the problem.
     [Fact]

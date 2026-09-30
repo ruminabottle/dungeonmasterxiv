@@ -8,7 +8,7 @@ namespace DungeonMasterXIV.Tests;
 
 public class KeyFingerprintTests
 {
-    // A fixed second party, so the tests inherited from C8 keep measuring what they measured — the
+    // A fixed second party, so the inherited tests keep measuring what they measured — the
     // rendering and the distribution — now that a fingerprint is a function of two keys.
     private static readonly byte[] Counterparty = SyntheticKey(0xC0FFEE);
 
@@ -173,7 +173,7 @@ public class CombinedKeyFingerprintTests
 
     // A-1.3f's second half, and it needs BOTH directions separately. A single test showing "it
     // changes when a key changes" is satisfied by a function that ignores one argument entirely —
-    // which is precisely the one-directional defence this chunk exists to remove.
+    // which is precisely the one-directional defence this change exists to remove.
     [Fact]
     public void SubstitutingTheHostsKeyChangesTheFingerprint()
     {
@@ -254,7 +254,7 @@ public class CombinedKeyFingerprintTests
     }
 
     // THE CROSS-GUARD, and the return half of the pair PR #10 could only write one side of.
-    // C6's side is AdmissionDeadline.Window's remark, which names KeyFingerprint.cs; this names
+    // The other side is AdmissionDeadline.Window's remark, which names KeyFingerprint.cs; this names
     // tests/DungeonMasterXIV.Tests/AdmissionDeadlineTests.cs back.
     //
     // Fails if: the admission prompt's expiry is removed or its window is changed without the
@@ -262,8 +262,8 @@ public class CombinedKeyFingerprintTests
     // expires — against a bounded window a ten-month second-preimage search is hopeless rather than
     // merely expensive. Remove the expiry and eleven must become fourteen.
     //
-    // A comment does not discharge this. A decision recorded rather than applied is what produced
-    // C8, which is the chunk this one amends.
+    // A comment does not discharge this. A decision recorded rather than applied is what stranded
+    // R-1.3a in the first place.
     [Fact]
     public void ElevenCharactersHoldsOnlyBecauseTheAdmissionPromptExpires()
     {

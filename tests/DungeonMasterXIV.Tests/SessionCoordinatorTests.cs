@@ -70,7 +70,7 @@ public class SessionCoordinatorTests
         Assert.NotEmpty(SessionFailureMessage.For(coordinator.Host.Failure));
     }
 
-    // BUG-37. Fails if: a typo in the relay address is reported as the relay being at fault. The
+    // Fails if: a typo in the relay address is reported as the relay being at fault. The
     // address never parsed, so no socket was opened and nothing was contacted — the plugin cannot
     // know whether the relay is up, and saying it is unreachable blames a third party for the user's
     // typo. Asserted on the SENTENCE rather than only the enum, because the sentence is what makes

@@ -27,11 +27,11 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// <b>What this cannot do, stated rather than implied.</b> The refused phrasings are TRANSCRIBED
-/// from R-1.7a, because the PRD lives under <c>.claude/</c>, which is gitignored — a test reading it
-/// would pass here and fail on every clean checkout, exactly as
-/// <c>TheAdmissionPromptCopyIsTheRuledCopyTests</c> records. So the LIST grows by hand when a
-/// decision reverses. What is derived, and what makes this a universal rather than a pin, is the
-/// CORPUS: a string added tomorrow is swept without anyone remembering to add it.
+/// from R-1.7a, because the requirement document is gitignored — a test reading it would pass here
+/// and fail on every clean checkout, exactly as <c>TheAdmissionPromptCopyIsTheRuledCopyTests</c>
+/// records. So the LIST grows by hand when a decision reverses. What is derived, and what makes this
+/// a universal rather than a pin, is the CORPUS: a string added tomorrow is swept without anyone
+/// remembering to add it.
 /// </para>
 /// </remarks>
 public class ShippedCopyMeetsItsConstraintsTests
@@ -69,11 +69,11 @@ public class ShippedCopyMeetsItsConstraintsTests
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>The two criteria have different corpora and I had them as one.</b> A-1.7d governs
-    /// <i>every shipped string</i> — the SQ-34 defect was in ruled copy, so exempting it would
-    /// exempt the case that produced the criterion. A-1.7e governs <i>engineering-authored</i>
-    /// strings only, by its own words, and applying it to the Product Owner's text refuses copy an
-    /// engineer may not alter anyway.
+    /// <b>The two criteria have different corpora and I had them as one.</b> A-1.7d governs <i>every
+    /// shipped string</i> — the stale admission-prompt string was in ruled copy, so exempting it
+    /// would exempt the case that produced the criterion. A-1.7e governs <i>engineering-authored</i>
+    /// strings only, by its own words, and applying it to ruled text refuses copy an engineer may
+    /// not alter anyway.
     /// </para>
     /// <para>
     /// <b>Enumerating the RULED side is what keeps the other side universal.</b> This list is small,
@@ -208,9 +208,9 @@ public class ShippedCopyMeetsItsConstraintsTests
         // decouple them; that is a change to the check's semantics and was not made under a denial.
     }
 
-    // BUG-48's lesson: a guard that claims a property of the CODEBASE must read the codebase rather
-    // than a list of files someone maintained. A window added tomorrow is swept because the set is
-    // derived from disk on both sides.
+    // The copy-path guard's lesson: a guard that claims a property of the CODEBASE must read the
+    // codebase rather than a list of files someone maintained. A window added tomorrow is swept
+    // because the set is derived from disk on both sides.
     [Fact]
     public void TheSweepReadsEveryWindowOnDisk()
     {
@@ -278,8 +278,8 @@ public class ShippedCopyMeetsItsConstraintsTests
 
     // The classification is load-bearing and silently does nothing if it is wrong: a typo in
     // RuledConstants matches no declaration, every string falls into the engineering-authored
-    // corpus, and the A-1.7e sweep quietly reverts to refusing the Product Owner's copy -- while
-    // still passing, because it passes today. So the split is asserted in both directions.
+    // corpus, and the A-1.7e sweep quietly reverts to refusing the ruled copy -- while still
+    // passing, because it passes today. So the split is asserted in both directions.
     [Fact]
     public void TheRuledCopyIsClassifiedAsRuledAndTheRestIsNot()
     {

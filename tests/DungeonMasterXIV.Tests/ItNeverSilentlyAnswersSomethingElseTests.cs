@@ -6,7 +6,7 @@ namespace DungeonMasterXIV.Tests;
 
 /// <summary>
 /// R-2.1: <i>"Malformed notation is refused with a message naming what was wrong. It never silently
-/// rolls something else."</i> BUG-143 and BUG-144 are two breaches of that one sentence.
+/// rolls something else."</i> Overflow and the x0 sentinel are two breaches of that one sentence.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,7 +28,7 @@ public class ItNeverSilentlyAnswersSomethingElseTests
     private static RollOutcome Evaluate(string expression) =>
         new RollEvaluator(new ScriptedDieRoller()).Evaluate(expression);
 
-    // BUG-143, the wrapping half. Each of these previously came back Evaluated with a confident
+    // Overflow, the wrapping half. Each of these previously came back Evaluated with a confident
     // wrong number, which is the outcome R-2.1 names and forbids.
     [Theory]
     [InlineData("1073741824*2")]
@@ -43,7 +43,7 @@ public class ItNeverSilentlyAnswersSomethingElseTests
         Assert.NotNull(outcome.Message);
     }
 
-    // BUG-143, the throwing half, and the assertion is that CONTROL RETURNS AT ALL. Before the fix
+    // Overflow, the throwing half, and the assertion is that CONTROL RETURNS AT ALL. Before the fix
     // this did not fail an assertion -- it escaped the method, so a test asserting on the outcome
     // never got one to assert about.
     [Fact]
@@ -79,7 +79,7 @@ public class ItNeverSilentlyAnswersSomethingElseTests
         Assert.Equal(expected, outcome.Total);
     }
 
-    // BUG-144. x0 asks to explode on a face a die never shows, so nothing explodes. Before the fix
+    // x0 asks to explode on a face a die never shows, so nothing explodes. Before the fix
     // it produced the identical RollComparison the bare-x sentinel used, and exploded on the maximum.
     [Theory]
     [InlineData("1d6x0")]
@@ -113,7 +113,7 @@ public class ItNeverSilentlyAnswersSomethingElseTests
         Assert.Equal(2, roller.Rolls);
     }
 
-    // BUG-149. THE PREMISE FIRST, because it is the half I got wrong last time: int.MinValue is
+    // THE PREMISE FIRST, because it is the half I got wrong last time: int.MinValue is
     // REACHABLE. I recorded the Negate guard as defensive against a path that does not exist, on the
     // grounds that arithmetic producing int.MinValue is refused. That is true of MULTIPLICATION and
     // false in general -- int.MinValue is a representable result, so a SUBTRACTION reaches it with
@@ -131,7 +131,7 @@ public class ItNeverSilentlyAnswersSomethingElseTests
     }
 
     // ...AND THEREFORE THE NEGATE GUARD IS LIVE. Deleting its catch rethrows out of Evaluate, which
-    // is BUG-143's throwing half returning by the one door that had no test on it.
+    // is the overflow's throwing half returning by the one door that had no test on it.
     [Fact]
     public void NegatingTheMostNegativeValueIsRefusedRatherThanThrown()
     {
@@ -150,7 +150,7 @@ public class ItNeverSilentlyAnswersSomethingElseTests
         Assert.Equal(RollFault.ResultOutOfRange, outcome.Fault);
     }
 
-    // BUG-148. LAST SUFFIX WINS, which is this grammar's existing convention for exploding rather
+    // LAST SUFFIX WINS, which is this grammar's existing convention for exploding rather
     // than a new rule invented here.
     //
     // THE ROWS ARE CHOSEN TO DISTINGUISH, which took some care: 4d6kh3dh1 answers 9 under BOTH the
@@ -160,8 +160,8 @@ public class ItNeverSilentlyAnswersSomethingElseTests
     [Theory]
     // kh3 then dh2: defect kept 3 lowest (9); last-wins drops the 2 highest, keeping 1 and 3.
     [InlineData("4d6kh3dh2", 4)]
-    // the k arm ALONE, which parsed long before the drop half existed -- this is why the bug is
-    // pre-existing rather than something the BUG-142 fix introduced.
+    // the k arm ALONE, which parsed long before the drop half existed -- this is why the defect is
+    // pre-existing rather than something adding the drop half introduced.
     [InlineData("4d6kh1kl2", 4)]
     // and the reverse order, to show the rule is positional rather than a precedence among suffixes.
     [InlineData("4d6kl2kh1", 6)]

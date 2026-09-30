@@ -15,7 +15,7 @@ namespace DungeonMasterXIV.Tests;
 /// <para>
 /// <b>This file has now been wrong twice in the same direction, and the second time is the
 /// interesting one.</b> A-1.12 enumerated three things to unit-test and missed a fourth, which
-/// shipped as BUG-40. The first version of this file replaced that enumeration with a universal over
+/// shipped unsent. The first version of this file replaced that enumeration with a universal over
 /// <see cref="WireMessageType"/> — and was itself blind, because
 /// <c>ForRelinkRequest</c> returns <see cref="WireMessageType.JoinRequest"/>, the same type an
 /// ordinary join uses. Relink appeared in no bucket at all, <c>JoinRequest</c> was already
@@ -32,7 +32,7 @@ namespace DungeonMasterXIV.Tests;
 /// </para>
 /// <para>
 /// <b>Each trigger drives the production entry point, never the factory.</b> A test that constructs
-/// <c>ForJoinRequest</c> and checks the wire accepts it passes on the build BUG-40 describes: the
+/// <c>ForJoinRequest</c> and checks the wire accepts it passes on a build that never sent one: the
 /// factory was always correct and nothing called it.
 /// </para>
 /// </remarks>
@@ -57,7 +57,7 @@ public class EveryMessageAClientSendsIsSentTests
             + "that identifies its output -- keying on message type alone is what let relink hide.");
     }
 
-    // Guards the correction itself. Keying on type is the defect this ticket exists to fix, so a
+    // Guards the correction itself. Keying on type is the defect being corrected, so a
     // future edit that drops a predicate must not silently fall back to a type-only match.
     [Fact]
     public void EveryClientFactoryHasBothATriggerAndAPredicate()
@@ -107,7 +107,7 @@ public class EveryMessageAClientSendsIsSentTests
     // THE CONTROL, and it must not depend on any row above. An earlier version drove StartHosting
     // and asserted "something was sent", so suppressing the CodeRequest send failed the control too
     // -- it could not tell "the harness is broken" from "CodeRequest is missing". Measured, not
-    // reasoned: injecting BUG-36 reddened both. This asks only whether the fixture can carry and
+    // reasoned: suppressing that send reddened both. This asks only whether the fixture can carry and
     // decode a frame, using no production send path.
     [Fact]
     public void TheHarnessRecordsAFrameAndDecodesIt()
@@ -123,8 +123,8 @@ public class EveryMessageAClientSendsIsSentTests
         Assert.Equal(WireMessageType.CodeRequest, decoded!.Type);
     }
 
-    // The other half of the fixture, and why a naive double would have hidden BUG-36: a frame sent
-    // before the socket opens must be discarded here exactly as the real transport discards it.
+    // The other half of the fixture, and why a naive double would have hidden a lost send: a frame
+    // sent before the socket opens must be discarded here exactly as the real transport discards it.
     [Fact]
     public void TheHarnessDiscardsAFrameSentBeforeTheSocketOpens()
     {
@@ -147,8 +147,8 @@ public class EveryMessageAClientSendsIsSentTests
     // enumerate nothing you can derive, because the enumeration is what goes stale.
     //
     // WHAT A FAILURE HERE MEANS: two rows claim the same envelope, so whichever is checked first
-    // satisfies both and one action can hide inside the other. That is BUG-40's shape exactly --
-    // relink hid inside JoinRequest because one predicate answered for two actions.
+    // satisfies both and one action can hide inside the other. That is the shape that hid
+    // relink inside JoinRequest, because one predicate answered for two actions.
     [Theory]
     [MemberData(nameof(DistinctClientPairs))]
     public void NoClientPredicateAcceptsAnotherActionsEnvelope(string predicateOwner, string sampleFrom)
@@ -160,8 +160,8 @@ public class EveryMessageAClientSendsIsSentTests
             predicate(somebodyElses),
             $"{predicateOwner}'s predicate ACCEPTS the envelope {sampleFrom} produces, so those two "
             + "actions are not told apart: whichever row is checked first satisfies both, and the "
-            + "other can stop being sent without this file noticing. That is BUG-40's shape -- "
-            + "relink hid inside JoinRequest because one predicate answered for two actions.");
+            + "other can stop being sent without this file noticing. That is the shape that hid "
+            + "relink inside JoinRequest, because one predicate answered for two actions.");
     }
 
     // The other half, and without it the theory above is satisfied by a predicate that accepts

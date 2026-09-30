@@ -18,8 +18,8 @@ namespace DungeonMasterXIV.Tests;
 /// because <c>Grace</c> was <c>new()</c> and <c>Seat</c> was <c>new GraceWindow(null)</c> and both
 /// fell through to <see cref="GraceWindow.Default"/>. A test shaped <i>"the two windows match"</i>
 /// would have gone green at that moment with the third clause still failing.
-/// <b>De-duplicating a literal is not single-sourcing it to a setting</b> — that is BUG-55's insight
-/// one layer along, and it is the whole reason this file asserts what it does.
+/// <b>De-duplicating a literal is not single-sourcing it to a setting</b> — as correcting a literal
+/// was not, one layer along, and it is the whole reason this file asserts what it does.
 /// </para>
 /// <para>
 /// <b>So the assertion is positive, not comparative.</b> The window is set to a DISTINCTIVE value
@@ -95,7 +95,7 @@ public sealed class EveryWindowReadsTheOneSettingTests
             found.Count >= 2,
             $"The sweep found {found.Count} clock(s) [{string.Join(", ", found)}]. A-1.27 is about "
             + "BOTH windows; over a set of one it passes vacuously, which is exactly the failure "
-            + "BUG-55 exists to prevent.");
+            + "this file exists to prevent.");
     }
 
     // THE PROOF THAT THE DISTINCTIVE VALUE DISCRIMINATES. If it happened to equal the default, every

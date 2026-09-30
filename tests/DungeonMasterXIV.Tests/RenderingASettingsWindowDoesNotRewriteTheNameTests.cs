@@ -48,9 +48,9 @@ public class RenderingASettingsWindowDoesNotRewriteTheNameTests
         string.Concat(Enumerable.Repeat("Á̂̃̄", DisplayName.MaxLength));
 
     // THE PREMISE, ASSERTED RATHER THAN ASSUMED. Every test below is vacuous if a 288-byte name
-    // cannot be stored in the first place -- there would be nothing for a render to shorten. This is
-    // feature-engineer-2's finding, pinned here so the suite cannot quietly stop exercising the
-    // situation it was written for.
+    // cannot be stored in the first place -- there would be nothing for a render to shorten. The
+    // finding is pinned here so the suite cannot quietly stop exercising the situation it was
+    // written for.
     [Fact]
     public void ANameLargerThanTheFieldIsValidAndStorable()
     {

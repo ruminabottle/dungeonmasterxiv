@@ -13,7 +13,7 @@ namespace DungeonMasterXIV.Tests;
 /// <b>Why this file exists.</b> <c>WireEnvelope.FromWire</c> used to take seven parameters, and the
 /// compiler enforced that anyone rebuilding an envelope had to supply exactly those. Collapsing it
 /// to take a <c>WireShape</c> was necessary — a further optional field would have pushed it past
-/// the standards' blocking limit — but it moved a guarantee from the compiler to a sentence in a
+/// the parameter-count blocking limit — but it moved a guarantee from the compiler to a sentence in a
 /// comment: <i>"only the codec can obtain a WireShape."</i>
 /// </para>
 /// <para>
