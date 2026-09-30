@@ -10,17 +10,18 @@ public static class DeadPatterns
 {
     private const string Dash = "-";
     private const string NotAfterWordChar = "(?<![A-Za-z0-9])";
+    private const string AnyCase = "(?i)";
 
     /// <summary>A hit here is a dead reference, full stop.</summary>
     public static readonly IReadOnlyList<Regex> Guard =
     [
         new(NotAfterWordChar + "(?:BUG|DMXENG|DMX" + "HUM|SQ|PRD|E|T)" + Dash + @"\d+"),
-        new("[Ss]pec" + " [Oo]wner"),
-        new("[Dd]eployment" + " [Mm]anager"),
-        new("[Pp]roduct" + " [Oo]wner"),
-        new("[Ee]ngineering" + " [Ll]ead"),
-        new("[Cc]ode" + " [Rr]eviewer"),
-        new("[Bb]" + "reakfix"),
+        new(AnyCase + "spec" + " owner"),
+        new(AnyCase + "deployment" + " manager"),
+        new(AnyCase + "product" + " owner"),
+        new(AnyCase + "engineering" + " lead"),
+        new(AnyCase + "code" + " reviewer"),
+        new(AnyCase + "b" + "reakfix"),
         new("the " + "HUMAN"),
         new(@"\." + "claude/"),
         new("engineering" + Dash + "standards"),
@@ -44,6 +45,7 @@ public static class DeadPatterns
         new(@"[Bb]ug ?\d+"),
         new(@"(?i)\bthe (?:standards|PRD)\b"),
         new(@"\bC\d{1,2}\b"),
+        new(AnyCase + @"\bthis" + @" chunk\b"),
     ];
 
     /// <summary>Every match of any pattern in the set, with its one-based line.</summary>
