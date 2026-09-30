@@ -68,7 +68,7 @@ public sealed class PluginSettings
     /// <para>
     /// <b>Five minutes is not arbitrary, and the reason belongs beside the number.</b> Two minutes
     /// was actively wrong: relaunching FFXIV takes minutes, so a two-minute host grace
-    /// <i>guaranteed</i> that any DM crash ended the session (BUG-54). A reader who meets this
+    /// <i>guaranteed</i> that any DM crash ended the session. A reader who meets this
     /// value with no rationale will eventually shorten it and be able to argue for it.
     /// </para>
     /// <para>
@@ -100,7 +100,7 @@ public sealed class PluginSettings
 
     /// <summary>
     /// A display name this client stored BEFORE names were campaign-scoped, kept as a local
-    /// pre-fill default and nothing else (SQ-87, and A-2.31's single exception added by SQ-112).
+    /// pre-fill default and nothing else (and A-2.31's single exception added by SQ-112).
     /// </summary>
     /// <remarks>
     /// <para>

@@ -60,7 +60,7 @@ public static class CampaignName
     /// <param name="culture">Whose conventions to render in. Defaults to the reader's.</param>
     /// <remarks>
     /// <para>
-    /// <b>No "Session of" prefix, and the reason is not brevity (SQ-54).</b> A campaign is not a
+    /// <b>No "Session of" prefix, and the reason is not brevity.</b> A campaign is not a
     /// session — this product spends real effort keeping them apart — so the prefix would be the one
     /// place the product calls a campaign a session. And it is accurate only at creation: it becomes
     /// a misnomer the moment the campaign is RESUMED, which is exactly when the feature has worked.

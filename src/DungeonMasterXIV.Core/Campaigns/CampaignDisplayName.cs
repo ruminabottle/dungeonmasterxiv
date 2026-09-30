@@ -134,7 +134,7 @@ public static class CampaignDisplayName
 
     /// <summary>
     /// What the settings box starts out showing when this client carries a display name stored
-    /// BEFORE names were campaign-scoped (SQ-87): the campaign's own alias, else that carried-over
+    /// BEFORE names were campaign-scoped: the campaign's own alias, else that carried-over
     /// default, else the character name.
     /// </summary>
     /// <remarks>
@@ -184,7 +184,7 @@ public static class CampaignDisplayName
 
     /// <summary>
     /// What the settings box starts out showing, <b>with the carried-over default withheld where it
-    /// could not be kept</b> (A-1.2z, DMXENG-120).
+    /// could not be kept</b> (A-1.2z).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -213,7 +213,7 @@ public static class CampaignDisplayName
     /// </remarks>
     /// <param name="campaign">The campaign being played, or null when none is current.</param>
     /// <param name="carriedOverDefault">
-    /// A name stored before campaign-scoping (SQ-87). <b>Ignored entirely when there is no
+    /// A name stored before campaign-scoping. <b>Ignored entirely when there is no
     /// campaign.</b>
     /// </param>
     /// <param name="characterName">What the game says this player is called.</param>

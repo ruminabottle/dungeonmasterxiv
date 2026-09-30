@@ -93,7 +93,7 @@ public sealed class RetainedLogFileArchive(string directory) : IRetainedLogArchi
     /// <b>the pending file matched neither.</b> A crash between the write and the move stranded a
     /// COMPLETE session log that nothing could list and no delete path could remove, while
     /// <c>ConfigWindow</c> told the user there was <i>"nothing to delete anywhere but here"</i>
-    /// (BUG-166, found by the code reviewer).
+    /// (found by the code reviewer).
     /// </para>
     /// <para>
     /// <b>So this enumerates the DIRECTORY rather than a pattern.</b> A glob is a guess about what

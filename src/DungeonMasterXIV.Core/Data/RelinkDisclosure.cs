@@ -6,7 +6,7 @@ namespace DungeonMasterXIV.Data;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>ENGINEERING-AUTHORED UNDER R-1.7a's CONSTRAINTS (SQ-38, D-8, ruled SQ-67). NOT a placeholder,
+/// <b>ENGINEERING-AUTHORED UNDER R-1.7a's CONSTRAINTS (D-8, ruled SQ-67). NOT a placeholder,
 /// and not product-ruled copy.</b> R-1.7a governs exactly the strings it QUOTES; this is not one of
 /// them, so it is mine to write and it is the shipping text. <b>Anyone wanting to change it is
 /// arguing with the constraints below, not filling in a blank.</b>

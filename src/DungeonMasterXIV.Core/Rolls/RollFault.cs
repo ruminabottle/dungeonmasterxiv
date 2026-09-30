@@ -80,7 +80,7 @@ public enum RollFault
     /// A total, or a step on the way to one, did not fit in a 32-bit integer — <c>1073741824*2</c>.
     /// </summary>
     /// <remarks>
-    /// <b>A REFUSAL BECAUSE THE ALTERNATIVES ARE BOTH FORBIDDEN (BUG-143).</b> Unchecked, this
+    /// <b>A REFUSAL BECAUSE THE ALTERNATIVES ARE BOTH FORBIDDEN.</b> Unchecked, this
     /// arithmetic either wraps — answering <c>2000000000+2000000000</c> as <c>-294967296</c>,
     /// confidently and wrongly, which R-2.1 rules out in the words <i>"it never silently rolls
     /// something else"</i> — or, for <c>int.MinValue / -1</c>, the one case the hardware cannot

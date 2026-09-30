@@ -40,7 +40,7 @@ public static class RollCommand
     /// </summary>
     /// <remarks>
     /// <b>The expression is handed on UNPARSED and UNTRIMMED of meaning.</b> What is a valid roll is
-    /// <c>RollEvaluator</c>'s (DMXENG-84, shipped), and deciding any part of it here would put the
+    /// <c>RollEvaluator</c>'s (shipped), and deciding any part of it here would put the
     /// grammar in two places — which is the drift a second reader of one input always becomes.
     /// <b>An empty expression is still a recognised COMMAND</b>: refusing it here would answer a
     /// grammar question, and the evaluator already names its own faults.

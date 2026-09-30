@@ -156,7 +156,7 @@ public sealed class SessionLogOffer
     /// <b>THE LOG IS THE WRONG THING TO GUARD ON, BECAUSE A KEEP DELIBERATELY LEAVES IT HELD</b> —
     /// that is what makes <see cref="LineCount"/> readable after keeping, which callers rely on.
     /// So <see cref="Held"/> still passed after a keep, and <see cref="Decline"/> would destroy the
-    /// kept log and rewrite the outcome to say the player had declined (BUG-182). <b>Whether the
+    /// kept log and rewrite the outcome to say the player had declined. <b>Whether the
     /// choice has been ANSWERED and whether the log is still HERE are two different questions</b>,
     /// and only the first one decides this.
     /// </remarks>

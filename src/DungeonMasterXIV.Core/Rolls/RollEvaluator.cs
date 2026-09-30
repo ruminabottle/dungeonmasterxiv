@@ -9,7 +9,7 @@ namespace DungeonMasterXIV.Rolls;
 /// <remarks>
 /// <para>
 /// <b>THIS IS A LEAF AND MUST STAY ONE.</b> It has no caller, no command, no window and no
-/// transport, and that is deliberate rather than unfinished. The Spec Owner's ruling (SQ-84) is that
+/// transport, and that is deliberate rather than unfinished. The Spec Owner's ruling is that
 /// "base chat first" governs what a USER can do, and a pure evaluator nobody can reach cannot make
 /// the product roll-first. <b>The moment it acquires a surface a user can reach, the build order
 /// applies in full</b> — and <i>"the evaluator is already done"</i> is exactly how the pressure to
@@ -71,7 +71,7 @@ public sealed class RollEvaluator
         _ => null,
     };
 
-    // CHECKED, and it takes the state so it can REFUSE rather than wrap (BUG-143). -int.MinValue is
+    // CHECKED, and it takes the state so it can REFUSE rather than wrap. -int.MinValue is
     // the one negation that does not fit, and unchecked it answers int.MinValue again -- a negation
     // that returns its own operand, which is the silent-wrong-answer case rather than a crash.
     private static int? Negate(int? value, RollEvaluation state)

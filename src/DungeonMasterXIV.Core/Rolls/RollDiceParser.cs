@@ -106,7 +106,7 @@ internal static class RollDiceParser
         {
             // A bare 'x' explodes on the maximum face and the size is not known here, so the
             // evaluator resolves it -- carried as its OWN flag rather than as a comparison value,
-            // because the comparison that used to stand for it was one a user could type (BUG-144).
+            // because the comparison that used to stand for it was one a user could type.
             // Each arm clears the other so the last suffix written wins, as it did before.
             return Comparison(cursor, out var explode)
                 ? new ModifierParse(
