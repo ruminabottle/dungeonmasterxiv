@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Net;
 /// <remarks>
 /// <para>
 /// <b>Split out of <see cref="SessionCoordinator"/> because that is where session-role behaviour
-/// kept landing.</b> The first split (C25) took the transport concern; this one takes admission, and
+/// kept landing.</b> The first split took the transport concern; this one takes admission, and
 /// it was chosen over the joiner half by arithmetic rather than taste. The coordinator had to shed
 /// at least 98 lines to reach the 400-line limit; the whole joiner cluster is 76, so extracting it
 /// could not have got there even at zero overhead. Admission is 156.
@@ -47,8 +47,8 @@ public sealed class AdmissionControl
     /// <b>A DELEGATE RATHER THAN THE CAMPAIGN ITSELF, and the reason is not layering.</b> This type
     /// decides admissions; which campaign a session belongs to is settled elsewhere and can change
     /// under it. Taking a function keeps the question <i>who is joining what</i> answerable at the
-    /// moment of admission rather than at construction — the same reason
-    /// <paramref name="hostCode"/> is a function, and the same reason DMXENG-45 exists.
+    /// moment of admission rather than at construction — the same reason <paramref name="hostCode"/>
+    /// is a function, and the same reason SessionCoordinator's construction order is a hazard.
     /// </para>
     /// <para>
     /// <b>REQUIRED here and OPTIONAL on <see cref="SessionCoordinator"/>, which is not an
@@ -66,9 +66,8 @@ public sealed class AdmissionControl
     /// </param>
     /// <param name="log">
     /// Where a joiner admitted <b>without</b> a participant is reported. <b>Required, not optional
-    /// with a null default</b> — this is the exact shape PR #86's finding 5 was: a real loss that
-    /// nobody was told about, surviving because the code that dropped it was under no obligation to
-    /// speak.
+    /// with a null default</b> — this is the exact shape of a real loss that nobody was told about,
+    /// surviving because the code that dropped it was under no obligation to speak.
     /// </param>
     public AdmissionControl(
         AdmissionAnnouncer announcer,
@@ -108,7 +107,7 @@ public sealed class AdmissionControl
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>This is the arm BUG-42 was missing.</b> Everything below it existed and was tested; the
+    /// <b>This is the arm that was missing.</b> Everything below it existed and was tested; the
     /// relay forwarded every request to a host that had no path to it, so
     /// <see cref="Desk"/> stayed empty and no prompt was ever shown. Returning null when the
     /// host has no key is what keeps a joiner-only client from building prompts out
@@ -147,9 +146,9 @@ public sealed class AdmissionControl
     /// <b>Not a security value and deliberately not the fingerprint.</b> The fingerprint is computed
     /// from BOTH keys and exists so two humans can compare one string; this only has to tell two
     /// requesters apart on one screen. <b>What the DM should actually see here is a product
-    /// question</b> — PRD-1 requires a session-scoped code and does not say how it is formed, and
-    /// nothing sends this code to the joiner, so the two of them cannot yet read the same label
-    /// aloud. Raised with the Spec Owner rather than settled here.
+    /// question</b> — the session-layer spec requires a session-scoped code and does not say how it
+    /// is formed, and nothing sends this code to the joiner, so the two of them cannot yet read the
+    /// same label aloud. Raised as a question rather than settled here.
     /// </para>
     /// </remarks>
     public PeerCode PeerCodeFor(byte[] joinerPublicKey)
@@ -283,7 +282,7 @@ public sealed class AdmissionControl
             request?.DisplayName ?? DisplayName.None);
 
         // They are back, so the instant R-1.5a would have measured is spent. Forgotten HERE, at the
-        // admission, rather than when traffic arrives: admission is the decision that ruling is
+        // admission, rather than when traffic arrives: admission is the decision R-1.5a is
         // about, and clearing it on traffic would be inferring presence from noise -- the same
         // defect as inferring absence from silence, wearing its cheerful face (A-1.28).
         Drops.Forget(peerCode);
@@ -304,7 +303,7 @@ public sealed class AdmissionControl
             _announcer.Accepted(code, joinerKey, hostKeys.PublicKey, participantId);
         }
 
-        // A REAL LOSS, REPORTED RATHER THAN PASSED OVER -- PR #86's finding 5 in a new place. An
+        // A REAL LOSS, REPORTED RATHER THAN PASSED OVER. An
         // admitted player with no participant can never relink to this campaign: next session the
         // DM sees a stranger and approves them fresh, and NOTHING anywhere would have said why. The
         // peer code names WHICH person, because two may share a display name (A-1.2d) and D-8 keeps
@@ -334,14 +333,14 @@ public sealed class AdmissionControl
     /// <para>
     /// <b>A receipt for a request that is not pending is IGNORED, not an error.</b> It is the
     /// ordinary consequence of a fast admission — the DM answers, the request leaves the desk, and
-    /// the receipt arrives addressed to nobody. qa-2 measured a 171ms gap doing exactly that, so
+    /// the receipt arrives addressed to nobody. A 171ms gap doing exactly that was measured, so
     /// treating a late receipt as a fault would make the common case look broken.
     /// </para>
     /// <para>
     /// <b>This establishes state 1 and NOTHING ELSE (R-1.3a-iv).</b> It creates no producer for
     /// <see cref="ComparabilityEvidence.EstablishedIncapable"/> and therefore cannot make A-1.2f's
     /// suppression fire. <b>If anyone frames this arm as "fixing A-1.2f", that is the misreading to
-    /// refuse</b> — it is incomplete rather than wrong, and the Spec Owner said so in those words.
+    /// refuse</b> — it is incomplete rather than wrong.
     /// </para>
     /// </remarks>
     /// <param name="joinerPublicKey">The key the receipt was sent under.</param>

@@ -8,8 +8,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>This is a fact about the HOST'S GROUNDS, not about the joiner.</b> That distinction is what
 /// makes three states necessary rather than a two-valued fact read differently: <i>not established</i>
-/// is a statement about what the host knows, and no boolean about the joiner can express it. The
-/// Spec Owner's words: <i>"no reading of a boolean about the joiner can express it"</i>.
+/// is a statement about what the host knows, and no boolean about the joiner can express it.
 /// </para>
 /// <para>
 /// <b>It replaces a <c>bool</c> that collapsed two of these into one.</b> The previous model was
@@ -27,7 +26,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>A state is entered only on POSITIVE EVIDENCE — never from silence, a timeout, or elapsed
 /// time.</b> "We waited and heard nothing" is <see cref="NotEstablished"/> held longer, not a
-/// transition. qa-2 measured a 171ms admission producing zero receipts from a joiner that could
+/// transition. A 171ms admission was measured producing zero receipts from a joiner that could
 /// compare, which is the proof that silence carries no information here.
 /// </para>
 /// </remarks>

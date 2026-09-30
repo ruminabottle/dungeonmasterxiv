@@ -5,7 +5,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>The receiving half of a notice that has been sent since DMXENG-58 and read by nobody.</b>
+/// <b>The receiving half of a notice that has been sent, and read by nobody.</b>
 /// <c>RosterBroadcast.PublishClosing</c> seals a closing instant to every participant; measured
 /// before this file, <see cref="SessionClosing"/> had ZERO occurrences under <c>Windows/</c> or
 /// <c>Plugin.cs</c>. A participant of a session the DM had ended saw a roster that never changed and

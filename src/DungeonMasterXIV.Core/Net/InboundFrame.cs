@@ -13,9 +13,9 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>THE ARM ORDER IS LOAD-BEARING AND IS NOT AN ACCIDENT OF LAYOUT.</b> Payload, join request and
-/// receipt are all handled BEFORE the outcome arms because none of them is an outcome and each would
-/// otherwise fall through to nothing — the shape that cost BUG-42 an entire feature and BUG-75 a hop.
-/// Reordering these is a behaviour change wearing a tidy-up's clothes.
+/// receipt are all handled BEFORE the outcome arms because none of them is an outcome and each
+/// would otherwise fall through to nothing — the shape that once cost joining entirely and the
+/// receipt a hop. Reordering these is a behaviour change wearing a tidy-up's clothes.
 /// </para>
 /// <para>
 /// <b>Why a record struct rather than seven parameters.</b> The arms need five pieces of context and
@@ -42,8 +42,8 @@ internal readonly record struct InboundFrame(
     /// <para>
     /// <b>THE ORDER OF THESE ARMS IS THE BEHAVIOUR, NOT THE LAYOUT.</b> Payload, join request and
     /// receipt are each handled BEFORE the outcome arms because none of them is an outcome and each
-    /// would otherwise fall through to nothing — the shape that cost BUG-42 an entire feature and
-    /// BUG-75 a hop. Re-ordering this list is a behaviour change wearing a tidy-up's clothes.
+    /// would otherwise fall through to nothing — the shape that once cost joining entirely and the
+    /// receipt a hop. Re-ordering this list is a behaviour change wearing a tidy-up's clothes.
     /// </para>
     /// <para>
     /// The key derived earlier in the same drain is carried in and out rather than held as state, so
@@ -58,7 +58,7 @@ internal readonly record struct InboundFrame(
         var host = Host;
 
         // The relay's answer to this host's code request (R-1.2a). Registering is the one thing
-        // a host waits on, and before BUG-36 nothing consumed these at all — the request was
+        // a host waits on, and at one time nothing consumed these at all — the request was
         // never sent, so the answer never came and no handler was missed.
         if (host is not null && InboundApplication.ApplyRegistration(envelope, host))
         {
@@ -85,7 +85,7 @@ internal readonly record struct InboundFrame(
 
         // Content from inside the session (D-11). Handled before the outcome arms for the same
         // reason JoinRequest is: a payload is not an outcome and matches none of them, so it
-        // would fall through to nothing — the shape that cost BUG-42 an entire feature.
+        // would fall through to nothing — the shape that once cost joining entirely.
         //
         // A payload we cannot open is DISCARDED IN SILENCE, and that is correct rather than
         // lenient. Keys are pairwise, so the host seals one copy per participant and the relay
@@ -170,7 +170,7 @@ internal readonly record struct InboundFrame(
         // THE HOP THAT DID NOT EXIST. The joiner SENDS this (OutboundHandshake), the
         // relay ROUTES it to the host (RelayRouter), and until now nothing here consumed it --
         // so it reached the host and fell through to nothing. Sent, routed, silently dropped:
-        // the same shape as BUG-42's consumer nothing routed to, arriving from the other side.
+        // the same shape as the join request the host once never consumed, from the other side.
         //
         // Handled BEFORE the outcome arms for the same reason JoinRequest is: a receipt is not
         // an outcome and matches none of them, which is exactly how it fell through.
@@ -264,7 +264,7 @@ internal readonly record struct InboundFrame(
         }
         else if (envelope.TryReadAdmissionAnswer() is not null)
         {
-            // BUG-87: THE DROP THAT SAID NOTHING. An admission answer for a different client landed
+            // THE DROP THAT SAID NOTHING. An admission answer for a different client landed
             // here and was discarded by the `if` above without a line or a counter, so the one place
             // the D-11 addressing rule actually refuses something left no trace of having done so.
             //

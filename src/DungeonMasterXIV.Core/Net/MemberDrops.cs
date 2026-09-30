@@ -9,7 +9,7 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>A RECORDED INSTANT, NOT A RUNNING CLOCK, and the Spec Owner ruled the difference.</b> R-1.5a
+/// <b>A RECORDED INSTANT, NOT A RUNNING CLOCK, and the difference was ruled.</b> R-1.5a
 /// constrains the decision taken WHEN A CLIENT RETURNS — same key within five minutes resumes, same
 /// key after five minutes needs full approval. It says nothing about the roster's state while
 /// nobody is looking. So there is <b>no ticking clock, no expiry sweep, and no seat that visibly

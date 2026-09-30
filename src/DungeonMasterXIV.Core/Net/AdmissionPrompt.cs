@@ -106,11 +106,11 @@ public static class AdmissionPrompt
     /// <b>The "not established" sentence asserts NEITHER direction, and that is the whole
     /// criterion.</b> A-1.2o: <i>where the host has not established whether the joiner could
     /// compare, the UI says so</i>. Saying nothing fails it as surely as saying "they cannot" does —
-    /// a DM shown a bare tickbox reads it as an ordinary comparison, which is the false record
-    /// BUG-33 produced.
+    /// a DM shown a bare tickbox reads it as an ordinary comparison, which is the false record of
+    /// a confirmation for an exchange that could not happen.
     /// </para>
     /// <para>
-    /// <b>It must not read as suspicion.</b> qa-2 measured a 171ms admission producing zero receipts
+    /// <b>It must not read as suspicion.</b> A 171ms admission was measured producing zero receipts
     /// from a joiner that could compare perfectly well, so the common reason for this sentence is
     /// that the DM was quick — not that anything is wrong. Wording that implied an attack would
     /// train DMs to ignore it, and then it is not a signal on the day it means something.

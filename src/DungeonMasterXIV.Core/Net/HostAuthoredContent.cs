@@ -7,11 +7,10 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>One of the two doors <see cref="InboundHandlers"/> bolds, made a type.</b> The key
-/// belongs with the handler rather than beside it — as the record has said since DMXENG-50, it is
-/// not configuration, it is the thing that decides whether <see cref="OnContent"/> can be called at
-/// all. The pair is also null together: both are absent on a pure host, which authors the roster and
-/// never receives one.
+/// <b>One of the two doors <see cref="InboundHandlers"/> bolds, made a type.</b> The key belongs
+/// with the handler rather than beside it — it is not configuration, it is the thing that decides
+/// whether <see cref="OnContent"/> can be called at all. The pair is also null together: both are
+/// absent on a pure host, which authors the roster and never receives one.
 /// </para>
 /// <para>
 /// <b>THE MEMBERS ARE NAMED THE SAME AS <see cref="MemberAuthoredContent"/>'S AND THAT IS THE POINT.</b>

@@ -26,11 +26,11 @@ namespace DungeonMasterXIV.Net;
 /// <b>WHY THIS REPLACES TWO PARAMETERS RATHER THAN ADDING TWO.</b> <see cref="RosterBroadcast"/>'s
 /// constructor was at FIVE against a flag of four and a block of six. The host's name and its own
 /// peer code are two more things, which would have been SEVEN — a breach — and even one would have
-/// left it AT the block, which is the wall DMXENG-57 had just finished removing one level up. Four
-/// members in one argument takes it to FOUR, under the flag. <b>It rides with this chunk rather
-/// than being its own ticket because it is a precondition of exactly one chunk</b>, which is the
-/// distinction DMXENG-57 established: a precondition of two or more independent chunks is shared
-/// infrastructure and gets filed; a precondition of one ride with it.
+/// left it AT the block, which is the wall <c>SessionCapabilities</c> had just finished removing
+/// one level up. Four members in one argument takes it to FOUR, under the flag. <b>It rides with
+/// this chunk rather than being filed separately because it is a precondition of exactly one
+/// chunk</b>: a precondition of two or more independent chunks is shared infrastructure and gets
+/// filed; a precondition of one ride with it.
 /// </para>
 /// </remarks>
 /// <param name="Keys">The host's ephemeral session keys, or null when not hosting.</param>
@@ -50,7 +50,7 @@ namespace DungeonMasterXIV.Net;
 /// place for a second copy); a constant well-formed code (a second identity scheme, and it can
 /// collide with a real participant); and leaving the field empty or invented, which
 /// <c>SessionContentCodec</c> DROPS on the joiner's side — reintroducing the very absence this
-/// exists to fix, though loudly rather than silently, since BUG-70 made that drop warn.
+/// exists to fix, though loudly rather than silently, since that drop was made to warn.
 /// </para>
 /// </param>
 internal sealed record HostIdentity(
@@ -73,8 +73,8 @@ internal sealed record HostIdentity(
     /// <para>
     /// <b>Every member stays deferred, which is what makes this safe to call from a constructor.</b>
     /// Nothing here reads a key, a code, a name or the admission desk — it captures four functions
-    /// and returns. DMXENG-45's ordering hazard does not reach it, and that is a property of the
-    /// <c>Func</c>s rather than of where the call happens to sit.
+    /// and returns. SessionCoordinator's ordering hazard does not reach it, and that is a property
+    /// of the <c>Func</c>s rather than of where the call happens to sit.
     /// </para>
     /// <para>
     /// <b><paramref name="peerCodeFor"/> is THE one derivation, passed rather than repeated.</b> It

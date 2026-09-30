@@ -9,11 +9,11 @@ namespace DungeonMasterXIV.Net;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>THE PRODUCING HALF OF BASE CHAT, AND IT IS WHAT DMXENG-118 DID NOT SHIP.</b> That change put
-/// <see cref="StreamLine"/> and <see cref="SessionContent.Entries"/> on the wire and gave them a
-/// decode door, with <b>nothing at either end producing one</b> — measured at the time as zero
-/// constructions of <c>StreamLine</c> anywhere in the tree. A type that can carry a message is not a
-/// path by which a member can send one.
+/// <b>THE PRODUCING HALF OF BASE CHAT, AND IT IS WHAT THE WIRE CHANGE DID NOT SHIP.</b> That change
+/// put <see cref="StreamLine"/> and <see cref="SessionContent.Entries"/> on the wire and gave them
+/// a decode door, with <b>nothing at either end producing one</b> — measured at the time as zero
+/// constructions of <c>StreamLine</c> anywhere in the tree. A type that can carry a message is not
+/// a path by which a member can send one.
 /// </para>
 /// <para>
 /// <b>ONE ENVELOPE TO THE HOST, not a broadcast</b>, exactly as <see cref="MemberDeparture"/> does

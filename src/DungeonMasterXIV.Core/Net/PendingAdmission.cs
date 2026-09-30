@@ -24,7 +24,7 @@ public sealed class PendingAdmission
 {
     /// <param name="peerCode">The requester's session-scoped code. Never a character name.</param>
     /// <param name="fingerprint">The combined fingerprint, rendered per R-1.3a.</param>
-    /// <param name="deadline">When the window closes. Decided by the DM's client and carried in C6's vocabulary.</param>
+    /// <param name="deadline">When the window closes. Decided by the DM's client and carried in the admission vocabulary.</param>
     /// <param name="relink">What the host resolved about a claimed participant, if anything (R-1.5).</param>
     /// <param name="joinerPublicKey">The key they presented, echoed on acceptance (D-11).</param>
     /// <param name="displayName">What they call themselves (R-1.3e). Shown, never acted on.</param>
@@ -118,8 +118,8 @@ public sealed class PendingAdmission
     /// </para>
     /// <para>
     /// <b>Its failure mode is an old build, not an attacker</b> — either an old client that ignores
-    /// the additive message (D-14), or, as actually happened, an old relay that dropped it. That is
-    /// BUG-33: the DM was shown a plausible code and invited to tick "the code matched" against a
+    /// the additive message (D-14), or, as actually happened, an old relay that dropped it. The
+    /// result: the DM was shown a plausible code and invited to tick "the code matched" against a
     /// joiner who had nothing on their screen.
     /// </para>
     /// </remarks>
@@ -147,27 +147,27 @@ public sealed class PendingAdmission
         // It fires ONLY on EstablishedIncapable: positive evidence the joiner could NOT compare.
         // NOT on NotEstablished, which is silence. A-1.2o fails a build that suppresses "on the
         // grounds the joiner could not compare, on the strength of silence alone", and silence is
-        // the ORDINARY case -- qa-2 measured a 171ms admission producing zero receipts from a joiner
+        // the ORDINARY case -- a 171ms admission was measured producing zero receipts from a joiner
         // that could compare perfectly well.
         //
-        // WITHDRAWING WHAT I WROTE HERE IN T-29. I said "absence of a receipt means could not
+        // WITHDRAWING WHAT I WROTE HERE EARLIER. I said "absence of a receipt means could not
         // compare, correctly, because a relay that drops JoinPending can drop a receipt too". THAT
-        // IS WRONG AND SQ-43 RULED IT SO: "could not compare" is a fact about the JOINER; "no
-        // receipt arrived" is an observation about the WIRE, and they are measurably different. My
-        // fail-safe reasoning was sound about relays and wrong about what the absence means.
+        // IS WRONG: "could not compare" is a fact about the JOINER; "no receipt arrived" is an
+        // observation about the WIRE, and they are measurably different. My fail-safe reasoning was
+        // sound about relays and wrong about what the absence means.
         //
         // NOTHING PRODUCES EstablishedIncapable TODAY, so this branch is unreachable and that is
-        // deliberate rather than a gap. The Spec Owner checked the one remaining candidate -- the
-        // protocol version -- and D-14 makes JoinPending ADDITIVE, so a client ignoring it carries
+        // deliberate rather than a gap. The one remaining candidate was checked -- the protocol
+        // version -- and D-14 makes JoinPending ADDITIVE, so a client ignoring it carries
         // the same version and is refused by nothing. A-1.2f's SUPPRESSION is unreachable; its
         // QUALIFIED branch is the live one.
         //
-        // A GUARD THAT FIRES ON NOTHING IS THE OPPOSITE FAILURE FROM THE ONE T-29 AVOIDED, and it is
+        // A GUARD THAT FIRES ON NOTHING IS THE OPPOSITE FAILURE FROM THE ONE AVOIDED EARLIER, and it is
         // the safe one. The bool version would have fired on EVERY confirmation; this fires on none
         // until a producer exists. Removing it because it never fires would delete the only thing
         // ready to act the moment one does.
         //
-        // AND THE REFUSAL IS STILL NOT A RETURN VALUE, per my own constraint from T-29: this method
+        // AND THE REFUSAL IS STILL NOT A RETURN VALUE, per my own earlier constraint: this method
         // returned bool for one revision and AdmissionPromptView discarded it, so A-1.2f would have
         // READ AS IMPLEMENTED WHILE BEHAVING AS ABSENT. The mechanism is the ABSENCE OF THE STATE
         // CHANGE -- a caller that ignores everything and does nothing still gets NotCompared, which

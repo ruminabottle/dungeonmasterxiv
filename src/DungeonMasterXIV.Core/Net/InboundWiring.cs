@@ -16,9 +16,9 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>The point is WHERE THE NEXT HANDLER LANDS, not the line count.</b> Every handler added since
-/// DMXENG-50 has enlarged <see cref="SessionCoordinator"/>, which is how that class reached margin 3
-/// and blocked the chunk behind it for the fifth time. A fifth door now edits <i>this</i> type and
-/// leaves the coordinator's size unchanged.
+/// the R-1.3k door has enlarged <see cref="SessionCoordinator"/>, which is how that class reached
+/// margin 3 and blocked the chunk behind it for the fifth time. A fifth door now edits <i>this</i>
+/// type and leaves the coordinator's size unchanged.
 /// </para>
 /// <para>
 /// <b>Built per frame rather than held as a field, and that is deliberate.</b> Holding it would cost
@@ -71,7 +71,7 @@ internal sealed class InboundWiring(
         byte[]? sessionKey,
         Action<SessionContent> onHostContent) =>
         new(
-            // T-37: the claim is RESOLVED HERE, at the one place that has both the wire and
+            // The claim is RESOLVED HERE, at the one place that has both the wire and
             // the campaign. Until now it arrived on the envelope and was dropped -- the joiner
             // sent it, the relay routed it, and every relink branch took the not-a-relink path
             // because Receive was only ever reached with RelinkClaim.None.
@@ -83,8 +83,8 @@ internal sealed class InboundWiring(
                 OpenWith: sessionKey,
                 OnContent: onHostContent),
             // R-1.3k. DELIBERATELY NOT onHostContent: that is what a JOINER was told, and letting a
-            // member reach it would invert D-3 -- see MemberAuthoredContent.OnContent. Since
-            // DMXENG-59 the two doors are two TYPES, so the swap will not compile either.
+            // member reach it would invert D-3 -- see MemberAuthoredContent.OnContent. The two
+            // doors are two TYPES, so the swap will not compile either.
             MemberAuthored: new MemberAuthoredContent(
                 OpenWith: resources.MemberKeys.Candidates,
                 // A-1.16a. RECORDED FIRST, THEN ACTED ON: the receipt is what a DM's UI reads, and a
@@ -101,7 +101,7 @@ internal sealed class InboundWiring(
 
                     if (content.Leaving is true)
                     {
-                        // R-2.12 / SQ-116: THIS CLIENT WRITES DOWN WHAT IT RECEIVED, and a member
+                        // R-2.12: THIS CLIENT WRITES DOWN WHAT IT RECEIVED, and a member
                         // saying it is leaving is one of the few things that actually arrives today.
                         // Recorded BEFORE the departure is acted on, for A-1.16a's reason one row up:
                         // acting first and recording second leaves a window where the member is gone

@@ -219,7 +219,7 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     public static DisplayName OrNone(string? candidate) =>
         TryParse(candidate, out var name) ? name : None;
 
-    /// <summary>The four role words reserved to the host (R-1.3j.6, ruled by the human).</summary>
+    /// <summary>The four role words reserved to the host (R-1.3j.6).</summary>
     private static readonly string[] ReservedToTheHost = ["DM", "GM", "Dungeon Master", "Game Master"];
 
     /// <summary>Whether a candidate is one of the reserved role words.</summary>
@@ -233,18 +233,18 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     /// <para>
     /// <b>WHITESPACE RUNS COLLAPSE; THEY ARE NOT REMOVED — AND THE DIFFERENCE IS LOAD-BEARING.</b>
     /// R-1.3j.6 names <c>D M</c> among the leaks this rule does NOT catch, so stripping whitespace
-    /// instead of collapsing it would refuse a name the PRD says must pass. That is not a stricter
-    /// reading of the same rule, it is a different rule — and it would <b>disarm A-2.24a a second
-    /// time</b>: that criterion's re-derived demonstration requires an imitation using a name this
-    /// list PERMITS, and removal would refuse the imitation and let a build with no structural
-    /// marker pass by default. <c>Dungeon  Master</c> collapses and is refused; <c>D M</c> collapses
-    /// to itself and is allowed.
+    /// instead of collapsing it would refuse a name the session-layer spec says must pass. That is
+    /// not a stricter reading of the same rule, it is a different rule — and it would <b>disarm
+    /// A-2.24a a second time</b>: that criterion's re-derived demonstration requires an imitation
+    /// using a name this list PERMITS, and removal would refuse the imitation and let a build with
+    /// no structural marker pass by default. <c>Dungeon  Master</c> collapses and is refused;
+    /// <c>D M</c> collapses to itself and is allowed.
     /// </para>
     /// <para>
     /// <b>THIS IS NOT THE GUARANTEE, AND MUST NOT BE REPORTED AS ONE (A-1.2w-note).</b> A blocklist
     /// leaks and this one does: <c>D.M.</c>, <c>D M</c>, <c>the DM</c>, small-caps and Cyrillic
     /// homoglyphs all read as "DM" to a human and none are the four strings. <b>The guarantee is
-    /// <see cref="SessionRole"/> (PRD-2 R-2.7a)</b>, which is not a string and cannot be
+    /// <see cref="SessionRole"/> (rolls R-2.7a)</b>, which is not a string and cannot be
     /// approximated. This row closes the obvious case cheaply and nothing more.
     /// </para>
     /// </remarks>
@@ -289,14 +289,14 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     /// <remarks>
     /// <para>
     /// <b>An ALLOWLIST, and that shape is the fix rather than a detail.</b> This was
-    /// <c>char.IsControl</c>, then <c>+ UnicodeCategory.Format</c>, and BUG-50 was a request for a
+    /// <c>char.IsControl</c>, then <c>+ UnicodeCategory.Format</c>, and the next gap called for a
     /// third category. <c>U+2028 LINE SEPARATOR</c> is <c>Zl</c> and <c>U+2029</c> is <c>Zp</c> —
     /// neither Control nor Format — so the validator refused the ASCII line break and accepted the
     /// Unicode one, which is the attack the ASCII rule exists to stop. <b>A denylist over Unicode
     /// cannot be completed</b>; the categories nobody has thought of are refused here by default.
     /// </para>
     /// <para>
-    /// This is C18's argument, already made in this repository for the TLS fence:
+    /// This is the argument already made in this repository for the TLS fence:
     /// <i>"naming what is forbidden goes stale the first time somebody adds a project … naming what
     /// is permitted means a project added tomorrow is scanned by default."</i> It transfers exactly.
     /// </para>

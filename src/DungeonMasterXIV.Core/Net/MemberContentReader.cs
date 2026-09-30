@@ -10,7 +10,7 @@ namespace DungeonMasterXIV.Net;
 /// <para>
 /// <b>Split out of <see cref="AdmissionInbox"/> rather than written inside it, and the reason is a
 /// measurement rather than taste.</b> Adding this to the inbox put that class at <b>428 lines
-/// against a 400 block</b> — the engineering standards' hard limit, not its flag. The method needs
+/// against a 400 block</b> — the size gate's hard limit, not its flag. The method needs
 /// nothing the inbox holds: no queue, no lock, no drain state. A static helper that reads only its
 /// arguments has no business inflating the class that happens to call it.
 /// </para>

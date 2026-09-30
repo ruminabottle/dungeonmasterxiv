@@ -3,9 +3,8 @@ using System;
 namespace DungeonMasterXIV.Net;
 
 /// <summary>
-/// The socket, as the session layer sees it. Implemented in the plugin's <c>Net/</c>, where the
-/// standards require sockets to live; declared here so the coordinator that drives it is testable
-/// without one.
+/// The socket, as the session layer sees it. Implemented in the plugin's <c>Net/</c>, the one
+/// place sockets may live; declared here so the coordinator that drives it is testable without one.
 /// </summary>
 public interface ISessionTransport
 {
@@ -21,12 +20,12 @@ public interface ISessionTransport
     /// <summary>Whether a frame sent right now would actually go out.</summary>
     /// <remarks>
     /// <para>
-    /// <b>On the interface because BUG-36 made it load-bearing.</b> It existed on the WebSocket
-    /// implementation, named as a hazard that was "not reachable in the product today". Registering
-    /// a session made it reachable: the host must send its <c>CodeRequest</c> once connected, and
-    /// <see cref="Send"/> silently discards a frame that arrives before the socket opens. Sending on
-    /// the return from <see cref="Connect"/> would have reproduced BUG-36 exactly — a host that
-    /// believes it registered, a relay that was never told, and no error anywhere.
+    /// <b>On the interface because registering made it load-bearing.</b> It existed on the
+    /// WebSocket implementation, named as a hazard that was "not reachable in the product today".
+    /// Registering a session made it reachable: the host must send its <c>CodeRequest</c> once
+    /// connected, and <see cref="Send"/> silently discards a frame that arrives before the socket
+    /// opens. Sending on the return from <see cref="Connect"/> would have failed exactly that way —
+    /// a host that believes it registered, a relay that was never told, and no error anywhere.
     /// </para>
     /// <para>
     /// So the coordinator sends on readiness rather than on connection, which it cannot do unless it

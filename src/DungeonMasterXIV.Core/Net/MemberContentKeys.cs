@@ -58,11 +58,10 @@ public readonly record struct PeerContentKey(PeerCode Peer, byte[] Key);
 /// <see cref="WireEnvelope.ForSessionPayload"/> has exactly one production caller —
 /// <c>RosterBroadcast</c>, the host — so today nothing on a member client ever produces a payload
 /// for this to open. The relay <i>will</i> carry one: <c>RelayRouter.ForwardPayload</c> routes from
-/// any admitted member to <c>MembersExcept(sender)</c>. <b>The sending half is DMXENG-11 / A-1.15, a
-/// live ticket held by another engineer and blocked on this one.</b> This is a sequence, not half a
-/// wire — but until that lands, <b>this is a capability the product has and does not yet use</b>,
-/// and a reader who takes it for shipped behaviour has been misled. A model with no production
-/// caller is not a shipped behaviour.
+/// any admitted member to <c>MembersExcept(sender)</c>. <b>The sending half is A-1.15, and it is
+/// blocked on this one.</b> This is a sequence, not half a wire — but until that lands, <b>this is
+/// a capability the product has and does not yet use</b>, and a reader who takes it for shipped
+/// behaviour has been misled. A model with no production caller is not a shipped behaviour.
 /// </para>
 /// </remarks>
 internal sealed class MemberContentKeys

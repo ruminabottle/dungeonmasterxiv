@@ -96,7 +96,7 @@ public sealed class AdmissionInbox
     /// Where this drain reports content it accepted but had to strip — see
     /// <see cref="SessionContentCodec.TryDecode"/>. Optional because a caller that only wants
     /// the derived key has nobody to tell; a null log makes the strip silent, which is the
-    /// condition BUG-70 was about rather than an accepted default.
+    /// silent-drop defect rather than an accepted default.
     /// </param>
     /// <returns>The derived session key if this drain admitted us, otherwise null.</returns>
     /// <remarks>
