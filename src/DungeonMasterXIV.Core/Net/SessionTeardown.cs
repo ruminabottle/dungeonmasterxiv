@@ -46,9 +46,9 @@ public static class SessionTeardown
     /// </para>
     /// <para>
     /// <b>A HOST ANNOUNCES NOTHING, and is not special-cased to achieve it:</b> a departure needs a
-    /// session code AND a shared key from having been admitted, so a host and a never-admitted joiner
-    /// both fall out of it silently. Pinned by test rather than inferred from that reasoning, because
-    /// it was only ever a reading of a comment.
+    /// session code AND a shared key from having been admitted, so a host and a never-admitted
+    /// joiner both fall out of it silently. Pinned by test rather than inferred from that
+    /// reasoning, because that claim was only ever a reading of a comment.
     /// </para>
     /// <para>
     /// <b>This does NOT make a host remove members who vanished.</b> R-1.3g names that as the false

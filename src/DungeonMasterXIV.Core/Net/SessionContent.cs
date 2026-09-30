@@ -75,12 +75,12 @@ public sealed class SessionContent
     /// <b>1. This notice — the DM's outward announcement with time remaining. BUILT.</b>
     /// </para>
     /// <para>
-    /// <b>2. Removal when a player DELIBERATELY QUITS (A-1.15, A-1.16a). NOT BUILT, and the reason is
-    /// a capability rather than an omission here:</b> a host cannot READ member-authored content at
-    /// all. <c>InboundHandlers.OpenWith</c> is a single key and a host holds one per admitted peer,
-    /// so a departure notice would be forwarded by the relay and dropped unopened. That capability is
-    /// R-1.3k / A-1.13c; A-1.15 and A-1.16a wait on it. Adding a departure
-    /// section here before then would put a message on the wire that nothing can receive.
+    /// <b>2. Removal when a player DELIBERATELY QUITS (A-1.15, A-1.16a). NOT BUILT, and the reason
+    /// is a capability rather than an omission here:</b> a host cannot READ member-authored content
+    /// at all. <c>InboundHandlers.OpenWith</c> is a single key and a host holds one per admitted
+    /// peer, so a departure notice would be forwarded by the relay and dropped unopened. That
+    /// capability is R-1.3k / A-1.13c; A-1.15 and A-1.16a wait on it. Adding a departure section
+    /// here before then would put a message on the wire that nothing can receive.
     /// </para>
     /// <para>
     /// <b>3. A member that VANISHES — a crash or a dropped link — IS NOT REMOVED, AND THAT IS

@@ -121,9 +121,9 @@ internal sealed class SessionRecording
     /// </para>
     /// <para>
     /// <b>SO THE MEMBER PATH IS A WIRING CHANGE, NOT A REDESIGN.</b> When stamps travel, a non-host
-    /// client decodes an already-stamped entry and calls THIS. No new type, no new
-    /// method, and nothing here to unpick. <b>A recorder that could only mint would have had to be
-    /// taken apart to admit the member, which is the host-only assumption this shape refuses.</b>
+    /// client decodes an already-stamped entry and calls THIS. No new type, no new method, and
+    /// nothing here to unpick. <b>A recorder that could only mint would have had to be taken apart
+    /// to admit the member, which is the host-only assumption this shape refuses.</b>
     /// </para>
     /// </remarks>
     /// <param name="entry">An entry stamped by the host, decoded from the wire or minted here.</param>

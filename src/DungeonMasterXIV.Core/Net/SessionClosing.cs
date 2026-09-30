@@ -29,8 +29,8 @@ namespace DungeonMasterXIV.Net;
 /// </para>
     /// <para>
     /// <b>IT CARRIES R-1.3g's SIXTY SECONDS BECAUSE R-1.3g NOW NAMES THEM.</b> It did not, and this
-    /// type deliberately held no duration while the question was open — a literal would have answered
-    /// a product question silently. The window has since been ruled, so the number
+    /// type deliberately held no duration while the question was open — a literal would have
+    /// answered a product question silently. R-1.3g has since fixed the window, so the number
     /// belongs here on its own authority: R-1.3g names it, so the type expressing R-1.3g holds it.
     /// </para>
     /// <para>
@@ -45,7 +45,7 @@ namespace DungeonMasterXIV.Net;
     /// </para>
     /// <para>
     /// <b>THE FIFTEEN MINUTES IS NOW RULED TOO</b> — R-1.3l was REPLACED on 2026-08-29, not amended:
-    /// it used to record a value it explicitly did not decide, and that value has since been ruled.
+    /// it used to record a value it explicitly did not decide, and the replacement now fixes it.
     /// Worth knowing how close that was: a grep of every directive returned ZERO hits for it. The
     /// value was in force, cited in three places and shipped, and <b>nobody had ever chosen it</b>.
     /// </para>

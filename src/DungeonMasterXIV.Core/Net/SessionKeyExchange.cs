@@ -31,9 +31,9 @@ namespace DungeonMasterXIV.Net;
 /// speakable, so a key derived from one would protect nothing.
 /// </para>
 /// <para>
-/// <b>The EC half is BouncyCastle rather than the BCL, and that is D-19.</b> On the
-/// affected machines the plugin runs Windows binaries under a Wine prefix, and a probe measured
-/// that the BCL's EC paths cannot work there <i>at all</i>: generate, import and agree all fail
+/// <b>The EC half is BouncyCastle rather than the BCL, and that is D-19.</b> On the affected
+/// machines the plugin runs Windows binaries under a Wine prefix, and a probe measured that the
+/// BCL's EC paths cannot work there <i>at all</i>: generate, import and agree all fail
 /// with <c>0x80090029</c>/<c>0x80090027</c> out of the key-storage provider. The gap is not
 /// confined to key STORAGE — the layer underneath cannot do EC through the provider — so no
 /// arrangement of BCL calls fixes it, which is why D-11 preference (a) is eliminated by

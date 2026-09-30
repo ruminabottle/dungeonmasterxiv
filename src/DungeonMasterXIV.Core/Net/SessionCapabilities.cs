@@ -8,11 +8,11 @@ namespace DungeonMasterXIV.Net;
 /// <remarks>
 /// <para>
 /// <b>This type exists so that adding a capability stops costing a constructor parameter.</b>
-/// <see cref="SessionCoordinator"/>'s constructor was at six against a block of six
-/// (the size gate's parameter row: flag 4, block 6), so the next chunk that needed
-/// one more thing from outside could not be cut at all — two were stopped on it at once, one
-/// for the host's display name and one for a campaign it could resolve a relink against.
-/// <b>Growing this record costs the constructor nothing.</b> That is the whole of the fix.
+/// <see cref="SessionCoordinator"/>'s constructor was at six against a block of six (the size
+/// gate's parameter row: flag 4, block 6), so the next chunk that needed one more thing from
+/// outside could not be cut at all — two were stopped on it at once, one for the host's display
+/// name and one for a campaign it could resolve a relink against. <b>Growing this record costs the
+/// constructor nothing.</b> That is the whole of the fix.
 /// </para>
 /// <para>
 /// <b>What belongs here is a CAPABILITY: something Core calls to have done what it cannot do.</b>
@@ -49,10 +49,10 @@ namespace DungeonMasterXIV.Net;
 /// </para>
 /// <para>
 /// <b>They arrived separately and that is not an argument for merging any of them.</b>
-/// <c>HostDisplayName</c> and <c>ResolveRelink</c> landed within an hour of
-/// each other and collided textually on this parameter list. <b>Adjacency is not kinship</b> —
-/// folding two members together because they arrived next to each other is a grouping chosen for
-/// its arithmetic, which is why the log was left out rather than moved in here to reach four.
+/// <c>HostDisplayName</c> and <c>ResolveRelink</c> landed within an hour of each other and collided
+/// textually on this parameter list. <b>Adjacency is not kinship</b> — folding two members together
+/// because they arrived next to each other is a grouping chosen for its arithmetic, which is why
+/// the log was left out rather than moved in here to reach four.
 /// </para>
 /// <para>
 /// <b>NOT named for the plugin, though the plugin is what supplies it today.</b> A test supplies

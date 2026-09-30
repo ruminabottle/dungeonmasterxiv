@@ -54,10 +54,10 @@ public sealed class SessionCoordinator
     /// </para>
     /// </param>
     /// <param name="capabilities">
-    /// What Core cannot do for itself — key generation and participant minting. <b>Required, and
-    /// a caller wanting the defaults says <see cref="SessionCapabilities.Default"/> out loud</b>.
-    /// A record rather than parameters so the NEXT capability costs a member here
-    /// instead of a seventh argument, which is what stopped two chunks at once.
+    /// What Core cannot do for itself — key generation and participant minting. <b>Required, and a
+    /// caller wanting the defaults says <see cref="SessionCapabilities.Default"/> out loud</b>. A
+    /// record rather than parameters so the NEXT capability costs a member here instead of a
+    /// seventh argument, which is what stopped two chunks at once.
     /// </param>
     public SessionCoordinator(
         ISessionTransport transport,

@@ -163,7 +163,7 @@ internal sealed class SessionWiring
     /// Deliberately NOT null-conditional, matching what <see cref="SessionCoordinator.HostKeys"/>
     /// has always done: every caller above defers the read behind a <c>Func</c>, so a throw here
     /// would mean a collaborator read it during construction, which is the ordering defect
-    /// those guards exist to surface rather than to hide.
+    /// the constructors' null guards exist to surface rather than to hide.
     /// </remarks>
     private SessionKeyExchange? HostKeys => Hosting.Keys;
 }
