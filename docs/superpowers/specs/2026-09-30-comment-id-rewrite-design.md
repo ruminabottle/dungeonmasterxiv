@@ -35,7 +35,10 @@ pattern set. The full picture:
 | `SQ-n` | 70 | 39 | archive `claude/team/product/prd/SQ-LEDGER.md` |
 | `PRD-n` | 18 | 17 | renamed to area specs |
 | `E-n` | 8 | 7 | retired |
+| `T-n` (pre-Jira ticket IDs, e.g. `T-37`) | 15 | ~10 | archive `claude/team/tickets/` |
 | Role names (Spec Owner 24, Deployment Manager 20, the HUMAN 14, QA 8, breakfix 2) | 68 | 57 | roles retired |
+| More role names (Product Owner 21, Code Reviewer / code reviewer 13, Engineering Lead 3) | 37 | — | roles retired |
+| Archived documents (`engineering-standards.md` 8, `brief.md` 1) | 9 | — | archive |
 | "Decision n" | 7 | 4 | product-overview Session panel item n |
 | `.claude/` paths | 3 | 3 | archive |
 | PR numbers `#nn` / commit hashes | 82 / 10 | 52 / 9 | GitHub, git (live) |
@@ -86,6 +89,7 @@ pattern set. The full picture:
 | `PRD-n` | The area spec name, or the `R-`/`A-` ID alone. |
 | "Decision n" | "product-overview Session panel item n". |
 | A `.claude/…` path | Write the fact into the comment, or drop it if the path only pointed at a backlog. |
+| A citation of an archived document: "in `engineering-standards.md`", "the brief" | The rule it cited, or its spec ID if a spec now holds it. |
 | "PR #89's body is authoritative", "since #120" | The rule that PR established. |
 
 **Recovering a rule.** When a comment's reason is only its ID, read, in order: the surrounding code,
@@ -123,7 +127,8 @@ passes about 1,500 lines.
 Inside each PR:
 
 1. **Mechanical pre-pass.** A script deletes only standalone parenthetical tags matching
-   `\s?\((BUG|DMXENG|SQ|E)-\d+(, (BUG|DMXENG|SQ|E)-\d+)*\)` and bare dead IDs ending a citation list.
+   `\s?\((BUG|DMXENG|SQ|E|T)-\d+(, (BUG|DMXENG|SQ|E|T)-\d+)*\)` and dead IDs that open or close a
+   citation list inside parentheses, such as `(R-1.3h, BUG-115)`.
    Its diff is its own commit, so review can skim it.
 2. **Judgment pass.** Every remaining hit is rewritten by the §1 rules, one file group at a time.
 3. **Checks** (§3), review, merge.
@@ -150,8 +155,10 @@ Inside each PR:
 **The guard (PR 7).** A test in `tools/DungeonMasterXIV.Release.Tests`:
 
 - Scans every file `git ls-files` lists outside `docs/`.
-- Fails on `BUG-n`, `DMXENG-n`, `SQ-n`, `E-n`, `PRD-n`, `Spec Owner`, `Deployment Manager`,
-  `[Bb]reakfix`, `the HUMAN` and `.claude/`.
+- Fails on `BUG-n`, `DMXENG-n`, `SQ-n`, `E-n`, `T-n`, `PRD-n`; the role names Spec Owner,
+  Deployment Manager, Product Owner, Engineering Lead and Code Reviewer (either capitalisation),
+  `[Bb]reakfix` and `the HUMAN`; `.claude/`; and the archived documents `engineering-standards`,
+  `product-directives` and `brief.md`.
 - Does not police `R-`/`A-`/`D-` IDs, PR or commit anchors, or the word "ticket".
 - Names each file, line and match on failure, and says to cite the spec ID instead.
 - Builds its patterns from fragments so its own source does not match.
