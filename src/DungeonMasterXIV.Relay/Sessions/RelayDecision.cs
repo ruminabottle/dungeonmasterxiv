@@ -48,7 +48,7 @@ public enum RelayOutcome
     PendingNoticeForwarded = 15,
 }
 
-/// <summary>The router's verdict for one message: its action, outcome, any reply, and who receives it.</summary>
+/// <summary>The router's verdict on a message: action, outcome, any reply, recipients, whether to close them.</summary>
 public readonly record struct RelayDecision(
     RelayAction Action,
     RelayOutcome Outcome,

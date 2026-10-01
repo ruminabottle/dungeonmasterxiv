@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
-/// <summary>Serves one WebSocket connection, passing its size-limited messages to the hub until it closes.</summary>
+/// <summary>Serves one WebSocket connection, passing messages to the hub; an oversized message ends it.</summary>
 public sealed class WebSocketRelayEndpoint(
     RelayHub hub,
     ConnectionDirectory directory,

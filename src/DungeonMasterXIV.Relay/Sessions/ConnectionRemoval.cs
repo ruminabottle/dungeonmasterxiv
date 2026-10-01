@@ -1,6 +1,6 @@
 namespace DungeonMasterXIV.Relay.Sessions;
 
-/// <summary>A removed connection leaving one session: whether that ended it, and who else is affected.</summary>
+/// <summary>One session a removed connection left: if it ended, its orphans; if not, its host and member key.</summary>
 public readonly record struct SessionDeparture(
     string Code,
     bool EndedSession,

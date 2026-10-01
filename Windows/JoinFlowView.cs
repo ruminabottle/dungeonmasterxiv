@@ -6,7 +6,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>Draws the joining side of the session window: status, code to compare, roster and the request form.</summary>
+/// <summary>Draws the joiner's side of the session window: status, code check, roster, leaving and request form.</summary>
 internal sealed class JoinFlowView
 {
     private readonly SessionCoordinator _coordinator;

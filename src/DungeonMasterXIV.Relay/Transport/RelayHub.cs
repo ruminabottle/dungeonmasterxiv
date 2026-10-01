@@ -4,7 +4,7 @@ using DungeonMasterXIV.Relay.Sessions;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
-/// <summary>Carries out routing decisions on live connections, and clears up when a connection disconnects.</summary>
+/// <summary>Decodes and routes incoming messages, and on disconnect clears up and tells hosts a member dropped.</summary>
 public sealed class RelayHub(
     RelayRouter router,
     SessionRegistry registry,
