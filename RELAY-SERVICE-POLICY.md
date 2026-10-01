@@ -26,56 +26,28 @@ Not your session, not your campaign, not your character names, not your messages
 there are no accounts. When your session ends there is nothing left on the relay to delete, because
 nothing was written.
 
-This is not a promise you have to take on faith. The relay's source is public, and there is an
-automated test that runs the relay, puts a full session through it, and **watches the disk while it
-happens** — including the ordinary places a program writes by default, which is exactly where an
-earlier version of this test was not looking. It fails if the relay writes a file.
-
-The test is checked by deliberately breaking the relay: a version that writes one line per
-connection makes the test fail, by name. That is how we know it is looking rather than merely
-passing.
+You can check this rather than take it on trust: the relay's source is public, and it writes only to
+standard output. It has no file of its own.
 
 ## What it cannot read
 
 Session traffic is **end-to-end encrypted between the people in the session**. The relay carries
 sealed messages and holds no key. It forwards your DM's bytes onward unchanged and cannot open them.
 
-**One honest limit, which matters.** Encryption protects you from someone substituting a key only if
-the humans involved actually check the keys. The software can put the same code in front of both of
-you. It cannot make either of you look at it, and it cannot tell whether you did.
+**That includes the name you join with.** [changed with protocol version 2] Your client and your DM's
+exchange keys before you ask to join, so your name, and anything that would let your DM recognise you
+as a returning player, travel sealed.
 
-**Both of you are shown the same short code, before the DM decides.** [changed 2026-08-27] The person
-asking to join sees it, and so does the DM deciding whether to admit them — the joining client
-receives the DM's key *before* admission rather than with it, so there is a moment when you can both
-be reading the same thing aloud to each other. Earlier versions of this plugin showed it only to the
-DM, and earlier versions of this page said so.
-
-**Ten seconds of reading it out is the whole protection.** If nobody reads it, that check did not
-happen, and the phrase "end-to-end encrypted" does not do that work on its own.
-
-**What your client will and will not claim about it.** If the code did not arrive in time for you to
-compare it, your client tells you so rather than staying quiet. But **whether the two of you actually
-compared it is not something either client can know** — a person can click past anything. Nothing in
-this plugin reports that the comparison happened; it reports only that it was possible. That
-distinction is deliberate, and no wording on this page will blur it.
+**One honest limit.** Nobody compares keys. A relay that only forwards traffic, a log that leaks, or a
+server that is seized reveals nothing you say. A relay operator who set out to swap keys during a join
+could read that session. We think that risk is small for a tabletop relay, and we would rather say it
+plainly than ask every group to read codes aloud. Earlier versions had you compare a short code; this
+one does not.
 
 ## What it can see
 
 A relay that forwards your messages inherently sees **that you are connected**: your network address,
 when you connected, how much traffic and how often, and which session code you are on.
-
-**And it sees your character name when you ask to join a session.** [corrected 2026-08-28]
-
-Your client reads your character name from the game and sends it with the join request, **in the
-clear**. The DM has to see who is knocking in order to decide, and at that moment the two of you have
-not yet exchanged keys — there is nothing to encrypt it to. Everything you say *inside* a session is
-sealed and the relay cannot open it. **The joining name is the exception, it is the only one, and this
-page claimed otherwise until now.**
-
-**You cannot currently change it.** The ability to send a different name instead is specified and is
-not yet built. Until it ships, **asking to join a session tells the relay operator your character
-name, and you have no way to prevent that except not joining.** We would rather say that plainly than
-describe a control you do not have.
 
 **"Not stored" is not "not observed."** Those are different claims and we are making the first one.
 An operator who wanted to watch traffic in real time could see the shape of your session — when you
@@ -94,8 +66,7 @@ key.
 **Retention: whatever is kept is discarded within seven days.**
 
 Two of those three are facts about the code and you can check them. **The seven days is not** — the
-relay writes only to standard output and has no file of its own, which is exactly what makes the
-"stores nothing" test above possible. Retention is therefore a property of how the service is run,
+relay writes only to standard output and has no file of its own, which is what makes "stores nothing" checkable in the source. Retention is therefore a property of how the service is run,
 not of what the software does. It is a promise rather than a fact about the
 code, and this page marks that difference wherever it matters.
 
@@ -103,8 +74,8 @@ code, and this page marks that difference wherever it matters.
 
 - We may **rate-limit** connections, and **refuse service** to a source that is abusing it.
 - We do not read, moderate or police what happens inside a session. We cannot — see above. Who is in
-  your game is your DM's decision, made through the accept/deny prompt, and it is the entire trust
-  model.
+  your game is your DM's decision, made through the accept/deny prompt or by letting that campaign's
+  returning players straight in, and it is the entire trust model.
 - We collect **no telemetry, no analytics, and no usage measurement**, anywhere in the plugin or the
   relay. We do not know how many people use this.
 
