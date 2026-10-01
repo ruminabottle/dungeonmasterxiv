@@ -104,6 +104,8 @@ public sealed class SessionCoordinator
 
     public void Deny(PeerCode peerCode) => _admissions.Deny(peerCode);
 
+    public bool CanAdmitAsClaimed(PendingAdmission request) => _admissions.CanAdmitAsClaimed(request);
+
     public void SynchroniseTransport() => _parts.SynchroniseTransport();
 
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)

@@ -39,8 +39,8 @@ public sealed class SessionAudience
 
     public bool IsAdmitted(PeerCode peerCode) => _admitted.Any(peer => peer.PeerCode == peerCode);
 
-    public bool HoldsParticipant(Guid participantId) =>
-        _admitted.Any(peer => peer.ParticipantId == participantId);
+    public AdmittedPeer? HolderOf(Guid participantId) =>
+        _admitted.FirstOrDefault(peer => peer.ParticipantId == participantId);
 
     public AdmittedPeer? Find(PeerCode peerCode) =>
         _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);

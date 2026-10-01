@@ -115,7 +115,7 @@ public sealed class JoinAttempt
             return false;
         }
 
-        Fail(SessionFailure.RelayUnreachable);
+        Fail(HostPublicKey is not null ? SessionFailure.HostDidNotTakeRequest : SessionFailure.RelayUnreachable);
         return true;
     }
 }

@@ -32,9 +32,10 @@ internal sealed class AdmissionPromptView
             var remaining = request.RemainingAt(now);
             ImGui.TextUnformatted($"This request lapses in {remaining:mm\\:ss}");
 
-            if (request.Relink.ParticipantId is { } claimed && !_coordinator.Audience.HoldsParticipant(claimed))
+            if (_coordinator.CanAdmitAsClaimed(request))
             {
-                if (ImGui.Button($"Admit as {request.RelinkLabel}##{request.PeerCode}"))
+                var label = string.IsNullOrEmpty(request.RelinkLabel) ? "returning player" : request.RelinkLabel;
+                if (ImGui.Button($"Admit as {label}##{request.PeerCode}"))
                 {
                     _coordinator.Admit(request.PeerCode, asClaimed: true);
                 }

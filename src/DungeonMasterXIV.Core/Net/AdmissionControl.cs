@@ -77,6 +77,11 @@ public sealed class AdmissionControl
             return null;
         }
 
+        if (Desk.Find(peerCode) is { } existing)
+        {
+            return existing;
+        }
+
         var deadline = AdmissionDeadline.DecidedByHost(now);
         var request = new PendingAdmission(peerCode, deadline, relink, joinerPublicKey, displayName);
 
@@ -152,9 +157,22 @@ public sealed class AdmissionControl
     {
         var request = Desk.Decide(peerCode);
         var displayName = request?.DisplayName ?? DisplayName.None;
-        var participantId = asClaimed && ClaimedAndFree(request) is { } claimed
-            ? claimed
-            : _mintParticipant(displayName);
+
+        Guid? participantId;
+        if (asClaimed && ClaimedAndFree(request) is { } claimed)
+        {
+            if (Audience.HolderOf(claimed) is { } holder)
+            {
+                Audience.Remove(holder.PeerCode);
+                Drops.Forget(holder.PeerCode);
+            }
+
+            participantId = claimed;
+        }
+        else
+        {
+            participantId = _mintParticipant(displayName);
+        }
 
         var peer = Audience.Admit(peerCode, role, request?.JoinerPublicKey, displayName, participantId);
 
@@ -172,10 +190,18 @@ public sealed class AdmissionControl
         return peer;
     }
 
-    private Guid? ClaimedAndFree(PendingAdmission? request) =>
-        request?.Relink is { Matched: true, ParticipantId: { } claimed } && !Audience.HoldsParticipant(claimed)
-            ? claimed
-            : null;
+    public bool CanAdmitAsClaimed(PendingAdmission request) => ClaimedAndFree(request) is not null;
+
+    private Guid? ClaimedAndFree(PendingAdmission? request)
+    {
+        if (request?.Relink is not { Matched: true, ParticipantId: { } claimed })
+        {
+            return null;
+        }
+
+        var holder = Audience.HolderOf(claimed);
+        return holder is null || Drops.WhenDropped(holder.PeerCode) is not null ? claimed : null;
+    }
 
     private void AnnounceAccepted(byte[]? joinerPublicKey, Guid? participantId)
     {
