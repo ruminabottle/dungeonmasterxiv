@@ -108,7 +108,7 @@ deep, or a pool that expands without bound.
 
 - **The roller's own client produces the roll and sends the result. Never the host.** A host that
   rolls for everyone becomes an authority this product refuses to build. This is a game among people
-  who arranged to play together (session-layer R-1.7a).
+  who arranged to play together (session-layer R-1.3).
 - The number comes from a cryptographically seeded generator, not a trivially predictable one. The
   result is not a secret; a predictable sequence would make the trust position worse than it needs to
   be.
@@ -141,8 +141,8 @@ left, dropped, reconnected), each timed.
 
 - The roster shows who is here now; the stream shows when it changed. They answer different questions
   and neither replaces the other.
-- **Admission mechanics stay out of the stream.** Who asked, who was refused, and what a fingerprint
-  said belong to the admission flow (session-layer R-1.3). The stream records that membership
+- **Admission mechanics stay out of the stream.** Who asked and who was refused belong to the
+  admission flow (session-layer R-1.3). The stream records that membership
   changed, not how it was negotiated.
 
 **Acceptance criteria**
@@ -360,9 +360,9 @@ player's is retention, not recording.
   superset. The stream's lifetime, owner and construction site are engineering's.
 - **A player's log dies with the session unless exported.**
 - **The DM's client retains its log automatically**, on their machine, where campaign data lives.
-- **A retained log is deletable from the same place as everything else.** The shipped settings copy
-  says there is nothing to delete anywhere but there (session-layer R-1.7a); a retained log that no
-  delete control reaches makes shipped copy false.
+- **A retained log is deletable from the same place as everything else**: Campaign storage in
+  settings, with its campaign (session-layer R-1.6). A retained log that no delete control reaches is
+  data the DM cannot clear.
 - **A roll log is not campaign data.** A campaign persists a roster, which is metadata; a log is what
   people said and did. Moving the player side into the campaign store is a product decision, not a
   storage one.
@@ -431,8 +431,8 @@ player's is retention, not recording.
   correspond and an unlabelled ordinal silently misleads anyone cross-referencing them; **and
   overclaiming fails**: the wording is "these labels mean nothing outside this file", never "these
   files cannot be related" (session-layer R-1.7a).
-- **A-2.21** A retained log is deletable from the place the product says everything is deletable.
-  Retain a log, use that control, and assert the log is gone and the shipped sentence is still true.
+- **A-2.21** A retained log is deletable from Campaign storage in settings. Retain a log, use that
+  control, and assert the log is gone.
 - **A-2.22** A player's log does not survive the session unless exported; the DM's does, without being
   asked. Both halves fail separately.
 - **A-2.23** The export is offered at session end. A build where the only route is a settings menu

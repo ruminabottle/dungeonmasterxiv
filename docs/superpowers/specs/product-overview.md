@@ -103,8 +103,8 @@ A deliberate, load-bearing design choice; see D-8.
 
 - A client's identifier is generated fresh **every time the plugin launches**.
 - It may bind to a persistent UUID stored **under a session code**, so a returning player can relink to
-  their character in that campaign. **The DM approves every relink, every session.** Relinking is
-  never silent and never automatic.
+  their character in that campaign. **The DM approves every relink, every session**, unless they have
+  chosen to let returning players straight in for that campaign (session-layer R-1.5f).
 - No identifier is stable across campaigns, derivable from a character name or account, or present
   in any export.
 - The DM's local history may contain real character names. Exports never may (D-20).
@@ -223,7 +223,8 @@ plugin. Foundry has the same property.
 
 A client's identifier is generated fresh on every plugin launch. It may be bound to a persistent UUID
 stored under a session code, so a returning player can relink to their character in that campaign. The DM
-approves every relink, every session, and an approved relink is never silent or automatic. No
+approves every relink, every session, unless they have chosen to let that campaign's returning
+players straight in (session-layer R-1.5f). No
 identifier may be stable across campaigns, derivable from a character name or account, or present in
 any exported artefact. Local history on the DM's own machine may hold real character names; exports
 may not.
@@ -242,13 +243,13 @@ product refuses to build.
   name before it is sent, pre-filled. Settings may hold a persistent default that pre-fills the field;
   they may not replace it. A control that protects against something the user does not know about
   has to be on the path they are already taking.
-- **The display name is sent in the clear at join**, beside the ciphertext, because the DM needs it
-  to decide and no keys have been exchanged yet. So the alias is a privacy control. The screen where
-  the name is chosen says the relay operator can see it, and the published policy says so too.
+- **The display name travels encrypted.** Keys are exchanged before the join request is sent
+  (session-layer R-1.3m), so the relay never sees it. The alias is a privacy control towards other
+  participants.
 - **Any script is allowed.** Restrict what can attack the display; never restrict what language a
   person speaks. The constraints that do apply are all attacks. A name must render visibly and be
   length-bounded, and it must not forge or displace surrounding text: a bidirectional override or line
-  separator that pushes the fingerprint out of the DM's view is the D-11 substitution attack.
+  separator that pushes the prompt's controls out of the DM's view is an attack.
   Diacritics and combining marks are accepted.
 - **Length is counted in grapheme clusters**, so the limit does not vary by script. The limit is 32,
   and the rule behind the number is that it accepts any name FFXIV itself permits, because the
@@ -262,9 +263,9 @@ product refuses to build.
   guarantee: in every rendering, including the one-line echo, a member cannot produce a line that
   looks host-authored. Two *players* can still look alike; that is the DM's to catch at admission.
 - **A display name may be shown and may never authenticate.** It may appear at the admission prompt
-  and in the roster. It is self-declared, unverified and trivially spoofable. The **key fingerprint**
-  is the only security-bearing identifier at admission. A UI that shows a name while omitting or
-  de-emphasising the fingerprint is not permitted.
+  and in the roster. It is self-declared, unverified and trivially spoofable. The DM admits people they
+  arranged to play with, and a returning player is recognised by their stored participant ID, never by
+  name.
 
 **The relay observes every session by construction.** Without E2E, "no identifier links a player
 across two session codes" would be only a promise about our logging. Copy implying that participants
@@ -278,8 +279,9 @@ permitted. Choosing an alias hides you from other participants, not from your ow
 - The player may delete their own participant UUID for a campaign **without the DM's involvement
   and without the DM being told.** Notifying the DM would create a signal tying a deletion to a
   player. The DM learns when relink is not offered.
-- Before deleting, the player can **see what their client stores for each campaign**, and the UI
-  says that relink will no longer be possible and they will rejoin as a new participant.
+- Before deleting, the player can **see what their client stores, one entry per session code**, and
+  the confirmation says that relink will no longer be possible and they will rejoin as a new
+  participant. Deleting lives in settings only.
 
 ### D-11 Session traffic is end-to-end encrypted
 
@@ -289,13 +291,13 @@ not secret. No hand-rolled protocol or primitive: use a vetted standard construc
 construction is ECDH on P-256 with HKDF-SHA256. Changing the curve, the KDF or the salt breaks the
 protocol.
 
-The key exchange rides the existing join flow. The joiner presents an ephemeral public key with its
-request, and the host's public key reaches the joiner **before** admission. **Both parties are shown
-the same fingerprint** and have something to compare. This adds no user-facing step, because the
-human decision point is already there.
+The key exchange comes first. The joiner sends an ephemeral public key, the host answers with its
+own, and only then does the joiner send its join request, encrypted (session-layer R-1.3m). This adds
+no user-facing step.
 
-No UI offers a confirmation control for something the other party cannot take part in: a checkbox
-affirming a comparison only one side could make is a false control that records success.
+**Nothing is compared.** No fingerprint is shown. That leaves one accepted risk: a relay that actively
+substitutes keys could read a session. Passive reading, a leaked log and a seized server cannot. No
+copy claims a session is verified or protected against interception.
 
 Reason: without encryption the relay could read session content, so it could link a player across
 two codes using none of our identifiers. Without E2E, D-8 protects a
@@ -598,11 +600,11 @@ Observable statements. Area specs hold the numbered criteria; these are the prod
   yet observed.)
 - A user can point the plugin at a relay they run themselves, and a session works through it.
 - A player who enters the code causes the DM to see a prompt identifying the requester by their
-  **chosen display name** alongside the key fingerprint, with accept and deny.
+  **chosen display name**, with accept and deny.
 - **A participant can see and change the name they will send, before it is sent,** pre-filled with
   their character name, **in the join flow.** A settings page alone does not satisfy this.
-- **The display name is never what the DM authenticates on.** The prompt must not present the name in
-  a way that pushes the fingerprint aside. A prompt showing a name and hiding the fingerprint fails.
+- **A display name never admits anyone.** The DM decides, or the campaign's returning-players setting
+  admits a stored participant (session-layer R-1.5f).
 - A hosting client offers no way to join a session, a joined client offers no way to host one, and a
   live host is offered no way to restart hosting.
 - The DM can see the display names of everyone currently admitted. A player who has joined can see
@@ -622,7 +624,7 @@ Observable statements. Area specs hold the numbered criteria; these are the prod
 - When the DM ends the session or closes the plugin, their client disconnects from the relay, and
   every player client shows the session has ended rather than still appearing connected.
 - A returning player in a known campaign is offered relink, and the DM must approve it before any
-  state flows. Relink never happens silently.
+  state flows, unless the DM lets that campaign's returning players straight in.
 - **No export contains a participant identifier or a participant name at all**, not even for a single
   session (D-8, D-20). No file the plugin writes contains an identifier that links a player across
   two different session codes.
@@ -696,7 +698,7 @@ chat, which renders only text, so the panel cannot live there. Game chat is an e
    private talk that is part of the session record and can carry a roll.
 2. **The stream carries messages, rolls and membership events** (joined, left, lost connection,
    reconnected), timed and in order. The roster shows who is here now; the stream shows when that
-   changed. **Admission mechanics stay out**: code registration, denials and fingerprint state are DM
+   changed. **Admission mechanics stay out**: code registration and denials are DM
    machinery and would bury the conversation.
 3. **Three message kinds: in-character, out-of-character, emote.** One field plus `/ooc` and `/me`.
    Without them, nobody can tell whether a character or its player said "I don't think that's a good

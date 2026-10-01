@@ -163,11 +163,8 @@ exactly one place a human authors it, and the tag and the assembly version are n
 
 The default relay's operator publishes a service policy before the relay is public
 (`product-overview D-12`), linked above rather than duplicated here. It states what the relay stores
-(nothing), what it can still observe (`session-layer R-1.9` is the single source for that list — the
-published policy's own "What it can see" section states the list again in its own words; that is a
-second statement of a fact `session-layer A-1.13b` requires exactly one statement of, flagged here
-rather than edited into the published file), what happens if it is discontinued, and how it is
-funded. Funding is optional community support, kept entirely outside the plugin, and there is no
+(nothing), what it can still observe (the public statement of `session-layer R-1.9`, kept in step
+with it under `A-1.13b`), what happens if it is discontinued, and how it is funded. Funding is optional community support, kept entirely outside the plugin, and there is no
 other anti-abandonment guarantee (`product-overview` Non-goals section, "No monetisation surface").
 
 ## Open questions
