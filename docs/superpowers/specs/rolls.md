@@ -742,15 +742,14 @@ collection semantics (ordering, filtering, paging, retention in memory).
   It blocks A-2.3b for `4d6dl9` and `2d6dl20` only. `4d6kh0`, `4d6dl4` and `4d6dl4+100` (keep of zero,
   or drop count equal to the pool) do not depend on it and fail A-2.3b today if the result is silent.
 - Open question: what should a modifier followed by a tab, newline, CR or NBSP do? Only the space case
-  is established (A-2.3c). It blocks pinning any test for those characters.
+  is established (A-2.3c); the others are unspecified.
 - Open question: is `/roll` free in FFXIV? Believed to be (the game uses `/random` and `/dice`), not
   verified. It blocks registering the token as a game-wide command (R-2.18, A-2.33c); it blocks
   nothing while the token is typed only into the product's own input.
-- Open question: R-2.10 requires that a bound on held messages exists. The code holds everything for a
-  dropped member until the seat expires, with no count or size bound, on the reasoning that the seat
-  window already bounds the hold and a build that never gaps satisfies the short-drop floor trivially.
-  Whether the seat window counts as the bound R-2.10 requires is undecided. It blocks A-2.10a's far-edge
-  half being observable in the product (no real drop can gap today).
+- Open question: R-2.10 is not built. Nothing holds messages for a dropped member, and nothing marks a
+  gap (the stream has a gap kind that nothing produces). A dropped member comes back only by relink,
+  which is a new admission and starts empty, so A-2.6a and A-2.10a fail today. Whether the seat
+  window may serve as the bound R-2.10 requires is left to whoever builds it.
 - Open question: chat commands as an input path were raised by the user and are not wanted; they are
   recorded only as raised. Whether they are even possible, given product-overview D-1 (no driving the
   chat-send path) and A-2.7 (no chat-read subscription), is unassessed. Not to be closed by building
