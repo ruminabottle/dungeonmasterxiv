@@ -1,18 +1,4 @@
-# The relay's deployment, versioned here so what runs on the VM is traceable to a commit (A-1.5e).
-#
-# Two things in this file are load-bearing rather than hardening habits, and both are approve-
-# blocking if removed:
-#
-#   read_only + tmpfs  — the relay stores nothing (D-2), and R-1.7a ships users the words "no
-#                        server storing your sessions". A read-only root filesystem makes that
-#                        enforced by the kernel rather than promised by us: a future dependency
-#                        that tries to persist fails loudly here instead of quietly accumulating.
-#                        There is no volume, and adding one would make shipped copy false.
-#
-#   direct TLS         — no reverse proxy, no CDN, no ingress that terminates TLS. D-2's
-#                        clarification makes any such party a network destination, and destinations
-#                        other than a relay or a session peer are denied. The client's TLS session
-#                        terminates against this container.
+# The relay's deployment: read-only root and no volume (it stores nothing), TLS terminated in the container.
 
 services:
   relay:
@@ -23,7 +9,7 @@ services:
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
     restart: unless-stopped
 
-    # 443 on the host, straight through to the relay. Nothing sits in between.
+    # 443 on the host maps straight to the relay, with no proxy in between.
     ports:
       - "443:443"
 
@@ -32,16 +18,9 @@ services:
       DMX_RELAY_USE_TLS: "true"
       DMX_RELAY_CERT_PATH: /run/secrets/relay-certificate
       DMX_RELAY_CERT_PASSWORD: ${DMX_RELAY_CERT_PASSWORD:-}
-      # The keepalive is deliberately NOT set here, and the reap timeout cannot be set at all.
-      # The ping interval comes from TransportContract, the type the plugin and the relay share;
-      # restating it in a deployment file is the same drift that type exists to prevent, one layer
-      # further out — a deployment pinning 30 would keep working while the contract moved under it.
-      # The reaper is derived from the interval in code and has no environment variable, so there is
-      # no way to configure it below the interval and turn the keepalive into the thing that ends a
-      # quiet session.
+      # Keepalive left unset so it follows TransportContract; the reap timeout derives from it and has no setting.
 
-    # The certificate is supplied by the operator; provisioning it, the VM and DNS is outside this
-    # repository and outside C2's boundary.
+    # The operator supplies the certificate file; provisioning it, the VM and DNS is outside this repository.
     secrets:
       - relay-certificate
 
@@ -53,8 +32,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-    # No volumes. This is the absence that A-1.5e and R-1.7a depend on; it is written here so that
-    # adding one is a visible edit to a stated guarantee rather than a small convenience.
+    # No volumes: the relay stores nothing.
 
 secrets:
   relay-certificate:
