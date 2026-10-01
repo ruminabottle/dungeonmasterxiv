@@ -3,6 +3,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>Rolls one dice term, applying rerolls, explosions, keep and drop, then sums it or counts successes.</summary>
 internal static class DiceTermEvaluator
 {
     public static int? Evaluate(DiceNode dice, RollEvaluation state)

@@ -4,6 +4,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Writes a session log for export, replacing each peer with a file-local label such as participant 1.</summary>
 public static class SessionExportFormat
 {
     public const string Header = "# DungeonMasterXIV session export";

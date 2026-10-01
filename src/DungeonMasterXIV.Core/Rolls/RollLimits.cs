@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>The limits a dice expression must keep to: length, dice per term, die size, nesting and dice rolled.</summary>
 public sealed record RollLimits
 {
     public static RollLimits Default { get; } = new();

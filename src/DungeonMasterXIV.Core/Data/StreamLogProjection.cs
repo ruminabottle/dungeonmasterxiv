@@ -6,6 +6,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Converts session stream entries into log entries, naming each event kind.</summary>
 public static class StreamLogProjection
 {
     public static LoggedEntry From(StreamEntry entry)

@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>The modifiers on a dice term: keep or drop highest or lowest, reroll, explode, and count successes.</summary>
 public sealed record DiceModifiers
 {
     public static DiceModifiers None { get; } = new();

@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>A participant recorded in a campaign: an identifier and a label, plus any unknown JSON properties.</summary>
 public sealed class CampaignParticipant
 {
     public Guid ParticipantId { get; set; }

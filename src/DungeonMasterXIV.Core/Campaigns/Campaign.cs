@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>A saved campaign: identifier, name, preferred session code, display-name alias and participants.</summary>
 public sealed class Campaign
 {
     public Guid CampaignId { get; set; }

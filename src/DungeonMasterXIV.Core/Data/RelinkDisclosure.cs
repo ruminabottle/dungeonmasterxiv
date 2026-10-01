@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Data;
 
+/// <summary>The wording that explains what relink memory stores and confirms forgetting an entry.</summary>
 public static class RelinkDisclosure
 {
     public const string WhatIsStored =

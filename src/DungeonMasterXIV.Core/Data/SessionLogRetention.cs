@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Builds a campaign's session log from supplied entries and asks the store to retain it.</summary>
 public sealed class SessionLogRetention(
     RetainedLogStore store,
     Guid campaignId,

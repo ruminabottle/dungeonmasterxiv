@@ -3,6 +3,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>Gives the notice a roll carries when every rolled die was dropped or rerolled away.</summary>
 internal static class RollSurvival
 {
     public const string NothingSurvived =

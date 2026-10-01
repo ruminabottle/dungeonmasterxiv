@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>The JSON layout of one campaign's file: a schema version, the campaign and any unknown properties.</summary>
 public sealed class CampaignFileDocument
 {
     public const int CurrentSchemaVersion = 1;

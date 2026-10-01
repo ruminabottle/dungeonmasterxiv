@@ -3,6 +3,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Reads and records the display-name alias a campaign stores, falling back to the character name.</summary>
 public static class CampaignDisplayName
 {
     public static string Stored(Campaign? campaign) => campaign?.DisplayNameAlias ?? string.Empty;

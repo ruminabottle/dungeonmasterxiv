@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>What loading campaigns produced: the campaigns, unreadable files, outcome and migration counts.</summary>
 public sealed class CampaignLoadResult
 {
     public List<Campaign> Campaigns { get; } = new();

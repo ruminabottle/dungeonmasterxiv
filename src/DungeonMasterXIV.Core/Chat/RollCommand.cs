@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Chat;
 
+/// <summary>Recognises text that starts with the /roll command and extracts the dice expression after it.</summary>
 public static class RollCommand
 {
     public const string Token = "/roll";

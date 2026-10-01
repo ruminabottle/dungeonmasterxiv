@@ -5,6 +5,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>A participant identifier this client was admitted with, stored under its session code.</summary>
 public sealed class RememberedParticipant
 {
     public string SessionCode { get; set; } = string.Empty;
@@ -12,6 +13,7 @@ public sealed class RememberedParticipant
     public Guid ParticipantId { get; set; }
 }
 
+/// <summary>Maps each session code to the participant identifier this client was admitted with, sent when joining it again.</summary>
 public sealed class RelinkMemory
 {
     public List<RememberedParticipant> Remembered { get; set; } = new();

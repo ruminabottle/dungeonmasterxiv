@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Builds and recognises per-campaign file names, campaign-{guid}.json, and names the legacy store file.</summary>
 public static class CampaignFileName
 {
     public const string Prefix = "campaign-";

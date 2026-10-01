@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Keeps formatted session logs per campaign in an archive, retaining one only when hosting.</summary>
 public sealed class RetainedLogStore(IRetainedLogArchive archive)
 {
     private readonly IRetainedLogArchive _archive =

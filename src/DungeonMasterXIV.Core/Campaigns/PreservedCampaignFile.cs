@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Builds and recognises file names of the form campaigns.unreadable-{timestamp}.json.</summary>
 public static class PreservedCampaignFile
 {
     public const string Prefix = "campaigns.unreadable-";

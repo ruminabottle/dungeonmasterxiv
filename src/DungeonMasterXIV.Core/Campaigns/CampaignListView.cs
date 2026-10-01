@@ -3,6 +3,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Builds the rows and detail text the campaign list shows for campaigns and for unreadable files.</summary>
 public static class CampaignListView
 {
     public const string NoCodeLabel = "(no code yet)";

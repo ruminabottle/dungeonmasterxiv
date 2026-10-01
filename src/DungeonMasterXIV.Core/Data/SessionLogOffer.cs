@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Where a session-log offer stands: still open, kept, or declined (also when its time runs out).</summary>
 public enum SessionLogOfferOutcome
 {
     Pending,
@@ -12,6 +13,7 @@ public enum SessionLogOfferOutcome
     Declined,
 }
 
+/// <summary>Holds a session's log for a one-time keep-or-discard choice, dropping it if declined or out of time.</summary>
 public sealed class SessionLogOffer
 {
     private readonly long _closesAtUtcTicks;

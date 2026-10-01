@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>Parses a dice expression and optional label into a tree, enforcing the length and nesting limits.</summary>
 internal sealed class RollParser
 {
     private readonly RollCursor _cursor;

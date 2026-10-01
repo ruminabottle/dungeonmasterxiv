@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Services;
 
+/// <summary>Acts on the /dmx command's arguments: settings opens settings, anything else toggles the main window.</summary>
 public sealed class CommandDispatcher
 {
     private const string SettingsArgument = "settings";

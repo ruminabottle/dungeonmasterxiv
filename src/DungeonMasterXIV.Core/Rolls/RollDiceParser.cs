@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>Parses the die size and modifiers that follow the d in a dice term, checking the dice limits.</summary>
 internal static class RollDiceParser
 {
     public static RollParse ParseDice(RollCursor cursor, RollLimits limits, int count)
@@ -172,5 +173,6 @@ internal static class RollDiceParser
     private static ModifierParse Bad(RollCursor cursor, string expected) =>
         new(null, RollFault.Malformed, $"Expected {expected} at position {cursor.Position}.");
 
+    /// <summary>The result of reading one dice modifier: the updated modifiers, nothing if none follows, or a fault.</summary>
     private readonly record struct ModifierParse(DiceModifiers? Modifiers, RollFault Fault, string? Message);
 }

@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Keeps retained session logs as one .log.txt file per campaign in a directory.</summary>
 public sealed class RetainedLogFileArchive(string directory) : IRetainedLogArchive
 {
     private const string Extension = ".log.txt";

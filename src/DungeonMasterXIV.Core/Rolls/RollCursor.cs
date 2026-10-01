@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>Steps through a dice expression's text, skipping whitespace, taking characters and reading numbers.</summary>
 internal sealed class RollCursor(string text)
 {
     private readonly string _text = text;

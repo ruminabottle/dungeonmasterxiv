@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Serializes and parses the single-file campaign store, refusing a newer schema version.</summary>
 public static class CampaignDocumentCodec
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };

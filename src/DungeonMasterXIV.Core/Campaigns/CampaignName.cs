@@ -3,6 +3,7 @@ using System.Globalization;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Names a campaign: its stored name, or its local creation date and time without a weekday.</summary>
 public static class CampaignName
 {
     public static string For(Campaign campaign)

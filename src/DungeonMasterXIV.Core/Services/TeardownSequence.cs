@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Services;
 
+/// <summary>Collects named undo steps and runs them in reverse order, reporting each step that throws.</summary>
 public sealed class TeardownSequence
 {
     private readonly Stack<(string Name, Action Undo)> _steps = new();

@@ -4,6 +4,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Chat;
 
+/// <summary>The result of checking a chat message: the trimmed text if accepted, otherwise a fault and a reason.</summary>
 public readonly record struct MessageDraft(string? Text, MessageFault Fault, string? Reason)
 {
     public bool IsAccepted => Fault == MessageFault.None;

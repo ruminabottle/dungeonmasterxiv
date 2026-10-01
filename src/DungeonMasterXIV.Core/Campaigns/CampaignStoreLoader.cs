@@ -4,6 +4,7 @@ using System.IO;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Loads campaigns from an archive, first moving any single-file store into one file per campaign.</summary>
 public static class CampaignStoreLoader
 {
     public static CampaignLoadResult Load(ICampaignArchive archive, ICampaignStoreLog log)

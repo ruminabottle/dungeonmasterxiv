@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>The running state of one roll: the dice rolled so far, the work limit, and the first fault hit.</summary>
 internal sealed class RollEvaluation(IDieRoller roller, RollLimits limits)
 {
     private readonly List<RolledDie> _dice = [];

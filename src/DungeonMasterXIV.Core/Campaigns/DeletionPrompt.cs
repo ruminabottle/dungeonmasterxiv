@@ -2,8 +2,10 @@ using System;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Holds one pending campaign or file deletion until it is confirmed or cancelled.</summary>
 public sealed class DeletionPrompt
 {
+    /// <summary>The campaign or file a deletion prompt is waiting to delete.</summary>
     private readonly record struct Target(Guid? CampaignId, string? FileName);
 
     private readonly Action<Guid> _deleteCampaign;

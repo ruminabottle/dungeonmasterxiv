@@ -4,6 +4,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Resolves a claimed participant identifier against a campaign's participants into a relink claim.</summary>
 public static class CampaignRelink
 {
     public static RelinkClaim Resolve(Campaign? campaign, string? claimedParticipantId)

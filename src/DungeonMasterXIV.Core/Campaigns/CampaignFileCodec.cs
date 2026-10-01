@@ -2,6 +2,7 @@ using System.Text.Json;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Converts one campaign to and from its own JSON file, refusing a newer schema version.</summary>
 public static class CampaignFileCodec
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };

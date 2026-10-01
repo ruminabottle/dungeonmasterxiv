@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Keeps campaign files in a directory, reading, writing and deleting only files it recognises.</summary>
 public sealed class CampaignFileArchive : ICampaignArchive
 {
     private readonly DirectoryInfo _directory;

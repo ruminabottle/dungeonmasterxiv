@@ -5,6 +5,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Writes a session log as a header and tab-separated escaped lines, and summarises its contents.</summary>
 public static class RetainedLogFormat
 {
     public const string Header = "# DungeonMasterXIV session log";

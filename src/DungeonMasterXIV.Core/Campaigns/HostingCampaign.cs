@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Holds the campaign chosen for hosting and the one in use, creating a new one if none was chosen.</summary>
 public sealed class HostingCampaign
 {
     private readonly CampaignStore _store;

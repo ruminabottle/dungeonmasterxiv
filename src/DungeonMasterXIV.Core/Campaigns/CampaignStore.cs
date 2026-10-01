@@ -5,6 +5,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Campaigns;
 
+/// <summary>Loads campaigns from an archive, then creates, changes, saves and deletes them, counting changes.</summary>
 public sealed class CampaignStore
 {
     private readonly ICampaignArchive _archive;

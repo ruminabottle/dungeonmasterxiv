@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>Evaluates a dice expression into a total and its dice, or a fault, using an injected die roller.</summary>
 public sealed class RollEvaluator
 {
     private readonly IDieRoller _roller;

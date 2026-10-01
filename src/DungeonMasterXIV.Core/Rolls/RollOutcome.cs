@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Rolls;
 
+/// <summary>The result of a roll: the total, dice, label and any notice, or the fault and message if refused.</summary>
 public sealed record RollOutcome
 {
     private RollOutcome()
