@@ -73,8 +73,8 @@ state of any kind (product-overview D-2).
 
 - A player enters a code and requests to join. This is a human action in the plugin; nothing is
   automatic.
-- The DM sees a prompt showing the requester's **chosen display name alongside the key fingerprint**,
-  with accept and deny. The plugin reads no chat, so a display name is something the player chose to
+- The DM sees a prompt showing the requester's **chosen display name**, with accept and deny. The
+  request reaches the host encrypted (R-1.3m). The plugin reads no chat, so a display name is something the player chose to
   send; showing it lets the DM tell who is knocking. What the name may and may not do is R-1.3e.
 - Nothing flows to a requesting client before the DM accepts. A denied or pending client receives no
   roster, no state and no events: not a filtered view, nothing (R-1.3b).
@@ -88,7 +88,7 @@ state of any kind (product-overview D-2).
 
 **Acceptance criteria**
 - **A-1.2** A player entering the code causes the DM to see a prompt identifying the requester by
-  their chosen display name alongside the key fingerprint, with accept and deny.
+  their chosen display name, with accept and deny.
 - **A-1.3** On accept, the player's client shows it is in the session. On its own this is a
   self-report, so it is bounded by A-1.3a.
 - **A-1.3a** On accept, session state actually flows to that client: roster, events, the picture the
@@ -96,158 +96,27 @@ state of any kind (product-overview D-2).
   client showing "you are in the session" while nothing reaches it fails.
 - **A-1.4** On deny, the player's client says so and receives no session state whatsoever.
 
-### R-1.3a The fingerprint must be compared, not displayed
+### R-1.3m Keys first, then an encrypted join request
 
-The key exchange (product-overview D-11) puts a fingerprint on the admission prompt. That fingerprint
-**is the entire defence against interception**: admission protects a session only if the DM can tell
-the right key from a substituted one. A forgeable or unread fingerprint does not make encryption
-slightly weaker; it inverts the guarantee while the UI keeps claiming it holds.
+**The joiner and the host exchange keys before the join request is sent, so the request travels
+encrypted.**
 
-- **Rendering:** the R-1.2a alphabet, in groups of three. One speakable alphabet for the whole
-  product.
-- **One fingerprint, derived from both public keys together, shown identically on both screens.** Not
-  two fingerprints:
-  - One thing to read aloud, not two. Two doubles the reading and halves the chance anyone finishes.
-  - Nobody can verify one direction and forget the other.
-  - It is symmetric: either party reads it out and the other confirms.
-- **Interaction.** The admission prompt **requires the DM to actively confirm** that the fingerprint
-  matches what the joining player told them: a deliberate act, not a displayed string and not a
-  pre-ticked box.
-- The comparison happens **out of band** (voice chat, Discord, whatever the group already uses). The
-  plugin cannot carry it, because a channel an attacker controls cannot verify that attacker. The UI
-  says this in plain words.
-- A DM **may admit without comparing**; a session is not blocked on a step some groups will skip. That
-  admission is recorded and shown as unverified, and the UI never describes that session as protected
-  against interception.
-- The ceiling that sized the fingerprint: **a DM will read aloud roughly eight to twelve characters
-  before people start skipping the step**, and a skipped check is worse than an absent one because
-  the UI records that it happened. If a security floor ever exceeds that ceiling, it is a product
-  conflict to resolve with a different comparison mechanism or an honest statement of the defence's
-  limits, never by picking a number in the middle.
+- The joining client sends a hello carrying a fresh public key, and the host answers with its own
+  (product-overview D-11). Both derive the session key before anything identifying is sent.
+- The join request, carrying the display name and any stored participant ID (R-1.5b), is sealed
+  under that key. **The relay never sees a name or a participant ID.**
+- The key exchange is not session traffic. An unadmitted client still receives none (R-1.3b).
+- **Nothing is compared, and nothing claims to have been.** No fingerprint is shown and the prompt has
+  no confirmation control. With no comparison, a relay that actively substitutes keys could read a
+  session; a passive relay, a leaked log or a seized server cannot. That risk is accepted, and no
+  copy implies otherwise (R-1.7).
 
 **Acceptance criteria**
-- **A-1.3f-2** The combined fingerprint differs if either public key is substituted, in both
-  directions independently.
-- **A-1.3f-4** The same fingerprint is visible on both screens at the moment of comparison, in the
-  R-1.2a alphabet, grouped three-three-three-two.
-
-### R-1.3a-i The joiner can compare before the DM decides
-
-- The host's public key reaches the joining client **before** admission, and the joining client can
-  compute and display the combined fingerprint before the decision is made, not as part of learning
-  the outcome (product-overview D-11).
-- **A confirmation control the counterparty cannot take part in is a false control**, worse than none
-  because it records success. The DM's prompt never offers a "the code matched what they read to me"
-  affirmation where the joiner has nothing to read.
-- Whether the host key travels as a new field or a new message is an engineering choice. It is
-  additive either way (product-overview D-14).
-- **Failing safe is not silence.** If the host key is unavailable when the prompt is shown, the
-  prompt says the check cannot be performed rather than presenting an unverifiable value. Admitting
-  without comparing stays available on R-1.3a's terms.
-
-**Acceptance criteria**
-- **A-1.3f-1** The joining client can compute the combined fingerprint before it has been admitted. A
-  run in which a joiner is admitted without the host's public key having reached that client
-  beforehand fails.
-
-### R-1.3a-ii A security control does not silently survive a peer that ignored it
-
-Receivers ignore messages they do not recognise (product-overview D-14), which keeps old plugins
-working. When an additive message **carries a security control**, the sender cannot tell "the peer
-acted on this" from "the peer ignored it". So, for any control whose validity depends on a peer
-having received an additive message:
-
-- **The control does not present as performed unless the peer's participation has been
-  established.** Presenting it on the strength of having *sent* the message is a false control,
-  whatever the reason the peer could not take part.
-- How participation is established is an engineering choice: suppressing or qualifying the control
-  when participation is unknown satisfies this, and so does an acknowledgement round trip.
-- This does not weaken the rule that unknown messages are ignored. A security-relevant additive
-  message needs its degraded case designed rather than inherited.
-
-**Fingerprint length and prompt expiry are a pair, and this requirement owns the pairing.**
-
-- The fingerprint is **eleven characters (about 50.4 bits)**, in the R-1.2a alphabet, grouped
-  three-three-three-two. The length is this requirement's; the alphabet is R-1.2a's.
-- The admission prompt **expires** after the window R-1.3l sets. What is required here is that the
-  window is bounded at all: a prompt left open while a client runs overnight must not exist. Against
-  a prompt that expires, grinding a second preimage at this length is hopeless.
-- **If the expiry is ever removed, the fingerprint must go to 14 characters** (64 bits) and the
-  usability problem returns. Do not change one without the other.
-
-**Acceptance criteria**
-- **A-1.2f** The confirmation control is suppressed or qualified when the joining client **could not
-  compare**. A build offering an unqualified confirmation against a client that received no host key
-  fails. The criterion is conditioned on that fact, never on the presence of a receipt: absence of a
-  receipt does not discharge it (R-1.3a-iii). Because no state-2 producer exists today (R-1.3a-iv),
-  the "qualified" branch is the live one and suppression cannot legitimately fire.
-- **A-1.3f-3** In no session is a confirmation control offered for a comparison the counterparty did
-  not have the means to perform. Whether a joiner holds the key depends on the **peer's version at
-  runtime**, so this is judged per session, not per build.
-
-### R-1.3a-iii Capability may be signalled; human action may not
-
-- **A signal that the joining client COULD compare is legitimate.** It is a protocol fact (the client
-  received the host key and rendered a fingerprint), and it is how R-1.3a-ii distinguishes an old
-  build that ignored the host key from one that did not.
-- **A signal that the joining human DID compare is forbidden.** It would travel the same channel an
-  attacker who substituted the host key controls, so it can be forged exactly when it matters.
-- The DM's UI **may** suppress or qualify the confirmation control when the joiner's client could not
-  compare.
-- The DM's UI **must never** state or imply that the joining person compared, checked, confirmed or
-  agreed. No copy, tick or icon that reads as it. A capability signal is never rendered as an action
-  signal.
-- What the DM confirms is their own out-of-band comparison, unchanged.
-
-**Silence is not evidence, in either direction.** A missing receipt can mean an old client that sends
-none (cannot compare), a relay that lost it (unknowable), or a fast admission that closed the send
-window before the joiner processed the host key (can compare, and did). A host admitting 171ms before
-the joiner processed the host key produced exactly the third case.
-
-- The UI asserts neither direction it has not established: not that the joiner compared, and not that
-  it could not. Suppressing the control *on the grounds that the joiner could not compare*, from
-  silence alone, asserts the second.
-- **A third state is required: not established**, distinct from both. Its look is an engineering
-  choice.
-- Suppression is not the safe default it appears to be: in the fast-admission case the joiner can
-  compare, so suppression buys no security, and a control that is usually suppressed teaches DMs to
-  ignore it.
-
-**Acceptance criteria**
-- **A-1.2e** No UI states or implies that the joining person compared, checked or confirmed the
-  fingerprint. A capability signal rendered where a DM reads it as an action signal fails. Judged by a
-  reader shown only the DM's screen and asked what the joiner did.
-- **A-1.2o** Where the host has not established whether the joiner could compare, the UI says so and
-  asserts neither direction. Implying they compared and implying they could not each fail separately.
-- **A-1.2p** A fast admission does not by itself degrade the reported verification state. Admit
-  before the joiner processes the host key and assert the DM is not told the joiner could not compare.
-  A build in which clicking faster degrades the reported state fails. This is a forced-timing case.
-
-### R-1.3a-iv What the three states name
-
-The state is **what the host has established about the joiner's capability at the moment of the
-decision**: not what is true of the joiner, but what the host has grounds to assert. How it is
-represented is an engineering choice.
-
-1. **Established capable:** positive evidence the joiner held the host key and could render the
-   fingerprint.
-2. **Established incapable:** positive evidence it could not.
-3. **Not established:** neither. **This is the default and initial state.**
-
-- A representation whose zero value means *incapable* fails by construction: absence and incapability
-  would share one value.
-- A state is entered only on positive evidence: never from silence, a timeout, or elapsed time.
-- Nothing reaches state 2 by exhausting state 3. "We waited and heard nothing" is state 3 held longer.
-- **State 2 has no producer today, and that is correct.** The protocol version cannot distinguish the
-  case: an old client that ignores the additive message carries the same version and connects
-  normally (R-1.7b). So the reachable states are two, and a build that suppresses the control is
-  asserting state 2 without a producer for it.
-
-**Acceptance criteria**
-- **A-1.2q** The initial and default state is not established. Asserted before any evidence arrives,
-  which is where a two-valued type gives itself away.
-- **A-1.2r** No path reaches established incapable without positive evidence. Silence, a timeout and
-  elapsed time each fail, including in a run where the wait is long.
+- **A-1.3m-1** No frame the relay receives during a join carries the display name or a participant ID
+  in plaintext. Assessed over what the relay receives, with a recognisable name and a known stored
+  participant ID.
+- **A-1.3m-2** The DM's prompt and the joiner's screen show no fingerprint and no comparison or
+  confirmation control.
 
 ### R-1.3b Denial is a message, and an unadmitted client receives nothing
 
@@ -299,18 +168,13 @@ when it ends.** "It didn't work" is not an answer a person can act on.
 - **A-1.5h** A lapsed request is reported as lapsed, never as denied, and can be re-requested without
   a new code.
 
-### R-1.3d The fingerprint is the one security-bearing identifier
+### R-1.3d-1 Telling requests apart
 
-- The key fingerprint is the single security-bearing identifier at admission, and **there is exactly
-  one value both parties read aloud** (R-1.3a). A second mutual read-aloud value is not added.
-- The prompt names a requester by display name plus fingerprint (R-1.3e), not by a session-scoped
-  code. The fingerprint is per key, so it already tells two concurrent requests apart, including two
-  that send the same display name.
-- If a per-requester **peer code** exists, its job is only to tell concurrent pending requests apart on
-  the DM's screen. The joiner need not see it. It is session-scoped (the same person in two sessions
-  does not present the same value), not derivable from a character name or account, not stable across
-  campaigns, and absent from every export (A-1.11c). Whether one exists is an engineering choice.
-- Any future need for the joiner to see a shared label is a new product decision.
+- Two concurrent requests, including two that send the same display name, are told apart on the DM's
+  screen by a short per-request label (a peer code). The joiner need not see it.
+- The label is session-scoped (the same person in two sessions does not present the same value), not
+  derivable from a character name or account, not stable across campaigns, and absent from every
+  export (A-1.11c).
 
 **Acceptance criteria**
 - **A-1.2a** No identifier the admission prompt or roster uses links a participant across two
@@ -318,22 +182,20 @@ when it ends.** "It didn't work" is not an answer a person can act on.
 
 ### R-1.3e The display name is shown, and never authenticates
 
-- **The admission prompt shows the requester's chosen display name alongside the key fingerprint.**
-  Both, together. The name defaults to the character name and may be changed to an alias.
+- **The admission prompt shows the requester's chosen display name.** The name defaults to the
+  character name and may be changed to an alias.
 - **A participant can see and change the name they will send, before it is sent, pre-filled with
   their character name.** The default is allowed only because the alternative exists; with no way to
-  change it, nothing is "chosen", and the product's disclosure copy (R-1.7) becomes false.
+  change it, nothing is "chosen".
 - **The choice lives in the join flow, not in settings.** A user who never opens settings never
   learns what is about to be sent on their behalf. Settings may hold a persistent default that
   pre-fills the join-flow field; they may not replace it. The general rule: *a control that protects
   against something the user does not know about must appear on the path they are already taking.*
 - Persistence across sessions and per-campaign aliases belong to the rolls area (rolls R-2.17); the
   minimum here is see it, change it, before it is sent.
-- **The limitation is stated in the UI** and never papered over (product-overview D-8).
-- **The name is never what the DM authenticates on.** It is self-declared, unverified and trivially
-  spoofable; the fingerprint is the security-bearing element. A prompt showing a name and hiding the
-  fingerprint fails, and so does one showing the fingerprint so quietly that the name is what the DM
-  acts on.
+- **A name never admits anyone.** It is self-declared, unverified and trivially spoofable. The DM
+  admits people they arranged to play with; a returning player is recognised by their stored
+  participant ID (R-1.5f) or by the DM (R-1.5e), never by a name match.
 - **Two requesters may send the same display name.** The prompt stays unambiguous when they do.
 - **Refused and absent never render the same.** "Did not give a name" invites suspicion; "the name was
   rejected" invites a question. A name a person gave and the rules refused is never reported as a name
@@ -345,10 +207,6 @@ when it ends.** "It didn't work" is not an answer a person can act on.
 - Names stay campaign-scoped and are barred from exports (product-overview D-8).
 
 **Acceptance criteria**
-- **A-1.2b** The admission prompt shows the display name **and** the key fingerprint. A prompt
-  rendering the name without the fingerprint fails.
-- **A-1.2c** A prompt that de-emphasises the fingerprint relative to the name fails. Judged by a person
-  who was not told which value matters.
 - **A-1.2d** Two concurrent requesters sending the same display name remain distinguishable to the DM,
   and admitting one does not admit the other.
 - **A-1.2g** A player can see and change the name they will send, before it is sent, pre-filled with
@@ -356,8 +214,6 @@ when it ends.** "It didn't work" is not an answer a person can act on.
   value sent with no way to change it; a blank rather than pre-filled field; a change made after the
   name is on the wire; a settings value that never reaches the wire. Asserted on what leaves the
   client.
-- **A-1.2h** The UI states that the name sent is the player's choice and defaults to their character
-  name.
 - **A-1.2n** The name that will be sent is shown, editable, in the join flow, on the screen the user
   is already on when they join. A build whose only name control is in settings fails.
 - **A-1.2y** Refused and absent never render the same, anywhere. Supply a character name the rules
@@ -486,9 +342,9 @@ language a person speaks** (product-overview D-8).
    blank where a name is required. `U+3164 HANGUL FILLER` is a letter and `U+2800 BRAILLE BLANK` is a
    symbol, which is why this is an allowlist and not a denylist.
 2. **A name cannot alter, forge or displace the text around it.** A line break (including `U+2028`) or
-   a bidirectional override can push the fingerprint out of the DM's eyeline or reorder what they read.
-   That is the substitution attack arriving through the one field an attacker controls.
-3. **Bounded in length, so the fingerprint stays visible beside it.** The bound is **32 grapheme
+   a bidirectional override can push the request label or the controls out of the DM's eyeline, or
+   reorder what they read, through the one field a requester controls.
+3. **Bounded in length, so the prompt stays readable beside it.** The bound is **32 grapheme
    clusters**, counted in a unit that does not vary by script. Code units would refuse a Vietnamese or
    Devanagari name that a Japanese name of the same visible length passes. **The rule behind the
    number: the limit never rejects a name FFXIV itself permits**, because the character name is the
@@ -509,7 +365,7 @@ language a person speaks** (product-overview D-8).
    - A blocklist leaks (`D.M.`, `the DM`, small caps, homoglyphs). Reserved names close the obvious
      case cheaply; the session role (rolls R-2.7a) carries the guarantee. Neither alone suffices.
 
-- An unreadable or look-alike name cannot admit anyone, because the fingerprint authenticates. The
+- An unreadable or look-alike name cannot admit anyone, because a name never admits anyone. The
   worst case is a DM asking "who is this?", and the recourse is to deny, which costs nothing. A social
   product solves a social problem socially, not by refusing a script.
 - **A refusal is visible, and nothing alters the user's name silently.** Refusing loudly beats
@@ -525,8 +381,8 @@ language a person speaks** (product-overview D-8).
 - **A-1.2j** The check refuses a name that renders as nothing, including `U+3164` and `U+2800`.
 - **A-1.2k** The check refuses a name that can alter, forge or displace surrounding text: line
   separators including `U+2028`, and bidirectional overrides.
-- **A-1.2l** A name long enough to displace the fingerprint is refused, and the fingerprint stays
-  visible beside the longest accepted name.
+- **A-1.2l** A name long enough to displace the request label or the controls is refused, and both
+  stay visible beside the longest accepted name.
 - **A-1.2m** The check accepts a name in a non-Latin script: Japanese, Korean, Cyrillic and Arabic
   each pass, each a separate failure.
 - **A-1.2s** Two names of the same perceived length are treated the same way whatever their script. A
@@ -540,7 +396,7 @@ language a person speaks** (product-overview D-8).
   independently of the production constant, so changing that constant makes the boundary check fail.
 - **A-1.2v** A name refused for length is refused **visibly**: never silently truncated, never
   silently dropped, and no layer silently stops accepting input. The words are an engineering choice
-  under R-1.7a's constraints.
+  under R-1.7's constraints.
 - **A-1.2v-1** "Silently" describes the **alteration**, not the result. Displaying a cut name does not
   satisfy A-1.2v: the user must be told an alteration happened.
 - **A-1.2v-2** A stored display name is never rewritten without the user having changed it. Load a
@@ -609,31 +465,29 @@ Grace, then a clean end. Not an instant kick, and not an indefinite freeze.
 - **A-1.7** Letting the grace window expire ends the session on every client, stated plainly, with no
   stale data shown as live.
 
-### R-1.5 Relink: every session, DM-approved
+### R-1.5 Relink: DM-approved unless the DM lets returning players in
 
 - A client's identifier is fresh on every plugin launch (product-overview D-8).
 - A returning player in a known campaign is offered relink to their existing participant UUID.
-- **The DM approves every relink, every session.** Relink is never silent, never automatic, and never
-  inferred from a character name.
-- Until relink is approved, that client is not in the session.
-- **While relink cannot be completed end to end, that is a known limitation and it is stated.** A
-  build that has never delivered relink, and offers no control claiming it, regresses nothing and
-  claims nothing by shipping without it, provided the limitation is disclosed (release notes, and the
-  host-flow picker per R-1.5d; product-overview D-18). Disclosure does not make the criteria below
-  met.
+- **The DM approves every relink, every session, unless they have turned on "Let them straight in"
+  for that campaign (R-1.5f).** Relink is never inferred from a character name.
+- Until relink is approved or automatically admitted, that client is not in the session.
+- A build that has never delivered relink, and offers no control claiming it, claims nothing by
+  shipping without it (product-overview D-18). That does not make the criteria below met.
 
 **Acceptance criteria**
-- **A-1.9** A returning player is offered relink and receives no state until the DM approves it.
+- **A-1.9** With "Ask me each time", a returning player is offered relink and receives no state until
+  the DM approves it.
 - **A-1.9a** A relink claim is **sent** by the joiner, **read** on arrival, **resolved**, and **reaches
-  the DM's approval path**, and each of the four fails separately. A build that sends a claim nobody
+  the DM's approval path** (or R-1.5f's automatic admission), and each of the four fails separately. A build that sends a claim nobody
   reads fails as surely as one that sends nothing, with nothing null, nothing thrown and no existing
   test red.
 
 ### R-1.5a Resuming is not relinking: the key says who, the window says how long
 
     same key, within 5 minutes   ->  resumes, no re-approval
-    same key, after 5 minutes    ->  relink, full approval (product-overview D-8)
-    different key, any time      ->  relink, full approval
+    same key, after 5 minutes    ->  relink (product-overview D-8; approval per R-1.5f)
+    different key, any time      ->  relink (approval per R-1.5f)
     deliberate quit              ->  removed immediately; returning means a new key, so relink
 
 Two questions, two mechanisms (product-overview D-17):
@@ -651,10 +505,9 @@ Two questions, two mechanisms (product-overview D-17):
   ghost**, as in Foundry VTT's defect foundryvtt#13161 (a disconnected user "active" and unable to
   rejoin for over ten minutes). The case is common: a crash-and-relaunch produces a fresh key, so it
   is a relink, not a resume.
-- **A crash costs a DM re-approval, and that is the design working.** A fresh launch means a fresh
-  key, a fresh key means a relink, and a relink means the DM approves. That is the price of refusing
-  a portable identifier (product-overview D-8). Persisting an identifier across launches to smooth
-  this would undo that decision.
+- **A crash means a relink, not a resume.** A fresh launch means a fresh key, and a fresh key means a
+  relink: the DM approves it, or R-1.5f admits it. Persisting a key across launches to turn it into a
+  resume would build the portable identifier product-overview D-8 refuses.
 - **The host must learn that a connection dropped, and the relay may tell it.** The seat clock cannot
   start, and a member cannot be shown as reconnecting, unless the host learns the link is gone; it
   must not infer this from silence. A dropped connection is a transport fact, and the relay is the only
@@ -677,7 +530,7 @@ Two questions, two mechanisms (product-overview D-17):
 **Acceptance criteria**
 - **A-1.19** A client holding the same key pair, returning within the window, resumes with no DM
   re-approval, and the DM is not prompted at all.
-- **A-1.20** The same client returning after the window relinks, with full approval. Resuming silently
+- **A-1.20** The same client returning after the window relinks, under R-1.5f's setting. Resuming silently
   after the window fails. The window must be settable for this to be testable.
 - **A-1.21** A client presenting a different key relinks at any time, however soon it returns.
 - **A-1.22** A client that presents the public key but cannot prove possession does **not** resume.
@@ -713,21 +566,32 @@ Two questions, two mechanisms (product-overview D-17):
 - **Retention is unbounded: no expiry, no timer.** The rule guards against linkage across campaigns,
   not duration within one; a clock protects nothing and breaks relink for a campaign that meets
   monthly. A number appearing in this requirement means something has gone wrong.
-- **The player may delete their own participant UUID, per campaign, without the DM's involvement and
-  without the DM being told.** The DM can delete a campaign outright (R-1.6); the subject of an
+- **The unit is the stored entry, not the campaign.** The joiner cannot know a campaign's identity,
+  and telling it one would hand it an identifier linking the player across codes (product-overview
+  D-8, A-1.11). A campaign whose code changed at resume (R-1.2a) therefore leaves one entry per code,
+  and the player sees and deletes each on its own.
+- **The player may delete their own participant UUID, per stored entry, without the DM's involvement
+  and without the DM being told.** The DM can delete a campaign outright (R-1.6); the subject of an
   identifier needs the same control over their own copy.
 - **No notification to the DM.** One would manufacture a signal linking a deletion to a player. The DM
   learns when relink is not offered.
 - **Deleting ends the possibility of relink, and the player is told so before the deletion**: they
   will rejoin as a new participant needing fresh approval. The less a user understands what they are
   destroying, the more friction the destruction gets, so this is never a one-click delete.
-- **A player can see what they are storing, per campaign, before deleting it.** You cannot meaningfully
-  delete what you cannot see.
+- **A player can see what they are storing, per stored entry, before deleting it.** Each entry shows
+  the session code it was stored under and when. You cannot meaningfully delete what you cannot see.
+- **Deleting lives in settings, under "User storage", and nowhere else.** The session panel, the join
+  flow and the roster never offer it. It is kept separate from the DM's campaign storage (R-1.6).
+- **Relink is offered only under the code it was stored under.** A returning player whose DM's code
+  changed has no matching entry and is not offered relink; the DM recognises them instead (R-1.5e).
 
 **Acceptance criteria**
-- **A-1.9b** A player can list what their client stores per campaign, and delete one campaign's
-  participant UUID without the DM's involvement. Afterwards no file on their disk contains that UUID. Offering deletion
+- **A-1.9b** A player can list what their client stores, one row per stored entry showing its
+  session code and when it was stored, and delete one entry's participant UUID without the DM's
+  involvement. Afterwards no file on their disk contains that UUID. Offering deletion
   without first showing what is stored fails.
+- **A-1.9b-1** No control that deletes stored participant IDs is reachable from the session panel,
+  the join flow or the roster. It is in settings, separate from campaign storage.
 - **A-1.9c** The player is told, before the deletion completes, that relink will no longer be possible
   and that they will rejoin as a new participant needing fresh DM approval. A one-click irreversible
   delete fails.
@@ -751,8 +615,10 @@ Constraints on the conveyance:
 - **Only to the joiner it belongs to.** The UUID is the relink claim; a participant holding another's
   could present it and the DM would see a plausible returning player (product-overview D-13, R-1.3f).
 - **After admission, never before** (R-1.3b).
-- **It need not be unforgeable.** Relink is DM-approved every time, so the DM is the check and the UUID
-  is not a bearer token. Resumption's proof of possession (R-1.5a) governs a different path.
+- **It is a credential when the DM lets returning players in (R-1.5f).** It is random (no less than
+  122 bits), only ever sent encrypted (R-1.3m), and only ever told to its owner. Anyone who copies a
+  player's stored copy can get in as that player while the setting is on; turning the setting off
+  ends that. Resumption's proof of possession (R-1.5a) governs a different path.
 - The carrier is an engineering choice, and additive (product-overview D-14).
 - **The player's deletion does not propagate to the host.** The player deletes their copy; the host
   keeps its own under R-1.6. With no copy to present, the player cannot relink, which is what deletion
@@ -778,18 +644,13 @@ Constraints on the conveyance:
 - **When prior campaigns exist, resuming one is reachable from the host flow without navigating
   away.** Pure auto-create would silently give a DM resuming last week's game a new campaign and lose
   the roster, which is the failure the product exists to remove.
-- **The picker never offers continuity the build cannot deliver** (product-overview D-18). Any of three
-  answers is acceptable, and the choice is an engineering one:
-  1. ship participant creation that gives a resumed campaign a real roster;
-  2. have the host flow not offer resumption while it cannot honour it; or
-  3. **disclose it at the picker itself**, where the false belief would form. A release note is not
-     sufficient.
+- **The picker never claims continuity the build cannot deliver** (product-overview D-18). It need
+  not explain what it cannot do; it must not say it restores players when it does not.
 - **A resumed roster must not grow by one duplicate entry per join.** A participant appended with a
   fresh id on every admission makes a four-person weekly game hold eight entries after a fortnight and
   sixteen after a month, all bearing the same labels. That replaces an empty roster with one that is
-  wrong, gets wronger, and cannot be seen to be false. Answer 1 does not discharge the rule unless
-  repeats are recognised; the DM recognises them by mapping an arriving joiner onto an existing entry
-  (R-1.5e).
+  wrong, gets wronger, and cannot be seen to be false. Repeats are recognised by the stored
+  participant ID (R-1.5f) or by the DM mapping an arriving joiner onto an existing entry (R-1.5e).
 - **Do not "fix" the empty roster by minting participants at the picker.** No durable joiner identity
   exists (joiner keys are per request, a peer code is per session, a display name is not an identity,
   and the participant id is only as durable as the joiner's retained copy, A-1.9g). Minting produces
@@ -797,15 +658,6 @@ Constraints on the conveyance:
   person, so no later migration can repair the file. **An empty, honest roster is the correct state**,
   not a gap. What is required here is the campaign half; recognising the same person automatically is
   relink (R-1.5).
-- **The picker's disclosure, literal**, shown at the control:
-
-  > Resuming keeps this campaign, but not its players. Everyone arrives as someone new, and the
-  > roster stays empty until recognising returning players is built. Nothing has been lost.
-
-  Punctuation is not load-bearing; the three claims are, one per sentence: resumption will not restore
-  participants; the state is empty **and** temporary; the campaign is intact (a missing feature, not
-  lost data). Do not add "...and you will admit them again": the DM admits every joiner every session
-  regardless, so naming it misdescribes what is missing.
 - **An auto-created campaign is recognisable to its own DM a week later without them having typed
   anything, and is renameable.** A GUID or an empty label fails.
 - **Its name is the creation date, then the clock time**, rendered in the reader's culture at the
@@ -850,9 +702,6 @@ Constraints on the conveyance:
   weekday and no prefix naming it a session, rendered in the reader's culture. A `Session of…` prefix
   fails; a coarse period such as "evening" fails. Verified against the shipped build, not against this
   document.
-- **A-1.9l** The picker states, at the control, that a resumed campaign's roster is empty until relink
-  exists, and **its absence fails**. Presence and placement are checked mechanically, so a later change
-  cannot quietly remove it.
 - **A-1.9m** No participant is minted to populate a resumed campaign's roster; a build that creates
   participants at the picker fails. This is about **where** a participant is minted, not whether:
   A-1.9f requires admission to mint one. The two are a complementary pair over the same operation.
@@ -877,9 +726,6 @@ recognises them instead, at the admission prompt.**
 - **A duplicate the DM chooses is accepted.** A DM who admits a returning person as new has made that
   choice, and R-1.6's list-and-delete is the remedy. The rule against duplicate growth (R-1.5d) is met
   by the product offering the match, not by forcing it.
-- **The picker's disclosure (R-1.5d) changes when this ships.** "The roster stays empty until
-  recognising returning players is built" stops being true once the DM can map; the replacement is
-  written then, under the same rule that each sentence's claim is load-bearing.
 
 **Acceptance criteria**
 - **A-1.9n** Resume a campaign and map a returning player onto their stored entry: the stored roster
@@ -891,6 +737,28 @@ recognises them instead, at the admission prompt.**
 - **A-1.9q** Admitting a joiner as a new player is still one action in a campaign with stored
   participants. A build that requires a mapping choice first fails.
 
+### R-1.5f Returning players: the DM chooses, per campaign
+
+- **Each campaign has a "Returning players" setting: "Ask me each time" (the default) or "Let them
+  straight in".** It is reachable from the host's session window for the current campaign and can be
+  changed mid-session. Its exact place is an engineering choice.
+- **A returning joiner** is one whose encrypted request (R-1.3m) carries a participant ID the
+  campaign store holds for this campaign, for an entry not already seated this session.
+- **Ask me each time:** the prompt names the stored entry the joiner claims. The DM admits them as
+  that entry, as a new player, or as another entry (R-1.5e), or denies them.
+- **Let them straight in:** a returning joiner is admitted as their entry with no prompt, and the DM
+  sees an ordinary join. A joiner with no matching claim is prompted as usual. The DM can still remove
+  anyone.
+- An Assistant cannot change the setting (R-1.3).
+
+**Acceptance criteria**
+- **A-1.9r** With the default setting, a returning joiner is prompted. A build that admits them
+  unprompted by default fails.
+- **A-1.9s** With "Let them straight in", a returning joiner is admitted as their stored entry without
+  a prompt, and a joiner with no matching claim is still prompted.
+- **A-1.9t** An entry already seated is never admitted a second time automatically; the second claim
+  falls to the prompt.
+
 ### R-1.6 The DM's campaign store
 
 - The DM's machine stores, **keyed by a campaign UUID generated locally**: participant UUIDs, the
@@ -901,6 +769,9 @@ recognises them instead, at the admission prompt.**
   machine.
 - **The DM can list every campaign their machine holds and delete one outright.** Afterwards no trace
   of its participants, UUIDs or state remains on disk.
+- **This lives in settings, under "Campaign storage", and nowhere else.** The host flow and the
+  campaign picker never offer deletion. It is kept separate from the player's own storage (R-1.5b).
+  Deleting asks for a deliberate confirmation that states what is lost.
 - Nothing in this store, and nothing exported from it, links a participant across two different session
   codes (product-overview D-8).
 - **What leaves the machine is what the promise is about.** The DM's own local history may hold real
@@ -913,6 +784,8 @@ recognises them instead, at the admission prompt.**
 - **A-1.10** The DM can list every campaign the machine holds, **including files the plugin cannot read
   or parse**, and delete any of them; afterwards no file on disk contains its participants, UUIDs or
   state.
+- **A-1.10a** Campaign deletion is reachable only from settings. A delete control in the host flow or
+  the campaign picker fails.
 - **A-1.11** No export, and nothing sent over the relay, contains an identifier linking a player across
   two different session codes.
 - **A-1.11a** **No exported artefact contains a participant identifier at all**, not one, not for one
@@ -956,78 +829,33 @@ recognises them instead, at the admission prompt.**
 - **A-1.11f** Kill the DM's client while a save is being written: on relaunch the campaign opens with
   either the new state or the previous one, never as unreadable.
 
-### R-1.7 Say what this is, honestly
+### R-1.7 Say nothing false, and explain elsewhere
 
-- The UI states that participants are known to the session by the **display name their client sent**,
-  which defaults to their character name and can be changed to an alias. No copy implies anonymity from
-  other participants, and none implies the choice hides you from your own client.
-- The UI states that the session code is not a secret and admission is what protects the session.
-- Both are requirements, not documentation tasks (product-overview D-8).
+- **The plugin carries no security or privacy explanation and no warnings.** How the session is
+  protected, and what the relay can see, is explained on the published relay policy page (R-1.9), not
+  in the plugin.
+- **Settings carries one link to that page**, and the plugin listing links it too, so it is never
+  more than a couple of steps away.
+- What copy the plugin does have is held to R-1.7a.
 
-### R-1.7a Disclosure copy: the literal strings
-
-Wording here is a product claim. **A string this requirement quotes is used verbatim, and the shipped
-string is byte-identical to it.** Byte identity is what makes a disagreement between this document and
-the build decidable instead of arguable.
-
-**On the session window, where the code is shown:**
-
-> Your session code is not a secret. Anyone who has it can ask to join — you decide who gets in.
-
-**On the admission prompt:**
-
-> The name shown is chosen by the requester, not proof of who they are - the code is. Only admit
-> people you arranged to play with.
-
-It denies the name any authority in the same breath as admitting one is shown. It is two sentences on
-purpose: the prompt's order (headline, fingerprint, out-of-band instruction, unticked confirmation) is
-load-bearing and nothing may push the fingerprint down. "Chosen by the requester" is accurate whether
-they took the default or set an alias.
-
-**In settings, under the heading "What this plugin knows":**
-
-> During a session, this plugin knows who is in the room. The game gives it character names, and
-> nothing can change that. What it does with them is the part we control: names are never written to
-> a log, never included in an export, and never linked between one campaign and another.
->
-> Your session is encrypted end to end, and the relay cannot read what you say inside it. One field
-> is different: the name sent when you ask to join a session travels in the clear, because you and
-> the DM have not yet exchanged keys at that moment. Today that name is your character name, and
-> changing it is not yet built - so asking to join tells the relay operator who you are. The relay
-> can also see that a connection exists, roughly when and how much, and the network address it came
-> from. Encryption hides what you say, not that you are talking.
->
-> Campaign history stays on the DM's machine. There is no account, no server storing your sessions,
-> and nothing to delete anywhere but here.
-
-Hyphen style is the codebase's, not an em dash. The sentence "changing it is not yet built" dates
-itself on purpose and must be updated when the join-flow name choice ships (see Open questions).
+### R-1.7a No false claims
 
 **Forbidden phrasings:** "anonymous", "private", "we can't see anything", "no one can see your
-session", or any claim that the relay cannot correlate sessions. Each is false under product-overview
-D-8, the last even with encryption.
+session", any claim that the relay cannot correlate sessions, or any claim that a session is verified
+or protected against interception (R-1.3m). Each is false under product-overview D-8 or R-1.3m.
 
-- **A ruled string may also live outside this requirement** (the picker disclosure in R-1.5d). This
-  requirement governs exactly the strings it quotes; the test is the quotation, not a list.
-- **Byte-pin where the words are the decision; assert a property where the class is the decision.**
-  Every other user-facing string is engineering-authored under this requirement's constraints: no
-  forbidden phrasing, and no claim that a session is protected when nobody checked. An enumeration
-  binds the strings someone listed and is silent on the next one; a property binds strings that do not
-  exist yet.
-- **A reversal sweeps the shipped strings before it is declared done.** Protecting copy from casual
-  substitution also protects it from correction.
+- **Assert a property, not a list.** Every user-facing string is engineering-authored under this
+  constraint. A property binds strings that do not exist yet; a list binds only the ones someone
+  wrote down.
+- **A reversal sweeps the shipped strings before it is declared done.**
 
 **Acceptance criteria**
-- **A-1.7c** Every string R-1.7a quotes is byte-identical to the shipped string, compared mechanically.
-  A mismatch fails without adjudicating which side is right.
 - **A-1.7d** After any decision that reverses previously specified behaviour, no shipped string still
   describes the old behaviour.
-- **A-1.7e** Every engineering-authored user-facing string meets R-1.7a's constraints: no phrasing from
-  the forbidden list, and no claim that a session is protected when nobody checked. A string asserting
-  protection that was never verified fails, however well written. This covers strings R-1.7a does not
-  quote (the out-of-band instruction, the unverified warning, the read-your-code-aloud prompt, the
-  no-code-to-compare notice, the admitted-uncompared notice, the code-changed warning, and any new
-  one).
+- **A-1.7e** Every user-facing string meets R-1.7a: no phrasing from the forbidden list, and no claim
+  that a session is verified or protected. A string asserting protection fails, however well written.
+- **A-1.7f** Settings links to the published relay policy page, and no screen in the plugin carries
+  a security or privacy explanation.
 
 ### R-1.7b Protocol version is checked at connect, and mismatch is a clear refusal
 
@@ -1101,25 +929,24 @@ D-8, the last even with encryption.
   no connection check) fails, even if promptly shown and correctly categorised. A message may say less
   than it knows, never more. A-1.5b supplies the conditions that exercise this.
 
-### R-1.9 Encrypt it, and say what the relay can still see
+### R-1.9 Encrypt it, and publish what the relay can still see
 
 - Session payloads are end-to-end encrypted between members (product-overview D-11). The relay carries
   ciphertext.
-- The UI states plainly what the relay **can** still observe even so:
+- The published relay policy page (R-1.7) states what the relay **can** still observe even so:
   - that a connection exists;
   - roughly when, and how much;
   - the network address it came from;
-  - **the display name a client sends at join**, which by default is the real character name;
   - **which session code a client is on.**
 - **The session code is plaintext to the relay by necessity: the relay routes on it.** Do not "fix"
   this by encrypting the code; that breaks routing and falsifies nothing.
-- **This requirement is the single source for what the relay can observe.** Any document, policy,
-  README, release note or UI string describing it references R-1.9 rather than restating the list. A
-  restatement is a copy that will not be updated when this one is; the same false claim once lived in
-  three documents that did not cite each other.
+- **This requirement is the single source for what the relay can observe, and the published relay
+  policy is its one public statement.** The policy is updated whenever this list changes. Every other
+  document, README, release note or plugin screen links to the policy rather than restating the
+  list. A restatement is a copy that will not be updated when this one is; the same false claim once
+  lived in three documents that did not cite each other.
 - No copy states or implies that the relay cannot read anything a client sends, and no copy overstates
   the guarantee in either direction. Encryption hides content, not the fact of a conversation.
-- This sits alongside R-1.7's disclosures. Both are requirements, not documentation tasks.
 
 **Acceptance criteria**
 - **A-1.5f** Session payloads reaching the relay are ciphertext; the relay holds no key and can decrypt
@@ -1129,39 +956,27 @@ D-8, the last even with encryption.
   legitimately equals it) leaves it passing.
 - **A-1.5f-b** Fixture values are ones the product can actually generate. A fixture chosen so it cannot
   collide with a real value is chosen so the test cannot discriminate.
-- **A-1.13b** Exactly one place states what the relay can observe, and every other mention is a
-  reference. A second independent statement fails even if currently accurate.
+- **A-1.13b** Outside this spec, only the published relay policy states what the relay can observe,
+  and it matches R-1.9. Every other mention links to it. A second independent statement fails even if
+  currently accurate.
 
 ## Open questions
 
 - Open question: whether five minutes is the right grace and seat window in play is empirical and
   unmeasured. The value is settable (R-1.4, R-1.5a); this blocks nothing.
-- Open question: the settings copy in R-1.7a says "Today that name is your character name, and changing
-  it is not yet built". The join flow now lets a player see and change the name (R-1.3e), so that
-  sentence has reached its own expiry. Replacement wording is a product decision; until it is made,
-  A-1.7c and A-1.7e pull in different directions for that paragraph. The same paragraph also
-  restates what the relay can see ("a connection exists, roughly when and how much, and the network
-  address it came from") and omits the session code, while R-1.9 is the single source for that list
-  and A-1.13b fails any second statement of it. So A-1.7c (the shipped paragraph is byte-identical to
-  the ruled one) and A-1.13b cannot both pass for this paragraph. Whether the copy should reference
-  R-1.9 instead, or carry the full list, is a product decision; it blocks A-1.7c and A-1.13b holding
-  together, and any settings copy change. The same pinned copy says "names are never written to a
-  log": true today, because nothing writes a retained log, but it becomes false if the DM's
-  retained log is built and uses its permission to hold names (product-overview D-8, rolls R-2.12).
 - Open question: a version refusal is a fourth ending under R-1.3c (R-1.7b); its timing bound is not
   specified, so it has no row in R-1.3c's table.
-- Open question: the see-and-delete right is per campaign (R-1.5b, A-1.9b), but the joiner cannot
-  know a campaign's identity and stores its participant UUID under the session code it was admitted on
-  (R-1.5b); the code keys this store by session code, one entry per code. A campaign's code can change
-  at resume (R-1.2a), so one campaign may leave several entries under different codes, and an entry
-  is not the same unit as a campaign. How a per-campaign listing and deletion map onto per-code
-  storage, and whether a returning player is still offered relink when the DM's code has changed, are
-  undecided. It blocks A-1.9b's per-campaign unit and A-1.9 for campaigns whose code moved.
 
 ## Retired IDs
 
-- A-1.3f: superseded by A-1.3f-1, A-1.3f-2, A-1.3f-3 and A-1.3f-4. It said what both parties see but
-  not when, so a build showing the fingerprint only after admission met it.
+- Fingerprint comparison, retired by the connection redesign (2026-10-01-connection-design.md); keys
+  are now exchanged first and nothing is compared (R-1.3m): R-1.3a, R-1.3a-i, R-1.3a-ii,
+  R-1.3a-iii, R-1.3a-iv and R-1.3d; A-1.2b, A-1.2c, A-1.2e, A-1.2f, A-1.2o, A-1.2p, A-1.2q, A-1.2r,
+  A-1.3f-1, A-1.3f-2, A-1.3f-3 and A-1.3f-4. R-1.3d's per-request label survives as R-1.3d-1.
+- In-plugin disclosure copy, retired by the same redesign; explanation moved to the published relay
+  policy (R-1.7): R-1.7a's quoted strings, A-1.2h, A-1.7c and A-1.9l (the picker's literal notice).
+- A-1.3f: superseded by A-1.3f-1, A-1.3f-2, A-1.3f-3 and A-1.3f-4, themselves since retired. It said
+  what both parties see but not when.
 - A-1.5: the NAT-traversal criterion of the abandoned peer-to-peer design, superseded by A-1.5a. No
   traversal technique works behind carrier-grade or symmetric NAT, so the transport became a relay.
 - A-1.5d: withdrawn. A self-hosted relay is an escape hatch, not a tested guarantee (R-1.8).
