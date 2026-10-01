@@ -2,7 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
-/// <summary>Tracks the host's registration of a session code with the relay and the failure if it does not succeed.</summary>
+/// <summary>Tracks hosting from code registration to stop: the phase, the current code and any failure.</summary>
 public sealed class HostSession
 {
     public static readonly TimeSpan RegistrationTimeout = TimeSpan.FromSeconds(10);

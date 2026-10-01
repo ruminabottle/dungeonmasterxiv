@@ -2,7 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
-/// <summary>Handles lost relay connections, running the host and seat grace windows or failing the session.</summary>
+/// <summary>Applies session failures, starting the host or seat grace window or failing hosting and joining.</summary>
 internal sealed class SessionInterruption
 {
     private readonly RelayLink _link;

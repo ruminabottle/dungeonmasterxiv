@@ -2,7 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
-/// <summary>Issues stream stamps with increasing sequence numbers and the current time.</summary>
+/// <summary>Issues stream stamps with increasing sequence numbers and the time its clock function supplies.</summary>
 public sealed class HostSequencer
 {
     private readonly Func<DateTimeOffset> _now;
