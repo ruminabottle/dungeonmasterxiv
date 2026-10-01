@@ -7,7 +7,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>The settings window: window restore, display name, relay address, privacy notes and relink memory.</summary>
+/// <summary>The settings window: window restore, display name, relay address, the relay policy link, and campaign and user storage.</summary>
 public sealed class ConfigWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;
@@ -18,25 +18,15 @@ public sealed class ConfigWindow : Window
 
     private readonly string _schemaVersionLabel;
     private readonly RelinkMemoryView _relinkMemory;
-
-    private static readonly string[] WhatThisPluginKnows =
-    {
-        "During a session, this plugin knows who is in the room. The game gives it character names, "
-        + "and nothing can change that. What it does with them is the part we control: names are "
-        + "never written to a log, never included in an export, and never linked between one "
-        + "campaign and another.",
-        "Your session is encrypted end to end. The relay passes messages between you and cannot "
-        + "read them. It can still see that a connection exists, roughly when and how much, and the "
-        + "network address it came from - encryption hides what you say, not that you are talking.",
-        "Campaign history stays on the DM's machine. There is no account, no server storing your "
-        + "sessions, and nothing to delete anywhere but here.",
-    };
+    private readonly CampaignStorageView _campaignStorage;
 
     private static readonly string UnusableAliasWarning =
         $"This name cannot be used, so your character name will be sent instead. Names are limited "
         + $"to {DisplayName.MaxLength} characters and cannot contain line breaks or invisible "
-        + "formatting characters - they are shown next to the code you compare, and a name that can "
-        + "redraw that line is a way to hide it.";
+        + "formatting characters.";
+
+    private const string RelayPolicyUrl =
+        "https://github.com/ruminabottle/dungeonmasterxiv/blob/main/RELAY-SERVICE-POLICY.md";
 
     private const string NameFieldIsFull =
         "This box is full and will not take any more. If you were still typing, the rest did not go "
@@ -46,11 +36,6 @@ public sealed class ConfigWindow : Window
         "A name is saved with a campaign, and no campaign is open. Until you open or create one, "
         + "you will join as your character name and this box cannot be changed.";
 
-    private const string NameIsNotIdentity =
-        "This name is not checked by anything. Anyone can send any name, so it tells your DM who "
-        + "you say you are and nothing more - the code you read to each other is the part that "
-        + "proves anything.";
-
     private const string InvalidRelayWarning =
         "This is not a usable relay address. It must start with wss:// - or ws:// for a relay "
         + "running on this machine.";
@@ -59,13 +44,15 @@ public sealed class ConfigWindow : Window
         ConfigurationStore configurationStore,
         Func<DisplayName> characterName,
         Func<Campaign?> currentCampaign,
-        Action<Campaign> saveCampaign)
+        Action<Campaign> saveCampaign,
+        CampaignStorageView campaignStorage)
         : base("Dungeon Master XIV settings###dmx-settings")
     {
         _configurationStore = configurationStore;
         _characterName = characterName;
         _currentCampaign = currentCampaign;
         _saveCampaign = saveCampaign;
+        _campaignStorage = campaignStorage;
 
         _relinkMemory = new RelinkMemoryView(
             () => _configurationStore.Configuration.Settings.Relink,
@@ -101,11 +88,17 @@ public sealed class ConfigWindow : Window
         ImGui.Separator();
         DrawRelaySetting(settings);
 
-        ImGui.Separator();
-        DrawWhatThisPluginKnows();
+        if (ImGui.Button("Relay and privacy"))
+        {
+            Dalamud.Utility.Util.OpenLink(RelayPolicyUrl);
+        }
 
         ImGui.Separator();
-        ImGui.TextUnformatted("What this plugin remembers about you");
+        ImGui.TextUnformatted("Campaign storage");
+        _campaignStorage.Draw();
+
+        ImGui.Separator();
+        ImGui.TextUnformatted("User storage");
         _relinkMemory.Draw();
 
         ImGui.Separator();
@@ -134,8 +127,6 @@ public sealed class ConfigWindow : Window
         {
             ImGui.TextWrapped(UnusableAliasWarning);
         }
-
-        ImGui.TextWrapped(NameIsNotIdentity);
     }
 
     private string DrawNameBox(Campaign? campaign, string? carriedOverDefault, DisplayName characterName)
@@ -181,18 +172,6 @@ public sealed class ConfigWindow : Window
         if (!RelayEndpoint.TryParse(settings.RelayAddress, out _))
         {
             ImGui.TextWrapped(InvalidRelayWarning);
-        }
-    }
-
-    private static void DrawWhatThisPluginKnows()
-    {
-        ImGui.TextUnformatted("What this plugin knows");
-        ImGui.Spacing();
-
-        foreach (var paragraph in WhatThisPluginKnows)
-        {
-            ImGui.TextWrapped(paragraph);
-            ImGui.Spacing();
         }
     }
 

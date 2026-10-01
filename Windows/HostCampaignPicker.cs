@@ -9,10 +9,6 @@ internal sealed class HostCampaignPicker
 {
     public const string NewCampaignLabel = "Start a new campaign";
 
-    public const string ResumeDisclosure =
-        "Resuming keeps this campaign, but not its players. Everyone arrives as someone new, and the "
-        + "roster stays empty until recognising returning players is built. Nothing has been lost.";
-
     private readonly HostingCampaign _hosting;
 
     public HostCampaignPicker(HostingCampaign hosting) => _hosting = hosting;
@@ -24,8 +20,6 @@ internal sealed class HostCampaignPicker
         {
             return;
         }
-
-        ImGui.TextWrapped(ResumeDisclosure);
 
         var chosen = _hosting.Chosen is { } id ? _hosting.Resumable.FirstOrDefaultById(id) : null;
 

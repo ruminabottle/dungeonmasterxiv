@@ -17,7 +17,6 @@ namespace DungeonMasterXIV;
 public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/dmx";
-    private const string CampaignsCommandName = "/dmxcampaigns";
 
     private readonly TeardownSequence _unwind = new();
 
@@ -31,7 +30,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WebSocketSessionTransport _relayTransport;
     private readonly SessionCoordinator _sessionCoordinator;
     private readonly HostingCampaign _hostingCampaign;
-    private readonly CampaignListWindow _campaignListWindow;
     private readonly CommandDispatcher _commandDispatcher;
 
     public Plugin(
@@ -53,7 +51,7 @@ public sealed class Plugin : IDalamudPlugin
         var characterName = new LocalCharacterName(objects).Current;
 
         _hostingCampaign = new HostingCampaign(_campaignStore);
-        _configWindow = SettingsWindowFor(characterName);
+        _configWindow = SettingsWindowFor(characterName, pluginInterface.ConfigDirectory);
         var sessionLog = new SessionTransportLog(log);
         _relayTransport = new WebSocketSessionTransport(sessionLog);
         _sessionCoordinator = new SessionCoordinator(
@@ -74,7 +72,6 @@ public sealed class Plugin : IDalamudPlugin
             _hostingCampaign,
             () => _configurationStore.Configuration.Settings.Relink, SessionEndChoiceFor(pluginInterface.ConfigDirectory));
         _mainWindow.OpenSession = _sessionWindow.Open;
-        _campaignListWindow = CampaignListWindowFor(pluginInterface.ConfigDirectory);
         _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
 
         try
@@ -93,14 +90,17 @@ public sealed class Plugin : IDalamudPlugin
     private Func<DisplayName> NameWeSendAs(Func<DisplayName> characterName) =>
         () => CampaignDisplayName.Or(_hostingCampaign.Current, characterName());
 
-    private ConfigWindow SettingsWindowFor(Func<DisplayName> characterName) =>
-        new(_configurationStore, characterName, () => _hostingCampaign.Current, _campaignStore.Save);
-
-    private CampaignListWindow CampaignListWindowFor(DirectoryInfo configDirectory)
+    private ConfigWindow SettingsWindowFor(Func<DisplayName> characterName, DirectoryInfo configDirectory)
     {
         var retainedLogs = new RetainedLogStore(
             new RetainedLogFileArchive(Path.Combine(configDirectory.FullName, "logs")));
-        return new CampaignListWindow(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs));
+
+        return new ConfigWindow(
+            _configurationStore,
+            characterName,
+            () => _hostingCampaign.Current,
+            _campaignStore.Save,
+            new CampaignStorageView(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs)));
     }
 
     private KeepOrLose SessionEndChoiceFor(DirectoryInfo configDirectory) =>
@@ -140,20 +140,11 @@ public sealed class Plugin : IDalamudPlugin
             _relayTransport.Dispose();
         });
 
-        _windowSystem.AddWindow(_campaignListWindow);
-        _unwind.Push("campaign list window", () => _windowSystem.RemoveWindow(_campaignListWindow));
-
         commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
             HelpMessage = "Toggle the Dungeon Master XIV window. \"/dmx settings\" opens settings.",
         });
         _unwind.Push("/dmx command", () => commandManager.RemoveHandler(CommandName));
-
-        commandManager.AddHandler(CampaignsCommandName, new CommandInfo(OnCampaignsCommand)
-        {
-            HelpMessage = "List the campaigns stored on this machine.",
-        });
-        _unwind.Push("/dmxcampaigns command", () => commandManager.RemoveHandler(CampaignsCommandName));
 
         pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
         _unwind.Push("draw handler", () => pluginInterface.UiBuilder.Draw -= _windowSystem.Draw);
@@ -198,6 +189,4 @@ public sealed class Plugin : IDalamudPlugin
             _configurationStore.Save();
         }
     }
-
-    private void OnCampaignsCommand(string command, string arguments) => _campaignListWindow.Open();
 }

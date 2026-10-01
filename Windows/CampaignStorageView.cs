@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Windowing;
 using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>Lists stored campaigns and unreadable campaign files, each with a delete that asks to confirm.</summary>
-public sealed class CampaignListWindow : Window
+/// <summary>Lists stored campaigns and unreadable campaign files in settings, each with a delete that asks to confirm.</summary>
+public sealed class CampaignStorageView
 {
     private readonly CampaignStore _store;
 
@@ -19,31 +17,15 @@ public sealed class CampaignListWindow : Window
     private IReadOnlyList<UnreadableRow> _unreadable = Array.Empty<UnreadableRow>();
     private int _rowsBuiltAtRevision = -1;
 
-    public CampaignListWindow(CampaignStore store, CampaignDeletion deletion)
-        : base("Dungeon Master XIV campaigns###dmx-campaigns")
+    public CampaignStorageView(CampaignStore store, CampaignDeletion deletion)
     {
         _store = store;
-
         _prompt = new DeletionPrompt(id => deletion.Delete(id), name => _store.DeleteUnreadable(name));
-
-        SizeConstraints = new WindowSizeConstraints
-        {
-            MinimumSize = new Vector2(420, 200),
-            MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
-        };
     }
 
-    public void Open() => IsOpen = true;
-
-    public override void Draw()
+    public void Draw()
     {
         RefreshRowsIfStale();
-
-        ImGui.TextWrapped(
-            "Campaigns stored on this machine. A campaign is identified by itself, not by its " +
-            "session code — if a code is taken when you resume, you take a new code and keep the " +
-            "campaign.");
-        ImGui.Separator();
 
         if (_rows.Count == 0)
         {

@@ -11,6 +11,8 @@ public sealed class RememberedParticipant
     public string SessionCode { get; set; } = string.Empty;
 
     public Guid ParticipantId { get; set; }
+
+    public DateTimeOffset? StoredUtc { get; set; }
 }
 
 /// <summary>Maps each session code to the participant identifier this client was admitted with, for rejoining.</summary>
@@ -35,6 +37,7 @@ public sealed class RelinkMemory
             }
 
             existing.ParticipantId = participantId;
+            existing.StoredUtc = DateTimeOffset.UtcNow;
             return true;
         }
 
@@ -42,6 +45,7 @@ public sealed class RelinkMemory
         {
             SessionCode = code.Value,
             ParticipantId = participantId,
+            StoredUtc = DateTimeOffset.UtcNow,
         });
 
         return true;
