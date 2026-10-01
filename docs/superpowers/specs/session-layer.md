@@ -713,20 +713,27 @@ Two questions, two mechanisms (product-overview D-17):
 - **Retention is unbounded: no expiry, no timer.** The rule guards against linkage across campaigns,
   not duration within one; a clock protects nothing and breaks relink for a campaign that meets
   monthly. A number appearing in this requirement means something has gone wrong.
-- **The player may delete their own participant UUID, per campaign, without the DM's involvement and
-  without the DM being told.** The DM can delete a campaign outright (R-1.6); the subject of an
+- **The unit is the stored entry, not the campaign.** The joiner cannot know a campaign's identity,
+  and telling it one would hand it an identifier linking the player across codes (product-overview
+  D-8, A-1.11). A campaign whose code changed at resume (R-1.2a) therefore leaves one entry per code,
+  and the player sees and deletes each on its own.
+- **The player may delete their own participant UUID, per stored entry, without the DM's involvement
+  and without the DM being told.** The DM can delete a campaign outright (R-1.6); the subject of an
   identifier needs the same control over their own copy.
 - **No notification to the DM.** One would manufacture a signal linking a deletion to a player. The DM
   learns when relink is not offered.
 - **Deleting ends the possibility of relink, and the player is told so before the deletion**: they
   will rejoin as a new participant needing fresh approval. The less a user understands what they are
   destroying, the more friction the destruction gets, so this is never a one-click delete.
-- **A player can see what they are storing, per campaign, before deleting it.** You cannot meaningfully
-  delete what you cannot see.
+- **A player can see what they are storing, per stored entry, before deleting it.** Each entry shows
+  the session code it was stored under and when. You cannot meaningfully delete what you cannot see.
+- **Relink is offered only under the code it was stored under.** A returning player whose DM's code
+  changed has no matching entry and is not offered relink; the DM recognises them instead (R-1.5e).
 
 **Acceptance criteria**
-- **A-1.9b** A player can list what their client stores per campaign, and delete one campaign's
-  participant UUID without the DM's involvement. Afterwards no file on their disk contains that UUID. Offering deletion
+- **A-1.9b** A player can list what their client stores, one row per stored entry showing its
+  session code and when it was stored, and delete one entry's participant UUID without the DM's
+  involvement. Afterwards no file on their disk contains that UUID. Offering deletion
   without first showing what is stored fails.
 - **A-1.9c** The player is told, before the deletion completes, that relink will no longer be possible
   and that they will rejoin as a new participant needing fresh DM approval. A one-click irreversible
@@ -1150,13 +1157,6 @@ D-8, the last even with encryption.
   retained log is built and uses its permission to hold names (product-overview D-8, rolls R-2.12).
 - Open question: a version refusal is a fourth ending under R-1.3c (R-1.7b); its timing bound is not
   specified, so it has no row in R-1.3c's table.
-- Open question: the see-and-delete right is per campaign (R-1.5b, A-1.9b), but the joiner cannot
-  know a campaign's identity and stores its participant UUID under the session code it was admitted on
-  (R-1.5b); the code keys this store by session code, one entry per code. A campaign's code can change
-  at resume (R-1.2a), so one campaign may leave several entries under different codes, and an entry
-  is not the same unit as a campaign. How a per-campaign listing and deletion map onto per-code
-  storage, and whether a returning player is still offered relink when the DM's code has changed, are
-  undecided. It blocks A-1.9b's per-campaign unit and A-1.9 for campaigns whose code moved.
 
 ## Retired IDs
 
