@@ -8,15 +8,7 @@ using DungeonMasterXIV.Data;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>
-/// Lists the campaigns this machine holds and deletes one outright (R-1.6, A-1.10).
-/// </summary>
-/// <remarks>
-/// Drawing only. The rows are built by <see cref="CampaignListView"/> and cached against the
-/// store's revision, because a draw callback runs every frame and may not allocate in a loop.
-/// The only state here is which delete is awaiting confirmation, which is a property of the
-/// window rather than of the campaigns.
-/// </remarks>
+/// <summary>Lists stored campaigns and unreadable campaign files, each with a delete that asks to confirm.</summary>
 public sealed class CampaignListWindow : Window
 {
     private readonly CampaignStore _store;
@@ -27,25 +19,11 @@ public sealed class CampaignListWindow : Window
     private IReadOnlyList<UnreadableRow> _unreadable = Array.Empty<UnreadableRow>();
     private int _rowsBuiltAtRevision = -1;
 
-    /// <param name="store">The campaigns this window lists and deletes.</param>
-    /// <param name="deletion">
-    /// Deletes a campaign AND its retained log. <b>The control is unchanged; what it reaches is
-    /// wider</b> — retention put a second thing on disk, and R-1.7a's shipped sentence
-    /// (<i>"nothing to delete anywhere but here"</i>) is only true if this control removes both.
-    /// </param>
     public CampaignListWindow(CampaignStore store, CampaignDeletion deletion)
         : base("Dungeon Master XIV campaigns###dmx-campaigns")
     {
         _store = store;
 
-        // Built once. Draw runs every frame over every row, so the delete callbacks must not be
-        // resolved per row per frame.
-        //
-        // THE CAMPAIGN ARM GOES THROUGH CampaignDeletion RATHER THAN THE STORE. That is the whole
-        // wiring: the rule "a campaign's log dies with it" lives in Core where it can be tested,
-        // and this line is the only thing that had to change for the existing control to reach it.
-        // The unreadable arm is unchanged -- a file that will not parse has no campaign id, so no
-        // log can be keyed to it.
         _prompt = new DeletionPrompt(id => deletion.Delete(id), name => _store.DeleteUnreadable(name));
 
         SizeConstraints = new WindowSizeConstraints
@@ -55,10 +33,8 @@ public sealed class CampaignListWindow : Window
         };
     }
 
-    /// <summary>Opens this window, for the campaign list command.</summary>
     public void Open() => IsOpen = true;
 
-    /// <inheritdoc />
     public override void Draw()
     {
         RefreshRowsIfStale();
@@ -74,10 +50,6 @@ public sealed class CampaignListWindow : Window
             ImGui.TextDisabled("No campaigns stored yet.");
         }
 
-        // Iterating the cached snapshot, NOT _store.Campaigns. This is what makes the Delete
-        // button below safe: Delete mutates the store's list while this loop is running, and
-        // iterating the live collection here would throw. The safety is not incidental — do not
-        // "simplify" this to walk the store directly.
         foreach (var row in _rows)
         {
             DrawRow(row);
@@ -98,10 +70,6 @@ public sealed class CampaignListWindow : Window
         _rowsBuiltAtRevision = _store.Revision;
     }
 
-    // A-1.10, as extended on 2026-08-27: the DM must be able to list and delete EVERY campaign the
-    // machine holds, including files the plugin cannot read or parse. An unreadable file is exactly
-    // the one a user cannot reason about, so it is the one that most needs to be visible — and it
-    // sits in the folder people zip into a bug report.
     private void DrawUnreadable()
     {
         if (_unreadable.Count == 0)
@@ -118,9 +86,6 @@ public sealed class CampaignListWindow : Window
             ImGui.TextUnformatted(row.FileName);
             ImGui.TextWrapped(row.Detail);
 
-            // Was a direct DeleteUnreadable call: one click, irreversible, on the row the user can
-            // reason about least. Same confirmation as the readable rows above, because the
-            // point is that they have already taught the user what deleting looks like here.
             if (_prompt.IsAwaiting(row.FileName))
             {
                 DrawConfirmation();
@@ -155,9 +120,6 @@ public sealed class CampaignListWindow : Window
         ImGui.PopID();
     }
 
-    // Shared by both row kinds on purpose: same words, same order, same affordances. Two renderers
-    // would be free to drift, and the whole value of confirming here is that it looks identical
-    // wherever the user meets it.
     private void DrawConfirmation()
     {
         ImGui.TextUnformatted("Delete permanently?");

@@ -51,21 +51,18 @@
            Text="ReleaseTag '$(ReleaseTag)' has the component %(ReleaseTagComponent.Identity), and an assembly version component cannot exceed 65534. Pick a version whose parts are all 65534 or below." />
   </Target>
 
-  <!-- The plugin project sits at the repo root, so its default glob would otherwise swallow the
-       sources of the projects nested under it. -->
+  <!-- Excludes the nested src/ and tests/ project sources from this project's default compile glob. -->
   <ItemGroup>
     <Compile Remove="src/**" />
     <None Remove="src/**" />
     <Compile Remove="tests/**" />
     <None Remove="tests/**" />
-    <!-- Release tooling. It sits under the repo root like src/ and tests/, so the plugin's default
-         glob would otherwise compile it, including the obj/ output. That fails the build with
-         duplicate assembly attributes, an error that names nothing resembling the real cause. -->
+    <!-- Excludes the release tooling under tools/, including its obj/ output, from this project's default compile glob. -->
     <Compile Remove="tools/**" />
     <None Remove="tools/**" />
   </ItemGroup>
 
-  <!-- The Dalamud-free half of the plugin. See DungeonMasterXIV.Core.csproj for why it is split. -->
+  <!-- References the Dalamud-free half of the plugin. -->
   <ItemGroup>
     <ProjectReference Include="src/DungeonMasterXIV.Core/DungeonMasterXIV.Core.csproj" />
   </ItemGroup>

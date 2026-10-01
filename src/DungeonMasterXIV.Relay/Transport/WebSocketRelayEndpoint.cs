@@ -4,14 +4,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
-/// <summary>
-/// Accepts a WebSocket and pumps complete messages into <see cref="RelayHub"/> until it closes.
-/// </summary>
-/// <remarks>
-/// The only file in the relay that knows the transport is WebSocket. Everything the relay decides
-/// happens behind <see cref="RelayHub"/> against <see cref="IRelayConnection"/>, so a change of
-/// framing lands here and nowhere else.
-/// </remarks>
+/// <summary>Serves one WebSocket connection, passing messages to the hub; an oversized message ends it.</summary>
 public sealed class WebSocketRelayEndpoint(
     RelayHub hub,
     ConnectionDirectory directory,
@@ -24,14 +17,8 @@ public sealed class WebSocketRelayEndpoint(
     private readonly RelayLog _log = log;
     private readonly RelayOptions _options = options;
 
-    /// <summary>
-    /// Whether the RELAY is stopping, which is the only thing that tells two causes of one exception
-    /// apart. The token passed to <see cref="ServeAsync"/> is the request's, and it fires
-    /// when the CLIENT goes away; this one fires when the process is going down.
-    /// </summary>
     private readonly IHostApplicationLifetime _lifetime = lifetime;
 
-    /// <summary>Serves one accepted WebSocket for its lifetime.</summary>
     public async Task ServeAsync(WebSocket socket, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(socket);
@@ -49,14 +36,6 @@ public sealed class WebSocketRelayEndpoint(
         }
         catch (OperationCanceledException)
         {
-            // ONE EXCEPTION TYPE, TWO CAUSES, and the handler used to name only the rarer.
-            // RelayApp passes context.RequestAborted, which fires when the CLIENT vanishes without a
-            // close frame — a dropped network, a crashed game client, a force-quit. Measured against
-            // a running image, that is what this arm catches in practice; a genuine shutdown reaches
-            // it too, but only while the process is actually stopping.
-            //
-            // So ask the thing that can tell them apart. Nothing else can: the token is the same
-            // object either way and the exception carries no cause.
             reason = _lifetime.ApplicationStopping.IsCancellationRequested
                 ? "relay shutting down"
                 : "closed by peer without a close frame";
@@ -72,8 +51,6 @@ public sealed class WebSocketRelayEndpoint(
         }
         finally
         {
-            // Still in a finally: an ungracefully dropped peer must unwind exactly like a polite one,
-            // and a connection that fell behind says so rather than being logged as a transport fault.
             await _hub
                 .DisconnectAsync(
                     connection,
@@ -93,11 +70,9 @@ public sealed class WebSocketRelayEndpoint(
         }
         catch (WebSocketException)
         {
-            // The peer went away mid-handshake. There is nothing to answer and nothing to report.
         }
         catch (OperationCanceledException)
         {
-            // The relay is shutting down; the socket closes with the process.
         }
     }
 
@@ -116,16 +91,10 @@ public sealed class WebSocketRelayEndpoint(
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    // Answer the close rather than dropping the socket. A client that closes
-                    // gracefully waits for this frame, and without it a clean disconnect surfaces
-                    // to the other side as an abnormal one — which the plugin would have to
-                    // report as a lost connection (R-1.8) when nothing was lost.
                     await CloseQuietlyAsync(socket, cancellationToken).ConfigureAwait(false);
                     return;
                 }
 
-                // A message larger than a session ever needs is the one way a client could make the
-                // relay accumulate memory, which is state by another name. Refuse rather than grow.
                 if (message.Length + result.Count > _options.MaxMessageBytes)
                 {
                     _log.ConnectionRejected(connection.Id, "message exceeded MaxMessageBytes");

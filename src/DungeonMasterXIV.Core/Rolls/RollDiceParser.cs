@@ -1,18 +1,8 @@
 namespace DungeonMasterXIV.Rolls;
 
-/// <summary>
-/// Reads a dice term and its modifiers: <c>4d6kh3</c>, <c>10d10x&gt;9</c>, <c>6d6r1</c>,
-/// <c>5d10&gt;7</c>.
-/// </summary>
-/// <remarks>
-/// <b>Separate from <see cref="RollParser"/> because the two grammars are different shapes.</b>
-/// Arithmetic is precedence and recursion; a dice term is a flat run of suffixes with no precedence
-/// among them. Keeping them in one type would have produced a single class carrying both, which is
-/// the size problem that was foreseen before a line was written.
-/// </remarks>
+/// <summary>Parses the die size and modifiers that follow the d in a dice term, checking the dice limits.</summary>
 internal static class RollDiceParser
 {
-    /// <summary>Reads the die size and any modifiers, given the already-read <paramref name="count"/>.</summary>
     public static RollParse ParseDice(RollCursor cursor, RollLimits limits, int count)
     {
         if (!cursor.TryNumber(out var sides))
@@ -50,19 +40,6 @@ internal static class RollDiceParser
 
         while (true)
         {
-            // A-2.3c: A MODIFIER BINDS ONLY WHEN ADJACENT TO ITS TERM. The cursor skips whitespace
-            // before every read, which is correct everywhere else -- `2d6 + 3` is one expression --
-            // but a modifier is a SUFFIX, so a space ends the term rather than being stepped over.
-            // Without this, `2d6 d20` reads as 2d6 with a drop-lowest-20, silently rolling something
-            // other than what was typed.
-            //
-            // Foundry's own MODIFIERS_REGEXP_STRING is "anything until a space, group symbol, or
-            // arithmetic operator", so this holds for EVERY modifier -- k, d, r, x and a bare
-            // comparison alike -- not only for the drop that exposed it.
-            //
-            // Deliberately silent about what `2d6 d20` DOES evaluate as: the criterion permits a
-            // refusal or a two-term reading, and only the modifier-binding reading is ruled out.
-            // Pinning either here would settle something nobody established.
             if (cursor.AtWhitespace)
             {
                 return RollParse.Parsed(dice with { Modifiers = modifiers }, null);
@@ -104,10 +81,6 @@ internal static class RollDiceParser
 
         if (cursor.TakeLetter('x'))
         {
-            // A bare 'x' explodes on the maximum face and the size is not known here, so the
-            // evaluator resolves it -- carried as its OWN flag rather than as a comparison value,
-            // because the comparison that used to stand for it was one a user could type.
-            // Each arm clears the other so the last suffix written wins, as it did before.
             return Comparison(cursor, out var explode)
                 ? new ModifierParse(
                     current with { Explode = explode, ExplodeOnMaximum = false }, RollFault.None, null)
@@ -145,21 +118,6 @@ internal static class RollDiceParser
             null);
     }
 
-    /// <summary>Reads a drop suffix — <c>dl1</c>, <c>dh1</c>, or a bare <c>d1</c>.</summary>
-    /// <remarks>
-    /// <para>
-    /// <b>This half was built and unreachable.</b> <see cref="DiceModifiers.DropLowest"/>,
-    /// <see cref="DiceModifiers.DropHighest"/> and the evaluator's handling of both already existed;
-    /// there was simply no arm here, so <c>4d6dl1</c> — the single most common notation in tabletop,
-    /// and the one <c>DropLowest</c> names in its own summary — was refused as <c>Malformed</c>.
-    /// </para>
-    /// <para>
-    /// <b>A bare <c>d</c> drops the LOWEST, where a bare <c>k</c> keeps the HIGHEST.</b> Both default
-    /// to the generous reading — keep the best, drop the worst — which is why the two are mirrored
-    /// rather than parallel. A <c>d</c> here cannot be confused with the die separator: the count and
-    /// size have already been read, so anything further is a modifier.
-    /// </para>
-    /// </remarks>
     private static ModifierParse Drop(RollCursor cursor, DiceModifiers current)
     {
         var low = !cursor.TakeLetter('h');
@@ -180,40 +138,9 @@ internal static class RollDiceParser
             null);
     }
 
-    /// <summary>Clears all four keep/drop fields, so the suffix about to be written is the only one.</summary>
-    /// <remarks>
-    /// <para>
-    /// <b>LAST SUFFIX WINS, which is this grammar's existing convention rather than a new one</b> —
-    /// exploding already says so a few lines up, <i>"each arm clears the other so the last suffix
-    /// written wins"</i>. Consistency inside one grammar beats the most expressive reading, and
-    /// there are three defensible readings here (refuse, last-wins, compose) that A-2.2 does not
-    /// choose between.
-    /// </para>
-    /// <para>
-    /// <b>The four fields were independent and the evaluator read two of them for different
-    /// questions.</b> <c>Keeping</c> took the COUNT from the first non-null in a fixed order, while
-    /// the sort direction was decided by a SEPARATE test — so <c>4d6kh3dh1</c> took its count from
-    /// <c>KeepHighest</c> and its direction from <c>DropHighest</c> and kept the three LOWEST. No
-    /// refusal, no report, a confident wrong number. Clearing here means the evaluator can never see
-    /// two of the four set, so the count and the direction cannot come from different suffixes.
-    /// </para>
-    /// <para>
-    /// <b>Pre-existing, and reachable through the <c>k</c> arm alone</b> — <c>4d6kh3kl2</c> hits it
-    /// without any of the drop arm's <c>d</c> parsing. That arm widened the reachable surface; it did
-    /// not create this.
-    /// </para>
-    /// </remarks>
     private static DiceModifiers OnlyKeepDrop(DiceModifiers current) =>
         current with { KeepHighest = null, KeepLowest = null, DropHighest = null, DropLowest = null };
 
-    /// <summary>
-    /// Reads a test: an operator and a number, or <b>a bare number meaning equality</b>.
-    /// </summary>
-    /// <remarks>
-    /// <c>r1</c> is "reroll a 1" and <c>x6</c> is "explode on a 6" — the grammar lets the operator be
-    /// omitted when it is <c>=</c>, which is the common case for both. Success counting does not
-    /// reach here without an operator, because a bare number after a dice term is not a test at all.
-    /// </remarks>
     private static bool Comparison(RollCursor cursor, out RollComparison comparison)
     {
         comparison = default;
@@ -246,5 +173,6 @@ internal static class RollDiceParser
     private static ModifierParse Bad(RollCursor cursor, string expected) =>
         new(null, RollFault.Malformed, $"Expected {expected} at position {cursor.Position}.");
 
+    /// <summary>The result of reading one dice modifier: the updated modifiers, nothing if none follows, or a fault.</summary>
     private readonly record struct ModifierParse(DiceModifiers? Modifiers, RollFault Fault, string? Message);
 }

@@ -7,28 +7,18 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>
-/// The settings window. The skeleton has one setting — whether windows reopen where they were
-/// left — because window state is the only thing the skeleton persists.
-/// </summary>
+/// <summary>The settings window: window restore, display name, relay address, privacy notes and relink memory.</summary>
 public sealed class ConfigWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;
     private readonly Func<DisplayName> _characterName;
 
-    // R-2.17/A-2.31. The name is scoped to ONE campaign, so this window reads and writes through
-    // the campaign rather than through settings -- there is no global alias to reach for any more.
-    // Supplied the same way _relinkMemory is: a supplier and a save, so a campaign store reloaded
-    // underneath this window is still the one the player edits.
     private readonly Func<Campaign?> _currentCampaign;
     private readonly Action<Campaign> _saveCampaign;
 
-    // Built once: Draw runs every frame and the schema version cannot change while we are loaded.
     private readonly string _schemaVersionLabel;
     private readonly RelinkMemoryView _relinkMemory;
 
-    // R-1.7a, verbatim. Bold markers from the requirement are dropped because ImGui text has no
-    // bold; nothing else is altered. If this needs to change, R-1.7a changes first.
     private static readonly string[] WhatThisPluginKnows =
     {
         "During a session, this plugin knows who is in the room. The game gives it character names, "
@@ -42,39 +32,20 @@ public sealed class ConfigWindow : Window
         + "sessions, and nothing to delete anywhere but here.",
     };
 
-    // Not R-1.7a copy -- R-1.7a covers the session window, the admission prompt and the settings
-    // section's "What this plugin knows" text, and supplies no wording for these. Written here under
-    // the same constraint: no phrasing from its forbidden list, and no claim that a name proves
-    // anything.
     private static readonly string UnusableAliasWarning =
         $"This name cannot be used, so your character name will be sent instead. Names are limited "
         + $"to {DisplayName.MaxLength} characters and cannot contain line breaks or invisible "
         + "formatting characters - they are shown next to the code you compare, and a name that can "
         + "redraw that line is a way to hide it.";
 
-    // A-1.2v, and the wording is doing careful work: the box being full says that nothing MORE will
-    // be accepted. It does NOT say anything was lost -- a user who typed to the ceiling and stopped
-    // lost nothing, and a message claiming otherwise would be a second false statement about what
-    // happened to their name. "If you were still typing" carries the conditional honestly.
-    //
-    // Written under R-1.7a's constraints without being R-1.7a copy, like the warning above.
     private const string NameFieldIsFull =
         "This box is full and will not take any more. If you were still typing, the rest did not go "
         + "in - use a shorter name.";
 
-    // A-1.2z. Says WHY the box is disabled and WHAT will be used instead, because the
-    // failure this replaces was not silence -- it was a contradiction the user had to resolve. It
-    // names the campaign as where a name lives, so the reader knows the action that changes it.
-    //
-    // It does not say the name was discarded, because with the box disabled nothing is typed to
-    // discard. A message claiming a loss that did not happen would be the NameFieldIsFull mistake
-    // in reverse.
     private const string NameNeedsACampaign =
         "A name is saved with a campaign, and no campaign is open. Until you open or create one, "
         + "you will join as your character name and this box cannot be changed.";
 
-    // D-8: a name may be shown and may never be acted on. Said in the place a user chooses one,
-    // because that is where somebody would otherwise assume it identifies them.
     private const string NameIsNotIdentity =
         "This name is not checked by anything. Anyone can send any name, so it tells your DM who "
         + "you say you are and nothing more - the code you read to each other is the part that "
@@ -84,21 +55,6 @@ public sealed class ConfigWindow : Window
         "This is not a usable relay address. It must start with wss:// - or ws:// for a relay "
         + "running on this machine.";
 
-    /// <param name="configurationStore">The settings this window reads and writes.</param>
-    /// <param name="characterName">
-    /// What the game says this player is called, read at draw time rather than captured — a
-    /// character name is not stable for the life of the plugin.
-    /// </param>
-    /// <param name="currentCampaign">
-    /// The campaign the display name is scoped to (R-2.17), or null when none is current. Read at
-    /// draw time for the same reason as the character name: the current campaign changes underneath
-    /// a window that stays open.
-    /// </param>
-    /// <param name="saveCampaign">
-    /// Persists a campaign after its name changes. The name lives on the campaign now, so the
-    /// campaign store is what writes it — <c>ConfigurationStore.Save</c> would write the settings
-    /// file, which no longer carries a name at all.
-    /// </param>
     public ConfigWindow(
         ConfigurationStore configurationStore,
         Func<DisplayName> characterName,
@@ -111,9 +67,6 @@ public sealed class ConfigWindow : Window
         _currentCampaign = currentCampaign;
         _saveCampaign = saveCampaign;
 
-        // Both suppliers read through the STORE rather than capturing the settings object, so a
-        // configuration reloaded from disk underneath this window is still the one the player sees
-        // and deletes from.
         _relinkMemory = new RelinkMemoryView(
             () => _configurationStore.Configuration.Settings.Relink,
             _configurationStore.Save);
@@ -129,10 +82,8 @@ public sealed class ConfigWindow : Window
             configurationStore.Configuration.Settings.SettingsWindowOpen);
     }
 
-    /// <summary>Opens this window, for the <c>/dmx settings</c> command.</summary>
     public void Open() => IsOpen = true;
 
-    /// <inheritdoc />
     public override void Draw()
     {
         var settings = _configurationStore.Configuration.Settings;
@@ -153,9 +104,6 @@ public sealed class ConfigWindow : Window
         ImGui.Separator();
         DrawWhatThisPluginKnows();
 
-        // R-1.5b, IMMEDIATELY AFTER "what this plugin knows" AND NOT IN A WINDOW OF ITS OWN. A-1.9b
-        // gives the player a right to SEE what is stored about them; a reader already here to answer
-        // that question should not have to discover a second place where the rest of the answer is.
         ImGui.Separator();
         ImGui.TextUnformatted("What this plugin remembers about you");
         _relinkMemory.Draw();
@@ -164,47 +112,15 @@ public sealed class ConfigWindow : Window
         ImGui.TextDisabled(_schemaVersionLabel);
     }
 
-    // R-1.3e: the name defaults to the character name and may be changed to an alias.
-    //
-    // The effective name is SHOWN, not only editable. R-1.3e's Tier 0 is "see and change the name
-    // they will send" -- a box you type into without being told the result delivers the changing
-    // half and not the seeing half, and the default case is exactly the one where the box is empty
-    // and the answer is not obvious.
     private void DrawDisplayNameSetting(PluginSettings settings)
     {
         ImGui.TextUnformatted("Display name");
 
         var characterName = _characterName();
 
-        // PRE-FILLED with the character name, which is a citation and not a nicety: R-1.3e's Tier 0
-        // is "see and change the name they will send, before it is sent, PRE-FILLED with their
-        // character name". An empty box fails that — the user would have to already know what would
-        // be sent in order to see it.
-        //
-        // Room to type MORE than the limit, deliberately. A box capped at exactly the limit stops
-        // accepting keystrokes with no explanation, and the user is left looking at a name that is
-        // not the one they meant. Over-typing is allowed and then told about.
-        //
-        // The size is MaxUtf8Bytes because IMGUI COUNTS BYTES AND THE LIMIT COUNTS CHARACTERS. This
-        // used to be (MaxLength * 2) + 1 = 65, which was room to over-type only in ASCII: a
-        // 32-character Devanagari name is 192 bytes and would have been truncated at the boundary
-        // this box exists to let the user cross deliberately.
         var campaign = _currentCampaign();
-        // A-1.2z and A-2.32's carried-over pre-fill both live in this one control, in DIFFERENT
-        // STATES: the disable applies with NO campaign, the carried-over pre-fill applies WITH one.
-        // Both sit in DrawNameBox because the rule that joins them -- an offer is only made where
-        // it can be accepted -- is one decision, and splitting it would let the halves drift apart.
         var typed = DrawNameBox(campaign, settings.DisplayNameAlias, characterName);
 
-        // Deliberately the SAME call the join uses, not a re-derivation of it. Two expressions that
-        // are meant to agree drift; one that is shared cannot disagree with itself. A-1.2g asserts
-        // on what LEAVES THE CLIENT rather than on what this line says, which is the right way
-        // round — this is a preview, and a preview is not evidence.
-        // A-1.2v. Said BEFORE the "you will join as" line, because it is about the box the
-        // user is still looking at rather than about the outcome -- and it is separate from the
-        // unusable-name warning below on purpose: a full box is not an invalid name. What is in the
-        // field may parse perfectly; the point is that the field stopped taking input and until now
-        // said nothing.
         if (NameInputCapacity.IsFull(typed))
         {
             ImGui.TextWrapped(NameFieldIsFull);
@@ -222,51 +138,12 @@ public sealed class ConfigWindow : Window
         ImGui.TextWrapped(NameIsNotIdentity);
     }
 
-    /// <summary>
-    /// The "Name others see" box and, without a campaign, the explanation of why it is disabled.
-    /// </summary>
-    /// <remarks>
-    /// Its own method because <c>DrawDisplayNameSetting</c> reached 89 lines against a cap of 60 once the
-    /// no-campaign disable landed. CODE moved rather than the explanation trimmed: the reasoning below is
-    /// what stops the next reader re-enabling a box that cannot store, which is the whole defect.
-    /// </remarks>
-    /// <param name="campaign">The open campaign, or null when there is none.</param>
-    /// <param name="characterName">The name used when nothing is stored.</param>
-    /// <param name="carriedOverDefault">
-    /// A name stored before campaign-scoping, offered as a pre-fill.
-    /// </param>
-    /// <returns>What the box holds after the user has had their turn with it.</returns>
     private string DrawNameBox(Campaign? campaign, string? carriedOverDefault, DisplayName characterName)
     {
         var noCampaign = campaign is null;
 
-        // >>> THE OFFER IS ONLY MADE WHERE IT CAN BE ACCEPTED (A-2.33's twin) -- AND THE DECISION
-        // IS NO LONGER MADE HERE. <<<
-        //
-        // It moved into CampaignDisplayName.ToPreFill, where it is a linkable boolean rule and can
-        // be asserted BEHAVIOURALLY. While it was a ternary in this method the only available guard
-        // was an assertion on this file's TEXT -- and a text assertion was shown to be defeated by
-        // ONE EXTRA LINE that leaves the asserted string untouched.
-        //
-        // What this window still owes is the WIRING: that it consults the helper at all. That part
-        // genuinely is under the renderer ceiling and is still asserted textually.
         var typed = CampaignDisplayName.ToPreFill(campaign, carriedOverDefault, characterName);
 
-        // A-1.2z. WITH NO CAMPAIGN THIS BOX USED TO TAKE INPUT AND KEEP NONE OF IT, and the
-        // "You will join as" line below then showed the character name instead. The two disagreed with
-        // no explanation, which is worse than saying nothing: a box showing one name above a preview
-        // showing another reads as a broken PREVIEW rather than as a refusal to store, so the user was
-        // misinformed about which half was wrong.
-        //
-        // DISABLED RATHER THAN ANNOUNCED, because A CONTROL OFFERED WHERE IT CANNOT WORK IS ITSELF
-        // THE DEFECT (R-1.3e). Announcing the discard while still accepting keystrokes would leave
-        // the box taking text it will never keep -- the same defect with a caption. A disabled box
-        // shows the name that WILL be used, so the box and the preview cannot disagree.
-        //
-        // NOTHING IS STORED AND NOTHING NEW CAN BE. A-2.31 permits exactly ONE globally-stored
-        // name-shaped value, read only by the pre-fill path; giving the no-campaign name somewhere
-        // to live is the cheap fix and it is the forbidden one. This remedy needs no storage at
-        // all, which is why it is a telling.
         if (noCampaign)
         {
             ImGui.BeginDisabled();
@@ -282,11 +159,6 @@ public sealed class ConfigWindow : Window
 
         if (edited)
         {
-            // The campaign is what persists the name now, so the campaign is what gets saved.
-            // RecordChosen reports false when nothing changed AND when there is no campaign to
-            // record against, so neither case writes a file. The guard is kept even though the box
-            // above is now disabled without one: two independent reasons nothing is written beats
-            // one, and this one does not depend on a UI state.
             if (campaign is not null && CampaignDisplayName.RecordChosen(campaign, typed, characterName))
             {
                 _saveCampaign(campaign);
@@ -296,7 +168,6 @@ public sealed class ConfigWindow : Window
         return typed;
     }
 
-    // R-1.8: the relay is swappable and the setting is discoverable rather than buried.
     private void DrawRelaySetting(PluginSettings settings)
     {
         ImGui.TextUnformatted("Relay");
@@ -313,8 +184,6 @@ public sealed class ConfigWindow : Window
         }
     }
 
-    // R-1.7a. These strings are literal and a PR may not substitute its own wording; they are
-    // reproduced here exactly as the requirement states them.
     private static void DrawWhatThisPluginKnows()
     {
         ImGui.TextUnformatted("What this plugin knows");
@@ -327,10 +196,8 @@ public sealed class ConfigWindow : Window
         }
     }
 
-    /// <inheritdoc />
     public override void OnOpen() => Remember(true);
 
-    /// <inheritdoc />
     public override void OnClose() => Remember(false);
 
     private void Remember(bool isOpen)
