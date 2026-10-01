@@ -1,11 +1,10 @@
 # Relay service policy
 
 Written in plain language on purpose. The claims here about **what the software does** are checkable
-in published source and provable from the test suite, which is a rarer position than most privacy
-policies occupy. Some of what follows is a **promise about how the service is run** instead — those
-are marked where they appear rather than blended in with the rest, because blending the two is how a
-policy comes to be trusted instead of checked. A document written to limit liability would undersell
-what is actually true.
+in published source, which is a rarer position than most privacy policies occupy. Some of what
+follows is a **promise about how the service is run** instead — those are marked where they appear
+rather than blended in with the rest, because blending the two is how a policy comes to be trusted
+instead of checked. A document written to limit liability would undersell what is actually true.
 
 ---
 
