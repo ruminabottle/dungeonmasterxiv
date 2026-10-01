@@ -1,6 +1,6 @@
 # Builds the relay into a deployable image from this repository.
 
-# Pins the SDK and runtime image tags separately, since the two repositories number their tags differently.
+# Pins the SDK and runtime image tags separately, since the two repositories number their tags differently; do not COPY global.json into the image, or a floating tag here stops being pinned.
 ARG DOTNET_SDK_VERSION=10.0.400
 ARG DOTNET_RUNTIME_VERSION=10.0.11
 
@@ -28,7 +28,7 @@ LABEL org.opencontainers.image.title="DungeonMasterXIV relay" \
       org.opencontainers.image.revision="${GIT_COMMIT}" \
       org.opencontainers.image.description="Forwards encrypted session traffic and stores nothing (D-2, A-1.5e)."
 
-# Runs as an unprivileged user; the relay opens no files and logs to stdout.
+# Runs as an unprivileged user; the relay logs to stdout and reads only its TLS certificate file.
 USER $APP_UID
 WORKDIR /app
 COPY --from=build /app .

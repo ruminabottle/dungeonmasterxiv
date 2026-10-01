@@ -11,12 +11,12 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
-  <!-- Pins BouncyCastle.Cryptography, used only for EC key exchange, to an exact reviewed version. -->
+  <!-- Pins BouncyCastle.Cryptography, used only for EC key exchange, to an exact version. -->
   <ItemGroup>
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
   </ItemGroup>
 
-  <!-- Fails the build if this project references Dalamud, checking each identity individually. -->
+  <!-- Fails the build if this project references Dalamud (per identity) or references the plugin project back. -->
   <Target Name="ForbidDalamud" BeforeTargets="Build">
     <Error Condition="$([System.String]::Copy('%(Reference.Identity)').Contains('Dalamud'))"
            Text="DungeonMasterXIV.Core must never reference Dalamud (found reference '%(Reference.Identity)'). Types needing Dalamud belong in the plugin project." />
