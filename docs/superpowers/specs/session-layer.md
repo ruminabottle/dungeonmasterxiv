@@ -788,8 +788,8 @@ Constraints on the conveyance:
   fresh id on every admission makes a four-person weekly game hold eight entries after a fortnight and
   sixteen after a month, all bearing the same labels. That replaces an empty roster with one that is
   wrong, gets wronger, and cannot be seen to be false. Answer 1 does not discharge the rule unless
-  repeats are recognised (the DM mapping an arriving joiner onto an existing entry, or the roster
-  distinguishing "has played before" from "arrived this session").
+  repeats are recognised; the DM recognises them by mapping an arriving joiner onto an existing entry
+  (R-1.5e).
 - **Do not "fix" the empty roster by minting participants at the picker.** No durable joiner identity
   exists (joiner keys are per request, a peer code is per session, a display name is not an identity,
   and the participant id is only as durable as the joiner's retained copy, A-1.9g). Minting produces
@@ -856,6 +856,40 @@ Constraints on the conveyance:
 - **A-1.9m** No participant is minted to populate a resumed campaign's roster; a build that creates
   participants at the picker fails. This is about **where** a participant is minted, not whether:
   A-1.9f requires admission to mint one. The two are a complementary pair over the same operation.
+
+### R-1.5e The DM maps a returning player onto their existing entry
+
+Admission mints a participant (R-1.5c) and relink is the player's claim to an old one (R-1.5), so
+without either working a returning person would arrive as someone new every session. **The DM
+recognises them instead, at the admission prompt.**
+
+- **The prompt offers the campaign's stored participants.** In a campaign with stored participants,
+  the DM can admit a joiner as a new player or as one of the stored entries. Choosing an entry mints
+  nothing: the joiner becomes that participant and is told its existing UUID, under the same
+  constraints as R-1.5c (only to that joiner, after admission, never before).
+- **The product never suggests a match.** Nothing is preselected, ranked or highlighted by display
+  name, character name or anything else; matching is never inferred (R-1.5). The default is a new
+  player. The DM recognises the person, and the product only lists the entries.
+- **Admitting stays one action.** A DM who ignores the list admits a new player exactly as before, and
+  the prompt keeps its expiry and every other property (R-1.3l).
+- **An entry holds one seat at a time.** An entry already held in this session is not offered, so two
+  joiners never become the same participant.
+- **A duplicate the DM chooses is accepted.** A DM who admits a returning person as new has made that
+  choice, and R-1.6's list-and-delete is the remedy. The rule against duplicate growth (R-1.5d) is met
+  by the product offering the match, not by forcing it.
+- **The picker's disclosure (R-1.5d) changes when this ships.** "The roster stays empty until
+  recognising returning players is built" stops being true once the DM can map; the replacement is
+  written then, under the same rule that each sentence's claim is load-bearing.
+
+**Acceptance criteria**
+- **A-1.9n** Resume a campaign and map a returning player onto their stored entry: the stored roster
+  has the same number of entries afterwards, and the joiner holds that entry's UUID.
+- **A-1.9o** An entry already held in the session is not offered to a second joiner. A build that lets
+  two joiners map onto one entry fails.
+- **A-1.9p** A joiner whose display name equals a stored entry's label is shown with nothing
+  preselected or ranked. A build that suggests the match fails.
+- **A-1.9q** Admitting a joiner as a new player is still one action in a campaign with stored
+  participants. A build that requires a mapping choice first fails.
 
 ### R-1.6 The DM's campaign store
 
@@ -1116,12 +1150,6 @@ D-8, the last even with encryption.
   retained log is built and uses its permission to hold names (product-overview D-8, rolls R-2.12).
 - Open question: a version refusal is a fourth ending under R-1.3c (R-1.7b); its timing bound is not
   specified, so it has no row in R-1.3c's table.
-- Open question: admission creates a participant for every admitted joiner (A-1.9f), and without
-  relink (A-1.9g) a returning person arrives as a new participant, so a campaign's stored roster grows
-  by one entry per join. That is the duplicate growth R-1.5d forbids for a resumed roster. Which answer
-  applies (the DM mapping a joiner onto an existing entry, the roster marking repeats, or deferring
-  admission-time creation until relink works) is undecided. It blocks A-1.9f and R-1.5d holding
-  together.
 - Open question: the see-and-delete right is per campaign (R-1.5b, A-1.9b), but the joiner cannot
   know a campaign's identity and stores its participant UUID under the session code it was admitted on
   (R-1.5b); the code keys this store by session code, one entry per code. A campaign's code can change
