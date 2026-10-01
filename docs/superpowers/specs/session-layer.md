@@ -1089,8 +1089,8 @@ D-8, the last even with encryption.
   the ruled one) and A-1.13b cannot both pass for this paragraph. Whether the copy should reference
   R-1.9 instead, or carry the full list, is a product decision; it blocks A-1.7c and A-1.13b holding
   together, and any settings copy change. The same pinned copy says "names are never written to a
-  log": true today, because the retained log writes peer codes, but it becomes false if the DM's
-  retained log uses its permission to hold names (product-overview D-8, rolls R-2.12).
+  log": true today, because nothing writes a retained log, but it becomes false if the DM's
+  retained log is built and uses its permission to hold names (product-overview D-8, rolls R-2.12).
 - Open question: a version refusal is a fourth ending under R-1.3c (R-1.7b); its timing bound is not
   specified, so it has no row in R-1.3c's table.
 - Open question: admission creates a participant for every admitted joiner (A-1.9f), and without
