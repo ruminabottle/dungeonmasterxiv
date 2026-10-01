@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Relay.Sessions;
 
+/// <summary>Tracks which session codes each connection takes part in and which code it hosts.</summary>
 internal sealed class ConnectionRoles
 {
     private readonly Dictionary<string, HashSet<string>> _codesByConnection = new(StringComparer.Ordinal);

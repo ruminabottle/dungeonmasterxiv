@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace DungeonMasterXIV.Release;
 
+/// <summary>The fields of a plugin manifest file, with a check that it comes from a build.</summary>
 public sealed class PluginManifest
 {
     public const string InternalName = "DungeonMasterXIV";

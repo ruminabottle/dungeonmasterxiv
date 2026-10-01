@@ -2,6 +2,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Relay;
 
+/// <summary>The relay's settings, such as port, TLS certificate, path and limits, readable from the environment.</summary>
 public sealed class RelayOptions
 {
     private readonly TimeSpan? _keepAliveTimeout;

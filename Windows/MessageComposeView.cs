@@ -7,6 +7,7 @@ using DungeonMasterXIV.Rolls;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>The chat box: sends a message to the session, or rolls dice locally when given a roll command.</summary>
 internal sealed class MessageComposeView
 {
     private readonly SessionCoordinator _coordinator;

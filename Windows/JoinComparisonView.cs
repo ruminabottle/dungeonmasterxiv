@@ -3,6 +3,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>Shows a joiner the code to read to the DM, or warns when there is no code to compare.</summary>
 internal sealed class JoinComparisonView
 {
     private const string ReadYourCodeAloud =

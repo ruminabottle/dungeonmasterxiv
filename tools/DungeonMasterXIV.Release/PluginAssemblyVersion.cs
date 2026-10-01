@@ -4,6 +4,7 @@ using System.Reflection;
 
 namespace DungeonMasterXIV.Release;
 
+/// <summary>Reads the assembly version from a built plugin assembly.</summary>
 public static class PluginAssemblyVersion
 {
     public static Version Of(string assemblyPath)

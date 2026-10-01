@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Relay.Sessions;
 
+/// <summary>One live session on the relay: its host connection, admitted members and pending joiners.</summary>
 internal sealed class LiveSession(string hostConnectionId)
 {
     public string HostConnectionId { get; } = hostConnectionId;

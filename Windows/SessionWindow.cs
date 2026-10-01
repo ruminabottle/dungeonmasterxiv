@@ -8,6 +8,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>The session window: hosting controls and status, the join flow, admission prompts and chat.</summary>
 public sealed class SessionWindow : Window
 {
     private const string CodeDisclosure =

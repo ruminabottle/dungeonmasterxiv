@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
+/// <summary>Holds the relay's open connections, keyed by connection id.</summary>
 public sealed class ConnectionDirectory
 {
     private readonly ConcurrentDictionary<string, IRelayConnection> _connections = new(StringComparer.Ordinal);

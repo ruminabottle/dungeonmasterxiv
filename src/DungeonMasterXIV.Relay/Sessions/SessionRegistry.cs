@@ -3,6 +3,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Relay.Sessions;
 
+/// <summary>Thread-safe record of live sessions by code: their hosts, pending joiners and admitted members.</summary>
 public sealed class SessionRegistry
 {
     private readonly Lock _gate = new();

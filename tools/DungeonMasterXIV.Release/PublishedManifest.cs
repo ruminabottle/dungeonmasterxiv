@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 
 namespace DungeonMasterXIV.Release;
 
+/// <summary>A committed repository manifest file, checked field by field against freshly generated output.</summary>
 public sealed class PublishedManifest
 {
     private readonly JsonNode document;

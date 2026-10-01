@@ -4,6 +4,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Transport;
 
+/// <summary>Passes the session transport's log messages to the Dalamud plugin log.</summary>
 public sealed class SessionTransportLog : ISessionTransportLog
 {
     private readonly IPluginLog _log;

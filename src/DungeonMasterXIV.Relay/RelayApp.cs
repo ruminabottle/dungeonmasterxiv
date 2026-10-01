@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 
 namespace DungeonMasterXIV.Relay;
 
+/// <summary>Builds the relay web server, with optional TLS, and maps its version-gated WebSocket endpoint.</summary>
 public static class RelayApp
 {
     public static WebApplication Build(RelayOptions options)

@@ -2,6 +2,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Relay.Sessions;
 
+/// <summary>What the relay does with a received message: drop it, reply to the sender, or forward it.</summary>
 public enum RelayAction
 {
     Drop = 0,
@@ -11,6 +12,7 @@ public enum RelayAction
     Forward = 2,
 }
 
+/// <summary>Why the router decided as it did for a message, such as a claimed code or an unadmitted sender.</summary>
 public enum RelayOutcome
 {
     MalformedEnvelope = 0,
@@ -46,6 +48,7 @@ public enum RelayOutcome
     PendingNoticeForwarded = 15,
 }
 
+/// <summary>The router's verdict for one message: its action, outcome, any reply, and who receives it.</summary>
 public readonly record struct RelayDecision(
     RelayAction Action,
     RelayOutcome Outcome,

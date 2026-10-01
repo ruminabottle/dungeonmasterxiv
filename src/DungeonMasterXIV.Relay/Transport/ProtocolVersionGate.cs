@@ -3,6 +3,7 @@ using DungeonMasterXIV.Relay.Diagnostics;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
+/// <summary>Refuses, with a 426 answer, a connection whose stated protocol version differs from the relay's.</summary>
 public sealed class ProtocolVersionGate(RelayLog log)
 {
     private readonly RelayLog _log = log;

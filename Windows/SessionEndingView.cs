@@ -5,6 +5,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>Shows a joiner the closing countdown, a Leave button, and after leaving the offer to keep the log.</summary>
 internal sealed class SessionEndingView
 {
     private readonly SessionCoordinator _coordinator;

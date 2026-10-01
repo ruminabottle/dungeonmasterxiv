@@ -3,6 +3,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Services;
 
+/// <summary>Reads the local player's character name from the game, or none when there is no local player.</summary>
 public sealed class LocalCharacterName
 {
     private readonly IObjectTable _objects;

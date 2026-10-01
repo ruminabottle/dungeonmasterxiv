@@ -7,6 +7,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>The settings window: window restore, display name, relay address, privacy notes and relink memory.</summary>
 public sealed class ConfigWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;

@@ -2,6 +2,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Relay.Sessions;
 
+/// <summary>Routes each envelope by type, updating the session registry and returning what the relay should do.</summary>
 public sealed class RelayRouter(SessionRegistry registry)
 {
     private readonly SessionRegistry _registry = registry;

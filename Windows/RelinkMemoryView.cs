@@ -6,6 +6,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>Lists the participant ids remembered per session code, each with a Forget that asks to confirm.</summary>
 public sealed class RelinkMemoryView
 {
     private readonly Func<RelinkMemory> _relink;

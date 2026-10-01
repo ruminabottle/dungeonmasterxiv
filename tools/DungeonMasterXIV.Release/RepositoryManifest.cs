@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 
 namespace DungeonMasterXIV.Release;
 
+/// <summary>Builds the testing-only Dalamud repository manifest JSON for a release.</summary>
 public static class RepositoryManifest
 {
     private static readonly JsonSerializerOptions Options = new()

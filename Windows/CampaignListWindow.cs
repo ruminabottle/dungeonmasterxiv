@@ -8,6 +8,7 @@ using DungeonMasterXIV.Data;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>Lists stored campaigns and unreadable campaign files, each with a delete that asks to confirm.</summary>
 public sealed class CampaignListWindow : Window
 {
     private readonly CampaignStore _store;

@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Release;
 
+/// <summary>Reads the version a canonical release tag such as v0.1.0 names, and pads versions to four parts.</summary>
 public static class TaggedVersion
 {
     public static readonly Version UntaggedBuild = new(0, 0, 0, 0);

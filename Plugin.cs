@@ -13,6 +13,7 @@ using DungeonMasterXIV.Windows;
 
 namespace DungeonMasterXIV;
 
+/// <summary>The Dalamud plugin entry point: builds services and windows, registers commands, and unwinds them.</summary>
 public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/dmx";

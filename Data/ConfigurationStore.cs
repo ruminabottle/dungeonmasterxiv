@@ -3,6 +3,7 @@ using Dalamud.Plugin.Services;
 
 namespace DungeonMasterXIV.Data;
 
+/// <summary>Loads the plugin configuration, using defaults if none is stored or it is unreadable, and saves it.</summary>
 public sealed class ConfigurationStore
 {
     private readonly IDalamudPluginInterface _pluginInterface;

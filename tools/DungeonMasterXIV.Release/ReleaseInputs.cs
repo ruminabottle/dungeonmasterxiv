@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Release;
 
+/// <summary>The values a repository manifest is built from, with their checks and the asset download link.</summary>
 public sealed record ReleaseInputs(
     string Tag, Version AssemblyVersion, int DalamudApiLevel, string RepoUrl, ReleaseAsset Asset)
 {

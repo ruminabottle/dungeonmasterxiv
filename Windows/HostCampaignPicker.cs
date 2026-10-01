@@ -4,6 +4,7 @@ using DungeonMasterXIV.Campaigns;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>Lets the host choose a stored campaign to resume, or a new one, before starting a session.</summary>
 internal sealed class HostCampaignPicker
 {
     public const string NewCampaignLabel = "Start a new campaign";

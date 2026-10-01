@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace DungeonMasterXIV.Relay.Diagnostics;
 
+/// <summary>Explains a failed TLS certificate load, adding a permissions hint when the file cannot be read.</summary>
 public static class CertificateLoadFailure
 {
     public static string Describe(string path, string reason) =>

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DungeonMasterXIV.Relay.Diagnostics;
 
+/// <summary>Writes the relay's connection and routing events to the log.</summary>
 public sealed class RelayLog(ILogger<RelayLog> logger)
 {
     private readonly ILogger<RelayLog> _logger = logger;

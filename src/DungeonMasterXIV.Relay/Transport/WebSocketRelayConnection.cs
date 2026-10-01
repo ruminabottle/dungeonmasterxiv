@@ -3,6 +3,7 @@ using System.Threading.Channels;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
+/// <summary>A relay connection over a WebSocket that queues outbound messages and aborts if the queue fills.</summary>
 public sealed class WebSocketRelayConnection : IRelayConnection, IAsyncDisposable
 {
     private readonly WebSocket _socket;

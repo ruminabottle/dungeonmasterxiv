@@ -5,6 +5,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>Shows the host each pending join request, with its code to compare and Admit and Deny buttons.</summary>
 internal sealed class AdmissionPromptView
 {
     private const string AdmissionDisclosure =

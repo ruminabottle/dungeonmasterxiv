@@ -8,6 +8,7 @@ using System.Text.Json;
 
 namespace DungeonMasterXIV.Release;
 
+/// <summary>The built release zip, checked to hold the same plugin assembly and manifest as the build.</summary>
 public sealed class ReleaseAsset
 {
     private const string PluginAssemblyName = "DungeonMasterXIV.dll";

@@ -5,6 +5,7 @@ using DungeonMasterXIV.Data;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>The plugin's main window, which describes the plugin and opens the session window.</summary>
 public sealed class MainWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;

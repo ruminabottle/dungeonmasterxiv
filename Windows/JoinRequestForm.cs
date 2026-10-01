@@ -5,6 +5,7 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
+/// <summary>The form where a joiner enters a session code and the name to send, then asks to join.</summary>
 internal sealed class JoinRequestForm
 {
     private const string NameFieldIsFull =
