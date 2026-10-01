@@ -2,7 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Data;
 
-/// <summary>The plugin's saved settings: window state, relay address, interruption window, relink memory, name.</summary>
+/// <summary>The plugin's saved settings: window state, relay address, interruption window, relink memory, alias.</summary>
 public sealed class PluginSettings
 {
     public const int CurrentSchemaVersion = 1;

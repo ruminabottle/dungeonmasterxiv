@@ -13,7 +13,7 @@ public sealed class RememberedParticipant
     public Guid ParticipantId { get; set; }
 }
 
-/// <summary>Maps each session code to the participant identifier this client was admitted with, sent when joining it again.</summary>
+/// <summary>Maps each session code to the participant identifier this client was admitted with, for rejoining.</summary>
 public sealed class RelinkMemory
 {
     public List<RememberedParticipant> Remembered { get; set; } = new();
