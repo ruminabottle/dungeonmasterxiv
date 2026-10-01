@@ -19,10 +19,18 @@ internal sealed class InboundWiring(
                 OnHello: admissions.OfferHostKey,
                 OnJoinRequest: (key, envelope) =>
                 {
-                    if (admissions.OpenJoinRequest(key, envelope) is { } details)
+                    if (admissions.OpenJoinRequest(key, envelope) is not { } details)
                     {
-                        admissions.AdmitToTheQueue(
-                            key, now, DisplayName.OrNone(details.DisplayName), resolveRelink(details.ParticipantId));
+                        return;
+                    }
+
+                    var request = admissions.AdmitToTheQueue(
+                        key, now, DisplayName.OrNone(details.DisplayName), resolveRelink(details.ParticipantId));
+
+                    if (request is not null && admissions.LetsInAutomatically(request))
+                    {
+                        admissions.Admit(request.PeerCode, asClaimed: true);
+                        roster.Publish();
                     }
                 }),
             HostAuthored: new HostAuthoredContent(

@@ -102,6 +102,19 @@ public sealed class SessionWindow : Window
 
             RosterView.Draw(audience.Recipients.Select(peer => (peer.DisplayName.Value, peer.Role)));
 
+            ImGui.TextUnformatted("Returning players");
+            var letIn = _hosting.LetsReturningPlayersIn;
+            if (ImGui.RadioButton("Ask me each time", !letIn))
+            {
+                _hosting.SetReturningPlayers(false);
+            }
+
+            ImGui.SameLine();
+            if (ImGui.RadioButton("Let them straight in", letIn))
+            {
+                _hosting.SetReturningPlayers(true);
+            }
+
             if (ImGui.Button("End session"))
             {
                 _coordinator.StopHosting(DateTimeOffset.UtcNow);

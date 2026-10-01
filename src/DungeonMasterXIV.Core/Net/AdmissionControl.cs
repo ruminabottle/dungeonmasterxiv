@@ -9,6 +9,7 @@ public sealed class AdmissionControl
 {
     private readonly AdmissionAnnouncer _announcer;
     private readonly Func<DisplayName, Guid?> _mintParticipant;
+    private readonly Func<bool> _letReturningPlayersIn;
     private readonly ISessionTransportLog _log;
     private readonly Func<SessionCode?> _hostCode;
     private readonly Func<SessionKeyExchange?> _hostKeys;
@@ -18,15 +19,18 @@ public sealed class AdmissionControl
         Func<SessionCode?> hostCode,
         Func<SessionKeyExchange?> hostKeys,
         Func<DisplayName, Guid?> mintParticipant,
+        Func<bool> letReturningPlayersIn,
         ISessionTransportLog log)
     {
         ArgumentNullException.ThrowIfNull(mintParticipant);
+        ArgumentNullException.ThrowIfNull(letReturningPlayersIn);
         ArgumentNullException.ThrowIfNull(log);
 
         _announcer = announcer;
         _hostCode = hostCode;
         _hostKeys = hostKeys;
         _mintParticipant = mintParticipant;
+        _letReturningPlayersIn = letReturningPlayersIn;
         _log = log;
     }
 
@@ -38,7 +42,7 @@ public sealed class AdmissionControl
 
     public void Receive(PendingAdmission request) => Desk.Receive(request);
 
-    public void AdmitToTheQueue(
+    public PendingAdmission? AdmitToTheQueue(
         byte[] joinerPublicKey,
         DateTimeOffset now,
         DisplayName displayName = default,
@@ -141,13 +145,18 @@ public sealed class AdmissionControl
         return details;
     }
 
-    public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player)
+    public bool LetsInAutomatically(PendingAdmission request) =>
+        _letReturningPlayersIn() && ClaimedAndFree(request) is not null;
+
+    public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player, bool asClaimed = false)
     {
         var request = Desk.Decide(peerCode);
         var displayName = request?.DisplayName ?? DisplayName.None;
-        var participantId = _mintParticipant(displayName);
+        var participantId = asClaimed && ClaimedAndFree(request) is { } claimed
+            ? claimed
+            : _mintParticipant(displayName);
 
-        var peer = Audience.Admit(peerCode, role, request?.JoinerPublicKey, displayName);
+        var peer = Audience.Admit(peerCode, role, request?.JoinerPublicKey, displayName, participantId);
 
         Drops.Forget(peerCode);
         AnnounceAccepted(request?.JoinerPublicKey, participantId);
@@ -162,6 +171,11 @@ public sealed class AdmissionControl
 
         return peer;
     }
+
+    private Guid? ClaimedAndFree(PendingAdmission? request) =>
+        request?.Relink is { Matched: true, ParticipantId: { } claimed } && !Audience.HoldsParticipant(claimed)
+            ? claimed
+            : null;
 
     private void AnnounceAccepted(byte[]? joinerPublicKey, Guid? participantId)
     {

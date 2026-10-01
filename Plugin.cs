@@ -66,7 +66,8 @@ public sealed class Plugin : IDalamudPlugin
                 MintParticipant: label => _hostingCampaign.Current is { } campaign
                     ? _campaignStore.AddParticipant(campaign.CampaignId, label.Value)?.ParticipantId
                     : null,
-                ResolveRelink: claimed => CampaignRelink.Resolve(_hostingCampaign.Current, claimed)));
+                ResolveRelink: claimed => CampaignRelink.Resolve(_hostingCampaign.Current, claimed),
+                LetReturningPlayersIn: () => _hostingCampaign.LetsReturningPlayersIn));
         _sessionWindow = new SessionWindow(
             _sessionCoordinator,
             NameWeSendAs(characterName),

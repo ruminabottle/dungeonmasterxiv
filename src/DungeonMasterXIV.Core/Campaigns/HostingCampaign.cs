@@ -28,4 +28,17 @@ public sealed class HostingCampaign
     }
 
     public void Ended() => Current = null;
+
+    public bool LetsReturningPlayersIn => Current?.LetReturningPlayersIn == true;
+
+    public void SetReturningPlayers(bool letIn)
+    {
+        if (Current is not { } campaign || campaign.LetReturningPlayersIn == letIn)
+        {
+            return;
+        }
+
+        campaign.LetReturningPlayersIn = letIn;
+        _store.Save(campaign);
+    }
 }
