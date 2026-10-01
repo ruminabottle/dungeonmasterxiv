@@ -1,7 +1,7 @@
 # Replace product comments with fresh one-line summaries
 
 **Date:** 2026-09-30
-**Status:** Approved for planning
+**Status:** Implemented 2026-09-30
 **Follows:** [2026-09-30-smoke-tests-only-design.md](2026-09-30-smoke-tests-only-design.md) (landed in #258)
 
 ## Goal
