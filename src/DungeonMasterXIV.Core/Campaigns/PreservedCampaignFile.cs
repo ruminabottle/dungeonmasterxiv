@@ -9,8 +9,6 @@ public static class PreservedCampaignFile
 
     public const string Suffix = ".json";
 
-    public static string NameFor(DateTimeOffset preservedAtUtc) =>
-        $"{Prefix}{preservedAtUtc:yyyyMMddTHHmmssZ}{Suffix}";
 
     public static bool IsPreservedName(string? name)
     {
