@@ -13,11 +13,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
 
-  <!--
-    Its own project rather than folding these into DungeonMasterXIV.Tests, which references Core and
-    nothing else on purpose. That constraint is what keeps Dalamud out of the plugin's test assembly,
-    and it is worth more than saving a csproj.
-  -->
+  <!-- References the release tool as its own project, kept separate so DungeonMasterXIV.Tests stays Core-only. -->
   <ItemGroup>
     <ProjectReference Include="..\DungeonMasterXIV.Release\DungeonMasterXIV.Release.csproj" />
   </ItemGroup>
