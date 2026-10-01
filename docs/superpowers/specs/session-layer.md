@@ -897,6 +897,31 @@ Constraints on the conveyance:
 - **A-1.11c** A **peer code** is a participant identifier for A-1.11a and must not appear in an export.
   Session-scoped does not exempt it. This does not reach a retained log (A-1.11a-note).
 
+### R-1.6a Campaign state saves itself
+
+- **The DM never saves and is never asked to.** Every change to the shared state (roster, encounter,
+  initiative, current turn and round, HP, statuses) is written to the campaign store shortly after it
+  happens. A burst of changes may be gathered into one write.
+- **A crash loses seconds, not the session.** A crash sends nothing and runs no shutdown (R-1.3g), so a
+  save that happens only at a clean end is no save at all for the case that matters. How long a change
+  may wait before it is written is engineering's; the rule is relative: a crash moments after an edit
+  may lose that edit, and a crash a minute after it must not.
+- **A clean end saves too**, so ending a session normally never loses the last changes.
+- **An encounter is saved as it stands and resumes as it stands**: its combatants, order, current turn,
+  round and HP. Saving never ends or discards an encounter; ending one stays explicit (initiative
+  R-3.1).
+- **An interrupted write never costs the last good save.** A crash during a write leaves the previous
+  save readable.
+
+**Acceptance criteria**
+- **A-1.11d** Kill the DM's client mid-encounter a few seconds after an HP change, relaunch and resume
+  the campaign: the HP change, the order and the current turn are all there. A build that saves only
+  on a clean exit fails.
+- **A-1.11e** Nothing in the host flow asks the DM whether to save. A save prompt, a save button the
+  state depends on, or a "save before closing?" dialog fails.
+- **A-1.11f** Kill the DM's client while a save is being written: on relaunch the campaign opens with
+  either the new state or the previous one, never as unreadable.
+
 ### R-1.7 Say what this is, honestly
 
 - The UI states that participants are known to the session by the **display name their client sent**,
@@ -1075,8 +1100,6 @@ D-8, the last even with encryption.
 
 ## Open questions
 
-- Open question: what happens to an in-progress encounter when the session ends: is it saved for resume
-  automatically, or does the DM choose? It blocks the session log and resume area.
 - Open question: whether five minutes is the right grace and seat window in play is empirical and
   unmeasured. The value is settable (R-1.4, R-1.5a); this blocks nothing.
 - Open question: the settings copy in R-1.7a says "Today that name is your character name, and changing

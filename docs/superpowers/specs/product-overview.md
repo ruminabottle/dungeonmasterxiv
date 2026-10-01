@@ -670,6 +670,8 @@ Observable statements. Area specs hold the numbered criteria; these are the prod
 - The DM's record survives a game restart.
 - A session that ended mid-combat can be resumed next week with the same roster and the same
   initiative and HP state, after each returning player is re-approved.
+- That state survives a crash of the DM's client, not only a clean end: it saves itself as it changes,
+  and the DM is never asked to save (session-layer R-1.6a).
 - A participant can export the record to a file they can open outside the game. **It names nobody:**
   no participant name and no participant identifier, however scoped. Entries are attributed by a
   label local to that one file, and the file says the label means nothing outside it (D-20).
