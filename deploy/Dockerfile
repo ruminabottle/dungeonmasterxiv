@@ -1,6 +1,6 @@
 # Builds the relay into a deployable image from this repository.
 
-# Pins the SDK and runtime image tags separately, since the two repositories number their tags differently; do not COPY global.json into the image, or a floating tag here stops being pinned.
+# Pins SDK and runtime tags separately (their repos number tags differently); keep the SDK tag equal to global.json's.
 ARG DOTNET_SDK_VERSION=10.0.400
 ARG DOTNET_RUNTIME_VERSION=10.0.11
 
