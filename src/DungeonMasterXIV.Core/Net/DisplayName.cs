@@ -140,7 +140,6 @@ public readonly struct DisplayName : IEquatable<DisplayName>
     private const int FullStop = 0x002E;
     private const int TypographicApostrophe = 0x2019;
 
-
     public bool Equals(DisplayName other) => string.Equals(_value, other._value, StringComparison.Ordinal);
 
     public override bool Equals(object? obj) => obj is DisplayName other && Equals(other);

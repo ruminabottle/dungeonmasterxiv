@@ -13,7 +13,6 @@ public sealed class SessionWindow : Window
     private const string CodeDisclosure =
         "Your session code is not a secret. Anyone who has it can ask to join — you decide who gets in.";
 
-
     private const string CodeChangedWarning =
         "Your session code changed while you were disconnected, because it was taken by another "
         + "session. Your players are still holding the old one - read them the new code below.";

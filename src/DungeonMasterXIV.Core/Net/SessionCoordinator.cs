@@ -56,8 +56,6 @@ public sealed class SessionCoordinator
 
     public JoinAttempt Join => _parts.Join;
 
-
-
     public SessionKeyExchange? HostKeys => _hosting.Keys;
 
     public SessionMembership Membership { get; }
@@ -69,8 +67,6 @@ public sealed class SessionCoordinator
     public MemberDrops Drops => _admissions.Drops;
 
     public IReadOnlyList<PendingAdmission> JustLapsed => _admissions.JustLapsed;
-
-
 
     public void StartHosting() => _hosting.Start();
 
@@ -107,7 +103,6 @@ public sealed class SessionCoordinator
 
     public void Deny(PeerCode peerCode) => _admissions.Deny(peerCode);
 
-
     public void SynchroniseTransport() => _parts.SynchroniseTransport();
 
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
@@ -137,7 +132,6 @@ public sealed class SessionCoordinator
         }
     }
 
-
     public GraceWindow Grace => _interruption.Grace;
 
     public bool InAJoinedSession => _interruption.InAJoinedSession;
@@ -151,7 +145,6 @@ public sealed class SessionCoordinator
     public void HostReconnectedWithNewCode() => _interruption.HostReconnectedWithNewCode();
 
     public void Detach() => _link.Detach();
-
 
     private void HeardFromTheHost(SessionContent content)
     {
