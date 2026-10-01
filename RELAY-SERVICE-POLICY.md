@@ -65,7 +65,8 @@ key.
 **Retention: whatever is kept is discarded within seven days.**
 
 Two of those three are facts about the code and you can check them. **The seven days is not** — the
-relay writes only to standard output and has no file of its own, which is what makes "stores nothing" checkable in the source. Retention is therefore a property of how the service is run,
+relay writes only to standard output and has no file of its own, which is what makes "stores
+nothing" checkable in the source. Retention is therefore a property of how the service is run,
 not of what the software does. It is a promise rather than a fact about the
 code, and this page marks that difference wherever it matters.
 
@@ -104,6 +105,11 @@ machine holds and delete any of them.
 
 Nothing exported from the plugin contains an identifier that links a person across two different
 campaigns. That is deliberate: this plugin is not a way to find out where someone else plays.
+
+If your DM lets returning players straight in, the participant id your client keeps for that
+campaign is what lets you back in without being asked. Anyone who copied that file from your
+computer could join that campaign as you while the setting is on. Forgetting the id in settings, or
+your DM switching the setting off, ends that.
 
 ## Changes
 
