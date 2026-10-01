@@ -37,7 +37,7 @@ public static class JoinDetailsCodec
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(envelope);
 
-        if (envelope.Nonce is null || envelope.Payload is null)
+        if (envelope.Nonce is null || envelope.Payload is null || envelope.Nonce.Length != SessionCipher.NonceSize)
         {
             return null;
         }
@@ -49,6 +49,10 @@ public static class JoinDetailsCodec
             return JsonSerializer.Deserialize<JoinDetails>(plaintext, Options);
         }
         catch (CryptographicException)
+        {
+            return null;
+        }
+        catch (ArgumentException)
         {
             return null;
         }
