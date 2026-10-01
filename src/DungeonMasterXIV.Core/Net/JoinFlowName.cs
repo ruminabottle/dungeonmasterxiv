@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Decides the join form's name field, refreshing it from settings while the player has not edited it.</summary>
 public static class JoinFlowName
 {
     public static PreFilledName Resolve(string fromSettings, string lastSeeded, string typed)
@@ -19,4 +20,5 @@ public static class JoinFlowName
     }
 }
 
+/// <summary>The join form's name field text and the settings value it was last filled from.</summary>
 public readonly record struct PreFilledName(string Typed, string SeededFrom);

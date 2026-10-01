@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Constructs and connects the parts a session coordinator uses.</summary>
 internal sealed class SessionWiring
 {
     internal SessionWiring(

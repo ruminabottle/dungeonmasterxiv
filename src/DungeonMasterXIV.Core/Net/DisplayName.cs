@@ -4,6 +4,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A validated player name: trimmed, at most 32 visible characters, printable, and not a host title.</summary>
 public readonly struct DisplayName : IEquatable<DisplayName>
 {
     public const int MaxLength = 32;

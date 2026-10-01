@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Tells the host, over a sealed session payload, that this member is leaving.</summary>
 internal sealed class MemberDeparture
 {
     private readonly RelayLink _link;

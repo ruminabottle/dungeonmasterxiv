@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The UTC instant by which the host must answer a join request, fifteen minutes after it arrives.</summary>
 public readonly struct AdmissionDeadline : IEquatable<AdmissionDeadline>
 {
     public static readonly TimeSpan Window = TimeSpan.FromMinutes(15);

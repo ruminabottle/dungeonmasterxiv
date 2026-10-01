@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Holds the join requests the host has not yet answered and removes them once decided or lapsed.</summary>
 public sealed class AdmissionDesk
 {
     private readonly List<PendingAdmission> _pending = new();

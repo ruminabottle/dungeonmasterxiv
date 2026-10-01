@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>An encrypted payload: its nonce and its ciphertext with the authentication tag appended.</summary>
 public sealed class SealedPayload
 {
     internal SealedPayload(byte[] nonce, byte[] ciphertext)

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Applies inbound envelopes: relay registration answers, sealed host content, and admission outcomes.</summary>
 internal static class InboundApplication
 {
     internal static bool ApplyRegistration(WireEnvelope envelope, HostSession host)

@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The kind of event a session stream entry records.</summary>
 public enum StreamEventKind
 {
     Message,

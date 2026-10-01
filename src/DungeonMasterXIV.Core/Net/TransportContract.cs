@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The relay connection's keepalive timings, and a check that a grace window outlasts three keepalives.</summary>
 public static class TransportContract
 {
     public static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);

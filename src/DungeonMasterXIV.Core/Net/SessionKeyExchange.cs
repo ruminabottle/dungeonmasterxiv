@@ -14,6 +14,7 @@ using Org.BouncyCastle.X509;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>An ECDH P-256 key pair that derives a 32-byte session key with another party's public key.</summary>
 public sealed class SessionKeyExchange : IDisposable
 {
     private static readonly byte[] DerivationInfo = "DungeonMasterXIV/session-key/v1"u8.ToArray();

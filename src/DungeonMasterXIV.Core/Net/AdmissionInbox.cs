@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Queues incoming relay frames and applies them a few at a time, returning any session key agreed.</summary>
 public sealed class AdmissionInbox
 {
     private const int FramesPerDrain = 8;

@@ -2,6 +2,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Tells whether a name input box is too full in UTF-8 bytes to take another character.</summary>
 public static class NameInputCapacity
 {
     private const int LargestCodePointBytes = 4;

@@ -4,6 +4,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A message sent through the relay, with factories for each message type and its associated data.</summary>
 public sealed record WireEnvelope
 {
     private WireEnvelope(WireMessageType type, string sessionCode)

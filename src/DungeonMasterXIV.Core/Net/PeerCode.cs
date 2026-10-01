@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A short code in the speakable alphabet that names one peer within a session.</summary>
 public readonly struct PeerCode : IEquatable<PeerCode>
 {
     private readonly string? _value;

@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Encodes session content to JSON and decodes it, dropping roster entries and lines that fail checks.</summary>
 public static class SessionContentCodec
 {
     private static readonly JsonSerializerOptions Options = new()

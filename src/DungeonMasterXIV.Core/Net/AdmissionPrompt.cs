@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Supplies the headline, comparability note and confirmation choice the host sees for a join request.</summary>
 public static class AdmissionPrompt
 {
     public static AdmissionAction Favoured(PendingAdmission request) => AdmissionAction.None;

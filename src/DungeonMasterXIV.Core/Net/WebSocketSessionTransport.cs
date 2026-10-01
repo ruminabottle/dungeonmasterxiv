@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A WebSocket connection to the relay that sends and receives binary envelope frames.</summary>
 public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
 {
     private readonly ISessionTransportLog _log;

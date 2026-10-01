@@ -2,6 +2,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A peer the host has admitted, with its peer code, role, verification, public key and display name.</summary>
 public sealed class AdmittedPeer
 {
     private readonly byte[]? _publicKey;

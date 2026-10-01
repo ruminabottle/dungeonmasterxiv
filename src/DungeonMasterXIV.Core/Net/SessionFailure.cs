@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Why hosting or joining a session failed, or None.</summary>
 public enum SessionFailure
 {
     None = 0,
@@ -25,6 +26,7 @@ public enum SessionFailure
     SessionKeysUnavailable = 10,
 }
 
+/// <summary>Gives the player-facing explanation for each session failure.</summary>
 public static class SessionFailureMessage
 {
     public static string For(SessionFailure failure) => failure switch

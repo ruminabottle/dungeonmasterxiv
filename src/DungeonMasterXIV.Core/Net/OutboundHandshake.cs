@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Sends the relay registration, join request and fingerprint receipt once each is due and the link is ready.</summary>
 internal sealed class OutboundHandshake
 {
     private readonly RelayLink _link;

@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Optional hooks a session uses for new keys, the host's name, minting participants and relinks.</summary>
 public sealed record SessionCapabilities(
     Func<SessionKeyExchange>? NewKeys = null,
     Func<DisplayName>? HostDisplayName = null,

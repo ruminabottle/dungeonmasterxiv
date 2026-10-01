@@ -4,8 +4,10 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A member's peer code paired with the key the host shares with that member.</summary>
 public readonly record struct PeerContentKey(PeerCode Peer, byte[] Key);
 
+/// <summary>Derives and caches the host's shared key with each admitted member, clearing them when the session moves.</summary>
 internal sealed class MemberContentKeys
 {
     private readonly SessionAudience _audience;

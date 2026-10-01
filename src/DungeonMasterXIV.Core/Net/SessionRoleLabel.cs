@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Gives the display label for each session role.</summary>
 public static class SessionRoleLabel
 {
     public static string? For(SessionRole role) => role switch

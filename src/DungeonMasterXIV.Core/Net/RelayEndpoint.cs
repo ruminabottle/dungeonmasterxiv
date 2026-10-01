@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The default relay address, and a parser that accepts only wss, or ws to a loopback host.</summary>
 public static class RelayEndpoint
 {
     public const string Default = "wss://relay.ruminabottle.com" + SessionPath;

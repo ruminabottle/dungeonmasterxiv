@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Holds stream entries a member missed while away, and replays them with a gap marker when needed.</summary>
 internal sealed class MissedMessages
 {
     private readonly Dictionary<PeerCode, List<StreamEntry>> _held = new();

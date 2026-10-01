@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Starts and abandons a join request, making fresh joiner keys and releasing the old seat and keys.</summary>
 internal sealed class JoinRequester
 {
     private readonly OutboundHandshake _handshake;

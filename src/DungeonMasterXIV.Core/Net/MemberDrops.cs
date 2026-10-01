@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Records when each admitted member's connection to the relay dropped.</summary>
 public sealed class MemberDrops
 {
     private readonly Dictionary<PeerCode, DateTimeOffset> _dropped = new();

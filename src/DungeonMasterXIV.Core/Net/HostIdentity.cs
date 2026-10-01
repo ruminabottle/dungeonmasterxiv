@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Supplies the host's current keys, session code, display name and own peer code on demand.</summary>
 internal sealed record HostIdentity(
     Func<SessionKeyExchange?> Keys,
     Func<SessionCode?> Code,

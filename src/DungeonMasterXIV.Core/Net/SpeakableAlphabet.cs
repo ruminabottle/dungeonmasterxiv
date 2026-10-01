@@ -3,6 +3,7 @@ using System.Text;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The characters used in spoken codes, and grouping of codes into dash-separated threes.</summary>
 public static class SpeakableAlphabet
 {
     public const string Characters = "BCDFGHJKMNPRTVWXY2346789";

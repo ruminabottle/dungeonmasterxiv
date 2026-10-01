@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The kinds of message exchanged through the relay.</summary>
 public enum WireMessageType
 {
     Unknown = 0,

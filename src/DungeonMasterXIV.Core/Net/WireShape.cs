@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The JSON form of a wire envelope.</summary>
 internal sealed class WireShape
 {
     public WireMessageType Type { get; set; }

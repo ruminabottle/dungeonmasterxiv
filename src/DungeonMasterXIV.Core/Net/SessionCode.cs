@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A six-character code in the speakable alphabet that names a session on the relay.</summary>
 public readonly struct SessionCode : IEquatable<SessionCode>
 {
     public const string Alphabet = SpeakableAlphabet.Characters;

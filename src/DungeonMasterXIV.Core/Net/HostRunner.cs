@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Starts and stops hosting: makes host keys, picks a session code, and releases resources on stop.</summary>
 internal sealed class HostRunner
 {
     private readonly HostSession _host;

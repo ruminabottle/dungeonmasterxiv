@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Reads the participant ID from a join acceptance addressed to this client's public key.</summary>
 public static class ParticipantReceipt
 {
     public static Guid? TryRead(WireEnvelope? envelope, byte[]? ownPublicKey) =>

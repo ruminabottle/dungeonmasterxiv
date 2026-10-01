@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Runs the host's side of admission: queues join requests, admits or denies them, and tracks drops.</summary>
 public sealed class AdmissionControl
 {
     private readonly AdmissionAnnouncer _announcer;

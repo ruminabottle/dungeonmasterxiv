@@ -3,6 +3,7 @@ using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A joiner's view of its session: its keys, messages to the host, leaving, and the closing notice.</summary>
 public sealed class SessionMembership
 {
     private readonly JoinRequester _joiner;

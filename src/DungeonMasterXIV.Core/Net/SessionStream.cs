@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Keeps stream entries in sequence order, refusing duplicates and sequence numbers below one.</summary>
 public sealed class SessionStream
 {
     private readonly List<StreamEntry> _entries = new();

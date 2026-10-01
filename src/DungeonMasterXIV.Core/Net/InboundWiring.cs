@@ -3,6 +3,7 @@ using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Builds the host's inbound handlers, connecting join requests, member content and drops to admission.</summary>
 internal sealed class InboundWiring(
     AdmissionControl admissions,
     SessionResources resources,

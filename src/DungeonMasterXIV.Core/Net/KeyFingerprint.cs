@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Renders an 11-character fingerprint of two public keys, the same whichever order they are given.</summary>
 public static class KeyFingerprint
 {
     public const int Characters = 11;

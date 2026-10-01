@@ -4,6 +4,7 @@ using DungeonMasterXIV.Data;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Ends a session at teardown: retains the log if asked, leaves, stops hosting, and detaches.</summary>
 public static class SessionTeardown
 {
     public static void EndSessionForTeardown(

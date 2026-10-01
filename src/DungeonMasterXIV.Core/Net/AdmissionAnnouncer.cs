@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Sends the host's pending, accepted, denied and lapsed answers to joiners over the transport.</summary>
 public sealed class AdmissionAnnouncer
 {
     private readonly ISessionTransport _transport;

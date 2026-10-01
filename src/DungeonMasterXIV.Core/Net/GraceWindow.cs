@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Counts down a set time after the host is lost and reports when it runs out, unless the host returns.</summary>
 public sealed class GraceWindow
 {
     public static readonly TimeSpan Default = TimeSpan.FromMinutes(5);

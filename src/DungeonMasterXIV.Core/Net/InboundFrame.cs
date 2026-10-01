@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Routes one decoded inbound envelope to the matching handler for a join attempt or hosted session.</summary>
 internal readonly record struct InboundFrame(
     JoinAttempt Attempt,
     SessionKeyExchange? Keys,

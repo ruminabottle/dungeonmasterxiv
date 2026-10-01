@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Closes a connection within a time limit, always disposes it, and returns any failure.</summary>
 public static class TransportShutdown
 {
     public static readonly TimeSpan CloseTimeout = TimeSpan.FromMilliseconds(250);

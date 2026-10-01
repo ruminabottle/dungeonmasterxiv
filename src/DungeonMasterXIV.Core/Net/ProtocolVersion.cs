@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The relay protocol version: adds it to the relay address and classifies version refusals.</summary>
 public static class ProtocolVersion
 {
     public const int Current = 1;

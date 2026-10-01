@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A join request awaiting the host's answer, with its fingerprint, deadline, relink claim and name.</summary>
 public sealed class PendingAdmission
 {
     public PendingAdmission(

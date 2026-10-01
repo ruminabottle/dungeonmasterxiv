@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Connects to or disconnects from the relay on demand and passes on frames and reported failures.</summary>
 public sealed class RelayLink
 {
     private readonly ISessionTransport _transport;

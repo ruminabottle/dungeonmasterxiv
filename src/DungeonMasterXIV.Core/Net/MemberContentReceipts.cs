@@ -5,8 +5,10 @@ using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The latest content received from one member, with its arrival order.</summary>
 public readonly record struct MemberContentReceipt(PeerCode Peer, int Order, SessionContent Content);
 
+/// <summary>Keeps the latest content from each member, dropping and counting parts members may not send.</summary>
 public sealed class MemberContentReceipts
 {
     private readonly Dictionary<string, MemberContentReceipt> _latest = new(StringComparer.Ordinal);

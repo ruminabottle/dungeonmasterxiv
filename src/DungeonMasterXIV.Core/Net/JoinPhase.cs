@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The stage of a join attempt, from idle through contacting and awaiting a decision to its outcome.</summary>
 public enum JoinPhase
 {
     Idle = 0,

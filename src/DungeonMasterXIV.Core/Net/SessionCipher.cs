@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Seals and opens payloads with AES-256-GCM under a 32-byte session key.</summary>
 public static class SessionCipher
 {
     public const int KeySize = 32;

@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Decides whether a reader may see a message given its target, sender, and the reader's role.</summary>
 public static class MessageAudience
 {
     public static bool Includes(

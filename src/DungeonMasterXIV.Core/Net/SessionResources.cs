@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Owns the host's per-session state and clears it all when a session ends.</summary>
 internal sealed class SessionResources
 {
     private readonly AdmissionControl _admissions;

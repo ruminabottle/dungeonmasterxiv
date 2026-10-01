@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Generates random session codes.</summary>
 public static class SessionCodeGenerator
 {
     public static SessionCode Next()

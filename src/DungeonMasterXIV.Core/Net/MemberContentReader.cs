@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Opens a sealed payload with each member's key and passes the first decodable content to its handler.</summary>
 internal static class MemberContentReader
 {
     public static void Apply(

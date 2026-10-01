@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The UTC instant a session closes, sixty seconds after the host ends it.</summary>
 public readonly struct SessionClosing : IEquatable<SessionClosing>
 {
     public static readonly TimeSpan Window = TimeSpan.FromSeconds(60);

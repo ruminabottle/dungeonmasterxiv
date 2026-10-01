@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Seals the roster, closing notices and stream lines to each admitted member and sends them.</summary>
 internal sealed class RosterBroadcast
 {
     private readonly RelayLink _link;

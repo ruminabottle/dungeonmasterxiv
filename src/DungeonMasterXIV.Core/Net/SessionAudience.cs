@@ -3,6 +3,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The list of peers the host has admitted to the session.</summary>
 public sealed class SessionAudience
 {
     private readonly List<AdmittedPeer> _admitted = new();

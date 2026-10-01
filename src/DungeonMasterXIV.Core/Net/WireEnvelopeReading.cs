@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Reads typed values from a wire envelope: host keys, deadlines, sealed payloads, admission answers.</summary>
 public static class WireEnvelopeReading
 {
     public static byte[]? TryGetPendingHostKey(this WireEnvelope envelope) =>

@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Formats a chat message as one line with its speaker, role tag, privacy tag and kind.</summary>
 public static class MessageLine
 {
     public static string Attribution(string speaker, DisplayName person) =>

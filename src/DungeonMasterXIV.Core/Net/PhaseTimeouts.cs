@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Times how long hosting or joining has stayed in one phase and fails it when that runs too long.</summary>
 internal sealed class PhaseTimeouts
 {
     private TimeSpan _timeInPhase;

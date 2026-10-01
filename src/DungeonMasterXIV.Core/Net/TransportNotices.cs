@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Passes the relay's connection-dropped notices on to a handler with the dropped member's key.</summary>
 public readonly record struct TransportNotices(
     Action<byte[]>? OnConnectionDropped = null)
 {

@@ -1,5 +1,6 @@
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A stream entry in the plain form sent inside session content, convertible back to an entry.</summary>
 public readonly record struct StreamLine(
     long Sequence,
     long AtUtcTicks,

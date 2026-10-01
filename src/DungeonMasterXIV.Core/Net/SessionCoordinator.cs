@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>The entry point for session networking: hosting, joining, admission, and the per-frame tick.</summary>
 public sealed class SessionCoordinator
 {
     private readonly RelayLink _link;

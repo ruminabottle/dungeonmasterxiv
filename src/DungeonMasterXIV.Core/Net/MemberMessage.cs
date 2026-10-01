@@ -3,6 +3,7 @@ using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Checks a member's chat message and sends it to the host as a sealed session payload.</summary>
 internal sealed class MemberMessage
 {
     private readonly RelayLink _link;

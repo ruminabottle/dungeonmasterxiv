@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Encodes wire envelopes to JSON bytes and decodes them back, rejecting frames without a valid code.</summary>
 public static class EnvelopeCodec
 {
     private static readonly JsonSerializerOptions Options = new()

@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Tracks a joiner's request to join a session from first contact through the host's decision.</summary>
 public sealed class JoinAttempt
 {
     public static readonly TimeSpan ContactTimeout = TimeSpan.FromSeconds(10);

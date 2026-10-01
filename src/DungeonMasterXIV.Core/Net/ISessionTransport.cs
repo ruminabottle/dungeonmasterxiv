@@ -2,6 +2,7 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>A connection to the relay that sends and receives envelope bytes and reports failures.</summary>
 public interface ISessionTransport
 {
     bool IsConnected { get; }

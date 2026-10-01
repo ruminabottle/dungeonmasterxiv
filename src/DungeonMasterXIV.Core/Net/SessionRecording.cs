@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DungeonMasterXIV.Net;
 
+/// <summary>Stamps and records the host's session stream entries, starting afresh when released.</summary>
 internal sealed class SessionRecording
 {
     private SessionStream _stream = new();
