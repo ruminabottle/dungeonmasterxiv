@@ -17,11 +17,9 @@ public sealed class JoinAttempt
 
     public bool MayReceiveSessionState => Phase == JoinPhase.Admitted;
 
-    public string? Fingerprint { get; private set; }
-
-    public bool FingerprintWasComparableAtDecision { get; private set; }
-
     public Guid? ParticipantId { get; private set; }
+
+    public byte[]? HostPublicKey { get; private set; }
 
     public void Request(SessionCode code)
     {
@@ -29,8 +27,7 @@ public sealed class JoinAttempt
         Code = code;
         Failure = SessionFailure.None;
         Deadline = null;
-        Fingerprint = null;
-        FingerprintWasComparableAtDecision = false;
+        HostPublicKey = null;
 
         ParticipantId = null;
     }
@@ -41,22 +38,20 @@ public sealed class JoinAttempt
         Code = null;
         Failure = SessionFailure.None;
         Deadline = null;
-        Fingerprint = null;
-        FingerprintWasComparableAtDecision = false;
+        HostPublicKey = null;
         ParticipantId = null;
     }
 
-    public void HostKeyOffered(byte[] hostPublicKey, byte[] ownPublicKey)
+    public void HostKeyOffered(byte[] hostPublicKey)
     {
         ArgumentNullException.ThrowIfNull(hostPublicKey);
-        ArgumentNullException.ThrowIfNull(ownPublicKey);
 
-        if (Phase is not (JoinPhase.Contacting or JoinPhase.AwaitingDecision))
+        if (Phase != JoinPhase.Contacting)
         {
             return;
         }
 
-        Fingerprint = KeyFingerprint.Of(hostPublicKey, ownPublicKey);
+        HostPublicKey = (byte[])hostPublicKey.Clone();
     }
 
     public void AwaitDecision(AdmissionDeadline? deadline = null)
@@ -88,7 +83,6 @@ public sealed class JoinAttempt
             return;
         }
 
-        FingerprintWasComparableAtDecision = Fingerprint is not null;
         Phase = JoinPhase.Admitted;
     }
 

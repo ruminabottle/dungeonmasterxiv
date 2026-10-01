@@ -20,17 +20,18 @@ public sealed class RelayRouter(SessionRegistry registry)
         return envelope.Type switch
         {
             WireMessageType.CodeRequest => Arbitrate(code, senderConnectionId),
+            WireMessageType.JoinHello => RouteJoinHello(code, senderConnectionId, envelope.PublicKey),
             WireMessageType.JoinRequest => RouteJoinRequest(code, senderConnectionId, envelope.PublicKey),
+            WireMessageType.HostKey =>
+                RouteToPendingJoiner(envelope, code, senderConnectionId, RelayOutcome.HostKeyForwarded),
             WireMessageType.SessionPayload => ForwardPayload(code, senderConnectionId),
 
             WireMessageType.JoinAccepted => RouteAdmission(envelope, code, senderConnectionId, admit: true),
             WireMessageType.JoinDenied or WireMessageType.JoinLapsed =>
                 RouteAdmission(envelope, code, senderConnectionId, admit: false),
 
-            WireMessageType.JoinPending => RouteJoinPending(envelope, code, senderConnectionId),
-
-            WireMessageType.JoinerHoldsFingerprint =>
-                RouteFingerprintReceipt(envelope, code, senderConnectionId),
+            WireMessageType.JoinPending =>
+                RouteToPendingJoiner(envelope, code, senderConnectionId, RelayOutcome.PendingNoticeForwarded),
 
             WireMessageType.CodeAccepted or WireMessageType.CodeRefused or WireMessageType.ConnectionDropped =>
                 RelayDecision.Drop(RelayOutcome.RelayOnlyMessageFromClient),
@@ -44,7 +45,7 @@ public sealed class RelayRouter(SessionRegistry registry)
             ? RelayDecision.Respond(RelayOutcome.CodeClaimed, WireEnvelope.ForCodeAccepted(code))
             : RelayDecision.Respond(RelayOutcome.CodeAlreadyLive, WireEnvelope.ForCodeRefused(code));
 
-    private RelayDecision RouteJoinRequest(SessionCode code, string joinerConnectionId, byte[]? envelopePublicKey)
+    private RelayDecision RouteJoinHello(SessionCode code, string joinerConnectionId, byte[]? envelopePublicKey)
     {
         if (!_registry.TryGetHost(code.Value, out var hostConnectionId))
         {
@@ -62,6 +63,27 @@ public sealed class RelayRouter(SessionRegistry registry)
         }
 
         _registry.TryRegisterPending(code.Value, joinerConnectionId, envelopePublicKey);
+
+        return RelayDecision.Forward(RelayOutcome.JoinForwardedToHost, [hostConnectionId]);
+    }
+
+    private RelayDecision RouteJoinRequest(SessionCode code, string joinerConnectionId, byte[]? envelopePublicKey)
+    {
+        if (!_registry.TryGetHost(code.Value, out var hostConnectionId))
+        {
+            return RelayDecision.Respond(RelayOutcome.SessionNotFound, WireEnvelope.ForCodeRefused(code));
+        }
+
+        if (envelopePublicKey is null)
+        {
+            return RelayDecision.Drop(RelayOutcome.MalformedEnvelope);
+        }
+
+        if (!_registry.TryGetPending(code.Value, envelopePublicKey, out var waiting)
+            || !string.Equals(waiting, joinerConnectionId, StringComparison.Ordinal))
+        {
+            return RelayDecision.Drop(RelayOutcome.UnknownJoiner);
+        }
 
         return RelayDecision.Forward(RelayOutcome.JoinForwardedToHost, [hostConnectionId]);
     }
@@ -95,7 +117,11 @@ public sealed class RelayRouter(SessionRegistry registry)
             : RelayDecision.Drop(RelayOutcome.UnknownJoiner);
     }
 
-    private RelayDecision RouteJoinPending(WireEnvelope envelope, SessionCode code, string senderConnectionId)
+    private RelayDecision RouteToPendingJoiner(
+        WireEnvelope envelope,
+        SessionCode code,
+        string senderConnectionId,
+        RelayOutcome forwarded)
     {
         if (!_registry.TryGetHost(code.Value, out var hostConnectionId))
         {
@@ -113,31 +139,8 @@ public sealed class RelayRouter(SessionRegistry registry)
         }
 
         return _registry.TryGetPending(code.Value, envelope.PublicKey, out var waiting)
-            ? RelayDecision.Forward(RelayOutcome.PendingNoticeForwarded, [waiting])
+            ? RelayDecision.Forward(forwarded, [waiting])
             : RelayDecision.Drop(RelayOutcome.UnknownJoiner);
-    }
-
-    private RelayDecision RouteFingerprintReceipt(
-        WireEnvelope envelope,
-        SessionCode code,
-        string senderConnectionId)
-    {
-        if (!_registry.TryGetHost(code.Value, out var hostConnectionId))
-        {
-            return RelayDecision.Drop(RelayOutcome.SessionNotFound);
-        }
-
-        if (string.Equals(hostConnectionId, senderConnectionId, StringComparison.Ordinal))
-        {
-            return RelayDecision.Drop(RelayOutcome.RelayOnlyMessageFromClient);
-        }
-
-        if (envelope.PublicKey is null)
-        {
-            return RelayDecision.Drop(RelayOutcome.MalformedEnvelope);
-        }
-
-        return RelayDecision.Forward(RelayOutcome.JoinForwardedToHost, [hostConnectionId]);
     }
 
     private RelayDecision ForwardPayload(SessionCode code, string senderConnectionId)

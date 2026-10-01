@@ -15,7 +15,7 @@ public sealed class RelayRouterTests
         var registry = new SessionRegistry();
         var router = new RelayRouter(registry);
         router.Route(WireEnvelope.ForCodeRequest(Code), "host-1");
-        router.Route(WireEnvelope.ForJoinRequest(Code, [1, 2, 3]), "joiner-1");
+        router.Route(WireEnvelope.ForJoinHello(Code, [1, 2, 3]), "joiner-1");
         registry.TryAdmit(Code.Value, [1, 2, 3], out _);
 
         var decision = router.Route(

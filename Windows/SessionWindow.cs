@@ -102,12 +102,6 @@ public sealed class SessionWindow : Window
 
             RosterView.Draw(audience.Recipients.Select(peer => (peer.DisplayName.Value, peer.Role)));
 
-            if (audience.Count > audience.ConfirmedCount)
-            {
-                ImGui.TextWrapped(
-                    $"{audience.Count - audience.ConfirmedCount} admitted without the code being compared.");
-            }
-
             if (ImGui.Button("End session"))
             {
                 _coordinator.StopHosting(DateTimeOffset.UtcNow);

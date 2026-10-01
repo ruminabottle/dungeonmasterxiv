@@ -9,9 +9,6 @@ public static class WireEnvelopeReading
     public static byte[]? TryGetPendingHostKey(this WireEnvelope envelope) =>
         envelope.Type == WireMessageType.JoinPending ? envelope.HostPublicKey : null;
 
-    public static byte[]? TryGetFingerprintReceiptKey(this WireEnvelope envelope) =>
-        envelope.Type == WireMessageType.JoinerHoldsFingerprint ? envelope.PublicKey : null;
-
     public static AdmissionOutcome? TryGetAdmissionOutcome(this WireEnvelope envelope, byte[]? ownPublicKey)
     {
         return envelope.TryReadAdmissionAnswer() is { } outcome && IsAddressedTo(envelope, ownPublicKey)

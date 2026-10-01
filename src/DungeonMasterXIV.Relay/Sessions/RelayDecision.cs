@@ -46,6 +46,8 @@ public enum RelayOutcome
     UnknownJoiner = 14,
 
     PendingNoticeForwarded = 15,
+
+    HostKeyForwarded = 16,
 }
 
 /// <summary>The router's verdict on a message: action, outcome, any reply, recipients, whether to close them.</summary>

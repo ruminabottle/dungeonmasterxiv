@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
@@ -73,13 +74,7 @@ public sealed class AdmissionControl
         }
 
         var deadline = AdmissionDeadline.DecidedByHost(now);
-        var request = new PendingAdmission(
-            peerCode,
-            KeyFingerprint.Of(joinerPublicKey, hostKeys.PublicKey),
-            deadline,
-            relink,
-            joinerPublicKey,
-            displayName);
+        var request = new PendingAdmission(peerCode, deadline, relink, joinerPublicKey, displayName);
 
         Desk.Receive(request);
 
@@ -107,24 +102,55 @@ public sealed class AdmissionControl
         return true;
     }
 
+    public void OfferHostKey(byte[] joinerPublicKey)
+    {
+        if (_hostCode() is { } code && _hostKeys() is { } hostKeys)
+        {
+            _announcer.HostKey(code, joinerPublicKey, hostKeys.PublicKey);
+        }
+    }
+
+    public JoinDetails? OpenJoinRequest(byte[] joinerPublicKey, WireEnvelope envelope)
+    {
+        if (_hostCode() is not { } code || _hostKeys() is not { } hostKeys)
+        {
+            return null;
+        }
+
+        byte[] key;
+        try
+        {
+            key = hostKeys.DeriveSharedKey(joinerPublicKey, code);
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
+
+        var details = JoinDetailsCodec.TryOpen(key, envelope);
+        CryptographicOperations.ZeroMemory(key);
+
+        if (details is null)
+        {
+            _log.Warning(
+                "A join request arrived that could not be opened with the key agreed for it, so it was "
+                + "discarded. A joiner on a different build and something altering the request on the "
+                + "way look the same from here.");
+        }
+
+        return details;
+    }
+
     public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player)
     {
         var request = Desk.Decide(peerCode);
-        var peer = Audience.Admit(
-            peerCode,
-            role,
-            request?.Verification ?? AdmissionVerification.NotCompared,
-            request?.JoinerPublicKey,
-            request?.DisplayName ?? DisplayName.None);
+        var displayName = request?.DisplayName ?? DisplayName.None;
+        var participantId = _mintParticipant(displayName);
+
+        var peer = Audience.Admit(peerCode, role, request?.JoinerPublicKey, displayName);
 
         Drops.Forget(peerCode);
-
-        var participantId = _mintParticipant(peer.DisplayName);
-
-        if (_hostCode() is { } code && _hostKeys() is { } hostKeys && request?.JoinerPublicKey is { } joinerKey)
-        {
-            _announcer.Accepted(code, joinerKey, hostKeys.PublicKey, participantId);
-        }
+        AnnounceAccepted(request?.JoinerPublicKey, participantId);
 
         if (participantId is null)
         {
@@ -137,8 +163,24 @@ public sealed class AdmissionControl
         return peer;
     }
 
-    public void RecordComparabilityReceipt(byte[] joinerPublicKey) =>
-        Desk.Find(PeerCodeFor(joinerPublicKey))?.JoinerReportedItCanCompare();
+    private void AnnounceAccepted(byte[]? joinerPublicKey, Guid? participantId)
+    {
+        if (_hostCode() is not { } code || _hostKeys() is not { } hostKeys || joinerPublicKey is null)
+        {
+            return;
+        }
+
+        SealedPayload? welcome = null;
+        if (participantId is { } id)
+        {
+            var key = hostKeys.DeriveSharedKey(joinerPublicKey, code);
+            welcome = JoinDetailsCodec.Seal(
+                key, new JoinDetails { ParticipantId = id.ToString("D") }, code, WireMessageType.JoinAccepted);
+            CryptographicOperations.ZeroMemory(key);
+        }
+
+        _announcer.Accepted(code, joinerPublicKey, hostKeys.PublicKey, welcome);
+    }
 
     public bool Departed(PeerCode peerCode) => Audience.Remove(peerCode);
 

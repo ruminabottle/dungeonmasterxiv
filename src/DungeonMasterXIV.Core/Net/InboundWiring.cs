@@ -16,9 +16,15 @@ internal sealed class InboundWiring(
         Action<SessionContent> onHostContent) =>
         new(
             Admission: new JoinerAdmission(
-                OnJoinRequest: (key, name, claimed) =>
-                    admissions.AdmitToTheQueue(key, now, name, resolveRelink(claimed)),
-                OnComparabilityReceipt: admissions.RecordComparabilityReceipt),
+                OnHello: admissions.OfferHostKey,
+                OnJoinRequest: (key, envelope) =>
+                {
+                    if (admissions.OpenJoinRequest(key, envelope) is { } details)
+                    {
+                        admissions.AdmitToTheQueue(
+                            key, now, DisplayName.OrNone(details.DisplayName), resolveRelink(details.ParticipantId));
+                    }
+                }),
             HostAuthored: new HostAuthoredContent(
                 OpenWith: sessionKey,
                 OnContent: onHostContent),

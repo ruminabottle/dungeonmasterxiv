@@ -6,12 +6,10 @@ using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>Draws the joiner's side of the session window: status, code check, roster, leaving and request form.</summary>
+/// <summary>Draws the joiner's side of the session window: status, roster, leaving and request form.</summary>
 internal sealed class JoinFlowView
 {
     private readonly SessionCoordinator _coordinator;
-
-    private readonly JoinComparisonView _comparison = new();
 
     private readonly SessionEndingView _ending;
 
@@ -38,8 +36,6 @@ internal sealed class JoinFlowView
             ImGui.TextUnformatted($"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");
 
         }
-
-        _comparison.Draw(join);
 
         _ending.Draw(join);
 

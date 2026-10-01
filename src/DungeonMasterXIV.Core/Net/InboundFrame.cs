@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace DungeonMasterXIV.Net;
 
 /// <summary>Routes one decoded inbound envelope to the matching handler for a join attempt or hosted session.</summary>
@@ -18,9 +20,10 @@ internal readonly record struct InboundFrame(
         }
 
         if (TryContent(envelope, sessionKey)
+            || TryJoinHello(envelope)
             || TryJoinRequest(envelope)
             || TryConnectionDropped(envelope)
-            || TryFingerprintReceipt(envelope)
+            || TryHostKey(envelope)
             || TryCodeRefused(envelope)
             || TryPendingNotice(envelope))
         {
@@ -46,26 +49,38 @@ internal readonly record struct InboundFrame(
         return false;
     }
 
-    private bool TryJoinRequest(WireEnvelope envelope)
+    private bool TryJoinHello(WireEnvelope envelope)
     {
-        var handlers = Handlers;
-
-        if (envelope.Type == WireMessageType.JoinRequest)
+        if (envelope.Type != WireMessageType.JoinHello)
         {
-            if (handlers.Admission.OnJoinRequest is { } onJoinRequest
-                && envelope.PublicKey is { } joinerPublicKey
-                && SessionKeyExchange.CanAgreeWith(joinerPublicKey))
-            {
-                onJoinRequest(
-                    joinerPublicKey,
-                    DisplayName.OrNone(envelope.DisplayName),
-                    envelope.ClaimedParticipantId);
-            }
-
-            return true;
+            return false;
         }
 
-        return false;
+        if (Handlers.Admission.OnHello is { } onHello
+            && envelope.PublicKey is { } joinerPublicKey
+            && SessionKeyExchange.CanAgreeWith(joinerPublicKey))
+        {
+            onHello(joinerPublicKey);
+        }
+
+        return true;
+    }
+
+    private bool TryJoinRequest(WireEnvelope envelope)
+    {
+        if (envelope.Type != WireMessageType.JoinRequest)
+        {
+            return false;
+        }
+
+        if (Handlers.Admission.OnJoinRequest is { } onJoinRequest
+            && envelope.PublicKey is { } joinerPublicKey
+            && SessionKeyExchange.CanAgreeWith(joinerPublicKey))
+        {
+            onJoinRequest(joinerPublicKey, envelope);
+        }
+
+        return true;
     }
 
     private bool TryConnectionDropped(WireEnvelope envelope)
@@ -81,22 +96,31 @@ internal readonly record struct InboundFrame(
         return false;
     }
 
-    private bool TryFingerprintReceipt(WireEnvelope envelope)
+    private bool TryHostKey(WireEnvelope envelope)
     {
-        var handlers = Handlers;
-
-        if (envelope.Type == WireMessageType.JoinerHoldsFingerprint)
+        if (envelope.Type != WireMessageType.HostKey)
         {
-            if (handlers.Admission.OnComparabilityReceipt is { } onReceipt
-                && envelope.TryGetFingerprintReceiptKey() is { } receiptKey)
-            {
-                onReceipt(receiptKey);
-            }
-
-            return true;
+            return false;
         }
 
-        return false;
+        var attempt = Attempt;
+
+        if (Keys is { } keys
+            && envelope.PublicKey is { } addressee
+            && CryptographicOperations.FixedTimeEquals(addressee, keys.PublicKey)
+            && envelope.HostPublicKey is { } hostPublicKey)
+        {
+            if (SessionKeyExchange.CanAgreeWith(hostPublicKey))
+            {
+                attempt.HostKeyOffered(hostPublicKey);
+            }
+            else if (attempt.Phase == JoinPhase.Contacting)
+            {
+                attempt.Fail(SessionFailure.HostKeyUnusable);
+            }
+        }
+
+        return true;
     }
 
     private bool TryCodeRefused(WireEnvelope envelope)
@@ -114,22 +138,13 @@ internal readonly record struct InboundFrame(
 
     private bool TryPendingNotice(WireEnvelope envelope)
     {
-        var attempt = Attempt;
-        var keys = Keys;
-
-        if (envelope.TryGetPendingHostKey() is { } hostPublicKey)
+        if (envelope.TryGetPendingHostKey() is null)
         {
-            attempt.AwaitDecision(envelope.TryGetDeadline());
-
-            if (keys is not null)
-            {
-                attempt.HostKeyOffered(hostPublicKey, keys.PublicKey);
-            }
-
-            return true;
+            return false;
         }
 
-        return false;
+        Attempt.AwaitDecision(envelope.TryGetDeadline());
+        return true;
     }
 
     private byte[]? ApplyOutcome(WireEnvelope envelope, byte[]? sessionKey)
@@ -140,7 +155,7 @@ internal readonly record struct InboundFrame(
         if (envelope.TryGetAdmissionOutcome(keys?.PublicKey) is { } outcome)
         {
             sessionKey = InboundApplication.Apply(
-                outcome, attempt, keys, ParticipantReceipt.TryRead(envelope, keys?.PublicKey)) ?? sessionKey;
+                outcome, attempt, keys, ParticipantReceipt.TryOpen(envelope, keys, attempt.Code)) ?? sessionKey;
         }
         else if (envelope.TryReadAdmissionAnswer() is not null)
         {

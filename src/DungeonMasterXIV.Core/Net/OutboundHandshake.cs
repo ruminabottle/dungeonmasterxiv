@@ -1,8 +1,9 @@
 using System;
+using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
-/// <summary>Sends the relay registration, join request and fingerprint receipt once each is due and the link is ready.</summary>
+/// <summary>Sends the relay registration, the join hello and the sealed join request once each is due and the link is ready.</summary>
 internal sealed class OutboundHandshake
 {
     private readonly RelayLink _link;
@@ -11,10 +12,10 @@ internal sealed class OutboundHandshake
     private readonly Func<SessionKeyExchange?> _joinerKeys;
 
     private string? _requestedCode;
+    private string? _helloSentFor;
     private string? _requestedJoinCode;
     private DisplayName _joinDisplayName;
     private Guid? _claimedParticipantId;
-    private string? _reportedCanCompareFor;
 
     public OutboundHandshake(
         RelayLink link,
@@ -40,31 +41,15 @@ internal sealed class OutboundHandshake
 
     public void ForgetJoinRequest()
     {
+        _helloSentFor = null;
         _requestedJoinCode = null;
-        _reportedCanCompareFor = null;
     }
 
     public void SendWhatIsDue()
     {
         RegisterWithRelayWhenReady();
+        SendHelloWhenReady();
         SendJoinRequestWhenReady();
-        ReportWeCanCompareWhenWeCan();
-    }
-
-    private void ReportWeCanCompareWhenWeCan()
-    {
-        if (_join.Phase is not (JoinPhase.Contacting or JoinPhase.AwaitingDecision)
-            || _join.Fingerprint is null
-            || _join.Code is not { } code
-            || _joinerKeys() is not { } keys
-            || string.Equals(_reportedCanCompareFor, code.Value, StringComparison.Ordinal)
-            || !_link.IsReadyToSend)
-        {
-            return;
-        }
-
-        _reportedCanCompareFor = code.Value;
-        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinerHoldsFingerprint(code, keys.PublicKey)));
     }
 
     private void RegisterWithRelayWhenReady()
@@ -81,10 +66,26 @@ internal sealed class OutboundHandshake
         _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(code)));
     }
 
+    private void SendHelloWhenReady()
+    {
+        if (_join.Phase != JoinPhase.Contacting
+            || _join.Code is not { } code
+            || _joinerKeys() is not { } keys
+            || string.Equals(_helloSentFor, code.Value, StringComparison.Ordinal)
+            || !_link.IsReadyToSend)
+        {
+            return;
+        }
+
+        _helloSentFor = code.Value;
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinHello(code, keys.PublicKey)));
+    }
+
     private void SendJoinRequestWhenReady()
     {
         if (_join.Phase != JoinPhase.Contacting
             || _join.Code is not { } code
+            || _join.HostPublicKey is not { } hostPublicKey
             || _joinerKeys() is not { } keys
             || string.Equals(_requestedJoinCode, code.Value, StringComparison.Ordinal)
             || !_link.IsReadyToSend)
@@ -93,8 +94,27 @@ internal sealed class OutboundHandshake
         }
 
         _requestedJoinCode = code.Value;
-        _link.Send(EnvelopeCodec.Encode(_claimedParticipantId is { } claimed
-            ? WireEnvelope.ForRelinkRequest(code, keys.PublicKey, claimed)
-            : WireEnvelope.ForJoinRequest(code, keys.PublicKey, _joinDisplayName)));
+
+        byte[] key;
+        try
+        {
+            key = keys.DeriveSharedKey(hostPublicKey, code);
+        }
+        catch (CryptographicException)
+        {
+            _join.Fail(SessionFailure.HostKeyUnusable);
+            return;
+        }
+
+        var details = new JoinDetails
+        {
+            DisplayName = _joinDisplayName.WasStated ? _joinDisplayName.Value : null,
+            ParticipantId = _claimedParticipantId?.ToString("D"),
+        };
+
+        var sealedDetails = JoinDetailsCodec.Seal(key, details, code, WireMessageType.JoinRequest);
+        CryptographicOperations.ZeroMemory(key);
+
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForJoinRequest(code, keys.PublicKey, sealedDetails)));
     }
 }

@@ -15,7 +15,6 @@ public sealed class SessionAudience
     public AdmittedPeer Admit(
         PeerCode peerCode,
         SessionRole role = SessionRole.Player,
-        AdmissionVerification verification = AdmissionVerification.NotCompared,
         byte[]? publicKey = null,
         DisplayName displayName = default)
     {
@@ -25,7 +24,7 @@ public sealed class SessionAudience
             return existing;
         }
 
-        var peer = new AdmittedPeer(peerCode, role, verification, publicKey, displayName);
+        var peer = new AdmittedPeer(peerCode, role, publicKey, displayName);
         _admitted.Add(peer);
         return peer;
     }
@@ -40,9 +39,6 @@ public sealed class SessionAudience
 
     public AdmittedPeer? Find(PeerCode peerCode) =>
         _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
-
-    public int ConfirmedCount =>
-        _admitted.Count(peer => peer.Verification == AdmissionVerification.Confirmed);
 
     public void Clear() => _admitted.Clear();
 }
