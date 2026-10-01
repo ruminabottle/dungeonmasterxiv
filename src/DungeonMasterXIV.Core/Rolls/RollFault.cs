@@ -7,13 +7,9 @@ public enum RollFault
 
     Empty,
 
-    UnknownCharacter,
-
     Malformed,
 
     UnbalancedParentheses,
-
-    ModifierWithoutDice,
 
     NotANumber,
 
