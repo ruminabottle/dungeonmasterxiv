@@ -2,22 +2,6 @@ using System;
 
 namespace DungeonMasterXIV.Rolls;
 
-/// <summary>
-/// Reads expression text into a <see cref="RollNode"/>, or refuses it naming the fault.
-/// </summary>
-/// <remarks>
-/// <para>
-/// Recursive descent, standard precedence: <c>+ -</c> below <c>* /</c> below unary minus below
-/// primaries. Parentheses nest, and <c>d20</c> means <c>1d20</c> (R-2.1).
-/// </para>
-/// <para>
-/// <b>THE NESTING BOUND IS ENFORCED WHILE READING, NOT AFTER.</b> A depth counter is carried through
-/// the descent and checked on entering a parenthesis, so <c>((((…))))</c> a thousand deep is refused
-/// at depth 33 rather than after the stack has already gone. A bound that is checked once the tree
-/// exists has already paid the cost it exists to prevent — and R-2.1a puts a crash in the same
-/// category as a wrong answer.
-/// </para>
-/// </remarks>
 internal sealed class RollParser
 {
     private readonly RollCursor _cursor;
@@ -29,7 +13,6 @@ internal sealed class RollParser
         _limits = limits;
     }
 
-    /// <summary>Reads <paramref name="text"/>, applying the shape bounds in <paramref name="limits"/>.</summary>
     public static RollParse Parse(string text, RollLimits limits)
     {
         ArgumentNullException.ThrowIfNull(limits);
@@ -50,15 +33,6 @@ internal sealed class RollParser
         return new RollParser(body, limits).ParseAll(label);
     }
 
-    /// <summary>
-    /// Separates a trailing free-text label from the expression — <c>1d20+5 [perception]</c> or
-    /// <c>1d20+5 #perception</c>.
-    /// </summary>
-    /// <remarks>
-    /// <b>Split lexically and never read.</b> D-4: the plugin stores and displays a label and never
-    /// interprets it. Taking it off before parsing is what keeps that true by construction — no
-    /// grammar rule can branch on text the grammar never sees.
-    /// </remarks>
     private static (string Body, string? Label) SplitLabel(string text)
     {
         var hash = text.IndexOf('#', StringComparison.Ordinal);
@@ -165,7 +139,6 @@ internal sealed class RollParser
             return ParseParenthesised(depth);
         }
 
-        // A leading 'd' with no count is 1dN -- R-2.1's "d20 means 1d20".
         if (_cursor.Peek() is 'd' or 'D')
         {
             _cursor.TakeLetter('d');

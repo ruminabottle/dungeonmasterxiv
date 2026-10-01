@@ -4,16 +4,6 @@ using DungeonMasterXIV.Relay.Sessions;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
-/// <summary>
-/// Applies the router's decisions to real connections: decode what arrived, ask
-/// <see cref="RelayRouter"/> what to do with it, do that, and record it.
-/// </summary>
-/// <remarks>
-/// The one place a routing decision meets a socket. It re-encodes nothing on the forwarding path —
-/// the bytes a member receives are the bytes the sender sent, so the relay cannot alter a payload
-/// even in principle, and a re-framed one would fail its authentication tag anyway because
-/// <see cref="SessionCipher"/> binds the envelope's type and session code into the tag.
-/// </remarks>
 public sealed class RelayHub(
     RelayRouter router,
     SessionRegistry registry,
@@ -25,7 +15,6 @@ public sealed class RelayHub(
     private readonly ConnectionDirectory _directory = directory;
     private readonly RelayLog _log = log;
 
-    /// <summary>Handles one complete message received from <paramref name="sender"/>.</summary>
     public async ValueTask ReceiveAsync(IRelayConnection sender, byte[] bytes, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(sender);
@@ -61,7 +50,6 @@ public sealed class RelayHub(
         }
     }
 
-    /// <summary>Drops a connection from its session and from the directory.</summary>
     public async ValueTask DisconnectAsync(
         IRelayConnection connection,
         string reason,
@@ -76,30 +64,6 @@ public sealed class RelayHub(
         await TellHostsTheirMemberDroppedAsync(removal, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Tells each affected host that one of its members' connections went away (A-1.28).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>A POSITIVE NOTICE, which is required rather than tidy.</b> Deciding a member has gone
-    /// because nothing has arrived from them starts a clock from an absence — silence taken as
-    /// evidence, which is what A-1.28 forbids in terms. The relay is the only party that can observe
-    /// the drop, so if it says nothing then nobody can know without inferring.
-    /// </para>
-    /// <para>
-    /// <b>Only for a MEMBER's departure, never the host's.</b> A departure with no
-    /// <c>DepartedMemberKey</c> is either the host leaving — the session is over and there is nobody
-    /// to tell — or a connection that was only ever pending, which is not a member whose seat is
-    /// being held.
-    /// </para>
-    /// <para>
-    /// <b>AFTER the registry removal and best-effort, deliberately.</b> This runs on a teardown path
-    /// that must complete: a host whose own socket has already gone is simply absent from the
-    /// directory, and a send that fails must not leave the connection half-removed. Nothing here
-    /// decides anything about the session — it reports a transport fact and the host decides
-    /// (A-1.29, D-3).
-    /// </para>
-    /// </remarks>
     private async ValueTask TellHostsTheirMemberDroppedAsync(
         ConnectionRemoval removal,
         CancellationToken cancellationToken)

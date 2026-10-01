@@ -1,138 +1,28 @@
 namespace DungeonMasterXIV.Net;
 
-/// <summary>
-/// What a <see cref="WireEnvelope"/> carries.
-/// </summary>
-/// <remarks>
-/// Two classes of message, and the difference decides what the relay can read. The first three are
-/// addressed to the relay itself, so the relay must be able to read them. <see cref="SessionPayload"/>
-/// is addressed to session members and reaches the relay as ciphertext (R-1.9, A-1.5f).
-/// </remarks>
 public enum WireMessageType
 {
-    /// <summary>
-    /// A type this build does not recognise. Never sent — <see cref="EnvelopeCodec"/> maps any
-    /// unrecognised value to this on receipt, so D-14's "ignore what you do not recognise" is a
-    /// property of the deserializer rather than something each handler remembers.
-    /// </summary>
     Unknown = 0,
 
-    /// <summary>Host to relay: claim this code. R-1.2a — the host proposes, the relay arbitrates.</summary>
     CodeRequest = 1,
 
-    /// <summary>Relay to host: the code is yours.</summary>
     CodeAccepted = 2,
 
-    /// <summary>Relay to host: already in use. The host regenerates and retries (R-1.2a).</summary>
     CodeRefused = 3,
 
-    /// <summary>Joiner to host, via relay: asking to be admitted, carrying an ephemeral public key (D-11).</summary>
     JoinRequest = 4,
 
-    /// <summary>Member to member: end-to-end encrypted. The relay forwards it and cannot read it.</summary>
     SessionPayload = 5,
 
-    /// <summary>
-    /// Host to joiner: admitted. Carries the <b>host's</b> public key, which is the half the joiner
-    /// cannot obtain any other way — see <see cref="WireEnvelope.ForJoinAccepted"/>.
-    /// </summary>
     JoinAccepted = 6,
 
-    /// <summary>Host to joiner: refused. Somebody looked and said no (R-1.3b).</summary>
     JoinDenied = 7,
 
-    /// <summary>
-    /// Host to joiner: the window closed with no answer. Distinct from
-    /// <see cref="JoinDenied"/> on purpose — nobody looked, so asking again is reasonable (R-1.3c).
-    /// </summary>
     JoinLapsed = 8,
 
-    /// <summary>
-    /// Host to joiner: your request is in front of the DM, here is the host's public key, and here
-    /// is when the window closes. Carries no decision — the DM has not made one yet.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>This message exists because of when it is sent, not what it contains (D-11 amended).</b>
-    /// <see cref="JoinAccepted"/> already carries the host's key, and carrying it there is too late:
-    /// the joiner cannot compute the fingerprint until the DM has already decided, so the check
-    /// meant to inform the decision arrives after it. A joiner who is only ever sent
-    /// <see cref="JoinAccepted"/> has nothing to compare and cannot detect a substituted host key.
-    /// </para>
-    /// <para>
-    /// <b>A new type rather than a field on <see cref="JoinRequest"/>.</b> D-14 permits either, but
-    /// <see cref="JoinRequest"/> means "joiner to host, asking to be admitted"; putting the host's
-    /// key on it would make one type mean two opposite things depending on direction, and D-14 says
-    /// no message type ever changes meaning. An old client decodes this as
-    /// <see cref="Unknown"/> and ignores it, which is the interoperability D-14 is for.
-    /// </para>
-    /// </remarks>
     JoinPending = 9,
 
-    /// <summary>
-    /// Joiner to host: this client holds the host's key and has a fingerprint on screen
-    /// (R-1.3a-iii). A CAPABILITY, never a claim that a human compared anything.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>A receipt, not a declaration, and the difference is load-bearing.</b> It would be simpler
-    /// for the joiner to say "I understand JoinPending" in its original <see cref="JoinRequest"/> —
-    /// one field, no round trip. That would have been WRONG, and this project proved it: the deployed
-    /// relay was v0.1.0 and DROPPED JoinPending, which is what made the impossible-confirmation defect
-    /// every session rather than a rare version skew. A declaring client would have told the host
-    /// "they can compare" while the relay silently ate the notice. This is sent only once the key has
-    /// actually arrived, so it reports a fact rather than a promise.
-    /// </para>
-    /// <para>
-    /// <b>What it may never carry.</b> R-1.3a-iii forbids signalling that the joining human DID
-    /// compare: that acknowledgement travels the same out-of-band channel as the comparison, so an
-    /// attacker who substituted the host key controls it and can forge it — worthless exactly when
-    /// it matters, while displaying as evidence.
-    /// </para>
-    /// </remarks>
     JoinerHoldsFingerprint = 10,
 
-    /// <summary>
-    /// The relay telling a host that one of its members' connections went away (A-1.28, R-1.5a).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>The only message the relay AUTHORS about a session's people, and the line it must not
-    /// cross is in its name.</b> It reports THAT A CONNECTION DROPPED — never <i>remove this
-    /// participant</i>. D-2 denies the relay authority over the SESSION; a dropped connection is a
-    /// TRANSPORT FACT, which is the distinction that makes this permissible at all. R-1.7b already
-    /// has the relay authoring a transport message and R-1.9 already discloses that it observes
-    /// that a connection exists.
-    /// </para>
-    /// <para>
-    /// <b>A positive notice rather than an inference from silence, and that is required rather than
-    /// tidy.</b> Deciding a member has gone because nothing has arrived starts a clock from an
-    /// absence — the defect A-1.28 forbids in terms.
-    /// </para>
-    /// <para>
-    /// <b>A CLIENT SENDING ONE IS REFUSED AT THE RELAY, and that guard is load-bearing.</b>
-    /// Forwarding a client-authored drop notice would let any keyholder tell a host that somebody
-    /// else vanished — a forged transport fact, which the host would then record against a real
-    /// member. <c>RelayRouter</c> drops it as <c>RelayOnlyMessageFromClient</c>, alongside the
-    /// relay's other own-answers. <b>The host refuses a key it has not admitted as well</b>, so
-    /// there are two independent guards rather than one — <b>but they are not co-equal, and the
-    /// difference matters to anyone thinking of relaxing either.</b> A forged notice naming a
-    /// member the host HAS admitted passes <c>RecordDrop</c>'s check, because that check asks only
-    /// whether the named member is real. <b>So the router guard carries the entire client threat;
-    /// the host guard covers relay error or a compromised relay.</b> Relaxing the first on the
-    /// strength of the second would remove the only thing standing between a keyholder and a
-    /// forged drop against a genuine member.
-    /// </para>
-    /// <para>
-    /// <b>WHAT THE RELAY CARRIES, AND THE CONDITION THE PRIVACY PROPERTY RESTS ON.</b> Naming a
-    /// member by public key means the relay now RETAINS that key for the life of the session. That
-    /// is not cross-session linkage <b>because joiner keys are ephemeral BY CONSTRUCTION</b> —
-    /// <c>JoinRequester</c> mints a fresh pair per join, so the key identifies a connection and
-    /// never a person. <b>If joiner keys ever became durable, this retention becomes linkage with
-    /// nothing in the relay changing</b>, and relink is the feature that would tempt exactly that.
-    /// Stated as a condition rather than a property so the next person changing key lifetime meets
-    /// it.
-    /// </para>
-    /// </remarks>
     ConnectionDropped = 11,
 }

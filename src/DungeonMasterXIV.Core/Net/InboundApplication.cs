@@ -3,60 +3,15 @@ using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
-/// <summary>
-/// What a decoded frame DOES to this client's own state — the applying half of the inbound path.
-/// </summary>
-/// <remarks>
-/// <para>
-/// <b>The seam is STATE, and it was already here before the size limit found it.</b>
-/// <see cref="AdmissionInbox"/> owns a lock and a queue: frames arrive, wait, and are handed out in
-/// bounded slices. All three methods below were ALREADY <c>private static</c> — they touch no field,
-/// take everything they need as parameters, and answer a different question: <i>given this frame,
-/// what changes?</i> <b>Moving them cannot change behaviour because they never had state to leave
-/// behind</b>, which is why this extraction is a move rather than a redesign.
-/// </para>
-/// <para>
-/// <b>WHY NOT <c>Drain</c> — the decision, stated rather than only the result.</b> <c>Drain</c> is
-/// 173 lines against a 60-line method block and is the obvious candidate. <b>It is also the largest
-/// of the block breaches already on <c>main</c>, and a separate fix waits on it.</b> Splitting it
-/// here would resolve that breach inside other work and would incidentally unblock the fix.
-/// <b>THIS EXTRACTION ADDRESSES NEITHER. <c>Drain</c>'s length is unchanged.</b>
-/// </para>
-/// <para>
-/// <b>And it did not have to.</b> Moving these three frees 142 lines where the A-1.28 work needs 7,
-/// so <c>Drain</c> never had to be touched to unblock that work. <b>That the boundary-
-/// respecting cut was also the sufficient one is luck, not design</b> — had it not been, the answer
-/// would have been to report that and stop, rather than to cross the boundary quietly.
-/// </para>
-/// </remarks>
 internal static class InboundApplication
 {
-    /// <summary>
-    /// Applies the relay's arbitration of a code request, or reports that this frame was not one.
-    /// </summary>
-    /// <remarks>
-    /// R-1.2a: the host proposes and the relay arbitrates. A refusal means the code is already live,
-    /// and the answer is to regenerate and ask again — never to surface it to the DM, who did not
-    /// choose the code and can do nothing about the collision.
-    /// </remarks>
     internal static bool ApplyRegistration(WireEnvelope envelope, HostSession host)
     {
-        // Only a host that is REGISTERING is waiting on one of these, and saying "handled" when it
-        // is not was a real defect: a JOINER's CodeRefused matched the arm below, was discarded by
-        // CodeAlreadyLive's own phase guard, and the `return true` then stopped it ever reaching a
-        // joiner arm. The frame was consumed by a branch that did nothing with it.
         if (host.Phase != HostingPhase.Registering)
         {
             return false;
         }
 
-        // THE ANSWER MUST NAME THE CODE THIS HOST ASKED ABOUT. The phase alone does not say
-        // that, so an answer queued from an EARLIER request was applied to a later one -- a new
-        // session registered under the relay's answer about an old code. Only _inbox.Clear() in
-        // StopHosting prevented it: a guard in one method covering an unchecked assumption in
-        // another. The refusal arm needs it more, not less: a stale refusal makes the host abandon a
-        // code nobody refused. FALSE rather than a drop, so the frame falls through instead of being
-        // CONSUMED by a branch that did nothing with it.
         if (host.Code is not { } outstanding
             || !string.Equals(envelope.SessionCode, outstanding.Value, StringComparison.Ordinal))
         {
@@ -78,7 +33,6 @@ internal static class InboundApplication
         }
     }
 
-    /// <summary>Opens a payload if it is ours to open, and hands on what it said.</summary>
     internal static void ApplyContent(
         WireEnvelope envelope,
         byte[]? key,
@@ -97,19 +51,9 @@ internal static class InboundApplication
         }
         catch (CryptographicException)
         {
-            // Sealed for somebody else, or tampered with. Both are silence: see the call site.
             return;
         }
 
-        // THE DECODE FAILURE IS LOGGED HERE, RATHER THAN INSIDE TryDecode, ON PURPOSE.
-        // The distinction this rests on is only knowable at THIS call site: Open SUCCEEDED
-        // just above, so the AEAD authenticated and this payload was sealed for us by a keyholder.
-        // A decode failure after that point can never be "traffic for somebody else" -- it is
-        // version skew or an encoding defect, and both are faults worth a line. Inside TryDecode
-        // that context is gone: its other callers decode plaintext of unproven provenance, and a
-        // log line there would fire on inputs where silence is correct.
-        //
-        // It costs nothing on the normal path because it cannot fire there.
         if (!SessionContentCodec.TryDecode(plaintext, out var content, log) || content is null)
         {
             log?.Warning(
@@ -122,8 +66,6 @@ internal static class InboundApplication
         onContent(content);
     }
 
-    // Every outcome the admission vocabulary defines is handled. Match takes a delegate per case,
-    // so omitting one is a compile error rather than a branch that silently does nothing.
     internal static byte[]? Apply(
         AdmissionOutcome outcome,
         JoinAttempt attempt,
@@ -132,19 +74,6 @@ internal static class InboundApplication
         outcome.Match(
             onAccepted: hostPublicKey =>
             {
-                // THE HOST'S KEY IS CHECKED, AND BEFORE Admitted() ON PURPOSE. The host's key is as
-                // untrusted as a joiner's is at the wire, and it reaches here by controlling the
-                // RELAY — the position D-11 assumes an attacker may occupy. Guarding the derive
-                // alone was measured and is wrong: Admitted() would still run, leaving
-                // Phase=Admitted with a null SessionKey and MayReceiveSessionState true, which is
-                // the silently-unreachable participant the joiner-key check exists to remove, rebuilt here.
-                //
-                // Failing rather than dropping is a ruling, not a default. Dropping cannot be
-                // neutral because NOTHING LAPSES A JOINER LOCALLY: the only Lapsed() call is the
-                // arm below, driven by the host, and a host that sent an acceptance believes this
-                // client is in and never sends one. A dropped acceptance leaves the joiner in
-                // AwaitingDecision showing a dead countdown indefinitely — A-1.5j applied to UI
-                // state, which is why this reports instead.
                 if (!SessionKeyExchange.CanAgreeWith(hostPublicKey))
                 {
                     attempt.Fail(SessionFailure.HostKeyUnusable);
@@ -153,9 +82,6 @@ internal static class InboundApplication
 
                 attempt.Admitted();
 
-                // AFTER Admitted(), never before, and ToldItIsParticipant guards the phase itself
-                // so the ordering is stated in two places on purpose. R-1.3b: an unadmitted client
-                // is entitled to nothing, and the guard above can fail this attempt before here.
                 if (participantId is { } told)
                 {
                     attempt.ToldItIsParticipant(told);

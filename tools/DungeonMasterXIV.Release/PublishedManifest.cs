@@ -7,31 +7,6 @@ using System.Text.Json.Nodes;
 
 namespace DungeonMasterXIV.Release;
 
-/// <summary>
-/// The repository manifest as COMMITTED at the repository root — the file a tester's Dalamud reads.
-/// </summary>
-/// <remarks>
-/// <para>
-/// <b>The generated artefact, read back.</b> <see cref="RepositoryManifest"/> writes this file; this
-/// reads the copy that actually landed. Publishing it was a hand step with no mechanism and it was
-/// skipped, so a tester's URL 404'd while every other check stayed green.
-/// </para>
-/// <para>
-/// <b>The whole document is compared, not a list of fields.</b> The first version of this
-/// class named four fields it cared about. <c>IsTestingExclusive</c> was not among them — so half of
-/// D-12's gate could be crossed by editing one boolean in a committed file, with the suite green,
-/// and the only thing standing in the way was somebody noticing a one-line diff at review. That is
-/// enforcement by review, which D-15 rejects. Generation is deterministic, so the invariant is
-/// <i>this file is what the tool would produce</i>, and every field is covered by consequence rather
-/// than by being remembered. Derive the invariant, do not enumerate it — the rule that replaced
-/// the hand-listed field comparison, one level up.
-/// </para>
-/// <para>
-/// <b>Compared as parsed JSON, never as bytes.</b> A byte comparison fails on key order and
-/// whitespace, which are not defects — an instrument that produces false failures trains people to
-/// ignore it, and that is worse than one that cannot fail.
-/// </para>
-/// </remarks>
 public sealed class PublishedManifest
 {
     private readonly JsonNode document;
@@ -42,12 +17,8 @@ public sealed class PublishedManifest
         this.document = document;
     }
 
-    /// <summary>Where the manifest was read from, so a refusal can name it.</summary>
     public string Path { get; }
 
-    /// <summary>
-    /// The manifest at <paramref name="path"/>, refusing anything that is not a readable one.
-    /// </summary>
     public static PublishedManifest At(string path)
     {
         if (!File.Exists(path))
@@ -62,12 +33,6 @@ public sealed class PublishedManifest
         return new PublishedManifest(path, Parse(File.ReadAllText(path), path));
     }
 
-    /// <summary>
-    /// Throws unless this file is exactly what the release tool would generate for
-    /// <paramref name="tag"/>.
-    /// </summary>
-    /// <param name="generated">The manifest the tool produces, regenerated from the artefacts.</param>
-    /// <param name="tag">The release tag it was generated for, so the refusal can print the fix.</param>
     public void MustMatch(string generated, string tag)
     {
         var expected = Parse(generated, "the freshly generated manifest");
@@ -110,15 +75,12 @@ public sealed class PublishedManifest
         }
     }
 
-    /// <summary>Every field of the single plugin entry, canonicalised so ordering is not a difference.</summary>
     private static Dictionary<string, string> Fields(JsonNode manifest) =>
         manifest.AsArray()[0]!.AsObject().ToDictionary(
             property => property.Key,
             property => Canonical(property.Value),
             StringComparer.Ordinal);
 
-    // Key order and whitespace are not differences, so they are normalised away before comparing
-    // rather than reported as defects.
     private static string Canonical(JsonNode? node) => node switch
     {
         null => "null",
@@ -155,12 +117,6 @@ public sealed class PublishedManifest
         return parsed;
     }
 
-    /// <summary>The exact two commands that fix this, with the tag already substituted.</summary>
-    /// <remarks>
-    /// Spelled out rather than described. Regenerating takes two commands and four paths, and a
-    /// refusal that says "regenerate it" leaves someone to reconstruct those from memory at the one
-    /// moment they are in a hurry — which is when the file gets hand-edited into agreement instead.
-    /// </remarks>
     private static string RegenerateWith(string tag) =>
         $"    dotnet build -c Release -p:ReleaseTag={tag}\n" +
         "    dotnet run --project tools/DungeonMasterXIV.Release -- \\\n" +

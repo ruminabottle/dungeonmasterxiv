@@ -3,21 +3,8 @@ using System.Linq;
 
 namespace DungeonMasterXIV.Rolls;
 
-/// <summary>
-/// Rolls one dice term and applies its modifiers, in the order the grammar means them: roll, reroll,
-/// explode, keep/drop, then count or sum.
-/// </summary>
-/// <remarks>
-/// <b>The order is fixed and is not the order they were written.</b> A reroll replaces a die before
-/// anything looks at it; an explosion adds dice that are themselves subject to keep/drop; a keep
-/// decides which dice count; and only then is the term summed or counted. Writing
-/// <c>4d6&gt;3kh3</c> and <c>4d6kh3&gt;3</c> means the same roll, because the suffixes are a set and
-/// not a pipeline — which is why <see cref="DiceModifiers"/> is one record rather than nested
-/// wrappers carrying an order the grammar cannot express.
-/// </remarks>
 internal static class DiceTermEvaluator
 {
-    /// <summary>Rolls <paramref name="dice"/> and returns its value, or null if a bound stopped it.</summary>
     public static int? Evaluate(DiceNode dice, RollEvaluation state)
     {
         var first = state.RecordedCount;
@@ -47,8 +34,6 @@ internal static class DiceTermEvaluator
             return null;
         }
 
-        // One reroll per die: the discarded face stays in the result as not-kept, so a reader sees
-        // the reroll happened rather than inferring it from a total.
         if (dice.Modifiers.Reroll is { } reroll && reroll.Matches(value.Value))
         {
             state.Record(dice.Sides, value.Value, kept: false);
@@ -70,8 +55,6 @@ internal static class DiceTermEvaluator
             return true;
         }
 
-        // Walks forward over dice this term added, including ones added by this loop, so a chain of
-        // explosions is followed to its end -- bounded only by the work budget, which is the point.
         for (var i = first; i < state.RecordedCount; i++)
         {
             var die = state.Dice[i];
@@ -92,8 +75,6 @@ internal static class DiceTermEvaluator
         return true;
     }
 
-    // The bare-x case is now asked as a QUESTION ABOUT THE MODIFIER rather than recognised
-    // by comparing against a value, so an identical-looking value the user typed cannot answer yes.
     private static bool Explodes(DiceModifiers modifiers, RolledDie die) =>
         modifiers.ExplodeOnMaximum
             ? die.Value == die.Sides
@@ -145,8 +126,6 @@ internal static class DiceTermEvaluator
     {
         var kept = Kept(state, first);
 
-        // Counting successes against a number the USER TYPED is arithmetic and in scope (R-2.1).
-        // It yields a COUNT. Nothing here decides whether a roll succeeded -- see RollComparison.
         return modifiers.CountSuccesses is { } test
             ? kept.Count(test.Matches)
             : kept.Sum();

@@ -2,35 +2,6 @@ using System;
 
 namespace DungeonMasterXIV.Net;
 
-/// <summary>
-/// The joiner's outbound side: asking to join, and the keys that asking creates (R-1.3, R-1.5).
-/// </summary>
-/// <remarks>
-/// <para>
-/// <b>Split out of <see cref="SessionCoordinator"/>, and it is a PURE MOVE.</b> No behaviour
-/// changes here, no criterion is claimed, and nothing was fixed on the way past. The seam is
-/// <c>RequestJoin</c>'s overloads and the key-pair helper, cut before six queued changes add to a
-/// class that stood at 395 against a block of 400.
-/// </para>
-/// <para>
-/// <b>The KEYS came with the sequence, and that is the seam rather than a widening.</b>
-/// <see cref="Keys"/> and <see cref="SessionKey"/> are written by exactly two places — the request
-/// below, and the drain on each tick. Leaving them on the coordinator would have meant this type
-/// reaching back through setters to mutate state it is the only author of, which is a seam in name
-/// and a dependency in fact.
-/// </para>
-/// <para>
-/// <b><see cref="SessionCoordinator.RequestJoin(SessionCode, DisplayName, Guid?)"/> and its
-/// siblings REMAIN CALLABLE with their current signatures</b>,
-/// as thin forwarders. That fence is not about size: the A-1.12a table drives production
-/// through those entry points and carries an approve-blocking gate, so moving them off the type
-/// would break a table this split has no business touching.
-/// </para>
-/// <para>
-/// <b>The key-pair helper did NOT come here, and was NOT duplicated</b> — hosting needs it too. It
-/// is <see cref="SessionKeyPair"/>, reachable by both and owned by neither.
-/// </para>
-/// </remarks>
 internal sealed class JoinRequester
 {
     private readonly OutboundHandshake _handshake;
@@ -39,11 +10,6 @@ internal sealed class JoinRequester
     private readonly Func<SessionKeyExchange> _newKeys;
     private readonly Action _synchronise;
 
-    /// <param name="handshake">What actually puts the request on the wire.</param>
-    /// <param name="interruption">Holds the seat; told when a deliberate re-ask releases it.</param>
-    /// <param name="join">The join phase machine this drives.</param>
-    /// <param name="newKeys">How a key pair is made.</param>
-    /// <param name="synchronise">Brings the socket into line once the phase has moved.</param>
     public JoinRequester(
         OutboundHandshake handshake,
         SessionInterruption interruption,
@@ -51,24 +17,6 @@ internal sealed class JoinRequester
         Func<SessionKeyExchange> newKeys,
         Action synchronise)
     {
-        // THE CONSTRUCTION ORDER IN SessionCoordinator IS LOAD-BEARING AND WAS UNDETECTED.
-        //
-        // Three of these arrive from FIELDS assigned earlier in that constructor -- handshake,
-        // interruption and newKeys -- so building this type before them passes a NULL. Nothing
-        // refused it: the assignment succeeded, the object was valid-looking, and the failure
-        // surfaced later on a join path, or never in a test that does not join. A compile error is
-        // loud and a throw is loud; a silent null assignment is neither.
-        //
-        // These guards make the violation LOUD AT CONSTRUCTION: any coordinator built in the wrong
-        // order throws here, so every test that constructs one fails immediately. That is detection
-        // BY CONSTRUCTION rather than by a comment somebody has to read -- and the comment above
-        // this one had itself gone stale, which is why a comment was never going to be the fix.
-        //
-        // ALL FIVE are guarded rather than only the three that are order-sensitive TODAY. Which
-        // arguments come from earlier fields is a fact about SessionCoordinator that can change
-        // without anyone editing this file; a guard that tracked it would be correct now and wrong
-        // later, silently. A constructor that cannot work with a null collaborator should say so
-        // about all of them.
         ArgumentNullException.ThrowIfNull(handshake);
         ArgumentNullException.ThrowIfNull(interruption);
         ArgumentNullException.ThrowIfNull(join);
@@ -82,44 +30,16 @@ internal sealed class JoinRequester
         _synchronise = synchronise;
     }
 
-    /// <summary>This client's key pair when joining somebody else's session, or null.</summary>
     public SessionKeyExchange? Keys { get; private set; }
 
-    /// <summary>
-    /// The key this client derived on being admitted, or null. Present only once the host's key has
-    /// arrived — which is why the acceptance has to carry it.
-    /// </summary>
     public byte[]? SessionKey { get; internal set; }
 
-    /// <summary>
-    /// Requests to join <paramref name="code"/>, claiming a participant we believe is ours (R-1.5).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>A separate overload rather than a defaulted parameter, and that is the whole lesson of this
-    /// change.</b> The claim reached the wire types and the host's resolver and never travelled,
-    /// because <c>RelinkClaim relink = default</c> sat on three signatures: every caller omitted it,
-    /// every call got <c>None</c>, and every relink branch took the not-a-relink path while the suite
-    /// stayed green. A missing argument is a compile error; a defaulted one is silence.
-    /// </para>
-    /// <para>
-    /// <b>Nothing here remembers the id between sessions.</b> Storing it is a retention decision and
-    /// it belongs to whoever owns joiner-side persistence, not to making the path reachable.
-    /// </para>
-    /// </remarks>
-    /// <param name="code">The session to ask to join.</param>
-    /// <param name="name">What to call ourselves. Never authenticates.</param>
-    /// <param name="claimedParticipantId">The participant we claim, or null for an ordinary join.</param>
     public void Request(SessionCode code, DisplayName name, Guid? claimedParticipantId)
     {
         _handshake.JoiningAs(name, claimedParticipantId);
 
-        // R-1.5a: a deliberate quit removes the seat immediately, and asking to join again is that.
-        // Without this the suppression would outlive the intent that justified it.
         ReleaseTheSeatAndKeys();
 
-        // The same guard, because joining fails identically to hosting: both make a key pair, which
-        // is why an affected machine has nothing left that works.
         if (!SessionKeyPair.TryMake(_newKeys, out var joinerKeys))
         {
             _join.Fail(SessionFailure.SessionKeysUnavailable);
@@ -129,55 +49,18 @@ internal sealed class JoinRequester
         Keys = joinerKeys;
         _join.Request(code);
 
-        // Cleared so asking again for the SAME code re-sends. R-1.3c makes that the ordinary case —
-        // a lapse means the DM was mid-encounter, not that they refused — and the host's equivalent
-        // never needs it because R-1.2a regenerates a fresh code on every refusal.
         _handshake.ForgetJoinRequest();
         _synchronise();
     }
 
-    /// <summary>
-    /// Leaves the session this client joined, at the player's request (R-1.3g).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>This is the trigger the teardown never had.</b> Every line below already ran on the
-    /// deliberate-quit path — inlined in <see cref="Request"/>, under a comment reading "a deliberate
-    /// quit removes the seat immediately, AND ASKING TO JOIN AGAIN IS THAT". The comment named its
-    /// only trigger: the plugin could already do this and nobody could ask it to.
-    /// </para>
-    /// <para>
-    /// <b>It does not wait for anything.</b> The host is told separately and best effort; whether
-    /// that notice arrives changes nothing here. A leave conditional on an acknowledgement is a
-    /// player held in a session by a host that never answers.
-    /// </para>
-    /// <para>
-    /// <b>And an undelivered notice is not a defect — R-1.5a is why.</b> From the host's side a
-    /// joiner whose notice never arrived is a client that VANISHED, and holding its seat for five
-    /// minutes is then CORRECT. The session-layer spec says in terms that removing vanished members
-    /// to close that apparent gap breaks R-1.5a.
-    /// </para>
-    /// </remarks>
     public void Left()
     {
         ReleaseTheSeatAndKeys();
         _join.Left();
 
-        // Nothing wants a connection any more, so the link comes down through the one place that
-        // decides that (R-1.1). Not called by Request, which wants the socket it is about to use.
         _synchronise();
     }
 
-    /// <summary>
-    /// Drops the seat and the key material, which both leaving and re-asking do (R-1.5a).
-    /// </summary>
-    /// <remarks>
-    /// <b>Shared rather than duplicated, and NOT reached by having <see cref="Request"/> call
-    /// <see cref="Left"/>.</b> That would have been the shorter refactor and it changes behaviour:
-    /// <c>Left</c> synchronises the transport, and a request that tore the link down in the middle
-    /// of itself is not the method that was there before. The extraction is pure only if the caller
-    /// that already existed behaves identically, so the shared part is what moved.
-    /// </remarks>
     private void ReleaseTheSeatAndKeys()
     {
         _interruption.SeatReleased();

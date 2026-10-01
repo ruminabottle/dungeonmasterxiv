@@ -5,18 +5,12 @@ using DungeonMasterXIV.Data;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>
-/// The plugin's main window. In the skeleton it states what the plugin is and that no session is
-/// running; the session, roll and initiative views arrive with their own PRDs.
-/// </summary>
 public sealed class MainWindow : Window
 {
     private readonly ConfigurationStore _configurationStore;
 
-    /// <summary>Opens the session window. Set during wiring.</summary>
     public Action? OpenSession { get; set; }
 
-    /// <param name="configurationStore">Used to remember whether this window was left open.</param>
     public MainWindow(ConfigurationStore configurationStore)
         : base("Dungeon Master XIV###dmx-main")
     {
@@ -32,7 +26,6 @@ public sealed class MainWindow : Window
             configurationStore.Configuration.Settings.MainWindowOpen);
     }
 
-    /// <inheritdoc />
     public override void Draw()
     {
         ImGui.TextWrapped(
@@ -46,10 +39,8 @@ public sealed class MainWindow : Window
         }
     }
 
-    /// <inheritdoc />
     public override void OnOpen() => Remember(true);
 
-    /// <inheritdoc />
     public override void OnClose() => Remember(false);
 
     private void Remember(bool isOpen)

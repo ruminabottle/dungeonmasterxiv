@@ -8,29 +8,6 @@ using System.Text.Json;
 
 namespace DungeonMasterXIV.Release;
 
-/// <summary>
-/// The zip that will be attached to the release, identified by the path to the actual file.
-/// </summary>
-/// <remarks>
-/// <para>
-/// <b>The name is derived from the file, never typed.</b> It used to be a constant reading
-/// <c>DungeonMasterXIV.zip</c>, which DalamudPackager has never produced — it writes
-/// <c>latest.zip</c>. The manifest was therefore well-formed, the release real, the plugin working,
-/// and the download link dead, with nothing on our side looking wrong.
-/// </para>
-/// <para>
-/// <b>There is no default and there must not be one.</b> A default is the typed value with a longer
-/// fuse: it lets somebody believe the tool checked the name when it only repeated an assumption.
-/// That is the argument that removed <c>--api-level</c> in C17, third outing.
-/// </para>
-/// <para>
-/// <b>Every build writes <c>latest.zip</c>, so the name identifies nothing.</b> Five of them were on
-/// this machine at once — 61KB to 119KB, spanning two days, indistinguishable by name. Attaching the
-/// wrong one produces a plugin that installs and then misbehaves, which is worse than a dead link
-/// because it looks like it worked. That is why <see cref="MustMatchTheAssembly"/> exists: the name
-/// cannot tell these apart and the contents can.
-/// </para>
-/// </remarks>
 public sealed class ReleaseAsset
 {
     private const string PluginAssemblyName = "DungeonMasterXIV.dll";
@@ -39,16 +16,10 @@ public sealed class ReleaseAsset
 
     private ReleaseAsset(FileInfo file) => File = file;
 
-    /// <summary>The zip itself.</summary>
     public FileInfo File { get; }
 
-    /// <summary>The asset name the download link uses, taken from the file on disk.</summary>
     public string Name => File.Name;
 
-    /// <summary>
-    /// The asset at <paramref name="path"/>, refusing a path with nothing at the end of it.
-    /// </summary>
-    /// <param name="path">Path to the built zip, as produced by DalamudPackager.</param>
     public static ReleaseAsset At(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -73,24 +44,8 @@ public sealed class ReleaseAsset
         return new ReleaseAsset(file);
     }
 
-    /// <summary>
-    /// Confirms this zip carries the very assembly the manifest is describing.
-    /// </summary>
-    /// <remarks>
-    /// The name cannot distinguish one build's zip from another's — they are all <c>latest.zip</c> —
-    /// and the version cannot either, because a version is rarely bumped between builds. The bytes
-    /// can. Comparing them is what stops a stale zip being attached to a manifest that describes a
-    /// newer build, which installs and then behaves like neither.
-    /// </remarks>
-    /// <param name="assemblyPath">The built assembly the manifest's version was read from.</param>
     public void MustMatchTheAssembly(string assemblyPath)
     {
-        // This runs BEFORE PluginAssemblyVersion.Of, which used to be the first thing to touch
-        // --assembly and carried this guard. Without it here, reading a path whose DIRECTORY is
-        // missing throws DirectoryNotFoundException -- a SIBLING of FileNotFoundException under
-        // IOException, not a subclass -- so it escapes Program.cs's filter and the run ends in a
-        // stack trace instead of a sentence. Widening that filter to IOException would stop the
-        // crash and lose the sentence, which is the trade this file exists to refuse.
         if (!System.IO.File.Exists(assemblyPath))
         {
             throw new FileNotFoundException(
@@ -118,51 +73,6 @@ public sealed class ReleaseAsset
         }
     }
 
-    /// <summary>
-    /// Confirms the manifest inside this zip says the same things as the built manifest the
-    /// repository entry is generated from.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// <b>The DLL check cannot see this.</b> A metadata-only edit leaves the assembly
-    /// byte-identical — measured, twice, by two people — so a previous build's zip satisfies
-    /// <see cref="MustMatchTheAssembly"/> while carrying the previous build's metadata. The
-    /// repository entry then advertises one <c>DalamudApiLevel</c> and links an archive declaring
-    /// another, which is the failure mode <see cref="ReleaseInputs"/> singles out as the worst kind:
-    /// Dalamud does not reject it, it simply never offers the plugin.
-    /// </para>
-    /// <para>
-    /// <b>Values, never bytes.</b> Both files are JSON produced by different steps, and key order,
-    /// indentation and escaping may legitimately differ between them; today they happen to be
-    /// byte-identical, so a byte comparison would pass now and start failing the first time any of
-    /// that moved. A guard that produces false FAILs is worse than one that cannot fail, because a
-    /// noisy guard gets relaxed rather than fixed.
-    /// </para>
-    /// <para>
-    /// <b>The fields are enumerated by hand, and a test keeps the enumeration complete.</b> The
-    /// list covers every property <see cref="PluginManifest"/> carries, which is also every field
-    /// the repository entry republishes. An earlier version of this comment said the list was
-    /// derived from <see cref="RepositoryManifest.Build"/> "so it moves when that does" — that
-    /// described how the list was written and guaranteed nothing: a ninth property was
-    /// added, republished, and compared by nothing, with the whole suite green. The guarantee now
-    /// lives in <c>EveryFieldTheManifestCarriesIsComparedTests</c>, which varies each property in
-    /// turn and requires this method to refuse and name it.
-    /// <para>
-    /// It stays hand-written rather than reflective because the per-field message is the point:
-    /// <i>"Punchline: the build says X, the zip says Y"</i> ends an investigation where "the
-    /// manifests differ" starts one. What is mechanical is the proof of completeness, not the
-    /// comparison.
-    /// </para>
-    /// <para>
-    /// <c>InternalName</c> is absent and is not a property: it is a constant the entry republishes
-    /// directly, the source manifest carries no such field, and building under another assembly
-    /// name fails outright — so there is no build-produced zip whose <c>InternalName</c> differs
-    /// while a matching <c>DungeonMasterXIV.dll</c> is present.
-    /// </para>
-    /// </para>
-    /// </remarks>
-    /// <param name="built">The built manifest the repository entry is generated from.</param>
-    /// <param name="builtPath">Where that manifest was read from, for the message.</param>
     public void MustCarryTheSameMetadataAs(PluginManifest built, string builtPath)
     {
         var packaged = PackagedManifest();
@@ -184,8 +94,6 @@ public sealed class ReleaseAsset
             "an earlier one.");
     }
 
-    // Named field by field so the message says WHICH value disagrees. "The manifests differ" sends
-    // somebody diffing two files by hand; naming DalamudApiLevel ends the investigation.
     private static IEnumerable<string> Differences(PluginManifest built, PluginManifest packaged)
     {
         foreach (var (field, fromBuilt, fromPackaged) in new[]
@@ -195,11 +103,6 @@ public sealed class ReleaseAsset
             ("Punchline", built.Punchline, packaged.Punchline),
             ("Description", built.Description, packaged.Description),
             ("RepoUrl", built.RepoUrl, packaged.RepoUrl),
-            // Coalesced because an explicit "Tags": null in the zip deserialises to null and
-            // string.Join threw "Value cannot be null. (Parameter 'values')" -- a refusal naming
-            // neither the field, the file, nor what to do, in a method whose other refusals all do.
-            // Treated as no tags rather than as an error: null and [] mean the same thing here, so
-            // a zip carrying one against a build carrying the other is not a difference.
             ("Tags", Spelt(built.Tags), Spelt(packaged.Tags)),
             ("DalamudApiLevel", $"{built.DalamudApiLevel}", $"{packaged.DalamudApiLevel}"),
             ("AssemblyVersion", built.AssemblyVersion, packaged.AssemblyVersion),
@@ -241,9 +144,6 @@ public sealed class ReleaseAsset
         }
     }
 
-    // The raw failure here reads "End of Central Directory record could not be found", which names
-    // neither the file nor the mistake. The mistake is nearly always --asset pointed at the assembly
-    // instead of the zip: they sit in sibling directories and differ by one path segment.
     private ZipArchive OpenZip()
     {
         try
