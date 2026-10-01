@@ -30,7 +30,7 @@
   <Target Name="ReleaseTagIsSpeltForTheBuild" BeforeTargets="Restore;CollectPackageReferences;PrepareForBuild"
           Condition="'$(ReleaseTag)' != ''">
     <Error Condition="!$(ReleaseTag.StartsWith('v'))"
-           Text="ReleaseTag '$(ReleaseTag)' must begin with a lowercase 'v', e.g. v0.1.0. The tag is the one place the advertised version is authored (D-16, R-7.4a), and the release tool refuses any other spelling of it." />
+           Text="ReleaseTag '$(ReleaseTag)' must begin with a lowercase 'v', e.g. v0.1.0. The tag is the one place the advertised version is authored, and the release tool refuses any other spelling of it." />
 
     <!-- The tag must leave a version shape: one to four components of at most five digits each,
          optionally with a prerelease suffix. -->

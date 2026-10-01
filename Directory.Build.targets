@@ -48,7 +48,7 @@
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('ServerCertificateValidationCallback'))
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('userCertificateValidationCallback'))
                     Or $([System.String]::Copy('%(_ScannedSourceLine.Identity)').Contains('DangerousAccept')))"
-           Text="$(MSBuildProjectName) disables TLS certificate validation in %(Compile.Identity): &quot;%(_ScannedSourceLine.Identity)&quot;. A client that accepts any certificate has no transport authentication and still looks protected (D-11). Only $(TlsValidationBypassPermittedIn) may do this, and only to reach the throwaway certificate C15's container smoke test mints." />
+           Text="$(MSBuildProjectName) disables TLS certificate validation in %(Compile.Identity): &quot;%(_ScannedSourceLine.Identity)&quot;. A client that accepts any certificate has no transport authentication and still looks protected. Only $(TlsValidationBypassPermittedIn) may do this." />
 
   </Target>
 

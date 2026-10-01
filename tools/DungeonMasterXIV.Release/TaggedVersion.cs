@@ -17,7 +17,7 @@ public static class TaggedVersion
         {
             throw new ArgumentException(
                 $"The release tag '{tag}' does not name a version, so nothing can be checked against " +
-                "the build. The tag is the one place the advertised version is authored (R-7.4a): it " +
+                "the build. The tag is the one place the advertised version is authored: it " +
                 "has to read like v0.1.0, because the build takes its version from it.");
         }
 

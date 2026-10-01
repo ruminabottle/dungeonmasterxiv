@@ -34,7 +34,7 @@ public static class RelayApp
                     throw new InvalidOperationException(
                         $"TLS is on but no certificate was given. Set {RelayOptions.EnvironmentPrefix}CERT_PATH, "
                         + $"or {RelayOptions.EnvironmentPrefix}USE_TLS=false for a loopback test. The relay "
-                        + "terminates TLS itself; a proxy in front of it is a destination D-2 forbids.");
+                        + "terminates TLS itself; a proxy in front of it is not supported.");
                 }
 
                 try
