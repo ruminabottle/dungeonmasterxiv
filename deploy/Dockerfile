@@ -26,7 +26,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS runtime
 ARG GIT_COMMIT=unknown
 LABEL org.opencontainers.image.title="DungeonMasterXIV relay" \
       org.opencontainers.image.revision="${GIT_COMMIT}" \
-      org.opencontainers.image.description="Forwards encrypted session traffic and stores nothing (D-2, A-1.5e)."
+      org.opencontainers.image.description="Forwards encrypted session traffic and stores nothing."
 
 # Runs as an unprivileged user; the relay logs to stdout and reads only its TLS certificate file.
 USER $APP_UID

@@ -10,7 +10,7 @@ if (options.ContainsKey("api-level"))
 {
     Console.Error.WriteLine(
         "--api-level no longer exists. The API level is copied from the built plugin manifest " +
-        "(R-7.3a) so that it is never typed. Pass the BUILT manifest to --plugin-manifest.");
+        "so that it is never typed. Pass the BUILT manifest to --plugin-manifest.");
     return 2;
 }
 

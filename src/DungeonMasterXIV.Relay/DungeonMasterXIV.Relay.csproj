@@ -28,7 +28,7 @@
   <!-- Fails the build if this project references any project other than Core. -->
   <Target Name="RelayReferencesContractOnly" BeforeTargets="Build">
     <Error Condition="'%(ProjectReference.Filename)' != 'DungeonMasterXIV.Core'"
-           Text="DungeonMasterXIV.Relay may reference only DungeonMasterXIV.Core (found '%(ProjectReference.Filename)'). D-15: the relay depends on the shared contract only, so it stays extractable into its own repository. If this project is genuinely shared, it belongs in the contract." />
+           Text="DungeonMasterXIV.Relay may reference only DungeonMasterXIV.Core (found '%(ProjectReference.Filename)'). The relay depends on the shared contract only, so it stays extractable into its own repository. If this project is genuinely shared, it belongs in the contract." />
   </Target>
 
   <!-- Fails the build if the relay references a persistence or storage package. -->
@@ -40,7 +40,7 @@
                    Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('StackExchange.Redis'))
                    Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('MongoDB'))
                    Or $([System.String]::Copy('%(PackageReference.Identity)').Contains('Serilog.Sinks.File'))"
-           Text="The relay stores nothing (D-2, A-1.5e). '%(PackageReference.Identity)' is a persistence dependency. R-1.7a tells users there is no server storing their sessions; adding this would make shipped copy false." />
+           Text="The relay stores nothing. '%(PackageReference.Identity)' is a persistence dependency. The plugin tells users no server stores their sessions; adding this would make shipped copy false." />
   </Target>
 
 </Project>

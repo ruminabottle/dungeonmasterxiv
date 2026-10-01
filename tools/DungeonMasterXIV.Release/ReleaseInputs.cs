@@ -27,7 +27,7 @@ public sealed record ReleaseInputs(
                 "an update on the version alone: a build advertising a version it was not built as is " +
                 "not rejected, it is silently never offered. Rebuild with " +
                 $"`dotnet build -c Release -p:ReleaseTag={Tag}`, or publish under the tag the build " +
-                "already carries. Do not hand-edit the version to close the gap (D-16).");
+                "already carries. Do not hand-edit the version to close the gap.");
         }
 
         if (DalamudApiLevel <= 0)
