@@ -125,12 +125,16 @@ public sealed class SessionRegistry
             members = [];
             droppedMemberKeys = [];
             if (!_byCode.TryGetValue(code.Value, out var session)
-                || !session.HostAway
                 || session.ReclaimHash is not { } expected
                 || _roles.Hosts(connectionId)
                 || !CryptographicOperations.FixedTimeEquals(SHA256.HashData(secret), expected))
             {
                 return false;
+            }
+
+            if (session.HostConnectionId is { } old && !string.Equals(old, connectionId, StringComparison.Ordinal))
+            {
+                _roles.Remove(old, code.Value);
             }
 
             session.HostConnectionId = connectionId;
