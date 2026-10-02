@@ -241,9 +241,12 @@ names are aliasable and need not be distinct (session-layer R-1.3e).
 - **Host specifically, not "anyone DM-ish".** The host is the sole author of shared state
   (product-overview D-3); an Assistant runs the table but is not that. Marking an Assistant as host
   makes the marker mean something vaguer than it claims.
-- Open question: how the host's own speaker line renders is not decided. A parenthetical role such as
-  `Renn (DM)` would contradict the one-meaning rule for parentheses below; a player's line keeps
-  `Eli (Tuka)`, the person behind the speaker.
+- **The host's line carries a `[DM]` prefix the session adds**: `[DM] Renn (Ramon)`, or `[DM] Ramon`
+  when the host speaks as themselves. It is plain text, so it survives the one-line echo, and it comes
+  from the session role, never from anything the sender typed.
+- **Square brackets are reserved to that marker.** No display name (session-layer R-1.3j) and no
+  speaker may contain `[` or `]`, so no member can type the prefix. `Renn (DM)` stays forbidden by the
+  rule below.
 - **Parentheses carry exactly one meaning product-wide: the person behind the speaker.** The roster
   changes to make that true, not the message format: roles are not rendered in parentheses
   (session-layer R-1.3f, A-1.13d). A marker that must beat a convention every session reinforces only
@@ -261,6 +264,8 @@ names are aliasable and need not be distinct (session-layer R-1.3e).
   demonstration uses an ordinary name and no blocklist entry, so it is coupled to nothing: a build with
   the reserved-name list and no structural marker fails here. Both surfaces fail separately; the echo
   is the one that will fail.
+- **A-2.24a-1** A host line renders with the `[DM]` prefix in the panel and in the echo, and a speaker
+  or display name containing `[` or `]` is refused. Each fails separately.
 - **A-2.24b** An Assistant is not marked as the host. A build treating anyone DM-ish as host fails.
 - **A-2.24c** No copy states or implies that impersonation between players is prevented. Copy claiming
   players cannot be impersonated, are verified, or have unique names fails (session-layer R-1.7a).
