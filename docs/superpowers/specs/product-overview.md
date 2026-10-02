@@ -147,8 +147,10 @@ the user configures instead) and (b) other clients in the same session. The plug
 point it at a different relay, and the setting is in the plugin, not buried.
 
 The relay **stores nothing**: no accounts, no session state, no campaign data, no message content at
-rest, no content logging. It keeps no session identifier beyond the life of a connection and never
-writes one to durable storage. It forwards traffic between session members and forgets it. It is not
+rest, no content logging. It keeps no session identifier beyond the life of a connection, with one bounded
+exception, and never writes one to durable storage. The exception: when a host's connection drops,
+the relay holds that session's code, the hash of the host's reclaim secret and a timer in memory for
+at most the grace window, so the host can come back (session-layer R-1.4). It forwards traffic between session members and forgets it. It is not
 authoritative for anything (D-3).
 
 A TLS-terminating proxy in front of the relay (a CDN, a proxied DNS record, any service the client

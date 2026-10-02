@@ -450,22 +450,53 @@ it lapsed and can ask again; the DM sees that it expired rather than the prompt 
 
 Grace, then a clean end. Not an instant kick, and not an indefinite freeze.
 
-- If the host becomes unreachable, player clients hold their last known state and clearly show they
-  are reconnecting, with the state visibly marked as no longer live.
+- **The relay holds the session while the host is away.** When the host's connection closes, the
+  relay keeps the session code reserved and the players connected for the grace window, tells the
+  players the host is away, drops pending join requests with a message to ask again, and forwards no
+  player payloads meanwhile. A hold that runs out ends the session as before.
+- **Only the same running host can reclaim it.** On hosting, the host's client makes a random reclaim
+  secret, held in memory only, and registers its hash with the code. The host's client redials on its
+  own and presents the secret; a match reattaches it as host and tells the players it is back, and a
+  mismatch is refused like a code already in use. A crash loses the secret, so a relaunched client
+  cannot reclaim, and the campaign continues through autosave (R-1.6a).
+- If the host becomes unreachable, player clients hold their last known state and show they are
+  reconnecting after the silent window (R-1.4a), with the state visibly marked as no longer live.
 - If the host returns within the grace window, clients resync **from the host** (product-overview
   D-3). Clients never reconcile with each other.
 - If the grace window expires, the session ends and every client says so plainly. It never keeps
   showing stale data as though it were live.
-- **The grace window is five minutes**, and it is a settable value, not a magic number, because the
-  right length is empirical. Relaunching FFXIV takes minutes, so a shorter grace would end the session
-  on any DM crash; five gives one relaunch attempt. It is the same value as the seat window (R-1.5a):
-  the two never tick together, so one number serves both.
+- **The grace window is five minutes**, and it is a settable value, not a magic number. It measures
+  the whole outage: a connection that flaps for five minutes ends the session as one long drop would,
+  and each reconnect does not restart it. It is the same value as the seat window (R-1.5a): the two
+  never tick together, so one number serves both. The relay's hold uses the same default.
 
 **Acceptance criteria**
 - **A-1.6** Killing the host's connection makes player clients show "reconnecting" with state
   visibly not live; restoring it within the grace window resyncs them from the host.
 - **A-1.7** Letting the grace window expire ends the session on every client, stated plainly, with no
   stale data shown as live.
+- **A-1.7f** Drop the host's connection and let its client redial within the window: it reclaims the
+  same code, players resync from it, and nobody joins again. A client without the reclaim secret is
+  refused.
+
+### R-1.4a A blip is invisible
+
+- **Every client redials on its own** after its connection drops, with growing waits, for as long as
+  its window runs (the grace window for the host, the seat window for a player), keeping its keys.
+- **The first ten seconds of any drop show nothing**: the client's own link, or a player hearing the
+  host is away. After that, one line says who is reconnecting and how long is left. On return the line
+  disappears, with no "reconnected" notice, so flapping produces no stream of messages.
+- **Messages sent while the path is down wait on the sender's machine** and go out in order when it
+  returns. After the silent window the message box is disabled until then. If the window runs out,
+  waiting messages are dropped and the end message says how many were not delivered.
+- **When the session ends**, the end message says the DM can resume the campaign. It states how the
+  product works; it is not a warning (R-1.7).
+
+**Acceptance criteria**
+- **A-1.32** A drop shorter than ten seconds shows nothing on any client, and a message sent during it
+  arrives afterwards, in order.
+- **A-1.33** After ten seconds the line appears with the time left, and disappears on return with no
+  further notice.
 
 ### R-1.5 Relink: DM-approved unless the DM lets returning players in
 
@@ -499,7 +530,10 @@ Two questions, two mechanisms (product-overview D-17):
 - **The window answers how long the seat is held.** A key alone is unbounded: the host would hold a
   slot for someone never coming back.
 - **Resumption is gated on proof of possession, never on presentation.** A returning client
-  demonstrates it holds the private key. A public key used as a bearer token is a value that travels,
+  demonstrates it holds the private key: its resume carries a payload sealed with the key it shares
+  with the host, naming the last stream line it received, and the host admits it silently only if that
+  payload opens and the member is recorded as dropped. A refused resume tells the player their seat
+  expired and the ordinary join applies. A public key used as a bearer token is a value that travels,
   and a value that travels is not a secret (product-overview D-11). The construction is an engineering
   choice. Only one client can prove possession, so "two clients claim the same key" cannot arise.
 - **A relink supersedes a stale seat; it never sits alongside one.** A relink under a new key clears
@@ -964,8 +998,6 @@ or protected against interception (R-1.3m). Each is false under product-overview
 
 ## Open questions
 
-- Open question: whether five minutes is the right grace and seat window in play is empirical and
-  unmeasured. The value is settable (R-1.4, R-1.5a); this blocks nothing.
 - Open question: a version refusal is a fourth ending under R-1.3c (R-1.7b); its timing bound is not
   specified, so it has no row in R-1.3c's table.
 

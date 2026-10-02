@@ -314,8 +314,9 @@ names are aliasable and need not be distinct (session-layer R-1.3e).
 
 - **A gap that could not be held is marked in that member's stream.** They are told something is
   missing rather than shown a stream that silently omits it.
-- **Delivery on reconnect re-sends.** A build that restores a reconnecting member's stream by re-sending
-  what it missed conforms; this is what the requirement asks for.
+- **Delivery on reconnect re-sends.** After admitting a resumed member (session-layer R-1.5a), the host
+  re-sends every stream line after the last one the member reports receiving, sealed to that member
+  only, in order, and only lines that member was entitled to at the time.
 - **This is not history for newcomers.** A client receives nothing from before its admission: a late
   joiner gets no earlier messages or rolls, and a relink is a new admission on a new key and starts
   empty (product-overview Session panel, "Log history is never sent"). This covers only a member who
@@ -752,10 +753,6 @@ collection semantics (ordering, filtering, paging, retention in memory).
 
 - Open question: what should a modifier followed by a tab, newline, CR or NBSP do? Only the space case
   is established (A-2.3c); the others are unspecified.
-- Open question: R-2.10 is not built. Nothing holds messages for a dropped member, and nothing marks a
-  gap (the stream has a gap kind that nothing produces). A dropped member comes back only by relink,
-  which is a new admission and starts empty, so A-2.6a and A-2.10a fail today. Whether the seat
-  window may serve as the bound R-2.10 requires is left to whoever builds it.
 - Open question: chat commands as an input path were raised by the user and are not wanted; they are
   recorded only as raised. Whether they are even possible, given product-overview D-1 (no driving the
   chat-send path) and A-2.7 (no chat-read subscription), is unassessed. Not to be closed by building
