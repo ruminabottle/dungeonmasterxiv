@@ -76,11 +76,12 @@ public sealed class RelayHub(
     public async ValueTask DisconnectAsync(
         IRelayConnection connection,
         string reason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool closedCleanly = false)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
-        var removal = _registry.Remove(connection.Id);
+        var removal = _registry.Remove(connection.Id, closedCleanly);
         _directory.Remove(connection.Id);
         _log.ConnectionClosed(connection.Id, removal, reason);
 

@@ -30,9 +30,10 @@ public sealed class WebSocketRelayEndpoint(
         _log.ConnectionOpened(connectionId);
 
         var reason = "closed by peer";
+        var closedCleanly = false;
         try
         {
-            await PumpAsync(socket, connection, cancellationToken).ConfigureAwait(false);
+            closedCleanly = await PumpAsync(socket, connection, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -55,7 +56,8 @@ public sealed class WebSocketRelayEndpoint(
                 .DisconnectAsync(
                     connection,
                     connection.FellBehind ? "dropped: outbound queue full" : reason,
-                    cancellationToken)
+                    cancellationToken,
+                    closedCleanly && !connection.FellBehind)
                 .ConfigureAwait(false);
         }
     }
@@ -76,7 +78,7 @@ public sealed class WebSocketRelayEndpoint(
         }
     }
 
-    private async Task PumpAsync(WebSocket socket, IRelayConnection connection, CancellationToken cancellationToken)
+    private async Task<bool> PumpAsync(WebSocket socket, IRelayConnection connection, CancellationToken cancellationToken)
     {
         var buffer = new byte[_options.ReceiveChunkBytes];
 
@@ -92,13 +94,13 @@ public sealed class WebSocketRelayEndpoint(
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     await CloseQuietlyAsync(socket, cancellationToken).ConfigureAwait(false);
-                    return;
+                    return true;
                 }
 
                 if (message.Length + result.Count > _options.MaxMessageBytes)
                 {
                     _log.ConnectionRejected(connection.Id, "message exceeded MaxMessageBytes");
-                    return;
+                    return false;
                 }
 
                 message.Write(buffer.AsSpan(0, result.Count));
@@ -107,5 +109,7 @@ public sealed class WebSocketRelayEndpoint(
 
             await _hub.ReceiveAsync(connection, message.ToArray(), cancellationToken).ConfigureAwait(false);
         }
+
+        return false;
     }
 }

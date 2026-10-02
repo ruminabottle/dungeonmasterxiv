@@ -214,7 +214,7 @@ public sealed class SessionRegistry
         }
     }
 
-    public ConnectionRemoval Remove(string connectionId)
+    public ConnectionRemoval Remove(string connectionId, bool closedCleanly = false)
     {
         lock (_gate)
         {
@@ -232,7 +232,7 @@ public sealed class SessionRegistry
                 }
 
                 departures.Add(session.IsHost(connectionId)
-                    ? session.ReclaimHash is not null
+                    ? session.ReclaimHash is not null && !closedCleanly
                         ? HoldSession(code, session)
                         : EndSession(code, session, connectionId)
                     : LeaveSession(code, session, connectionId));
@@ -265,9 +265,12 @@ public sealed class SessionRegistry
         session.HostAwaySince = _clock.GetUtcNow();
         session.HostConnectionId = null;
 
-        var waiting = session.Pending.Values.Distinct(StringComparer.Ordinal).ToArray();
+        var waiting = session.Pending.Values
+            .Distinct(StringComparer.Ordinal)
+            .Where(joiner => !session.Members.ContainsKey(joiner))
+            .ToArray();
         session.Pending.Clear();
-        foreach (var joiner in waiting.Where(joiner => !session.Members.ContainsKey(joiner)))
+        foreach (var joiner in waiting)
         {
             _roles.Remove(joiner, code);
         }
