@@ -11,15 +11,16 @@ public sealed class SessionMembership
     private readonly MemberDeparture _departure;
     private readonly MemberMessage _message;
 
-    internal SessionMembership(RelayLink link, JoinRequester joiner, Func<SessionCode?> code)
+    internal SessionMembership(RelayLink link, JoinRequester joiner, Func<SessionCode?> code, Func<bool> pathDown)
     {
         ArgumentNullException.ThrowIfNull(link);
         ArgumentNullException.ThrowIfNull(joiner);
         ArgumentNullException.ThrowIfNull(code);
+        ArgumentNullException.ThrowIfNull(pathDown);
 
         _joiner = joiner;
         _departure = new MemberDeparture(link, code, () => joiner.SessionKey);
-        _message = new MemberMessage(link, code, () => joiner.SessionKey);
+        _message = new MemberMessage(link, code, () => joiner.SessionKey, pathDown);
     }
 
     public SessionKeyExchange? Keys => _joiner.Keys;
@@ -37,8 +38,22 @@ public sealed class SessionMembership
 
     public SessionClosing? Closing => _closing.Notice;
 
+    public int Undelivered { get; internal set; }
+
+    internal void FlushWaiting() => _message.Flush();
+
+    internal void AbandonWaiting()
+    {
+        var abandoned = _message.Abandon();
+        if (abandoned > 0)
+        {
+            Undelivered = abandoned;
+        }
+    }
+
     public void Leave()
     {
+        AbandonWaiting();
         AnnounceDeparture();
         _closing.Clear();
         _joiner.Left();

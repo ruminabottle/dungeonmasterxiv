@@ -77,11 +77,9 @@ public sealed class SessionWindow : Window
                 }
             }
 
-            if (_coordinator.Grace.IsRunning)
+            if (_coordinator.ReconnectingLine is { } reconnecting)
             {
-                ImGui.TextWrapped(
-                    $"Lost contact with the relay. Reconnecting - the session ends in "
-                    + $"{_coordinator.Grace.Remaining:mm\\:ss} if it does not come back.");
+                ImGui.TextWrapped(reconnecting);
             }
 
             ImGui.TextUnformatted($"Session code: {code.ToDisplayString()}");

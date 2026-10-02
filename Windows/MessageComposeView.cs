@@ -24,6 +24,14 @@ internal sealed class MessageComposeView
 
     public void Draw()
     {
+        var reconnecting = _coordinator.ReconnectingLine;
+        if (reconnecting is not null)
+        {
+            ImGui.TextWrapped(reconnecting);
+        }
+
+        ImGui.BeginDisabled(reconnecting is not null);
+
         ImGui.InputText("Say", ref _entry, MessageLimits.Default.MaxUtf8Bytes);
 
         if (ImGui.Button("Send"))
@@ -35,6 +43,8 @@ internal sealed class MessageComposeView
         {
             ImGui.TextUnformatted(refusal);
         }
+
+        ImGui.EndDisabled();
     }
 
     internal void Submit()

@@ -88,6 +88,7 @@ public sealed class SessionCoordinator
     public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
     {
         _stream.Clear();
+        Membership.Undelivered = 0;
         _joiner.Request(code, name, claimedParticipantId);
     }
 
@@ -127,6 +128,12 @@ public sealed class SessionCoordinator
             _log)
             ?? Membership.SessionKey;
         _handshake.SendWhatIsDue();
+        Membership.FlushWaiting();
+        if (Join.Phase is JoinPhase.Failed or JoinPhase.Idle)
+        {
+            Membership.AbandonWaiting();
+        }
+
         _admissions.ExpireLapsed(now);
         Membership.ExpireIfTheSessionHasClosed(now);
 
@@ -184,6 +191,9 @@ public sealed class SessionCoordinator
     }
 
     public GraceWindow Grace => _interruption.Grace;
+
+    public string? ReconnectingLine =>
+        ReconnectNotice.For(InAHostedSession, _interruption.Grace, _interruption.Seat);
 
     public bool InAJoinedSession => _interruption.InAJoinedSession;
 

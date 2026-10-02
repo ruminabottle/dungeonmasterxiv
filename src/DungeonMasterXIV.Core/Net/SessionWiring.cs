@@ -46,7 +46,8 @@ internal sealed class SessionWiring
             new MemberContentReceipts());
         Interruption = new SessionInterruption(Link, Host, Join, SynchroniseTransport, window);
         Joiner = new JoinRequester(Handshake, Interruption, Join, newKeys, SynchroniseTransport);
-        Membership = new SessionMembership(Link, Joiner, () => Join.Code);
+        Membership = new SessionMembership(
+            Link, Joiner, () => Join.Code, () => !Link.IsReadyToSend || Interruption.Reconnecting);
         Hosting = new HostRunner(Host, Resources, Handshake, newKeys, SynchroniseTransport);
     }
 

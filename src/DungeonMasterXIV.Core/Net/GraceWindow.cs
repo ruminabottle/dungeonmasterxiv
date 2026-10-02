@@ -29,6 +29,8 @@ public sealed class GraceWindow
 
     public TimeSpan Remaining => _length - _elapsed < TimeSpan.Zero ? TimeSpan.Zero : _length - _elapsed;
 
+    public TimeSpan Elapsed => _elapsed;
+
     public void HostLost()
     {
         if (IsRunning || HasExpired)
