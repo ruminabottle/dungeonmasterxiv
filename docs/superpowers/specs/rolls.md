@@ -51,6 +51,9 @@ type `/dice`; the plugin will not know about it. See R-2.16.
   valid. This was chosen over a smaller grammar knowingly.
 - **Malformed notation is refused with a message naming what was wrong. It never silently rolls
   something else.**
+- **A keep or drop count larger than the pool clamps to the pool.** `4d6kh9` keeps all four dice, and
+  `2d6dl20` drops both. It is not refused: the meaning is plain, and a roll that drops every die says
+  so (A-2.3b).
 - **A modifier does not bind to its term across a space (U+0020).** Foundry's published modifier
   pattern ("anything until a space, group symbol, or arithmetic operator") cannot capture a space, for
   any modifier (`k`, `r`, `x`, `d`, a bare comparison), and it is unchanged across major versions.
@@ -79,7 +82,8 @@ type `/dice`; the plugin will not know about it. See R-2.16.
   beside `[1*,6*]` fails; so does `4d6dl4+100`, which drops every die and totals an ordinary-looking
   100, and `4d6kh0`, which reaches the same state with no drop modifier. Survival is the test, not
   the total: `4d10>9` and `4d6-15` can total zero with every die kept and must not trigger it, and
-  `2+2` rolls no dice and is not in scope.
+  `2+2` rolls no dice and is not in scope. An over-large count clamps: `4d6dl9` and `2d6dl20` drop every
+  die and say so, and `4d6kh9` keeps all four.
 - **A-2.3c** A modifier is not bound to its term across a space. `2d6 d20` does not evaluate as `2d6`
   with a drop modifier; refusing it passes, and so does treating it as two terms. **The die count is
   the discriminator, not the total:** the drop reading rolls two dice and sets both aside, while a
@@ -741,11 +745,6 @@ collection semantics (ordering, filtering, paging, retention in memory).
 
 ## Open questions
 
-- Open question: does an over-large keep/drop count (one exceeding the pool) clamp or refuse under the
-  adopted grammar? No Foundry instance is available to run, and the documentation's in-pool examples
-  say nothing about out-of-pool behaviour, so inferring from `20d20kh10` to `2d6dl20` would be a guess.
-  It blocks A-2.3b for `4d6dl9` and `2d6dl20` only. `4d6kh0`, `4d6dl4` and `4d6dl4+100` (keep of zero,
-  or drop count equal to the pool) do not depend on it and fail A-2.3b today if the result is silent.
 - Open question: what should a modifier followed by a tab, newline, CR or NBSP do? Only the space case
   is established (A-2.3c); the others are unspecified.
 - Open question: is `/roll` free in FFXIV? Believed to be (the game uses `/random` and `/dice`), not
