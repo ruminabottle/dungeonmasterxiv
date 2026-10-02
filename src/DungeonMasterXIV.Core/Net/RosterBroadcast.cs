@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -68,6 +69,21 @@ internal sealed class RosterBroadcast
         SealToEveryRecipient(new SessionContent { Entries = new[] { line } }, keys, code);
     }
 
+    public void PublishEntriesTo(PeerCode recipient, IReadOnlyList<StreamLine> lines)
+    {
+        if (lines.Count == 0
+            || _host.Keys() is not { } keys
+            || _host.Code() is not { } code
+            || !_link.IsReadyToSend
+            || _audience.Find(recipient) is not { } peer)
+        {
+            return;
+        }
+
+        var plaintext = SessionContentCodec.Encode(new SessionContent { Entries = lines });
+        SealTo(peer, plaintext, WireEnvelope.AssociatedDataFor(code, WireMessageType.SessionPayload), keys, code);
+    }
+
     private void SealToEveryRecipient(SessionContent content, SessionKeyExchange keys, SessionCode code)
     {
         var plaintext = SessionContentCodec.Encode(content);
@@ -75,32 +91,37 @@ internal sealed class RosterBroadcast
 
         foreach (var peer in _audience.Recipients)
         {
-            if (peer.PublicKey is not { } peerKey)
-            {
-                _log.Warning(
-                    $"Roster broadcast skipped participant {peer.PeerCode.Value}: no public key, so the "
-                    + "host cannot address them. They remain admitted and will hear nothing from this "
-                    + "or any later broadcast.");
-                continue;
-            }
-
-            byte[] shared;
-            try
-            {
-                shared = keys.DeriveSharedKey(peerKey, code);
-            }
-            catch (CryptographicException exception)
-            {
-                _log.Warning(
-                    exception,
-                    $"Roster broadcast skipped participant {peer.PeerCode.Value}: their public key "
-                    + "will not import, so no shared key can be derived. They remain admitted and "
-                    + "will hear nothing from this or any later broadcast.");
-                continue;
-            }
-
-            var sealedPayload = SessionCipher.Seal(shared, plaintext, associatedData);
-            _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForSessionPayload(code, sealedPayload)));
+            SealTo(peer, plaintext, associatedData, keys, code);
         }
+    }
+
+    private void SealTo(AdmittedPeer peer, byte[] plaintext, byte[] associatedData, SessionKeyExchange keys, SessionCode code)
+    {
+        if (peer.PublicKey is not { } peerKey)
+        {
+            _log.Warning(
+                $"Roster broadcast skipped participant {peer.PeerCode.Value}: no public key, so the "
+                + "host cannot address them. They remain admitted and will hear nothing from this "
+                + "or any later broadcast.");
+            return;
+        }
+
+        byte[] shared;
+        try
+        {
+            shared = keys.DeriveSharedKey(peerKey, code);
+        }
+        catch (CryptographicException exception)
+        {
+            _log.Warning(
+                exception,
+                $"Roster broadcast skipped participant {peer.PeerCode.Value}: their public key "
+                + "will not import, so no shared key can be derived. They remain admitted and "
+                + "will hear nothing from this or any later broadcast.");
+            return;
+        }
+
+        var sealedPayload = SessionCipher.Seal(shared, plaintext, associatedData);
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForSessionPayload(code, sealedPayload)));
     }
 }

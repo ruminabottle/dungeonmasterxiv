@@ -37,7 +37,17 @@ internal sealed class SessionInterruption
 
     public bool Tick(TimeSpan sinceLastTick)
     {
-        Seat.Tick(sinceLastTick);
+        if (Seat.IsRunning && _join.Phase == JoinPhase.Admitted && !_join.Resuming)
+        {
+            Seat.HostReturned();
+        }
+
+        if (Seat.Tick(sinceLastTick))
+        {
+            _join.SeatExpired();
+            _synchronise();
+        }
+
         return Grace.Tick(sinceLastTick);
     }
 
@@ -68,6 +78,7 @@ internal sealed class SessionInterruption
         if (dropped && _join.Phase == JoinPhase.Admitted)
         {
             Seat.HostLost();
+            _join.StartResuming();
             return;
         }
 

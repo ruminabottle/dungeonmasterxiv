@@ -22,6 +22,7 @@ internal readonly record struct InboundFrame(
         if (TryContent(envelope, sessionKey)
             || TryJoinHello(envelope)
             || TryJoinRequest(envelope)
+            || TryResume(envelope)
             || TryTransportNotice(envelope)
             || TryHostKey(envelope)
             || TryCodeRefused(envelope)
@@ -83,6 +84,23 @@ internal readonly record struct InboundFrame(
         return true;
     }
 
+    private bool TryResume(WireEnvelope envelope)
+    {
+        if (envelope.Type != WireMessageType.Resume)
+        {
+            return false;
+        }
+
+        if (Handlers.Admission.OnResume is { } onResume
+            && envelope.PublicKey is { } memberPublicKey
+            && SessionKeyExchange.CanAgreeWith(memberPublicKey))
+        {
+            onResume(memberPublicKey, envelope);
+        }
+
+        return true;
+    }
+
     private bool TryTransportNotice(WireEnvelope envelope)
     {
         var handlers = Handlers;
@@ -139,6 +157,12 @@ internal readonly record struct InboundFrame(
         if (envelope.Type == WireMessageType.CodeRefused && attempt.Phase == JoinPhase.Contacting)
         {
             attempt.Fail(SessionFailure.SessionCodeNotActive);
+            return true;
+        }
+
+        if (envelope.Type == WireMessageType.CodeRefused && attempt.Phase == JoinPhase.Admitted && attempt.Resuming)
+        {
+            attempt.SeatExpired();
             return true;
         }
 

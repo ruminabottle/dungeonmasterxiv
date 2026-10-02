@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
@@ -36,6 +37,22 @@ internal sealed class InboundWiring(
                         admissions.Admit(request.PeerCode, asClaimed: true);
                         roster.Publish();
                     }
+                },
+                OnResume: (key, envelope) =>
+                {
+                    if (admissions.Resume(key, envelope) is not { } resumed)
+                    {
+                        return;
+                    }
+
+                    var missed = resources.Recording.Entries
+                        .Where(entry => entry.Stamp.Sequence > resumed.LastSequence)
+                        .Select(entry => new StreamLine(
+                            entry.Stamp.Sequence, entry.Stamp.AtUtcTicks, entry.Kind, entry.Peer.Value, entry.Text))
+                        .ToList();
+
+                    roster.Publish();
+                    roster.PublishEntriesTo(resumed.Peer, missed);
                 }),
             HostAuthored: new HostAuthoredContent(
                 OpenWith: sessionKey,

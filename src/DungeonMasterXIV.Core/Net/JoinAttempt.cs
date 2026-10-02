@@ -21,6 +21,24 @@ public sealed class JoinAttempt
 
     public byte[]? HostPublicKey { get; private set; }
 
+    public bool Resuming { get; private set; }
+
+    public void StartResuming()
+    {
+        if (Phase == JoinPhase.Admitted)
+        {
+            Resuming = true;
+        }
+    }
+
+    public void ResumeConfirmed() => Resuming = false;
+
+    public void SeatExpired()
+    {
+        Resuming = false;
+        Fail(SessionFailure.SeatExpired);
+    }
+
     public void Request(SessionCode code)
     {
         Phase = JoinPhase.Contacting;
@@ -28,6 +46,7 @@ public sealed class JoinAttempt
         Failure = SessionFailure.None;
         Deadline = null;
         HostPublicKey = null;
+        Resuming = false;
 
         ParticipantId = null;
     }
@@ -40,6 +59,7 @@ public sealed class JoinAttempt
         Deadline = null;
         HostPublicKey = null;
         ParticipantId = null;
+        Resuming = false;
     }
 
     public void HostKeyOffered(byte[] hostPublicKey)

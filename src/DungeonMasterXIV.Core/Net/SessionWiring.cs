@@ -10,7 +10,8 @@ internal sealed class SessionWiring
         Func<string> relayAddress,
         TimeSpan window,
         ISessionTransportLog log,
-        SessionCapabilities capabilities)
+        SessionCapabilities capabilities,
+        Func<long> lastSequence)
     {
         ResolveRelink = capabilities.RelinkSource;
         var newKeys = capabilities.KeySource;
@@ -24,7 +25,14 @@ internal sealed class SessionWiring
             capabilities.ReturningPlayersSource,
             log);
         Handshake = new OutboundHandshake(
-            Link, Host, Join, () => Joiner?.Keys, () => Hosting?.ReclaimSecret, () => Interruption?.Grace.IsRunning == true);
+            Link,
+            Host,
+            Join,
+            () => Joiner?.Keys,
+            () => Hosting?.ReclaimSecret,
+            () => Interruption?.Grace.IsRunning == true,
+            () => Joiner?.SessionKey,
+            lastSequence);
         Roster = new RosterBroadcast(
             Link,
             Admissions.Audience,

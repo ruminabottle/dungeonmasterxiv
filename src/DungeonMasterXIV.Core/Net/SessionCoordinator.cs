@@ -20,7 +20,7 @@ public sealed class SessionCoordinator
         ArgumentNullException.ThrowIfNull(log);
         ArgumentNullException.ThrowIfNull(capabilities);
 
-        _parts = new SessionWiring(transport, relayAddress, window, log, capabilities);
+        _parts = new SessionWiring(transport, relayAddress, window, log, capabilities, () => _stream.LastSequence);
 
         _log = log;
         _link = _parts.Link;
@@ -46,10 +46,13 @@ public sealed class SessionCoordinator
     private readonly JoinRequester _joiner;
     private readonly HostRunner _hosting;
     private readonly ReceivedRoster _received = new();
+    private readonly ReceivedStream _stream = new();
     private readonly PhaseTimeouts _timeouts = new();
     private readonly ReconnectSchedule _reconnect = new();
 
     public IReadOnlyList<RosterEntry> Roster => _received.Entries;
+
+    public IReadOnlyList<StreamLine> Received => _stream.Lines;
 
     public MemberContentReceipts MemberContent => _resources.MemberContent;
     public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
@@ -82,8 +85,11 @@ public sealed class SessionCoordinator
 
     public void RequestJoin(SessionCode code, DisplayName name) => RequestJoin(code, name, null);
 
-    public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId) =>
+    public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
+    {
+        _stream.Clear();
         _joiner.Request(code, name, claimedParticipantId);
+    }
 
     public void ReceiveJoinRequest(PendingAdmission request) => _admissions.Receive(request);
 
@@ -126,7 +132,16 @@ public sealed class SessionCoordinator
 
         if (_interruption.Tick(sinceLastTick))
         {
-            StopHosting(now);
+            if (InAHostedSession)
+            {
+                StopHosting(now);
+            }
+            else if (Join.Phase == JoinPhase.Admitted)
+            {
+                Join.Fail(SessionFailure.HostGone);
+                SynchroniseTransport();
+            }
+
             return;
         }
 
@@ -162,7 +177,11 @@ public sealed class SessionCoordinator
 
     private void HostWentAway() => _interruption.Grace.HostLost();
 
-    private void HostCameBack() => _interruption.Grace.HostReturned();
+    private void HostCameBack()
+    {
+        _interruption.Grace.HostReturned();
+        _handshake.ResendResume();
+    }
 
     public GraceWindow Grace => _interruption.Grace;
 
@@ -181,6 +200,7 @@ public sealed class SessionCoordinator
     private void HeardFromTheHost(SessionContent content)
     {
         _received.Replace(content.Roster);
+        _stream.Add(content.Entries);
         Membership.HeardFromTheHost(content.ClosingAtUtcTicks);
     }
 

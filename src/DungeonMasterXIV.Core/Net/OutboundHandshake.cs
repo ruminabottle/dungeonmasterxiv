@@ -12,6 +12,8 @@ internal sealed class OutboundHandshake
     private readonly Func<SessionKeyExchange?> _joinerKeys;
     private readonly Func<byte[]?> _reclaimSecret;
     private readonly Func<bool> _hostAway;
+    private readonly Func<byte[]?> _sessionKey;
+    private readonly Func<long> _lastSequence;
 
     private string? _requestedCode;
     private string? _helloSentFor;
@@ -19,6 +21,7 @@ internal sealed class OutboundHandshake
     private DisplayName _joinDisplayName;
     private Guid? _claimedParticipantId;
     private bool _reclaimSentOnThisLink;
+    private bool _resumeSentOnThisLink;
 
     public OutboundHandshake(
         RelayLink link,
@@ -26,7 +29,9 @@ internal sealed class OutboundHandshake
         JoinAttempt join,
         Func<SessionKeyExchange?> joinerKeys,
         Func<byte[]?> reclaimSecret,
-        Func<bool> hostAway)
+        Func<bool> hostAway,
+        Func<byte[]?> sessionKey,
+        Func<long> lastSequence)
     {
         _link = link;
         _host = host;
@@ -34,6 +39,8 @@ internal sealed class OutboundHandshake
         _joinerKeys = joinerKeys;
         _reclaimSecret = reclaimSecret;
         _hostAway = hostAway;
+        _sessionKey = sessionKey;
+        _lastSequence = lastSequence;
     }
 
     public bool RegistrationWasSent => _requestedCode is not null;
@@ -57,14 +64,18 @@ internal sealed class OutboundHandshake
         if (!_link.IsReadyToSend)
         {
             _reclaimSentOnThisLink = false;
+            _resumeSentOnThisLink = false;
         }
 
         ReclaimWhenReconnected();
+        ResumeWhenReconnected();
 
         RegisterWithRelayWhenReady();
         SendHelloWhenReady();
         SendJoinRequestWhenReady();
     }
+
+    public void ResendResume() => _resumeSentOnThisLink = false;
 
     private void RegisterWithRelayWhenReady()
     {
@@ -95,6 +106,25 @@ internal sealed class OutboundHandshake
 
         _reclaimSentOnThisLink = true;
         _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForReclaim(code, secret)));
+    }
+
+    private void ResumeWhenReconnected()
+    {
+        if (_join.Phase != JoinPhase.Admitted
+            || !_join.Resuming
+            || _join.Code is not { } code
+            || _joinerKeys() is not { } keys
+            || _sessionKey() is not { } key
+            || _resumeSentOnThisLink
+            || !_link.IsReadyToSend)
+        {
+            return;
+        }
+
+        _resumeSentOnThisLink = true;
+        var proof = JoinDetailsCodec.Seal(
+            key, new JoinDetails { LastSequence = _lastSequence() }, code, WireMessageType.Resume);
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForResume(code, keys.PublicKey, proof)));
     }
 
     private void SendHelloWhenReady()
