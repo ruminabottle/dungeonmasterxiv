@@ -348,8 +348,9 @@ language a person speaks** (product-overview D-8).
    clusters**, counted in a unit that does not vary by script. Code units would refuse a Vietnamese or
    Devanagari name that a Japanese name of the same visible length passes. **The rule behind the
    number: the limit never rejects a name FFXIV itself permits**, because the character name is the
-   pre-filled default. 32 assumes the game's maximum is 31 (15 + space + 15); if the real maximum is
-   higher, the number rises and the rule does not change.
+   pre-filled default. FFXIV allows a forename and a surname of 2 to 15 characters each and at most 20
+   characters in all, the space included, so 32 accepts every character name with room for longer
+   aliases. If the game's maximum ever rises past 32, the number rises and the rule does not change.
 4. **Legitimate names are accepted.** Diacritics and combining marks, including decomposed forms, are
    ordinary. An allowlist that admits nothing refuses every hostile input and looks perfect, so this
    half fails silently.
@@ -390,8 +391,8 @@ language a person speaks** (product-overview D-8).
   build accepting a Latin name at the limit and refusing a Japanese, Korean, Arabic or combining-mark
   name of the same perceived length fails. Only a length-matched pair exposes this; a short non-Latin
   name passes any code-unit limit.
-- **A-1.2t** The longest name FFXIV itself permits is accepted, pre-filled and unedited. Needs the
-  real game, since its maximum is not recorded anywhere.
+- **A-1.2t** The longest name FFXIV itself permits (20 characters, the space included, for example a
+  15-character forename and a 4-character surname) is accepted, pre-filled and unedited.
 - **A-1.2u** The length boundary is exercised with a **non-ASCII** name. A boundary built from a
   repeated ASCII character cannot tell grapheme clusters from code units. The expected bound is stated
   independently of the production constant, so changing that constant makes the boundary check fail.
