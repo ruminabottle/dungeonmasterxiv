@@ -7,7 +7,8 @@ public sealed record SessionCapabilities(
     Func<SessionKeyExchange>? NewKeys = null,
     Func<DisplayName>? HostDisplayName = null,
     Func<DisplayName, Guid?>? MintParticipant = null,
-    Func<string?, RelinkClaim>? ResolveRelink = null)
+    Func<string?, RelinkClaim>? ResolveRelink = null,
+    Func<bool>? LetReturningPlayersIn = null)
 {
     public static SessionCapabilities Default { get; } = new();
 
@@ -19,4 +20,6 @@ public sealed record SessionCapabilities(
         ResolveRelink ?? (static _ => RelinkClaim.None);
 
     public Func<DisplayName> HostNameSource => HostDisplayName ?? (static () => DisplayName.None);
+
+    public Func<bool> ReturningPlayersSource => LetReturningPlayersIn ?? (static () => false);
 }

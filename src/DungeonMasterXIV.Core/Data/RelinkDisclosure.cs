@@ -1,13 +1,8 @@
 namespace DungeonMasterXIV.Data;
 
-/// <summary>The wording that explains what relink memory stores and confirms forgetting an entry.</summary>
+/// <summary>The wording that confirms forgetting a stored participant id.</summary>
 public static class RelinkDisclosure
 {
-    public const string WhatIsStored =
-        "When a DM admits you, they create a participant for you in their campaign and tell your "
-        + "client which one it is. Your client keeps that here, so the same DM can recognise you "
-        + "when you join again with the same code.";
-
     public const string BeginForgetting = "Forget this";
 
     public const string KeepIt = "Keep it";

@@ -94,15 +94,17 @@ public sealed class SessionCoordinator
         DisplayName displayName = default) =>
         _admissions.Receive(peerCode, joinerPublicKey, now, relink, displayName);
 
-    public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player)
+    public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player, bool asClaimed = false)
     {
-        var peer = _admissions.Admit(peerCode, role);
+        var peer = _admissions.Admit(peerCode, role, asClaimed);
 
         _roster.Publish();
         return peer;
     }
 
     public void Deny(PeerCode peerCode) => _admissions.Deny(peerCode);
+
+    public bool CanAdmitAsClaimed(PendingAdmission request) => _admissions.CanAdmitAsClaimed(request);
 
     public void SynchroniseTransport() => _parts.SynchroniseTransport();
 

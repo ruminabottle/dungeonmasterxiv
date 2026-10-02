@@ -16,6 +16,8 @@ public static class CampaignRelink
 
         var participant = campaign.Participants.FirstOrDefault(known => known.ParticipantId == claimed);
 
-        return participant is null ? RelinkClaim.None : new RelinkClaim(true, participant.Label);
+        return participant is null
+            ? RelinkClaim.None
+            : new RelinkClaim(true, participant.Label, participant.ParticipantId);
     }
 }

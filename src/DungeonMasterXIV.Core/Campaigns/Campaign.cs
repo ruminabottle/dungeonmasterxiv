@@ -16,6 +16,8 @@ public sealed class Campaign
 
     public string? DisplayNameAlias { get; set; }
 
+    public bool LetReturningPlayersIn { get; set; }
+
     public List<CampaignParticipant> Participants { get; set; } = new();
 
     public DateTimeOffset CreatedUtc { get; set; }

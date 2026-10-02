@@ -17,12 +17,15 @@ public sealed class AdmissionAnnouncer
         AdmissionDeadline deadline) =>
         Send(WireEnvelope.ForJoinPending(code, joinerPublicKey, hostPublicKey, deadline));
 
+    public void HostKey(SessionCode code, byte[] joinerPublicKey, byte[] hostPublicKey) =>
+        Send(WireEnvelope.ForHostKey(code, joinerPublicKey, hostPublicKey));
+
     public void Accepted(
         SessionCode code,
         byte[] joinerPublicKey,
         byte[] hostPublicKey,
-        Guid? participantId = null) =>
-        Send(WireEnvelope.ForJoinAccepted(code, joinerPublicKey, hostPublicKey, participantId));
+        SealedPayload? welcome = null) =>
+        Send(WireEnvelope.ForJoinAccepted(code, joinerPublicKey, hostPublicKey, welcome));
 
     public void Denied(SessionCode code, byte[] joinerPublicKey) =>
         Send(WireEnvelope.ForJoinDenied(code, joinerPublicKey));

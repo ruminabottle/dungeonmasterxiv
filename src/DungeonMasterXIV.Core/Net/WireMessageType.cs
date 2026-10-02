@@ -23,7 +23,9 @@ public enum WireMessageType
 
     JoinPending = 9,
 
-    JoinerHoldsFingerprint = 10,
-
     ConnectionDropped = 11,
+
+    JoinHello = 12,
+
+    HostKey = 13,
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,9 +16,9 @@ public sealed class SessionAudience
     public AdmittedPeer Admit(
         PeerCode peerCode,
         SessionRole role = SessionRole.Player,
-        AdmissionVerification verification = AdmissionVerification.NotCompared,
         byte[]? publicKey = null,
-        DisplayName displayName = default)
+        DisplayName displayName = default,
+        Guid? participantId = null)
     {
         var existing = _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
         if (existing is not null)
@@ -25,7 +26,7 @@ public sealed class SessionAudience
             return existing;
         }
 
-        var peer = new AdmittedPeer(peerCode, role, verification, publicKey, displayName);
+        var peer = new AdmittedPeer(peerCode, role, publicKey, displayName, participantId);
         _admitted.Add(peer);
         return peer;
     }
@@ -38,11 +39,11 @@ public sealed class SessionAudience
 
     public bool IsAdmitted(PeerCode peerCode) => _admitted.Any(peer => peer.PeerCode == peerCode);
 
+    public AdmittedPeer? HolderOf(Guid participantId) =>
+        _admitted.FirstOrDefault(peer => peer.ParticipantId == participantId);
+
     public AdmittedPeer? Find(PeerCode peerCode) =>
         _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
-
-    public int ConfirmedCount =>
-        _admitted.Count(peer => peer.Verification == AdmissionVerification.Confirmed);
 
     public void Clear() => _admitted.Clear();
 }

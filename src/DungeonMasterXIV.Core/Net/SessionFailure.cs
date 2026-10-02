@@ -24,6 +24,8 @@ public enum SessionFailure
     HostKeyUnusable = 9,
 
     SessionKeysUnavailable = 10,
+
+    HostDidNotTakeRequest = 11,
 }
 
 /// <summary>Gives the player-facing explanation for each session failure.</summary>
@@ -70,11 +72,12 @@ public static class SessionFailureMessage
             + "created, so this is not a setting to change here — please report it with your "
             + "platform and how you launch the game.",
         SessionFailure.HostKeyUnusable =>
-            "The host's answer to your request could not be used: it carried a key this plugin "
-            + "cannot agree with, so no shared key was established and you have not joined. This "
-            + "does not say why — a host running a different build, and something altering the "
-            + "answer on the way, look the same from here and this client cannot tell them apart. "
-            + "You can ask to join again.",
+            "Your DM's plugin sent an answer this plugin could not use, so you have not joined. You "
+            + "may be on different versions of the plugin - check you are both up to date, then ask "
+            + "again.",
+        SessionFailure.HostDidNotTakeRequest =>
+            "Your DM's plugin answered but did not take your request. You may be on different "
+            + "versions of the plugin - check you are both up to date, then ask again.",
         _ => string.Empty,
     };
 }

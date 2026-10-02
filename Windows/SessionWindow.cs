@@ -11,9 +11,6 @@ namespace DungeonMasterXIV.Windows;
 /// <summary>The session window: hosting controls and status, the join flow, admission prompts and chat.</summary>
 public sealed class SessionWindow : Window
 {
-    private const string CodeDisclosure =
-        "Your session code is not a secret. Anyone who has it can ask to join — you decide who gets in.";
-
     private const string CodeChangedWarning =
         "Your session code changed while you were disconnected, because it was taken by another "
         + "session. Your players are still holding the old one - read them the new code below.";
@@ -95,17 +92,22 @@ public sealed class SessionWindow : Window
                 ImGui.SetClipboardText(code.ToClipboardString());
             }
 
-            ImGui.TextWrapped(CodeDisclosure);
-
             var audience = _coordinator.Audience;
             ImGui.TextUnformatted($"Players admitted: {audience.Count}");
 
             RosterView.Draw(audience.Recipients.Select(peer => (peer.DisplayName.Value, peer.Role)));
 
-            if (audience.Count > audience.ConfirmedCount)
+            ImGui.TextUnformatted("Returning players");
+            var letIn = _hosting.LetsReturningPlayersIn;
+            if (ImGui.RadioButton("Ask me each time", !letIn))
             {
-                ImGui.TextWrapped(
-                    $"{audience.Count - audience.ConfirmedCount} admitted without the code being compared.");
+                _hosting.SetReturningPlayers(false);
+            }
+
+            ImGui.SameLine();
+            if (ImGui.RadioButton("Let them straight in", letIn))
+            {
+                _hosting.SetReturningPlayers(true);
             }
 
             if (ImGui.Button("End session"))

@@ -21,6 +21,7 @@ internal sealed class SessionWiring
             () => Host.Code,
             () => HostKeys,
             capabilities.ParticipantSource,
+            capabilities.ReturningPlayersSource,
             log);
         Handshake = new OutboundHandshake(Link, Host, Join, () => Joiner?.Keys);
         Roster = new RosterBroadcast(

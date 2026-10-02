@@ -25,8 +25,6 @@ public sealed class RelinkMemoryView
 
     public void Draw()
     {
-        ImGui.TextWrapped(RelinkDisclosure.WhatIsStored);
-
         var remembered = _relink().All();
 
         if (remembered.Count == 0)
@@ -41,6 +39,9 @@ public sealed class RelinkMemoryView
 
             ImGui.TextUnformatted($"Session code {entry.SessionCode}");
             ImGui.TextUnformatted($"Participant {entry.ParticipantId:D}");
+            ImGui.TextUnformatted(entry.StoredUtc is { } stored
+                ? $"Stored {stored.ToLocalTime():d}"
+                : "Stored before dates were kept");
 
             if (_confirming == entry.SessionCode)
             {

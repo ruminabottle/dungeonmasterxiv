@@ -27,10 +27,6 @@ public sealed record WireEnvelope
 
     public long? DeadlineUtcTicks { get; private init; }
 
-    public string? ClaimedParticipantId { get; private init; }
-
-    public string? ParticipantId { get; private init; }
-
     public static byte[] AssociatedDataFor(SessionCode code, WireMessageType type) =>
         Encoding.UTF8.GetBytes($"{code.Value}:{(int)type}");
 
@@ -46,28 +42,32 @@ public sealed record WireEnvelope
     public static WireEnvelope ForCodeRefused(SessionCode code) =>
         new(WireMessageType.CodeRefused, code.Value);
 
-    public string? DisplayName { get; private init; }
-
-    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey) =>
-        ForJoinRequest(code, publicKey, DungeonMasterXIV.Net.DisplayName.None);
-
-    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey, DisplayName name)
+    public static WireEnvelope ForJoinHello(SessionCode code, byte[] publicKey)
     {
         ArgumentNullException.ThrowIfNull(publicKey);
-        return new WireEnvelope(WireMessageType.JoinRequest, code.Value)
+        return new WireEnvelope(WireMessageType.JoinHello, code.Value) { PublicKey = publicKey };
+    }
+
+    public static WireEnvelope ForHostKey(SessionCode code, byte[] joinerPublicKey, byte[] hostPublicKey)
+    {
+        ArgumentNullException.ThrowIfNull(joinerPublicKey);
+        ArgumentNullException.ThrowIfNull(hostPublicKey);
+        return new WireEnvelope(WireMessageType.HostKey, code.Value)
         {
-            PublicKey = publicKey,
-            DisplayName = name.WasStated ? name.Value : null,
+            PublicKey = joinerPublicKey,
+            HostPublicKey = hostPublicKey,
         };
     }
 
-    public static WireEnvelope ForRelinkRequest(SessionCode code, byte[] publicKey, Guid claimedParticipantId)
+    public static WireEnvelope ForJoinRequest(SessionCode code, byte[] publicKey, SealedPayload details)
     {
         ArgumentNullException.ThrowIfNull(publicKey);
+        ArgumentNullException.ThrowIfNull(details);
         return new WireEnvelope(WireMessageType.JoinRequest, code.Value)
         {
             PublicKey = publicKey,
-            ClaimedParticipantId = claimedParticipantId.ToString("D"),
+            Nonce = details.Nonce,
+            Payload = details.Ciphertext,
         };
     }
 
@@ -89,16 +89,13 @@ public sealed record WireEnvelope
             PublicKey = wire.PublicKey,
             HostPublicKey = wire.HostPublicKey,
             DeadlineUtcTicks = wire.DeadlineUtcTicks,
-            DisplayName = wire.DisplayName,
-            ClaimedParticipantId = wire.ClaimedParticipantId,
-            ParticipantId = wire.ParticipantId,
         };
 
     public static WireEnvelope ForJoinAccepted(
         SessionCode code,
         byte[] joinerPublicKey,
         byte[] hostPublicKey,
-        Guid? participantId = null)
+        SealedPayload? welcome = null)
     {
         ArgumentNullException.ThrowIfNull(joinerPublicKey);
         ArgumentNullException.ThrowIfNull(hostPublicKey);
@@ -106,7 +103,8 @@ public sealed record WireEnvelope
         {
             PublicKey = joinerPublicKey,
             HostPublicKey = hostPublicKey,
-            ParticipantId = participantId?.ToString("D"),
+            Nonce = welcome?.Nonce,
+            Payload = welcome?.Ciphertext,
         };
     }
 
@@ -135,15 +133,6 @@ public sealed record WireEnvelope
             PublicKey = joinerPublicKey,
             HostPublicKey = hostPublicKey,
             DeadlineUtcTicks = deadline.UtcTicks,
-        };
-    }
-
-    public static WireEnvelope ForJoinerHoldsFingerprint(SessionCode code, byte[] joinerPublicKey)
-    {
-        ArgumentNullException.ThrowIfNull(joinerPublicKey);
-        return new WireEnvelope(WireMessageType.JoinerHoldsFingerprint, code.Value)
-        {
-            PublicKey = joinerPublicKey,
         };
     }
 
