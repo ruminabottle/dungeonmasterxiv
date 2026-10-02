@@ -1,12 +1,13 @@
 namespace DungeonMasterXIV.Relay.Sessions;
 
-/// <summary>One session a removed connection left: if it ended, its orphans; if not, its host and member key.</summary>
+/// <summary>One session a removed connection left: if it ended, its orphans; if held, the members to tell; otherwise its host and member key.</summary>
 public readonly record struct SessionDeparture(
     string Code,
     bool EndedSession,
     IReadOnlyList<string> OrphanedConnections,
     string HostConnectionId = "",
-    string? DepartedMemberKey = null);
+    string? DepartedMemberKey = null,
+    IReadOnlyList<string>? HeldMembers = null);
 
 /// <summary>The sessions a removed connection left, one departure for each.</summary>
 public readonly record struct ConnectionRemoval(IReadOnlyList<SessionDeparture> Departures)

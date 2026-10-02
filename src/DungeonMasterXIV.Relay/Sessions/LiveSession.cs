@@ -1,23 +1,30 @@
 namespace DungeonMasterXIV.Relay.Sessions;
 
-/// <summary>One live session on the relay: its host connection, admitted members and pending joiners.</summary>
-internal sealed class LiveSession(string hostConnectionId)
+/// <summary>One session on the relay: its host connection (absent while held), members, pending joiners and reclaim hash.</summary>
+internal sealed class LiveSession(string hostConnectionId, byte[]? reclaimHash)
 {
-    public string HostConnectionId { get; } = hostConnectionId;
+    public string? HostConnectionId { get; set; } = hostConnectionId;
+
+    public byte[]? ReclaimHash { get; } = reclaimHash;
+
+    public DateTimeOffset? HostAwaySince { get; set; }
+
+    public bool HostAway => HostAwaySince is not null;
 
     public Dictionary<string, string> Members { get; } = new(StringComparer.Ordinal);
 
     public Dictionary<string, string> Pending { get; } = new(StringComparer.Ordinal);
 
     public bool IsHost(string connectionId) =>
-        string.Equals(HostConnectionId, connectionId, StringComparison.Ordinal);
+        HostConnectionId is not null && string.Equals(HostConnectionId, connectionId, StringComparison.Ordinal);
 
     public bool IsMember(string connectionId) => IsHost(connectionId) || Members.ContainsKey(connectionId);
 
     public bool HasPending(string connectionId) =>
         Pending.Values.Contains(connectionId, StringComparer.Ordinal);
 
-    public IEnumerable<string> Everyone() => Members.Keys.Prepend(HostConnectionId);
+    public IEnumerable<string> Everyone() =>
+        HostConnectionId is { } host ? Members.Keys.Prepend(host) : Members.Keys;
 
     public void ForgetAllPending(string connectionId)
     {

@@ -16,4 +16,8 @@ internal sealed class WireShape
     public byte[]? HostPublicKey { get; set; }
 
     public long? DeadlineUtcTicks { get; set; }
+
+    public byte[]? ReclaimHash { get; set; }
+
+    public byte[]? ReclaimSecret { get; set; }
 }

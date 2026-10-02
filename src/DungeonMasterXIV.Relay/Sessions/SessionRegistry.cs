@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using DungeonMasterXIV.Net;
 
 namespace DungeonMasterXIV.Relay.Sessions;
@@ -12,6 +13,10 @@ public sealed class SessionRegistry
 
     private readonly ConnectionRoles _roles = new();
 
+    private readonly TimeProvider _clock;
+
+    public SessionRegistry(TimeProvider? clock = null) => _clock = clock ?? TimeProvider.System;
+
     public int LiveSessionCount
     {
         get
@@ -23,7 +28,7 @@ public sealed class SessionRegistry
         }
     }
 
-    public bool TryClaim(SessionCode code, string hostConnectionId)
+    public bool TryClaim(SessionCode code, string hostConnectionId, byte[]? reclaimHash = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(hostConnectionId);
 
@@ -34,7 +39,7 @@ public sealed class SessionRegistry
                 return false;
             }
 
-            _byCode[code.Value] = new LiveSession(hostConnectionId);
+            _byCode[code.Value] = new LiveSession(hostConnectionId, reclaimHash);
             _roles.AddHost(hostConnectionId, code.Value);
             return true;
         }
@@ -86,14 +91,76 @@ public sealed class SessionRegistry
     {
         lock (_gate)
         {
-            if (_byCode.TryGetValue(code, out var session))
+            if (_byCode.TryGetValue(code, out var session) && session.HostConnectionId is { } host)
             {
-                hostConnectionId = session.HostConnectionId;
+                hostConnectionId = host;
                 return true;
             }
 
             hostConnectionId = null;
             return false;
+        }
+    }
+
+    public bool IsHostAway(string code)
+    {
+        lock (_gate)
+        {
+            return _byCode.TryGetValue(code, out var session) && session.HostAway;
+        }
+    }
+
+    public bool TryReclaim(SessionCode code, byte[] secret, string connectionId, out IReadOnlyList<string> members)
+    {
+        ArgumentNullException.ThrowIfNull(secret);
+        ArgumentException.ThrowIfNullOrEmpty(connectionId);
+
+        lock (_gate)
+        {
+            members = [];
+            if (!_byCode.TryGetValue(code.Value, out var session)
+                || !session.HostAway
+                || session.ReclaimHash is not { } expected
+                || _roles.Hosts(connectionId)
+                || !CryptographicOperations.FixedTimeEquals(SHA256.HashData(secret), expected))
+            {
+                return false;
+            }
+
+            session.HostConnectionId = connectionId;
+            session.HostAwaySince = null;
+            _roles.AddHost(connectionId, code.Value);
+            members = session.Members.Keys.ToArray();
+            return true;
+        }
+    }
+
+    public IReadOnlyList<SessionDeparture> ExpireHolds(TimeSpan hold)
+    {
+        lock (_gate)
+        {
+            var now = _clock.GetUtcNow();
+            var expired = _byCode
+                .Where(entry => entry.Value.HostAwaySince is { } since && now - since >= hold)
+                .Select(entry => entry.Key)
+                .ToArray();
+
+            var departures = new List<SessionDeparture>(expired.Length);
+            foreach (var code in expired)
+            {
+                var session = _byCode[code];
+                _byCode.Remove(code);
+
+                var orphaned = session.Members.Keys.ToArray();
+                foreach (var orphan in orphaned)
+                {
+                    _roles.Remove(orphan, code);
+                }
+
+                departures.Add(new SessionDeparture(code, EndedSession: true, orphaned));
+            }
+
+            return departures;
         }
     }
 
@@ -153,7 +220,9 @@ public sealed class SessionRegistry
                 }
 
                 departures.Add(session.IsHost(connectionId)
-                    ? EndSession(code, session, connectionId)
+                    ? session.ReclaimHash is not null
+                        ? HoldSession(code, session)
+                        : EndSession(code, session, connectionId)
                     : LeaveSession(code, session, connectionId));
             }
 
@@ -179,13 +248,28 @@ public sealed class SessionRegistry
         return new SessionDeparture(code, EndedSession: true, orphaned);
     }
 
+    private SessionDeparture HoldSession(string code, LiveSession session)
+    {
+        session.HostAwaySince = _clock.GetUtcNow();
+        session.HostConnectionId = null;
+
+        var waiting = session.Pending.Values.Distinct(StringComparer.Ordinal).ToArray();
+        session.Pending.Clear();
+        foreach (var joiner in waiting.Where(joiner => !session.Members.ContainsKey(joiner)))
+        {
+            _roles.Remove(joiner, code);
+        }
+
+        return new SessionDeparture(code, EndedSession: false, waiting, HeldMembers: session.Members.Keys.ToArray());
+    }
+
     private static SessionDeparture LeaveSession(string code, LiveSession session, string connectionId)
     {
         var departedKey = session.Members.TryGetValue(connectionId, out var key) ? key : null;
 
         session.Members.Remove(connectionId);
         session.ForgetAllPending(connectionId);
-        return new SessionDeparture(code, EndedSession: false, [], session.HostConnectionId, departedKey);
+        return new SessionDeparture(code, EndedSession: false, [], session.HostConnectionId ?? string.Empty, departedKey);
     }
 
     private bool TryResolvePending(

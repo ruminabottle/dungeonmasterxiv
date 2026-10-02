@@ -28,4 +28,14 @@ public enum WireMessageType
     JoinHello = 12,
 
     HostKey = 13,
+
+    HostAway = 14,
+
+    HostBack = 15,
+
+    Reclaim = 16,
+
+    Reclaimed = 17,
+
+    Resume = 18,
 }

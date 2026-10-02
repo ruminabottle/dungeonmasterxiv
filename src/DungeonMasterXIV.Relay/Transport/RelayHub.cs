@@ -4,7 +4,7 @@ using DungeonMasterXIV.Relay.Sessions;
 
 namespace DungeonMasterXIV.Relay.Transport;
 
-/// <summary>Decodes and routes incoming messages, and on disconnect clears up and tells hosts a member dropped.</summary>
+/// <summary>Decodes and routes incoming messages, holds sessions whose host dropped, and clears up on disconnect and expiry.</summary>
 public sealed class RelayHub(
     RelayRouter router,
     SessionRegistry registry,
@@ -49,6 +49,19 @@ public sealed class RelayHub(
             default:
                 break;
         }
+
+        if (decision.Notice is { } notice && decision.NoticeRecipients is { } noticeRecipients)
+        {
+            await ForwardAsync(EnvelopeCodec.Encode(notice), noticeRecipients, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public async ValueTask ExpireHoldsAsync(TimeSpan hold, CancellationToken cancellationToken)
+    {
+        foreach (var departure in _registry.ExpireHolds(hold))
+        {
+            await CloseAsync(departure.OrphanedConnections, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async ValueTask DisconnectAsync(
@@ -63,6 +76,22 @@ public sealed class RelayHub(
         _log.ConnectionClosed(connection.Id, removal, reason);
 
         await TellHostsTheirMemberDroppedAsync(removal, cancellationToken).ConfigureAwait(false);
+        await TellMembersTheHostIsAwayAsync(removal, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask TellMembersTheHostIsAwayAsync(ConnectionRemoval removal, CancellationToken cancellationToken)
+    {
+        foreach (var departure in removal.Departures)
+        {
+            if (departure.HeldMembers is not { } members || !SessionCode.TryParse(departure.Code, out var code))
+            {
+                continue;
+            }
+
+            await ForwardAsync(EnvelopeCodec.Encode(WireEnvelope.ForHostAway(code)), members, cancellationToken)
+                .ConfigureAwait(false);
+            await CloseAsync(departure.OrphanedConnections, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async ValueTask TellHostsTheirMemberDroppedAsync(

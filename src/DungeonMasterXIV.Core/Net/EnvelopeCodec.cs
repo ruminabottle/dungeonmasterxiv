@@ -25,6 +25,8 @@ public static class EnvelopeCodec
             PublicKey = envelope.PublicKey,
             HostPublicKey = envelope.HostPublicKey,
             DeadlineUtcTicks = envelope.DeadlineUtcTicks,
+            ReclaimHash = envelope.ReclaimHash,
+            ReclaimSecret = envelope.ReclaimSecret,
         };
 
         return JsonSerializer.SerializeToUtf8Bytes(wire, Options);
