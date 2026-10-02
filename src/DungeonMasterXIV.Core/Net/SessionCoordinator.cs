@@ -49,6 +49,8 @@ public sealed class SessionCoordinator
     private readonly ReceivedStream _stream = new();
     private readonly PhaseTimeouts _timeouts = new();
     private readonly ReconnectSchedule _reconnect = new();
+    private static readonly TimeSpan ResumeRetryInterval = TimeSpan.FromSeconds(5);
+    private TimeSpan _sinceResumeSent;
 
     public IReadOnlyList<RosterEntry> Roster => _received.Entries;
 
@@ -127,6 +129,7 @@ public sealed class SessionCoordinator
                 .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;
+        RetryAStrandedResume(sinceLastTick);
         _handshake.SendWhatIsDue();
         Membership.FlushWaiting();
         if (Join.Phase is JoinPhase.Failed or JoinPhase.Idle)
@@ -170,9 +173,29 @@ public sealed class SessionCoordinator
         }
     }
 
+    private void RetryAStrandedResume(TimeSpan sinceLastTick)
+    {
+        if (Join.Phase != JoinPhase.Admitted
+            || !Join.Resuming
+            || !_interruption.Grace.IsRunning
+            || !_link.IsReadyToSend)
+        {
+            _sinceResumeSent = TimeSpan.Zero;
+            return;
+        }
+
+        _sinceResumeSent += sinceLastTick;
+        if (_sinceResumeSent >= ResumeRetryInterval)
+        {
+            _sinceResumeSent = TimeSpan.Zero;
+            _handshake.ResendResume();
+        }
+    }
+
     private void Reclaimed()
     {
         _interruption.HostReconnected();
+        _admissions.ForgetPending();
         _roster.Publish();
     }
 
@@ -182,10 +205,23 @@ public sealed class SessionCoordinator
         _parts.Host.Fail(SessionFailure.ConnectionLost);
     }
 
-    private void HostWentAway() => _interruption.Grace.HostLost();
+    private bool InAJoinedSessionAsPlayer => !InAHostedSession && Join.Phase == JoinPhase.Admitted;
+
+    private void HostWentAway()
+    {
+        if (InAJoinedSessionAsPlayer)
+        {
+            _interruption.Grace.HostLost();
+        }
+    }
 
     private void HostCameBack()
     {
+        if (!InAJoinedSessionAsPlayer)
+        {
+            return;
+        }
+
         _interruption.Grace.HostReturned();
         _handshake.ResendResume();
     }
@@ -212,6 +248,10 @@ public sealed class SessionCoordinator
         _received.Replace(content.Roster);
         _stream.Add(content.Entries);
         Membership.HeardFromTheHost(content.ClosingAtUtcTicks);
+        if (!InAHostedSession)
+        {
+            _interruption.Grace.HostReturned();
+        }
     }
 
 }

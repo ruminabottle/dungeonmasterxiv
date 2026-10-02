@@ -127,10 +127,11 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
             opened = true;
             await ReceiveLoopAsync(socket, token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
         }
         catch (Exception exception) when (exception is WebSocketException
+                                              or OperationCanceledException
                                               or ObjectDisposedException
                                               or InvalidOperationException)
         {

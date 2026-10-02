@@ -285,6 +285,8 @@ public sealed class AdmissionControl
         AnnounceLapsed();
     }
 
+    public void ForgetPending() => Desk.Clear();
+
     public void Clear()
     {
         Audience.Clear();

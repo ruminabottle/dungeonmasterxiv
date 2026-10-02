@@ -93,7 +93,7 @@ internal sealed class LoopbackRelay
             relay._directory.Add(RelaySide);
         }
 
-        public void Disconnect() => Close(reportFailure: false);
+        public void Disconnect() => Close(reportFailure: false, closedCleanly: true);
 
         public void Send(byte[] envelope)
         {
@@ -103,11 +103,11 @@ internal sealed class LoopbackRelay
             }
         }
 
-        public void Drop() => Close(reportFailure: true);
+        public void Drop() => Close(reportFailure: true, closedCleanly: false);
 
         public void Deliver(byte[] frame) => Received?.Invoke(frame);
 
-        public void Close(bool reportFailure)
+        public void Close(bool reportFailure, bool closedCleanly)
         {
             if (RelaySide is not { } side)
             {
@@ -115,7 +115,7 @@ internal sealed class LoopbackRelay
             }
 
             RelaySide = null;
-            relay._hub.DisconnectAsync(side, "dropped", CancellationToken.None).AsTask().GetAwaiter().GetResult();
+            relay._hub.DisconnectAsync(side, "dropped", CancellationToken.None, closedCleanly).AsTask().GetAwaiter().GetResult();
             if (reportFailure)
             {
                 Failed?.Invoke(SessionFailure.ConnectionLost);
@@ -135,7 +135,7 @@ internal sealed class LoopbackRelay
 
         public ValueTask CloseAsync(CancellationToken cancellationToken)
         {
-            client.Close(reportFailure: true);
+            client.Close(reportFailure: true, closedCleanly: false);
             return ValueTask.CompletedTask;
         }
     }

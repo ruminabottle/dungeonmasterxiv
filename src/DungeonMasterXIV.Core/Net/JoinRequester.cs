@@ -64,7 +64,7 @@ internal sealed class JoinRequester
 
     private void ReleaseTheSeatAndKeys()
     {
-        _interruption.SeatReleased();
+        _interruption.JoinReleased();
         Keys?.Dispose();
         Keys = null;
         SessionKey = null;

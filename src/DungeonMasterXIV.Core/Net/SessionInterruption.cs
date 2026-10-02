@@ -33,7 +33,16 @@ internal sealed class SessionInterruption
         _join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted
         || Seat.IsRunning;
 
-    public void SeatReleased() => Seat.Reset();
+    private bool OnAPlayerClient => _host.Phase is not (HostingPhase.Registering or HostingPhase.Hosting);
+
+    public void JoinReleased()
+    {
+        Seat.Reset();
+        if (OnAPlayerClient)
+        {
+            Grace.Reset();
+        }
+    }
 
     public bool Tick(TimeSpan sinceLastTick)
     {
@@ -42,12 +51,17 @@ internal sealed class SessionInterruption
             Seat.Reset();
         }
 
+        if (OnAPlayerClient && _join.Phase != JoinPhase.Admitted)
+        {
+            Grace.Reset();
+        }
+
         if (Seat.IsRunning && _join.Phase == JoinPhase.Admitted && !_join.Resuming)
         {
             Seat.HostReturned();
         }
 
-        if (Seat.Tick(sinceLastTick))
+        if (!(OnAPlayerClient && Grace.IsRunning) && Seat.Tick(sinceLastTick))
         {
             _join.SeatExpired();
             _synchronise();
