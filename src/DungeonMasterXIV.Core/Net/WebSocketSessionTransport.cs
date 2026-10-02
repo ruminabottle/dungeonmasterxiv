@@ -119,28 +119,31 @@ public sealed class WebSocketSessionTransport : ISessionTransport, IDisposable
 
     private async Task ConnectAsync(ClientWebSocket socket, Uri relay, CancellationToken token)
     {
+        var opened = false;
         try
         {
             await socket.ConnectAsync(relay, token).ConfigureAwait(false);
-
             _connected = socket;
-
+            opened = true;
             await ReceiveLoopAsync(socket, token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
         }
         catch (Exception exception) when (exception is WebSocketException
+                                              or OperationCanceledException
                                               or ObjectDisposedException
                                               or InvalidOperationException)
         {
-            var failure = ClassifyRefusal(socket);
+            var failure = opened ? SessionFailure.ConnectionLost : ClassifyRefusal(socket);
             _log.Warning(
                 exception,
-                failure == SessionFailure.RelayUnreachable
-                    ? "Could not reach the session relay."
-                    : "The session relay refused this build's protocol version.");
-
+                failure switch
+                {
+                    SessionFailure.ConnectionLost => "The connection to the session relay dropped.",
+                    SessionFailure.RelayUnreachable => "Could not reach the session relay.",
+                    _ => "The session relay refused this build's protocol version.",
+                });
             Failed?.Invoke(failure);
         }
         finally

@@ -19,7 +19,7 @@ public sealed class RelayRouter(SessionRegistry registry)
 
         return envelope.Type switch
         {
-            WireMessageType.CodeRequest => Arbitrate(code, senderConnectionId),
+            WireMessageType.CodeRequest => Arbitrate(code, senderConnectionId, envelope.ReclaimHash),
             WireMessageType.JoinHello => RouteJoinHello(code, senderConnectionId, envelope.PublicKey),
             WireMessageType.JoinRequest => RouteJoinRequest(code, senderConnectionId, envelope.PublicKey),
             WireMessageType.HostKey =>
@@ -33,6 +33,12 @@ public sealed class RelayRouter(SessionRegistry registry)
             WireMessageType.JoinPending =>
                 RouteToPendingJoiner(envelope, code, senderConnectionId, RelayOutcome.PendingNoticeForwarded),
 
+            WireMessageType.Reclaim => RouteReclaim(envelope, code, senderConnectionId),
+            WireMessageType.Resume => RouteResume(code, senderConnectionId, envelope.PublicKey),
+
+            WireMessageType.HostAway or WireMessageType.HostBack or WireMessageType.Reclaimed =>
+                RelayDecision.Drop(RelayOutcome.RelayOnlyMessageFromClient),
+
             WireMessageType.CodeAccepted or WireMessageType.CodeRefused or WireMessageType.ConnectionDropped =>
                 RelayDecision.Drop(RelayOutcome.RelayOnlyMessageFromClient),
 
@@ -40,8 +46,8 @@ public sealed class RelayRouter(SessionRegistry registry)
         };
     }
 
-    private RelayDecision Arbitrate(SessionCode code, string hostConnectionId) =>
-        _registry.TryClaim(code, hostConnectionId)
+    private RelayDecision Arbitrate(SessionCode code, string hostConnectionId, byte[]? reclaimHash) =>
+        _registry.TryClaim(code, hostConnectionId, reclaimHash)
             ? RelayDecision.Respond(RelayOutcome.CodeClaimed, WireEnvelope.ForCodeAccepted(code))
             : RelayDecision.Respond(RelayOutcome.CodeAlreadyLive, WireEnvelope.ForCodeRefused(code));
 
@@ -143,8 +149,50 @@ public sealed class RelayRouter(SessionRegistry registry)
             : RelayDecision.Drop(RelayOutcome.UnknownJoiner);
     }
 
+    private RelayDecision RouteReclaim(WireEnvelope envelope, SessionCode code, string senderConnectionId)
+    {
+        if (envelope.ReclaimSecret is not { } secret)
+        {
+            return RelayDecision.Drop(RelayOutcome.MalformedEnvelope);
+        }
+
+        return _registry.TryReclaim(code, secret, senderConnectionId, out var members, out var droppedMemberKeys)
+            ? RelayDecision.Respond(RelayOutcome.Reclaimed, WireEnvelope.ForReclaimed(code))
+                .AlsoTelling(members, WireEnvelope.ForHostBack(code))
+                .ThenSending(droppedMemberKeys
+                    .Select(key => WireEnvelope.ForConnectionDropped(code, Convert.FromBase64String(key)))
+                    .ToArray())
+            : RelayDecision.Respond(RelayOutcome.ReclaimRefused, WireEnvelope.ForCodeRefused(code));
+    }
+
+    private RelayDecision RouteResume(SessionCode code, string memberConnectionId, byte[]? publicKey)
+    {
+        if (_registry.IsHostAway(code.Value))
+        {
+            return RelayDecision.Respond(RelayOutcome.HostAway, WireEnvelope.ForHostAway(code));
+        }
+
+        if (!_registry.TryGetHost(code.Value, out var hostConnectionId))
+        {
+            return RelayDecision.Respond(RelayOutcome.SessionNotFound, WireEnvelope.ForCodeRefused(code));
+        }
+
+        if (publicKey is null)
+        {
+            return RelayDecision.Drop(RelayOutcome.MalformedEnvelope);
+        }
+
+        _registry.TryRegisterPending(code.Value, memberConnectionId, publicKey);
+        return RelayDecision.Forward(RelayOutcome.ResumeForwarded, [hostConnectionId]);
+    }
+
     private RelayDecision ForwardPayload(SessionCode code, string senderConnectionId)
     {
+        if (_registry.IsHostAway(code.Value))
+        {
+            return RelayDecision.Drop(RelayOutcome.HostAway);
+        }
+
         if (!_registry.IsParticipant(code.Value, senderConnectionId))
         {
             return RelayDecision.Drop(RelayOutcome.SenderNotInSession);

@@ -57,6 +57,7 @@ public static class RelayApp
         builder.Services.AddSingleton<RelayHub>();
         builder.Services.AddSingleton<WebSocketRelayEndpoint>();
         builder.Services.AddSingleton<ProtocolVersionGate>();
+        builder.Services.AddHostedService<HeldSessionReaper>();
 
         var app = builder.Build();
 

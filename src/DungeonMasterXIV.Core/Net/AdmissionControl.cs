@@ -119,6 +119,43 @@ public sealed class AdmissionControl
         }
     }
 
+    public (PeerCode Peer, long LastSequence)? Resume(byte[] memberPublicKey, WireEnvelope envelope)
+    {
+        if (_hostCode() is not { } code || _hostKeys() is not { } hostKeys)
+        {
+            return null;
+        }
+
+        var peer = PeerCodeFor(memberPublicKey);
+        if (!Audience.IsAdmitted(peer))
+        {
+            _announcer.Denied(code, memberPublicKey);
+            return null;
+        }
+
+        byte[] key;
+        try
+        {
+            key = hostKeys.DeriveSharedKey(memberPublicKey, code);
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
+
+        var details = JoinDetailsCodec.TryOpen(key, envelope);
+        CryptographicOperations.ZeroMemory(key);
+
+        if (details is null)
+        {
+            return null;
+        }
+
+        Drops.Forget(peer);
+        _announcer.Accepted(code, memberPublicKey, hostKeys.PublicKey);
+        return (peer, details.LastSequence ?? 0);
+    }
+
     public JoinDetails? OpenJoinRequest(byte[] joinerPublicKey, WireEnvelope envelope)
     {
         if (_hostCode() is not { } code || _hostKeys() is not { } hostKeys)
@@ -247,6 +284,8 @@ public sealed class AdmissionControl
         JustLapsed = Desk.ExpireLapsed(now);
         AnnounceLapsed();
     }
+
+    public void ForgetPending() => Desk.Clear();
 
     public void Clear()
     {

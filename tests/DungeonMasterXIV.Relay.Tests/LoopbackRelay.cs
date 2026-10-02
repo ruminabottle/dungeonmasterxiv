@@ -1,28 +1,38 @@
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Relay.Diagnostics;
 using DungeonMasterXIV.Relay.Sessions;
+using DungeonMasterXIV.Relay.Transport;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace DungeonMasterXIV.Relay.Tests;
 
-/// <summary>Connects session coordinators through the real relay router in memory and keeps every frame the relay saw.</summary>
+/// <summary>Connects session coordinators through the real relay hub in memory and keeps every frame the relay received.</summary>
 internal sealed class LoopbackRelay
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 1, 20, 0, 0, TimeSpan.Zero);
 
-    private readonly RelayRouter _router = new(new SessionRegistry());
-    private readonly Dictionary<string, Connection> _connections = new(StringComparer.Ordinal);
+    private readonly RelayHub _hub;
+    private readonly ConnectionDirectory _directory = new();
+    private readonly Dictionary<string, Client> _clients = new(StringComparer.Ordinal);
     private readonly List<SessionCoordinator> _coordinators = new();
-    private readonly Queue<(string From, byte[] Frame)> _inFlight = new();
+    private readonly Queue<(Client From, byte[] Frame)> _inFlight = new();
+
+    public LoopbackRelay()
+    {
+        var registry = new SessionRegistry();
+        _hub = new RelayHub(new RelayRouter(registry), registry, _directory, new RelayLog(NullLogger<RelayLog>.Instance));
+    }
 
     public List<byte[]> Seen { get; } = new();
 
     public SessionCoordinator Connect(string id, SessionCapabilities? capabilities = null)
     {
-        var connection = new Connection(this, id);
-        _connections[id] = connection;
+        var client = new Client(this, id);
+        _clients[id] = client;
 
         var coordinator = new SessionCoordinator(
-            connection,
+            client,
             () => RelayEndpoint.Default,
             GraceWindow.Default,
             log: QuietLog.Instance,
@@ -32,13 +42,15 @@ internal sealed class LoopbackRelay
         return coordinator;
     }
 
-    public void RunUntil(Func<bool> condition)
+    public void Drop(string id) => _clients[id].Drop();
+
+    public void RunUntil(Func<bool> condition, TimeSpan? step = null)
     {
-        for (var round = 0; round < 50 && !condition(); round++)
+        for (var round = 0; round < 200 && !condition(); round++)
         {
             foreach (var coordinator in _coordinators)
             {
-                coordinator.Tick(TimeSpan.Zero, Now);
+                coordinator.Tick(step ?? TimeSpan.Zero, Now);
             }
 
             Deliver();
@@ -51,45 +63,80 @@ internal sealed class LoopbackRelay
     {
         while (_inFlight.TryDequeue(out var sent))
         {
-            Seen.Add(sent.Frame);
-
-            if (!EnvelopeCodec.TryDecode(sent.Frame, out var envelope) || envelope is null)
+            if (sent.From.RelaySide is not { } relaySide)
             {
                 continue;
             }
 
-            var decision = _router.Route(envelope, sent.From);
+            Seen.Add(sent.Frame);
+            _hub.ReceiveAsync(relaySide, sent.Frame, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        }
+    }
 
-            if (decision.Action == RelayAction.ReplyToSender && decision.Reply is not null)
+    private sealed class Client(LoopbackRelay relay, string name) : ISessionTransport
+    {
+        private int _dials;
+
+        public RelaySide? RelaySide { get; private set; }
+
+        public bool IsConnected => RelaySide is not null;
+
+        public bool IsReadyToSend => IsConnected;
+
+        public event Action<SessionFailure>? Failed;
+
+        public event Action<byte[]>? Received;
+
+        public void Connect(Uri relayAddress)
+        {
+            RelaySide = new RelaySide(this, $"{name}#{++_dials}");
+            relay._directory.Add(RelaySide);
+        }
+
+        public void Disconnect() => Close(reportFailure: false, closedCleanly: true);
+
+        public void Send(byte[] envelope)
+        {
+            if (RelaySide is not null)
             {
-                _connections[sent.From].Receive(EnvelopeCodec.Encode(decision.Reply));
+                relay._inFlight.Enqueue((this, envelope));
             }
-            else if (decision.Action == RelayAction.Forward)
+        }
+
+        public void Drop() => Close(reportFailure: true, closedCleanly: false);
+
+        public void Deliver(byte[] frame) => Received?.Invoke(frame);
+
+        public void Close(bool reportFailure, bool closedCleanly)
+        {
+            if (RelaySide is not { } side)
             {
-                foreach (var recipient in decision.Recipients)
-                {
-                    _connections[recipient].Receive(sent.Frame);
-                }
+                return;
+            }
+
+            RelaySide = null;
+            relay._hub.DisconnectAsync(side, "dropped", CancellationToken.None, closedCleanly).AsTask().GetAwaiter().GetResult();
+            if (reportFailure)
+            {
+                Failed?.Invoke(SessionFailure.ConnectionLost);
             }
         }
     }
 
-    private sealed class Connection(LoopbackRelay relay, string id) : ISessionTransport
+    private sealed class RelaySide(Client client, string id) : IRelayConnection
     {
-        public bool IsConnected { get; private set; }
+        public string Id { get; } = id;
 
-        public bool IsReadyToSend => IsConnected;
+        public ValueTask SendAsync(byte[] bytes, CancellationToken cancellationToken)
+        {
+            client.Deliver(bytes);
+            return ValueTask.CompletedTask;
+        }
 
-        public event Action<SessionFailure>? Failed { add { } remove { } }
-
-        public event Action<byte[]>? Received;
-
-        public void Connect(Uri relayAddress) => IsConnected = true;
-
-        public void Disconnect() => IsConnected = false;
-
-        public void Send(byte[] envelope) => relay._inFlight.Enqueue((id, envelope));
-
-        public void Receive(byte[] frame) => Received?.Invoke(frame);
+        public ValueTask CloseAsync(CancellationToken cancellationToken)
+        {
+            client.Close(reportFailure: true, closedCleanly: false);
+            return ValueTask.CompletedTask;
+        }
     }
 }

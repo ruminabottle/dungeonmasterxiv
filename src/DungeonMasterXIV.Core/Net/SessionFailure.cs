@@ -26,6 +26,10 @@ public enum SessionFailure
     SessionKeysUnavailable = 10,
 
     HostDidNotTakeRequest = 11,
+
+    SeatExpired = 12,
+
+    HostGone = 13,
 }
 
 /// <summary>Gives the player-facing explanation for each session failure.</summary>
@@ -78,6 +82,11 @@ public static class SessionFailureMessage
         SessionFailure.HostDidNotTakeRequest =>
             "Your DM's plugin answered but did not take your request. You may be on different "
             + "versions of the plugin - check you are both up to date, then ask again.",
+        SessionFailure.SeatExpired =>
+            "You were away too long to rejoin automatically. Ask to join again.",
+        SessionFailure.HostGone =>
+            "The DM did not come back in time, so the session ended. The DM can resume the campaign, "
+            + "and you can join again when they do.",
         _ => string.Empty,
     };
 }

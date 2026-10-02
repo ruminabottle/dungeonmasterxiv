@@ -20,7 +20,7 @@ public sealed class SessionCoordinator
         ArgumentNullException.ThrowIfNull(log);
         ArgumentNullException.ThrowIfNull(capabilities);
 
-        _parts = new SessionWiring(transport, relayAddress, window, log, capabilities);
+        _parts = new SessionWiring(transport, relayAddress, window, log, capabilities, () => _stream.LastSequence);
 
         _log = log;
         _link = _parts.Link;
@@ -46,9 +46,15 @@ public sealed class SessionCoordinator
     private readonly JoinRequester _joiner;
     private readonly HostRunner _hosting;
     private readonly ReceivedRoster _received = new();
+    private readonly ReceivedStream _stream = new();
     private readonly PhaseTimeouts _timeouts = new();
+    private readonly ReconnectSchedule _reconnect = new();
+    private static readonly TimeSpan ResumeRetryInterval = TimeSpan.FromSeconds(5);
+    private TimeSpan _sinceResumeSent;
 
     public IReadOnlyList<RosterEntry> Roster => _received.Entries;
+
+    public IReadOnlyList<StreamLine> Received => _stream.Lines;
 
     public MemberContentReceipts MemberContent => _resources.MemberContent;
     public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
@@ -81,8 +87,12 @@ public sealed class SessionCoordinator
 
     public void RequestJoin(SessionCode code, DisplayName name) => RequestJoin(code, name, null);
 
-    public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId) =>
+    public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
+    {
+        _stream.Clear();
+        Membership.Undelivered = 0;
         _joiner.Request(code, name, claimedParticipantId);
+    }
 
     public void ReceiveJoinRequest(PendingAdmission request) => _admissions.Receive(request);
 
@@ -115,18 +125,46 @@ public sealed class SessionCoordinator
             Join,
             Membership.Keys,
             Host,
-            new InboundWiring(_admissions, _resources, _resolveRelink, _roster)
+            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
                 .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;
+        RetryAStrandedResume(sinceLastTick);
         _handshake.SendWhatIsDue();
+        Membership.FlushWaiting();
+        if (Join.Phase is JoinPhase.Failed or JoinPhase.Idle)
+        {
+            Membership.AbandonWaiting();
+        }
+
         _admissions.ExpireLapsed(now);
         Membership.ExpireIfTheSessionHasClosed(now);
 
         if (_interruption.Tick(sinceLastTick))
         {
-            StopHosting(now);
+            if (InAHostedSession)
+            {
+                StopHosting(now);
+            }
+            else if (Join.Phase == JoinPhase.Admitted)
+            {
+                Join.Fail(SessionFailure.HostGone);
+                SynchroniseTransport();
+            }
+
             return;
+        }
+
+        if (_interruption.Reconnecting && !_link.IsReadyToSend)
+        {
+            if (_reconnect.Due(sinceLastTick))
+            {
+                SynchroniseTransport();
+            }
+        }
+        else
+        {
+            _reconnect.Reset();
         }
 
         if (_timeouts.Advance(sinceLastTick, Host, Join, _handshake.RegistrationWasSent))
@@ -135,7 +173,63 @@ public sealed class SessionCoordinator
         }
     }
 
+    private void RetryAStrandedResume(TimeSpan sinceLastTick)
+    {
+        if (Join.Phase != JoinPhase.Admitted
+            || !Join.Resuming
+            || !_interruption.Grace.IsRunning
+            || !_link.IsReadyToSend)
+        {
+            _sinceResumeSent = TimeSpan.Zero;
+            return;
+        }
+
+        _sinceResumeSent += sinceLastTick;
+        if (_sinceResumeSent >= ResumeRetryInterval)
+        {
+            _sinceResumeSent = TimeSpan.Zero;
+            _handshake.ResendResume();
+        }
+    }
+
+    private void Reclaimed()
+    {
+        _interruption.HostReconnected();
+        _admissions.ForgetPending();
+        _roster.Publish();
+    }
+
+    private void ReclaimRefused()
+    {
+        _hosting.Stop();
+        _parts.Host.Fail(SessionFailure.ConnectionLost);
+    }
+
+    private bool InAJoinedSessionAsPlayer => !InAHostedSession && Join.Phase == JoinPhase.Admitted;
+
+    private void HostWentAway()
+    {
+        if (InAJoinedSessionAsPlayer)
+        {
+            _interruption.Grace.HostLost();
+        }
+    }
+
+    private void HostCameBack()
+    {
+        if (!InAJoinedSessionAsPlayer)
+        {
+            return;
+        }
+
+        _interruption.Grace.HostReturned();
+        _handshake.ResendResume();
+    }
+
     public GraceWindow Grace => _interruption.Grace;
+
+    public string? ReconnectingLine =>
+        ReconnectNotice.For(InAHostedSession, _interruption.Grace, _interruption.Seat);
 
     public bool InAJoinedSession => _interruption.InAJoinedSession;
 
@@ -152,7 +246,12 @@ public sealed class SessionCoordinator
     private void HeardFromTheHost(SessionContent content)
     {
         _received.Replace(content.Roster);
+        _stream.Add(content.Entries);
         Membership.HeardFromTheHost(content.ClosingAtUtcTicks);
+        if (!InAHostedSession)
+        {
+            _interruption.Grace.HostReturned();
+        }
     }
 
 }

@@ -55,6 +55,12 @@ internal sealed class JoinFlowView
             ImGui.TextWrapped(SessionFailureMessage.For(join.Failure));
         }
 
+        if (_coordinator.Membership.Undelivered > 0)
+        {
+            ImGui.TextWrapped(
+                $"{_coordinator.Membership.Undelivered} messages you sent were not delivered.");
+        }
+
     }
 
     private bool InAHostedSession() =>

@@ -81,6 +81,14 @@ internal static class InboundApplication
                     return null;
                 }
 
+                if (attempt.Phase == JoinPhase.Admitted && attempt.Resuming)
+                {
+                    attempt.ResumeConfirmed();
+                    return keys is not null && attempt.Code is { } resumedCode
+                        ? keys.DeriveSharedKey(hostPublicKey, resumedCode)
+                        : null;
+                }
+
                 attempt.Admitted();
 
                 if (participantId is { } told)
@@ -94,7 +102,15 @@ internal static class InboundApplication
             },
             onDenied: () =>
             {
-                attempt.Denied();
+                if (attempt.Resuming)
+                {
+                    attempt.SeatExpired();
+                }
+                else
+                {
+                    attempt.Denied();
+                }
+
                 return (byte[]?)null;
             },
             onLapsed: () =>

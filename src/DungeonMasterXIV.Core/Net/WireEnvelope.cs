@@ -27,14 +27,42 @@ public sealed record WireEnvelope
 
     public long? DeadlineUtcTicks { get; private init; }
 
+    public byte[]? ReclaimHash { get; private init; }
+
+    public byte[]? ReclaimSecret { get; private init; }
+
     public static byte[] AssociatedDataFor(SessionCode code, WireMessageType type) =>
         Encoding.UTF8.GetBytes($"{code.Value}:{(int)type}");
 
     public byte[] AssociatedData() =>
         Encoding.UTF8.GetBytes($"{SessionCode}:{(int)Type}");
 
-    public static WireEnvelope ForCodeRequest(SessionCode code) =>
-        new(WireMessageType.CodeRequest, code.Value);
+    public static WireEnvelope ForCodeRequest(SessionCode code, byte[]? reclaimHash = null) =>
+        new(WireMessageType.CodeRequest, code.Value) { ReclaimHash = reclaimHash };
+
+    public static WireEnvelope ForReclaim(SessionCode code, byte[] reclaimSecret)
+    {
+        ArgumentNullException.ThrowIfNull(reclaimSecret);
+        return new WireEnvelope(WireMessageType.Reclaim, code.Value) { ReclaimSecret = reclaimSecret };
+    }
+
+    public static WireEnvelope ForReclaimed(SessionCode code) => new(WireMessageType.Reclaimed, code.Value);
+
+    public static WireEnvelope ForHostAway(SessionCode code) => new(WireMessageType.HostAway, code.Value);
+
+    public static WireEnvelope ForHostBack(SessionCode code) => new(WireMessageType.HostBack, code.Value);
+
+    public static WireEnvelope ForResume(SessionCode code, byte[] publicKey, SealedPayload proof)
+    {
+        ArgumentNullException.ThrowIfNull(publicKey);
+        ArgumentNullException.ThrowIfNull(proof);
+        return new WireEnvelope(WireMessageType.Resume, code.Value)
+        {
+            PublicKey = publicKey,
+            Nonce = proof.Nonce,
+            Payload = proof.Ciphertext,
+        };
+    }
 
     public static WireEnvelope ForCodeAccepted(SessionCode code) =>
         new(WireMessageType.CodeAccepted, code.Value);
@@ -89,6 +117,8 @@ public sealed record WireEnvelope
             PublicKey = wire.PublicKey,
             HostPublicKey = wire.HostPublicKey,
             DeadlineUtcTicks = wire.DeadlineUtcTicks,
+            ReclaimHash = wire.ReclaimHash,
+            ReclaimSecret = wire.ReclaimSecret,
         };
 
     public static WireEnvelope ForJoinAccepted(

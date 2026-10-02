@@ -33,11 +33,40 @@ internal sealed class SessionInterruption
         _join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted
         || Seat.IsRunning;
 
-    public void SeatReleased() => Seat.Reset();
+    private bool OnAPlayerClient => _host.Phase is not (HostingPhase.Registering or HostingPhase.Hosting);
+
+    public void JoinReleased()
+    {
+        Seat.Reset();
+        if (OnAPlayerClient)
+        {
+            Grace.Reset();
+        }
+    }
 
     public bool Tick(TimeSpan sinceLastTick)
     {
-        Seat.Tick(sinceLastTick);
+        if (Seat.IsRunning && _join.Phase != JoinPhase.Admitted)
+        {
+            Seat.Reset();
+        }
+
+        if (OnAPlayerClient && _join.Phase != JoinPhase.Admitted)
+        {
+            Grace.Reset();
+        }
+
+        if (Seat.IsRunning && _join.Phase == JoinPhase.Admitted && !_join.Resuming)
+        {
+            Seat.HostReturned();
+        }
+
+        if (!(OnAPlayerClient && Grace.IsRunning) && Seat.Tick(sinceLastTick))
+        {
+            _join.SeatExpired();
+            _synchronise();
+        }
+
         return Grace.Tick(sinceLastTick);
     }
 
@@ -52,22 +81,29 @@ internal sealed class SessionInterruption
         _host.CodeSuperseded(SessionCodeGenerator.Next());
     }
 
+    public bool Reconnecting => Grace.IsRunning || Seat.IsRunning;
+
     public void Fail(SessionFailure failure)
     {
-        if (failure == SessionFailure.ConnectionLost && _host.Phase == HostingPhase.Hosting)
+        var dropped = failure == SessionFailure.ConnectionLost
+            || (failure == SessionFailure.RelayUnreachable && Reconnecting);
+
+        if (dropped && _host.Phase == HostingPhase.Hosting)
         {
             Grace.HostLost();
+            return;
+        }
+
+        if (dropped && _join.Phase == JoinPhase.Admitted)
+        {
+            Seat.HostLost();
+            _join.StartResuming();
             return;
         }
 
         if (_host.Phase is HostingPhase.Registering or HostingPhase.Hosting)
         {
             _host.Fail(failure);
-        }
-
-        if (_join.Phase == JoinPhase.Admitted)
-        {
-            Seat.HostLost();
         }
 
         if (_join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted)

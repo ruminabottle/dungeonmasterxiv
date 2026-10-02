@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
@@ -8,7 +9,11 @@ internal sealed class InboundWiring(
     AdmissionControl admissions,
     SessionResources resources,
     Func<string?, RelinkClaim> resolveRelink,
-    RosterBroadcast roster)
+    RosterBroadcast roster,
+    Action onReclaimed,
+    Action onReclaimRefused,
+    Action onHostAway,
+    Action onHostBack)
 {
     public InboundHandlers For(
         DateTimeOffset now,
@@ -32,6 +37,22 @@ internal sealed class InboundWiring(
                         admissions.Admit(request.PeerCode, asClaimed: true);
                         roster.Publish();
                     }
+                },
+                OnResume: (key, envelope) =>
+                {
+                    if (admissions.Resume(key, envelope) is not { } resumed)
+                    {
+                        return;
+                    }
+
+                    var missed = resources.Recording.Entries
+                        .Where(entry => entry.Stamp.Sequence > resumed.LastSequence)
+                        .Select(entry => new StreamLine(
+                            entry.Stamp.Sequence, entry.Stamp.AtUtcTicks, entry.Kind, entry.Peer.Value, entry.Text))
+                        .ToList();
+
+                    roster.Publish();
+                    roster.PublishEntriesTo(resumed.Peer, missed);
                 }),
             HostAuthored: new HostAuthoredContent(
                 OpenWith: sessionKey,
@@ -52,7 +73,11 @@ internal sealed class InboundWiring(
                     }
                 }),
             Transport: new TransportNotices(
-                OnConnectionDropped: key => admissions.RecordDrop(key, now)));
+                OnConnectionDropped: key => admissions.RecordDrop(key, now),
+                OnReclaimed: onReclaimed,
+                OnReclaimRefused: onReclaimRefused,
+                OnHostAway: onHostAway,
+                OnHostBack: onHostBack));
 
     private void Said(PeerCode peer, SessionContent content, DateTimeOffset now)
     {

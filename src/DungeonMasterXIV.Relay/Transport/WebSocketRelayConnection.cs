@@ -58,6 +58,12 @@ public sealed class WebSocketRelayConnection : IRelayConnection, IAsyncDisposabl
         catch (WebSocketException)
         {
         }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     public async ValueTask DisposeAsync()

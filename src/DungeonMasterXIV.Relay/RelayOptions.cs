@@ -37,6 +37,8 @@ public sealed class RelayOptions
 
     public int ReceiveChunkBytes { get; init; } = 4 * 1024;
 
+    public TimeSpan HostHold { get; init; } = GraceWindow.Default;
+
     public static RelayOptions FromEnvironment() => new()
     {
         Port = ReadInt("PORT") ?? 443,
@@ -48,6 +50,7 @@ public sealed class RelayOptions
         KeepAliveInterval = ReadSeconds("KEEPALIVE_INTERVAL_SECONDS") ?? TransportContract.KeepAliveInterval,
         MaxMessageBytes = ReadInt("MAX_MESSAGE_BYTES") ?? 64 * 1024,
         OutboundQueueCapacity = ReadInt("OUTBOUND_QUEUE_CAPACITY") ?? 256,
+        HostHold = ReadSeconds("HOST_HOLD_SECONDS") ?? GraceWindow.Default,
     };
 
     private static string? Read(string name) =>

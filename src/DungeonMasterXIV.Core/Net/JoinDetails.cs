@@ -11,6 +11,8 @@ public sealed record JoinDetails
     public string? DisplayName { get; init; }
 
     public string? ParticipantId { get; init; }
+
+    public long? LastSequence { get; init; }
 }
 
 /// <summary>Seals join details for one message type and opens them again, refusing anything that does not authenticate.</summary>

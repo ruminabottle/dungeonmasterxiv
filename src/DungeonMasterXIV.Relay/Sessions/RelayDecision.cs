@@ -48,15 +48,26 @@ public enum RelayOutcome
     PendingNoticeForwarded = 15,
 
     HostKeyForwarded = 16,
+
+    HostAway = 17,
+
+    Reclaimed = 18,
+
+    ReclaimRefused = 19,
+
+    ResumeForwarded = 20,
 }
 
-/// <summary>The router's verdict on a message: action, outcome, any reply, recipients, whether to close them.</summary>
+/// <summary>The router's verdict on a message: action, outcome, reply, recipients, whether to close them, and any notice for others.</summary>
 public readonly record struct RelayDecision(
     RelayAction Action,
     RelayOutcome Outcome,
     WireEnvelope? Reply,
     IReadOnlyList<string> Recipients,
-    bool CloseRecipients = false)
+    bool CloseRecipients = false,
+    WireEnvelope? Notice = null,
+    IReadOnlyList<string>? NoticeRecipients = null,
+    IReadOnlyList<WireEnvelope>? FollowUps = null)
 {
     public static RelayDecision Drop(RelayOutcome outcome) => new(RelayAction.Drop, outcome, null, []);
 
@@ -68,6 +79,11 @@ public readonly record struct RelayDecision(
         IReadOnlyList<string> recipients,
         bool closeAfterwards = false) =>
         new(RelayAction.Forward, outcome, null, recipients, closeAfterwards);
+
+    public RelayDecision AlsoTelling(IReadOnlyList<string> recipients, WireEnvelope notice) =>
+        this with { Notice = notice, NoticeRecipients = recipients };
+
+    public RelayDecision ThenSending(IReadOnlyList<WireEnvelope> followUps) => this with { FollowUps = followUps };
 
     public string Reason => Outcome.ToString();
 }

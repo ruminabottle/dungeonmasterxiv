@@ -28,6 +28,11 @@ nothing was written.
 You can check this rather than take it on trust: the relay's source is public, and it writes only to
 standard output. It has no file of its own.
 
+One exception, held in memory and never written: if your DM's connection drops, the relay keeps that
+session open for up to five minutes so the DM can come back without anyone rejoining. It holds the
+session code, a hash of a secret only the DM's running plugin knows, and a timer. It forgets the
+timer when the DM returns, and all of it when the session ends.
+
 ## What it cannot read
 
 Session traffic is **end-to-end encrypted between the people in the session**. The relay carries
