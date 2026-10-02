@@ -33,6 +33,15 @@ public sealed class RelayHub(
         {
             case RelayAction.ReplyToSender when decision.Reply is not null:
                 await sender.SendAsync(EnvelopeCodec.Encode(decision.Reply), cancellationToken).ConfigureAwait(false);
+
+                if (decision.FollowUps is { } followUps)
+                {
+                    foreach (var followUp in followUps)
+                    {
+                        await sender.SendAsync(EnvelopeCodec.Encode(followUp), cancellationToken).ConfigureAwait(false);
+                    }
+                }
+
                 break;
 
             case RelayAction.Forward:

@@ -30,8 +30,8 @@ standard output. It has no file of its own.
 
 One exception, held in memory and never written: if your DM's connection drops, the relay keeps that
 session open for up to five minutes so the DM can come back without anyone rejoining. It holds the
-session code, a hash of a secret only the DM's running plugin knows, and a timer, and forgets all
-three when the DM returns or the five minutes run out.
+session code, a hash of a secret only the DM's running plugin knows, and a timer. It forgets the
+timer when the DM returns, and all of it when the session ends.
 
 ## What it cannot read
 

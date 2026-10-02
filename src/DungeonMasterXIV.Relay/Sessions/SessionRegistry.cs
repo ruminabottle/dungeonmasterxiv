@@ -110,7 +110,12 @@ public sealed class SessionRegistry
         }
     }
 
-    public bool TryReclaim(SessionCode code, byte[] secret, string connectionId, out IReadOnlyList<string> members)
+    public bool TryReclaim(
+        SessionCode code,
+        byte[] secret,
+        string connectionId,
+        out IReadOnlyList<string> members,
+        out IReadOnlyList<string> droppedMemberKeys)
     {
         ArgumentNullException.ThrowIfNull(secret);
         ArgumentException.ThrowIfNullOrEmpty(connectionId);
@@ -118,6 +123,7 @@ public sealed class SessionRegistry
         lock (_gate)
         {
             members = [];
+            droppedMemberKeys = [];
             if (!_byCode.TryGetValue(code.Value, out var session)
                 || !session.HostAway
                 || session.ReclaimHash is not { } expected
@@ -131,6 +137,8 @@ public sealed class SessionRegistry
             session.HostAwaySince = null;
             _roles.AddHost(connectionId, code.Value);
             members = session.Members.Keys.ToArray();
+            droppedMemberKeys = session.DroppedWhileAway.ToArray();
+            session.DroppedWhileAway.Clear();
             return true;
         }
     }
@@ -269,6 +277,12 @@ public sealed class SessionRegistry
 
         session.Members.Remove(connectionId);
         session.ForgetAllPending(connectionId);
+
+        if (session.HostAway && departedKey is { } droppedKey)
+        {
+            session.DroppedWhileAway.Add(droppedKey);
+        }
+
         return new SessionDeparture(code, EndedSession: false, [], session.HostConnectionId ?? string.Empty, departedKey);
     }
 

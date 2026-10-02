@@ -66,7 +66,8 @@ public readonly record struct RelayDecision(
     IReadOnlyList<string> Recipients,
     bool CloseRecipients = false,
     WireEnvelope? Notice = null,
-    IReadOnlyList<string>? NoticeRecipients = null)
+    IReadOnlyList<string>? NoticeRecipients = null,
+    IReadOnlyList<WireEnvelope>? FollowUps = null)
 {
     public static RelayDecision Drop(RelayOutcome outcome) => new(RelayAction.Drop, outcome, null, []);
 
@@ -81,6 +82,8 @@ public readonly record struct RelayDecision(
 
     public RelayDecision AlsoTelling(IReadOnlyList<string> recipients, WireEnvelope notice) =>
         this with { Notice = notice, NoticeRecipients = recipients };
+
+    public RelayDecision ThenSending(IReadOnlyList<WireEnvelope> followUps) => this with { FollowUps = followUps };
 
     public string Reason => Outcome.ToString();
 }

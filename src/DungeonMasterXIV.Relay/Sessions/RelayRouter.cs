@@ -156,9 +156,12 @@ public sealed class RelayRouter(SessionRegistry registry)
             return RelayDecision.Drop(RelayOutcome.MalformedEnvelope);
         }
 
-        return _registry.TryReclaim(code, secret, senderConnectionId, out var members)
+        return _registry.TryReclaim(code, secret, senderConnectionId, out var members, out var droppedMemberKeys)
             ? RelayDecision.Respond(RelayOutcome.Reclaimed, WireEnvelope.ForReclaimed(code))
                 .AlsoTelling(members, WireEnvelope.ForHostBack(code))
+                .ThenSending(droppedMemberKeys
+                    .Select(key => WireEnvelope.ForConnectionDropped(code, Convert.FromBase64String(key)))
+                    .ToArray())
             : RelayDecision.Respond(RelayOutcome.ReclaimRefused, WireEnvelope.ForCodeRefused(code));
     }
 

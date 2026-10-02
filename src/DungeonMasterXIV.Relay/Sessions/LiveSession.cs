@@ -15,6 +15,8 @@ internal sealed class LiveSession(string hostConnectionId, byte[]? reclaimHash)
 
     public Dictionary<string, string> Pending { get; } = new(StringComparer.Ordinal);
 
+    public List<string> DroppedWhileAway { get; } = new();
+
     public bool IsHost(string connectionId) =>
         HostConnectionId is not null && string.Equals(HostConnectionId, connectionId, StringComparison.Ordinal);
 
