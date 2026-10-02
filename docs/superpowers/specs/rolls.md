@@ -207,6 +207,9 @@ left, dropped, reconnected), each timed.
 `Eli (Tuka)`.
 
 - **Speaking as yourself renders the person alone.** Never `Tuka (Tuka)`.
+- **The DM keeps several NPC speakers on hand at once** and picks one per line or roll: the combatants
+  they own in the current encounter (initiative R-3.2), plus NPC names they add. A line reads
+  `[DM] Goblin Archer (Ramon)`, and the session log names the Goblin Archer. Switching is one action.
 - **The parenthetical is never dropped from a rendered surface:** not from the echo, not on a narrow
   window. `Character (Player)` fits one line of plain text, so the echo carries it too.
 - The reason is **attribution**: a reader needs to know who is speaking. It is not a defence against
@@ -226,6 +229,8 @@ left, dropped, reconnected), each timed.
   machine-checkable; the panel needs the game. It does not reach an export, where names are forbidden
   (A-2.17a).
 - **A-2.25** Speaking as yourself renders the person alone. `Tuka (Tuka)` fails.
+- **A-2.25a** The DM rolls as one owned combatant and then as another without retyping either name, and
+  each line and its log entry names the NPC it came from.
 
 ### R-2.7a The host is marked structurally, never by a name
 
@@ -758,9 +763,6 @@ collection semantics (ordering, filtering, paging, retention in memory).
   recorded only as raised. Whether they are even possible, given product-overview D-1 (no driving the
   chat-send path) and A-2.7 (no chat-read subscription), is unassessed. Not to be closed by building
   it.
-- Open question: should rolls be attributable to a character distinct from the participant, for a DM
-  running several NPCs? The speaker field (R-2.7) largely answers it; whether several NPC speakers can
-  be held at once is not decided.
 - Open question: the Foundry ChatLog and ChatMessages references (see Reference) have not been analysed.
   Whether sidebar behaviour, filtering, paging or in-memory retention need requirements here is
   undecided.

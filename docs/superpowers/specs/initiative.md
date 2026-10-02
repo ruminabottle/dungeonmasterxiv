@@ -53,23 +53,38 @@ and a correction request to the DM.
   in, and then begins.
 - The DM ends an encounter. Ending is explicit and announced, never implicit.
 - One active encounter per session. Sequential encounters are fine; concurrent ones are not.
+- **Each encounter starts with no initiative values.** Nothing carries over from an earlier encounter
+  in the session; everyone rolls again. A resumed encounter keeps its own order (session-layer
+  R-1.6a); that is the same encounter continuing, not a new one.
 
 **Acceptance criteria**
 - **A-3.6** The DM creates an encounter and it appears on every admitted client.
+- **A-3.6a** A second encounter in the same session starts with no initiative values, whatever the
+  first one held.
 
 ### R-3.2 The roster
 
 - Participants in the session can be added as combatants.
-- The DM can add **DM-controlled combatants** — monsters, NPCs — which are entries with a name and no
-  participant behind them. A DM running six goblins adds six entries.
+- **Every combatant has one owner: a participant or the DM.** A participant can own several (their
+  character plus a companion or a summon), each its own entry with its own initiative and status. The
+  DM can hand a combatant to a participant or take it back.
+- The DM can add **DM-controlled combatants** — monsters, NPCs — which are entries with a name, owned
+  by the DM. A DM running six goblins adds six entries.
 - Each combatant shows: display name, initiative value, and status markers. No portraits or
   thumbnails.
 - The DM can remove a combatant mid-encounter.
 
+**Acceptance criteria**
+- **A-3.12** A participant who owns two combatants rolls initiative for each and both land in the
+  order as separate entries. A participant cannot roll for, or end the turn of, a combatant they do
+  not own.
+- **A-3.12a** The DM hands a combatant to a participant, and that participant can then roll for it and
+  end its turn; taking it back removes both.
+
 ### R-3.3 Rolling initiative
 
-- A participant rolls their own initiative — `d20` plus their typed modifier — and it lands in the
-  roster.
+- A participant rolls initiative for each combatant they own — `d20` plus their typed modifier — and
+  it lands in the roster.
 - The DM can roll for all DM-controlled combatants at once ("roll NPCs"), and can roll for everyone
   if the table prefers speed over ceremony.
 - The DM can set or edit any initiative value directly, including a participant's. Tables do this
@@ -102,7 +117,8 @@ and a correction request to the DM.
 - A current combatant is highlighted on every client.
 - Next turn advances. Passing the last combatant increments the round and returns to the top.
 - The round number is visible.
-- A player may end their own turn. DM-controlled combatants' turns are ended by the DM. This keeps
+- A player may end the turn of a combatant they own. DM-controlled combatants' turns are ended by the
+  DM. This keeps
   players moving without letting anyone advance past someone else.
 - The DM can jump to any combatant, and can step back a turn.
 
@@ -170,13 +186,7 @@ the feature is that the players do not know the thing is there.
 
 ## Open questions
 
-- Open question: should a participant control more than one combatant — a player running a companion
-  or summon? Common in Pathfinder. Not decided; blocks nothing built so far.
-- Open question: does initiative persist between encounters in the same session, or reset? Not
-  decided.
-- Open question: does a DM-controlled combatant need to be attributable to a specific character the
-  DM is playing, for a session-log entry to read well? Also raised in the rolls area. Blocks the
-  session-log area.
+None.
 
 ## Retired IDs
 
