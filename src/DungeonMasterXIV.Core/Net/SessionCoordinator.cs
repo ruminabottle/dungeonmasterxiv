@@ -47,6 +47,7 @@ public sealed class SessionCoordinator
     private readonly HostRunner _hosting;
     private readonly ReceivedRoster _received = new();
     private readonly PhaseTimeouts _timeouts = new();
+    private readonly ReconnectSchedule _reconnect = new();
 
     public IReadOnlyList<RosterEntry> Roster => _received.Entries;
 
@@ -115,7 +116,7 @@ public sealed class SessionCoordinator
             Join,
             Membership.Keys,
             Host,
-            new InboundWiring(_admissions, _resources, _resolveRelink, _roster)
+            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
                 .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;
@@ -129,11 +130,39 @@ public sealed class SessionCoordinator
             return;
         }
 
+        if (_interruption.Reconnecting && !_link.IsReadyToSend)
+        {
+            if (_reconnect.Due(sinceLastTick))
+            {
+                SynchroniseTransport();
+            }
+        }
+        else
+        {
+            _reconnect.Reset();
+        }
+
         if (_timeouts.Advance(sinceLastTick, Host, Join, _handshake.RegistrationWasSent))
         {
             SynchroniseTransport();
         }
     }
+
+    private void Reclaimed()
+    {
+        _interruption.HostReconnected();
+        _roster.Publish();
+    }
+
+    private void ReclaimRefused()
+    {
+        _hosting.Stop();
+        _parts.Host.Fail(SessionFailure.ConnectionLost);
+    }
+
+    private void HostWentAway() => _interruption.Grace.HostLost();
+
+    private void HostCameBack() => _interruption.Grace.HostReturned();
 
     public GraceWindow Grace => _interruption.Grace;
 

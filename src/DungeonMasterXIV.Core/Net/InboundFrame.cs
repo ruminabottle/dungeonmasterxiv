@@ -22,7 +22,7 @@ internal readonly record struct InboundFrame(
         if (TryContent(envelope, sessionKey)
             || TryJoinHello(envelope)
             || TryJoinRequest(envelope)
-            || TryConnectionDropped(envelope)
+            || TryTransportNotice(envelope)
             || TryHostKey(envelope)
             || TryCodeRefused(envelope)
             || TryPendingNotice(envelope))
@@ -83,11 +83,14 @@ internal readonly record struct InboundFrame(
         return true;
     }
 
-    private bool TryConnectionDropped(WireEnvelope envelope)
+    private bool TryTransportNotice(WireEnvelope envelope)
     {
         var handlers = Handlers;
 
-        if (envelope.Type == WireMessageType.ConnectionDropped)
+        if (envelope.Type is WireMessageType.ConnectionDropped
+            or WireMessageType.Reclaimed
+            or WireMessageType.HostAway
+            or WireMessageType.HostBack)
         {
             handlers.Transport.Deliver(envelope);
             return true;
@@ -126,6 +129,12 @@ internal readonly record struct InboundFrame(
     private bool TryCodeRefused(WireEnvelope envelope)
     {
         var attempt = Attempt;
+
+        if (envelope.Type == WireMessageType.CodeRefused && Host is { Phase: HostingPhase.Hosting })
+        {
+            Handlers.Transport.OnReclaimRefused?.Invoke();
+            return true;
+        }
 
         if (envelope.Type == WireMessageType.CodeRefused && attempt.Phase == JoinPhase.Contacting)
         {

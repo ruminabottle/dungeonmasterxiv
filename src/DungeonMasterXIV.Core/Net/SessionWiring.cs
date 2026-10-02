@@ -23,7 +23,8 @@ internal sealed class SessionWiring
             capabilities.ParticipantSource,
             capabilities.ReturningPlayersSource,
             log);
-        Handshake = new OutboundHandshake(Link, Host, Join, () => Joiner?.Keys);
+        Handshake = new OutboundHandshake(
+            Link, Host, Join, () => Joiner?.Keys, () => Hosting?.ReclaimSecret, () => Interruption?.Grace.IsRunning == true);
         Roster = new RosterBroadcast(
             Link,
             Admissions.Audience,

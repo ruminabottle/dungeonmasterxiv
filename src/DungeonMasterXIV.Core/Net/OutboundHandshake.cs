@@ -10,23 +10,30 @@ internal sealed class OutboundHandshake
     private readonly HostSession _host;
     private readonly JoinAttempt _join;
     private readonly Func<SessionKeyExchange?> _joinerKeys;
+    private readonly Func<byte[]?> _reclaimSecret;
+    private readonly Func<bool> _hostAway;
 
     private string? _requestedCode;
     private string? _helloSentFor;
     private string? _requestedJoinCode;
     private DisplayName _joinDisplayName;
     private Guid? _claimedParticipantId;
+    private bool _reclaimSentOnThisLink;
 
     public OutboundHandshake(
         RelayLink link,
         HostSession host,
         JoinAttempt join,
-        Func<SessionKeyExchange?> joinerKeys)
+        Func<SessionKeyExchange?> joinerKeys,
+        Func<byte[]?> reclaimSecret,
+        Func<bool> hostAway)
     {
         _link = link;
         _host = host;
         _join = join;
         _joinerKeys = joinerKeys;
+        _reclaimSecret = reclaimSecret;
+        _hostAway = hostAway;
     }
 
     public bool RegistrationWasSent => _requestedCode is not null;
@@ -47,6 +54,13 @@ internal sealed class OutboundHandshake
 
     public void SendWhatIsDue()
     {
+        if (!_link.IsReadyToSend)
+        {
+            _reclaimSentOnThisLink = false;
+        }
+
+        ReclaimWhenReconnected();
+
         RegisterWithRelayWhenReady();
         SendHelloWhenReady();
         SendJoinRequestWhenReady();
@@ -63,7 +77,24 @@ internal sealed class OutboundHandshake
         }
 
         _requestedCode = code.Value;
-        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(code)));
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForCodeRequest(
+            code, _reclaimSecret() is { } secret ? SHA256.HashData(secret) : null)));
+    }
+
+    private void ReclaimWhenReconnected()
+    {
+        if (_host.Phase != HostingPhase.Hosting
+            || !_hostAway()
+            || _host.Code is not { } code
+            || _reclaimSecret() is not { } secret
+            || _reclaimSentOnThisLink
+            || !_link.IsReadyToSend)
+        {
+            return;
+        }
+
+        _reclaimSentOnThisLink = true;
+        _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForReclaim(code, secret)));
     }
 
     private void SendHelloWhenReady()

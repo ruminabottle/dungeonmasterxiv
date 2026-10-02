@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 
 namespace DungeonMasterXIV.Net;
 
@@ -33,6 +34,8 @@ internal sealed class HostRunner
 
     public SessionKeyExchange? Keys { get; private set; }
 
+    public byte[]? ReclaimSecret { get; private set; }
+
     public void Start()
     {
         Keys?.Dispose();
@@ -45,6 +48,7 @@ internal sealed class HostRunner
         }
 
         Keys = hostKeys;
+        ReclaimSecret = RandomNumberGenerator.GetBytes(32);
         _host.Start(SessionCodeGenerator.Next());
         _handshake.ForgetHostRegistration();
         _synchronise();
@@ -53,6 +57,12 @@ internal sealed class HostRunner
     public void Stop()
     {
         _host.Stop();
+        if (ReclaimSecret is { } secret)
+        {
+            CryptographicOperations.ZeroMemory(secret);
+        }
+
+        ReclaimSecret = null;
         Keys?.Dispose();
         Keys = null;
         _resources.Release();
