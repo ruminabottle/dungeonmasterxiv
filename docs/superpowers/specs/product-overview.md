@@ -253,7 +253,7 @@ product refuses to build.
   Diacritics and combining marks are accepted.
 - **Length is counted in grapheme clusters**, so the limit does not vary by script. The limit is 32,
   and the rule behind the number is that it accepts any name FFXIV itself permits, because the
-  character name is the default.
+  character name is the default. FFXIV names are at most 20 characters, the space included.
 - **Reserved names:** `DM`, `GM`, `Dungeon Master` and `Game Master` may not be chosen as an alias,
   matched case-insensitively after whitespace normalisation. The reservation reaches only a chosen
   alias: a player whose actual character name is one of them is accepted, because a character name
@@ -777,9 +777,6 @@ released plugin. Tagging makes "which protocol is this relay speaking?" answerab
 - Open question: other game systems use other words for the host (Keeper, Storyteller, Referee, MC,
   Judge). Only `DM`, `GM`, `Dungeon Master` and `Game Master` are reserved (D-8). Whether to extend
   the list is undecided; it blocks nothing, because the host marker carries the guarantee.
-- Open question: the 32-grapheme display-name limit assumes FFXIV allows at most 31 characters
-  (15 + space + 15). That has not been checked against the game. If the real maximum is higher, the
-  limit goes up (D-8).
 
 ## Retired IDs
 
