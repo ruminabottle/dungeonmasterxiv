@@ -356,7 +356,8 @@ language a person speaks** (product-overview D-8).
 5. **Any script, no restriction.** Japanese, Korean, Cyrillic, Arabic, any of them. FFXIV is global,
    and since the default is the character name, a script restriction would make the default invalid
    for exactly the players it excluded.
-6. **`DM`, `GM`, `Dungeon Master` and `Game Master` are reserved to the host and may not be chosen as
+6. **Square brackets (`[`, `]`) are refused.** They are reserved to the host marker (rolls R-2.7a).
+7. **`DM`, `GM`, `Dungeon Master` and `Game Master` are reserved to the host and may not be chosen as
    an alias**, matched case-insensitively after whitespace normalisation.
    - **The reservation reaches a chosen alias, never a player's actual character name.** A character
      name comes from the game and is true; a player genuinely called `Dungeon Master` is not imitating
