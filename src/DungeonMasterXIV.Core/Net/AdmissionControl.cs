@@ -127,29 +127,27 @@ public sealed class AdmissionControl
         }
 
         var peer = PeerCodeFor(memberPublicKey);
-        JoinDetails? details = null;
-        if (Audience.IsAdmitted(peer) && Drops.WhenDropped(peer) is not null)
+        if (!Audience.IsAdmitted(peer))
         {
-            byte[] key;
-            try
-            {
-                key = hostKeys.DeriveSharedKey(memberPublicKey, code);
-            }
-            catch (CryptographicException)
-            {
-                key = [];
-            }
-
-            if (key.Length > 0)
-            {
-                details = JoinDetailsCodec.TryOpen(key, envelope);
-                CryptographicOperations.ZeroMemory(key);
-            }
+            _announcer.Denied(code, memberPublicKey);
+            return null;
         }
+
+        byte[] key;
+        try
+        {
+            key = hostKeys.DeriveSharedKey(memberPublicKey, code);
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
+
+        var details = JoinDetailsCodec.TryOpen(key, envelope);
+        CryptographicOperations.ZeroMemory(key);
 
         if (details is null)
         {
-            _announcer.Denied(code, memberPublicKey);
             return null;
         }
 

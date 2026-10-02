@@ -37,6 +37,11 @@ internal sealed class SessionInterruption
 
     public bool Tick(TimeSpan sinceLastTick)
     {
+        if (Seat.IsRunning && _join.Phase != JoinPhase.Admitted)
+        {
+            Seat.Reset();
+        }
+
         if (Seat.IsRunning && _join.Phase == JoinPhase.Admitted && !_join.Resuming)
         {
             Seat.HostReturned();

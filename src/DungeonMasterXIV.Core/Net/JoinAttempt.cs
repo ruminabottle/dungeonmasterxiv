@@ -35,6 +35,11 @@ public sealed class JoinAttempt
 
     public void SeatExpired()
     {
+        if (Phase != JoinPhase.Admitted)
+        {
+            return;
+        }
+
         Resuming = false;
         Fail(SessionFailure.SeatExpired);
     }

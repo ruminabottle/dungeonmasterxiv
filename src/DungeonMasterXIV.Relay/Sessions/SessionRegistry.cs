@@ -282,6 +282,11 @@ public sealed class SessionRegistry
         session.Members.Remove(connectionId);
         session.ForgetAllPending(connectionId);
 
+        if (departedKey is { } heldKey && session.Members.ContainsValue(heldKey))
+        {
+            departedKey = null;
+        }
+
         if (session.HostAway && departedKey is { } droppedKey)
         {
             session.DroppedWhileAway.Add(droppedKey);
