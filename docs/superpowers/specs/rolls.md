@@ -637,9 +637,10 @@ campaign-scoped names before they have met the concept.
 - **No `/r` alias, ever.** Foundry supports `/r` and it will be the obvious thing to add, but in FFXIV
   `/r` is reply: a player typing `/r` to answer a tell would send it somewhere else, possibly in front
   of the table.
-- **Conditional on the surface.** If the token is ever registered as a game-wide command, that `/roll`
-  is free in FFXIV is verified first, and if it is taken the ruling changes. If it is only typed into
-  the product's own input, the question does not arise.
+- **`/roll` is free in FFXIV**, checked in the game on 2026-10-01: nothing answers it, and the game's own
+  dice commands are `/random` and `/dice`. So it may be registered as a game-wide command, typed from
+  game chat as well as the product's own input. If a game patch ever claims it, the condition above
+  governs and the word changes.
 - The input surface (slash command, window control, chat input) is not specified here. Base chat comes
   first in the build order (R-2.19), and the invoker sits behind it.
 
@@ -652,8 +653,7 @@ campaign-scoped names before they have met the concept.
   If the condition and the word conflict, R-2.18 governs, the word changes, and A-2.33a changes with
   it; the token is not changed by editing the criterion alone. This row cannot fail.
 - **A-2.33c** If `/roll` is registered as a game-wide command, it does not shadow an existing FFXIV
-  command, checked in the game before it ships. Vacuous while the token is typed only into the
-  product's own input.
+  command. Checked free on 2026-10-01; re-checked in the game whenever a patch adds commands.
 
 ### R-2.19 Base chat: a member can say something
 
@@ -752,9 +752,6 @@ collection semantics (ordering, filtering, paging, retention in memory).
 
 - Open question: what should a modifier followed by a tab, newline, CR or NBSP do? Only the space case
   is established (A-2.3c); the others are unspecified.
-- Open question: is `/roll` free in FFXIV? Believed to be (the game uses `/random` and `/dice`), not
-  verified. It blocks registering the token as a game-wide command (R-2.18, A-2.33c); it blocks
-  nothing while the token is typed only into the product's own input.
 - Open question: R-2.10 is not built. Nothing holds messages for a dropped member, and nothing marks a
   gap (the stream has a gap kind that nothing produces). A dropped member comes back only by relink,
   which is a new admission and starts empty, so A-2.6a and A-2.10a fail today. Whether the seat
