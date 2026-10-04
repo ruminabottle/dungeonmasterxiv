@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Dalamud.Game.Command;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -10,6 +11,7 @@ using DungeonMasterXIV.Net;
 using DungeonMasterXIV.Services;
 using DungeonMasterXIV.Transport;
 using DungeonMasterXIV.Windows;
+using DungeonMasterXIV.Windows.Ui;
 
 namespace DungeonMasterXIV;
 
@@ -24,7 +26,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ConfigurationStore _configurationStore;
     private readonly CampaignStore _campaignStore;
     private readonly WindowSystem _windowSystem;
-    private readonly MainWindow _mainWindow;
+    private readonly UiFonts _fonts;
+    private readonly RailWindow _railWindow;
     private readonly ConfigWindow _configWindow;
     private readonly SessionWindow _sessionWindow;
     private readonly WebSocketSessionTransport _relayTransport;
@@ -46,7 +49,10 @@ public sealed class Plugin : IDalamudPlugin
             new CampaignFileArchive(pluginInterface.ConfigDirectory),
             new CampaignStoreLog(log));
         _windowSystem = new WindowSystem("DungeonMasterXIV");
-        _mainWindow = new MainWindow(_configurationStore);
+        _fonts = new UiFonts(
+            pluginInterface.UiBuilder,
+            Path.Combine(pluginInterface.AssemblyLocation.DirectoryName!, "Data", "Fonts"),
+            log);
 
         var characterName = new LocalCharacterName(objects).Current;
 
@@ -71,8 +77,14 @@ public sealed class Plugin : IDalamudPlugin
             NameWeSendAs(characterName),
             _hostingCampaign,
             () => _configurationStore.Configuration.Settings.Relink, SessionEndChoiceFor(pluginInterface.ConfigDirectory));
-        _mainWindow.OpenSession = _sessionWindow.Open;
-        _commandDispatcher = new CommandDispatcher(_mainWindow.Toggle, _configWindow.Open);
+        _railWindow = new RailWindow(
+            _configurationStore,
+            _fonts,
+            log,
+            [new RailEntry(_sessionWindow, FontAwesomeIcon.Comments, "Session")],
+            new RailEntry(_configWindow, FontAwesomeIcon.Cog, "Settings"),
+            _sessionWindow);
+        _commandDispatcher = new CommandDispatcher(_railWindow.Toggle, _configWindow.Open);
 
         try
         {
@@ -125,8 +137,10 @@ public sealed class Plugin : IDalamudPlugin
 
     private void Register(IDalamudPluginInterface pluginInterface, ICommandManager commandManager, IFramework framework)
     {
-        _windowSystem.AddWindow(_mainWindow);
-        _unwind.Push("main window", () => _windowSystem.RemoveWindow(_mainWindow));
+        _unwind.Push("fonts", _fonts.Dispose);
+
+        _windowSystem.AddWindow(_railWindow);
+        _unwind.Push("rail window", () => _windowSystem.RemoveWindow(_railWindow));
 
         _windowSystem.AddWindow(_configWindow);
         _unwind.Push("settings window", () => _windowSystem.RemoveWindow(_configWindow));
@@ -142,15 +156,15 @@ public sealed class Plugin : IDalamudPlugin
 
         commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the Dungeon Master XIV window. \"/dmx settings\" opens settings.",
+            HelpMessage = "Toggle the Dungeon Master XIV buttons. \"/dmx settings\" opens settings.",
         });
         _unwind.Push("/dmx command", () => commandManager.RemoveHandler(CommandName));
 
         pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
         _unwind.Push("draw handler", () => pluginInterface.UiBuilder.Draw -= _windowSystem.Draw);
 
-        pluginInterface.UiBuilder.OpenMainUi += _mainWindow.Toggle;
-        _unwind.Push("main UI handler", () => pluginInterface.UiBuilder.OpenMainUi -= _mainWindow.Toggle);
+        pluginInterface.UiBuilder.OpenMainUi += _railWindow.Toggle;
+        _unwind.Push("main UI handler", () => pluginInterface.UiBuilder.OpenMainUi -= _railWindow.Toggle);
 
         pluginInterface.UiBuilder.OpenConfigUi += _configWindow.Toggle;
         _unwind.Push("config UI handler", () => pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle);

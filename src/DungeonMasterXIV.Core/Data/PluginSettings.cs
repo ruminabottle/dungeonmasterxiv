@@ -13,6 +13,11 @@ public sealed class PluginSettings
 
     public bool RestoreWindowState { get; set; } = true;
 
+    public bool RailCollapsed { get; set; }
+
+    /// <summary>False until the rail has opened once and put the session window beside it.</summary>
+    public bool RailIntroduced { get; set; }
+
     public static bool RequiresWriteOnLoad(int? versionOnDisk) => versionOnDisk is null;
 
     public string RelayAddress { get; set; } = Net.RelayEndpoint.Default;
@@ -49,6 +54,17 @@ public sealed class PluginSettings
         }
 
         MainWindowOpen = isOpen;
+        return true;
+    }
+
+    public bool RecordRailCollapsed(bool collapsed)
+    {
+        if (RailCollapsed == collapsed)
+        {
+            return false;
+        }
+
+        RailCollapsed = collapsed;
         return true;
     }
 
