@@ -10,6 +10,10 @@ with no shared styling, components or layout. Two gaps sit behind that look:
 - **The session stream is recorded but never shown.** The host keeps `Recorded` and a player keeps
   `Received`, but the session window only offers the message box. A player cannot see what anyone
   said.
+- **The stream is also incomplete.** The host records messages and departures, but not joins, lost
+  connections or reconnections, and it sends departures to nobody.
+- **The DM cannot send at all.** The message path is the member's, sealed to the host, so the host
+  has no route of its own.
 - **`/roll` never leaves the roller's machine.** It prints a total as a status line.
 
 Every coming feature (initiative, combatants, private messages, roll modes, character sheets) needs a
@@ -137,7 +141,8 @@ instead of designing their own:
 **Session window, top to bottom.**
 
 1. **Title:** the campaign name while hosting one, otherwise "Session".
-2. **Not in a session:** an `EmptyState` with two paths side by side.
+2. **Not in a session:** an `EmptyState` with two paths, side by side when the window is wide enough
+   and stacked when it is not.
    - **Host:** the campaign picker and Start.
    - **Join:** the code and name form.
 
@@ -155,6 +160,7 @@ instead of designing their own:
    button and keeps default focus.
 7. **Stream:** a scrolling region of `MessageCard`s, `RollCard`s and `EventLine`s.
    - It holds only what this client was sent live (log history is never sent).
+   - It draws the latest 300 entries, with a note when there are more. The log keeps them all.
    - It stays pinned to the newest entry. Scrolled up, it holds still and shows "New below ↓".
 8. **Composer:** one input and Send.
    - `/roll` in a session sends a public roll (decision 5).
@@ -174,7 +180,15 @@ stays offered at session end and is never buried (product-overview Session panel
 - **No copy changes.** Existing wording carries spec obligations (session-layer R-1.7a and the honest
   limitations in product-overview).
 
-### 5. Public rolls on the wire
+### 5. The stream on the wire: membership, the DM's own lines, public rolls
+
+- **Membership events are announced.** The host stamps joined, left, lost connection and reconnected
+  as stream entries and sends each to every admitted member, as it does a message.
+- **The DM speaks and rolls directly.** A host message or roll is checked by the same rules as a
+  member's and stamped straight into the host's stream, then sent to every member.
+- **Catch-up never nears the relay's frame limit.** The relay closes a connection that sends more than
+  64 KiB in one frame. The missed lines a reconnecting member is owed go out in frames of at most
+  24 KiB of content.
 
 - **The roller rolls** (rolls R-2.2). In a session, `/roll` evaluates locally as today. A new
   optional `Rolling` field on `SessionContent` then goes to the host on the existing sealed member
@@ -187,6 +201,9 @@ stays offered at session end and is never buried (product-overview Session panel
   The host's own roll goes straight to its sequencer.
 - **Malformed or over-bound input never leaves.** A refused expression shows its message under the
   input, and nothing is sent (A-2.3).
+- **A shared roll carries at most 500 dice.** That keeps its frame well under 64 KiB. A larger roll is
+  refused with a message giving the dice count and the cap, and nothing is sent. Outside a session the
+  cap does not apply.
 - **The host checks bounds and never re-rolls.** It caps the die count and sides at `RollLimits`, and
   the expression and label at a length cap of its own. A payload over a bound is refused under
   product-overview D-22, as the inbound message bound is today (A-2.36 to A-2.40):
@@ -208,22 +225,27 @@ stays offered at session end and is never buried (product-overview Session panel
 
 - `Windows/Ui/Theme.cs`: the roles from decision 2, applied as a scope that undoes itself on every
   exit path. A window that throws mid-draw must not leak our style into other plugins.
-- `Windows/Ui/Fonts.cs`: font handles from `UiBuilder.FontAtlas`.
+- `Windows/Ui/UiFonts.cs`: font handles from `UiBuilder.FontAtlas`.
   - Axis comes from the game.
-  - Cinzel and Spectral are bundled in `Data/Fonts/` with their SIL Open Font Licence files and
-    shipped in the release zip.
+  - Cinzel Regular and Bold and Spectral Regular (about 400 KB) are bundled in `Data/Fonts/` with
+    their SIL Open Font Licence files and shipped in the release zip. The player's language glyphs
+    are merged into each, so Japanese and other scripts still render.
   - **A font that fails to load** falls back to Dalamud's default for that role, logged once. The UI
     still works.
 - `Windows/Ui/ThemedWindow.cs`: a `Window` base that applies theme and fonts in `PreDraw`
   (so the title bar is themed) and undoes them in `PostDraw`. Every plugin window derives from it.
+  A window that throws while drawing logs once and shows a one-line notice instead of its content.
+- `ImRaii`'s colour and style pushes need the `Dalamud.Bindings.ImPlot` reference, supplied by
+  Dalamud and never copied into the plugin output.
 - `Windows/Ui/Components/`: one file per component in decision 3's built-now table.
 - `Windows/RailWindow.cs` replaces `MainWindow.cs`. `SessionWindow` and `ConfigWindow` are rebuilt
   from components. Their sub-views (`JoinFlowView`, `AdmissionPromptView`, `MessageComposeView`,
   `SessionEndingView`, `CampaignStorageView`, `RelinkMemoryView`, `HostCampaignPicker`,
   `JoinRequestForm`) keep their behaviour and draw through components. `RosterView` becomes
   `RosterRow`.
-- Core: the `Rolling` content and its codec, the member send path, host bounds and sequencing, and
-  the roll fields on `StreamLine`.
+- Core: the `Rolling` content and its codec, the member send path, host bounds and sequencing, the
+  roll fields on `StreamLine`, membership announcements, the host's own send path, and batched
+  catch-up.
 
 ## Out of scope
 
@@ -239,8 +261,10 @@ stays offered at session end and is never buried (product-overview Session panel
 
 ## Verification
 
-The smoke-tests-only rule applies: no new tests.
+The smoke-tests-only rule applies: one new smoke test for the new path, nothing else.
 
+- **The new smoke test:** a member's roll reaches a different member with every die. The chat smoke
+  test now filters to message lines, because members also receive join lines.
 - The build passes with no new warnings, and the smoke set passes.
 - In the game, by eye:
   - every session-window state: not in a session, hosting, joined, reconnecting, admission pending,
@@ -252,6 +276,8 @@ The smoke-tests-only rule applies: no new tests.
 - Two clients through a relay:
   - a player's `/roll 4d6kh3+2` appears for the host and for a third client with the same individual
     dice (A-2.8, A-2.18, A-2.1);
+  - the DM's message and roll appear for every player;
+  - `/roll 600d6` in a session is refused with the cap named, and nothing is sent;
   - a membership change appears timed in the stream (A-2.27);
   - a host line carries `[DM]`, and an Assistant does not (A-2.24a-1, A-2.24b).
 - Disable and re-enable the plugin five times: exactly one of each window and no style leaking into
