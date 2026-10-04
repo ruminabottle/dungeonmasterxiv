@@ -10,13 +10,7 @@ internal static class RosterRow
 
     public static void Draw(UiFonts fonts, SpeakerName person, bool away = false)
     {
-        ImGui.TextColored(Palette.Text, person.Name);
-
-        if (RoleBadge.TextFor(person.Role) is not null)
-        {
-            ImGui.SameLine();
-            RoleBadge.Draw(fonts, person.Role);
-        }
+        Speaker.Draw(fonts, person);
 
         if (away)
         {

@@ -86,16 +86,40 @@ internal static class RollCard
         using var pushed = font.Push();
         var start = ImGui.GetCursorScreenPos();
         var width = Card.InnerWidth();
-        var height = ImGui.GetTextLineHeight() + (2f * Metrics.Step);
+        var inner = width - (2f * Metrics.Step);
+        var textWidth = ImGui.CalcTextSize(text).X;
+
+        float height;
+        if (textWidth <= inner)
+        {
+            height = ImGui.GetTextLineHeight() + (2f * Metrics.Step);
+        }
+        else
+        {
+            height = ImGui.CalcTextSize(text, false, inner).Y + (2f * Metrics.Step);
+        }
+
         var end = start + new Vector2(width, height);
         var drawList = ImGui.GetWindowDrawList();
 
         drawList.AddRectFilled(start, end, ImGui.GetColorU32(Palette.SurfaceSunk), Metrics.ControlRounding);
         drawList.AddRect(start, end, ImGui.GetColorU32(Palette.RuleSoft), Metrics.ControlRounding);
 
-        var textWidth = ImGui.CalcTextSize(text).X;
-        ImGui.SetCursorScreenPos(new Vector2(start.X + ((width - textWidth) / 2f), start.Y + Metrics.Step));
-        ImGui.TextColored(colour, text);
+        if (textWidth <= inner)
+        {
+            // Centered single line
+            ImGui.SetCursorScreenPos(new Vector2(start.X + ((width - textWidth) / 2f), start.Y + Metrics.Step));
+            ImGui.TextColored(colour, text);
+        }
+        else
+        {
+            // Left-aligned with wrapping
+            ImGui.SetCursorScreenPos(start + new Vector2(Metrics.Step, Metrics.Step));
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + inner);
+            ImGui.TextColored(colour, text);
+            ImGui.PopTextWrapPos();
+        }
+
         ImGui.SetCursorScreenPos(new Vector2(start.X, end.Y + Metrics.Step));
         ImGui.Dummy(Vector2.Zero);
     }

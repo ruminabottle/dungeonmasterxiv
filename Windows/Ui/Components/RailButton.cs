@@ -14,7 +14,7 @@ internal static class RailButton
     public static bool Draw(UiFonts fonts, FontAwesomeIcon icon, string tooltip, bool lit)
     {
         bool pressed;
-        using (ImRaii.PushColor(ImGuiCol.Button, lit ? Palette.SurfaceHover : Palette.Surface)
+        using (ImRaii.PushColor(ImGuiCol.Button, lit ? Palette.SurfaceRaised : Palette.Surface)
                    .Push(ImGuiCol.Border, lit ? Palette.Gold : Palette.Surface)
                    .Push(ImGuiCol.Text, lit ? Palette.GoldBright : Palette.GoldLabel))
         using (fonts.Icon.Push())

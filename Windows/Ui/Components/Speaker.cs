@@ -16,6 +16,12 @@ internal static class Speaker
         }
 
         ImGui.TextColored(Palette.Text, speaker.Name);
+
+        if (speaker.Role == SessionRole.Assistant)
+        {
+            ImGui.SameLine();
+            RoleBadge.Draw(fonts, speaker.Role);
+        }
     }
 
     /// <summary>The speaker line with a right-aligned local time, as cards and event lines use it.</summary>
