@@ -44,6 +44,11 @@ internal sealed class JoinFlowView
             ImGui.TextColored(Palette.TextMuted, $"Joining: {DescribeJoin(join.Phase)}");
         }
 
+        if (_coordinator.ReconnectingLine is { } reconnecting)
+        {
+            Banner.Draw(_fonts, BannerKind.Warning, reconnecting);
+        }
+
         if (join.Phase == JoinPhase.AwaitingDecision)
         {
             Banner.Draw(_fonts, BannerKind.Info, $"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");
@@ -68,8 +73,11 @@ internal sealed class JoinFlowView
         }
     }
 
-    /// <summary>The keep-or-lose offer after leaving, drawn as a card where the stream was.</summary>
+    /// <summary>The keep-or-lose offer after leaving, drawn as a card at the end of the stream.</summary>
     public bool DrawOffer() => _ending.DrawOffer();
+
+    /// <summary>True while the keep-or-lose offer is open, so the Host and Join paths wait.</summary>
+    public bool OfferIsOpen => _ending.OfferIsOpen;
 
     /// <summary>A failed join and undelivered messages, as banners. Never drawn inside a table cell.</summary>
     public void DrawProblems()

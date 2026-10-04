@@ -51,6 +51,8 @@ internal sealed class SessionEndingView
         }
     }
 
+    public bool OfferIsOpen => _offer is { IsOpen: true };
+
     /// <summary>Draws the offer while it is open; returns true when it drew one.</summary>
     public bool DrawOffer()
     {

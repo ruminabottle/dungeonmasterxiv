@@ -12,6 +12,9 @@ namespace DungeonMasterXIV.Windows;
 /// <summary>The chat box: sends a message or shares a roll in a session, or rolls only for you outside one.</summary>
 internal sealed class MessageComposeView
 {
+    /// <summary>The most rolls kept outside a session; the oldest goes first.</summary>
+    private const int MostLocalRolls = 20;
+
     private readonly SessionCoordinator _coordinator;
 
     private readonly RollEvaluator _rolls = new(new SystemDieRoller());
@@ -41,9 +44,9 @@ internal sealed class MessageComposeView
             _local.Clear();
         }
 
-        var reconnecting = _coordinator.ReconnectingLine is not null;
+        var reconnecting = _coordinator.ReconnectingLine;
 
-        using (ImRaii.Disabled(reconnecting))
+        using (ImRaii.Disabled(reconnecting is not null))
         {
             var send = ImGui.GetStyle().ItemSpacing.X + ImGui.CalcTextSize("Send").X + (ImGui.GetStyle().FramePadding.X * 2f);
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - send);
@@ -60,6 +63,11 @@ internal sealed class MessageComposeView
                 ref _entry,
                 MessageLimits.Default.MaxUtf8Bytes,
                 ImGuiInputTextFlags.EnterReturnsTrue);
+
+            if (reconnecting is not null && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip(reconnecting);
+            }
 
             ImGui.SameLine();
             if (ActionRow.Primary("Send") || entered)
@@ -112,6 +120,11 @@ internal sealed class MessageComposeView
         else
         {
             _local.Add(new LocalRoll(now.UtcTicks, roll));
+            if (_local.Count > MostLocalRolls)
+            {
+                _local.RemoveAt(0);
+            }
+
             _refusal = null;
         }
 

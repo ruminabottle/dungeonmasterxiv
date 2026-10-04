@@ -3,6 +3,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.ManagedFontAtlas;
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Rolls;
 
 namespace DungeonMasterXIV.Windows.Ui.Components;
 
@@ -26,7 +27,7 @@ internal static class RollCard
         DrawDice(fonts, roll);
         Bar(fonts.Total, roll.Total.ToString(CultureInfo.InvariantCulture), Palette.GoldBright);
 
-        if (roll.Notice is { } notice)
+        if (RollSurvival.NoticeFor(roll.Dice) is { } notice)
         {
             ImGui.TextColored(Palette.Warning, notice);
         }

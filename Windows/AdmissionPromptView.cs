@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 using DungeonMasterXIV.Net;
 using DungeonMasterXIV.Windows.Ui;
 using DungeonMasterXIV.Windows.Ui.Components;
@@ -32,7 +33,7 @@ internal sealed class AdmissionPromptView
         foreach (var request in pending.ToArray())
         {
             using var card = Card.Begin(Palette.SurfaceRaised, Palette.Gold);
-            ImGui.PushID(request.PeerCode.Value);
+            using var id = ImRaii.PushId(request.PeerCode.Value);
 
             ImGui.TextWrapped(AdmissionPrompt.Headline(request));
             using (_fonts.Meta.Push())
@@ -41,42 +42,49 @@ internal sealed class AdmissionPromptView
             }
 
             DrawActions(request);
-            ImGui.PopID();
         }
     }
 
     private void DrawActions(PendingAdmission request)
     {
-        var favoured = AdmissionPrompt.Favoured(request) == AdmissionAction.Admit;
+        var favoured = AdmissionPrompt.Favoured(request);
 
         if (_coordinator.CanAdmitAsClaimed(request))
         {
             var label = string.IsNullOrEmpty(request.RelinkLabel) ? "returning player" : request.RelinkLabel;
-            if (ActionRow.Primary($"Admit as {label}"))
+            if (Button($"Admit as {label}", primary: false))
             {
                 _coordinator.Admit(request.PeerCode, asClaimed: true);
             }
 
             ImGui.SameLine();
-            if (ActionRow.Secondary("Admit as a new player"))
+            if (Button("Admit as a new player", favoured == AdmissionAction.Admit))
             {
                 _coordinator.Admit(request.PeerCode);
             }
         }
-        else if (ActionRow.Primary("Admit"))
+        else if (Button("Admit", favoured == AdmissionAction.Admit))
         {
             _coordinator.Admit(request.PeerCode);
         }
 
-        if (favoured)
-        {
-            ImGui.SetItemDefaultFocus();
-        }
-
         ImGui.SameLine();
-        if (ActionRow.Secondary("Deny"))
+        if (Button("Deny", favoured == AdmissionAction.Deny))
         {
             _coordinator.Deny(request.PeerCode);
         }
+    }
+
+    /// <summary>A secondary button, or the primary one with default focus when it is the favoured answer.</summary>
+    private static bool Button(string label, bool primary)
+    {
+        if (!primary)
+        {
+            return ActionRow.Secondary(label);
+        }
+
+        var pressed = ActionRow.Primary(label);
+        ImGui.SetItemDefaultFocus();
+        return pressed;
     }
 }

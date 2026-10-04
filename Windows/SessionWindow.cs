@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using DungeonMasterXIV.Campaigns;
@@ -93,7 +94,7 @@ internal sealed class SessionWindow : ThemedWindow
 
         var you = new SpeakerName(_displayName().Value, _coordinator.InAHostedSession ? SessionRole.DungeonMaster : SessionRole.Player);
         var streamHeight = ImGui.GetContentRegionAvail().Y - _compose.Height - ImGui.GetStyle().ItemSpacing.Y;
-        _stream.Draw(Math.Max(streamHeight, ImGui.GetFrameHeight()), you, _compose.LocalRolls);
+        _stream.Draw(Math.Max(streamHeight, ImGui.GetFrameHeight()), you, _compose.LocalRolls, _joinFlow.DrawOffer);
         _compose.Draw();
     }
 
@@ -102,7 +103,7 @@ internal sealed class SessionWindow : ThemedWindow
 
     private void DrawNotInASession()
     {
-        if (_joinFlow.DrawOffer())
+        if (_joinFlow.OfferIsOpen)
         {
             return;
         }
@@ -115,13 +116,9 @@ internal sealed class SessionWindow : ThemedWindow
         EmptyState.Draw(Fonts, "No session yet", "Start one as the DM, or join one with the code your DM gives you.");
 
         var sideBySide = ImGui.GetContentRegionAvail().X >= SideBySideWidth * ImGuiHelpers.GlobalScale;
-        if (sideBySide && ImGui.BeginTable("##paths", 2, ImGuiTableFlags.SizingStretchSame))
+        if (sideBySide)
         {
-            ImGui.TableNextColumn();
-            DrawHostPath();
-            ImGui.TableNextColumn();
-            DrawJoinPath();
-            ImGui.EndTable();
+            DrawPathsSideBySide();
         }
         else
         {
@@ -130,6 +127,22 @@ internal sealed class SessionWindow : ThemedWindow
         }
 
         _joinFlow.DrawProblems();
+    }
+
+    private void DrawPathsSideBySide()
+    {
+        using var table = ImRaii.Table("##paths", 2, ImGuiTableFlags.SizingStretchSame);
+        if (!table.Success)
+        {
+            DrawHostPath();
+            DrawJoinPath();
+            return;
+        }
+
+        ImGui.TableNextColumn();
+        DrawHostPath();
+        ImGui.TableNextColumn();
+        DrawJoinPath();
     }
 
     private void DrawHostPath()

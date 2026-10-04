@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -19,9 +20,12 @@ internal sealed class StreamView
 
     private readonly SessionCoordinator _coordinator;
     private readonly UiFonts _fonts;
-    private readonly SpeakerBook _speakers = new();
+    private readonly Dictionary<long, float> _lineHeights = new();
+    private readonly Dictionary<LocalRoll, float> _localHeights = new();
+    private float _heightsWidth;
     private int _lastCount;
     private bool _newBelow;
+    private bool _drewAfter;
 
     public StreamView(SessionCoordinator coordinator, UiFonts fonts)
     {
@@ -29,11 +33,11 @@ internal sealed class StreamView
         _fonts = fonts;
     }
 
-    public void Draw(float height, SpeakerName you, IReadOnlyList<LocalRoll> localRolls)
+    /// <summary>Draws the stream, then <paramref name="drawAfter"/> (true when it drew) as the last thing in it.</summary>
+    public void Draw(float height, SpeakerName you, IReadOnlyList<LocalRoll> localRolls, Func<bool>? drawAfter = null)
     {
-        _speakers.Learn(_coordinator.CurrentRoster);
-        var total = _coordinator.InASession ? _coordinator.StreamCount : 0;
-        var lines = _coordinator.InASession ? _coordinator.LatestStreamLines(MostShown) : [];
+        var total = _coordinator.StreamCount;
+        var lines = total > 0 ? _coordinator.LatestStreamLines(MostShown) : [];
 
         using var child = ImRaii.Child("##stream", new Vector2(0f, height), false);
         if (!child.Success)
@@ -44,6 +48,22 @@ internal sealed class StreamView
         var atBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 1f;
         var count = total + localRolls.Count;
 
+        if (count < _lastCount)
+        {
+            _lastCount = 0;
+            _newBelow = false;
+            _lineHeights.Clear();
+            _localHeights.Clear();
+        }
+
+        var width = ImGui.GetContentRegionAvail().X;
+        if (width != _heightsWidth)
+        {
+            _heightsWidth = width;
+            _lineHeights.Clear();
+            _localHeights.Clear();
+        }
+
         if (total > MostShown)
         {
             using var meta = _fonts.Meta.Push();
@@ -52,13 +72,35 @@ internal sealed class StreamView
 
         foreach (var line in lines)
         {
+            if (SkippedOffScreen(_lineHeights, line.Sequence))
+            {
+                continue;
+            }
+
+            var top = ImGui.GetCursorPosY();
             DrawLine(line);
+            _lineHeights[line.Sequence] = DrawnHeight(top);
         }
 
         foreach (var local in localRolls)
         {
+            if (SkippedOffScreen(_localHeights, local))
+            {
+                continue;
+            }
+
+            var top = ImGui.GetCursorPosY();
             RollCard.Draw(_fonts, you, local.AtUtcTicks, local.Roll, local: true);
+            _localHeights[local] = DrawnHeight(top);
         }
+
+        var drewAfter = drawAfter?.Invoke() ?? false;
+        if (drewAfter && !_drewAfter && atBottom)
+        {
+            ImGui.SetScrollHereY(1f);
+        }
+
+        _drewAfter = drewAfter;
 
         if (count > _lastCount)
         {
@@ -85,9 +127,25 @@ internal sealed class StreamView
         }
     }
 
+    /// <summary>Stands in for an entry known to be off-screen with space of its last drawn height.</summary>
+    private static bool SkippedOffScreen<TKey>(Dictionary<TKey, float> heights, TKey key)
+        where TKey : notnull
+    {
+        if (!heights.TryGetValue(key, out var height)
+            || ImGui.IsRectVisible(new Vector2(ImGui.GetContentRegionAvail().X, height)))
+        {
+            return false;
+        }
+
+        ImGui.Dummy(new Vector2(0f, height));
+        return true;
+    }
+
+    private static float DrawnHeight(float top) => ImGui.GetCursorPosY() - top - ImGui.GetStyle().ItemSpacing.Y;
+
     private void DrawLine(StreamLine line)
     {
-        var speaker = _speakers.For(line.Peer);
+        var speaker = _coordinator.Speakers.For(line.Peer);
 
         switch (line.Kind)
         {

@@ -113,7 +113,6 @@ internal sealed class ConfigWindow : ThemedWindow
 
     private void DrawDisplayNameSetting(PluginSettings settings)
     {
-
         var characterName = _characterName();
 
         var campaign = _currentCampaign();

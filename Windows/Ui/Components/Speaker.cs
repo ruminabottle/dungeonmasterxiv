@@ -39,7 +39,18 @@ internal static class Speaker
         using var font = fonts.Meta.Push();
         var time = TimeOf(atUtcTicks);
         var width = ImGui.CalcTextSize(time).X;
-        ImGui.SameLine(ImGui.GetWindowContentRegionMax().X - width - Metrics.CardPadding);
+        var target = ImGui.GetWindowContentRegionMax().X - width - Metrics.CardPadding;
+        var nameEnd = ImGui.GetItemRectMax().X - ImGui.GetWindowPos().X + ImGui.GetStyle().ItemSpacing.X;
+
+        if (nameEnd > target)
+        {
+            ImGui.SetCursorPosX(target);
+        }
+        else
+        {
+            ImGui.SameLine(target);
+        }
+
         ImGui.TextColored(Palette.TextMuted, time);
     }
 }
