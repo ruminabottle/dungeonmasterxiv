@@ -13,6 +13,8 @@ public sealed class SessionContent
 
     public string? Saying { get; init; }
 
+    public SharedRoll? Rolling { get; init; }
+
     public IReadOnlyList<StreamLine>? Entries { get; init; }
 }
 

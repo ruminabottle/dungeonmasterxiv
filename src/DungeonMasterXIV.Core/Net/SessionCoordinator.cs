@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.Linq;
+using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
@@ -59,6 +60,63 @@ public sealed class SessionCoordinator
     public MemberContentReceipts MemberContent => _resources.MemberContent;
     public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
 
+    /// <summary>This client's session stream: what the host recorded, or what a member was sent.</summary>
+    public IReadOnlyList<StreamLine> StreamLines =>
+        InAHostedSession ? Recorded.Select(StreamLine.From).ToList() : Received;
+
+    /// <summary>Who is in the session now: the host's own list, or the roster a member was sent.</summary>
+    public IReadOnlyList<RosterEntry> CurrentRoster => InAHostedSession ? _roster.Current() : Roster;
+
+    /// <summary>True while this client can send to a session, as its host or as an admitted member.</summary>
+    public bool InASession => InAHostedSession || Join.Phase == JoinPhase.Admitted;
+
+    /// <summary>Sends a message to the session: stamped directly when hosting, sealed to the host otherwise.</summary>
+    public MessageDraft Say(string? text, DateTimeOffset now)
+    {
+        if (!InAHostedSession)
+        {
+            return Membership.Say(text);
+        }
+
+        var draft = MessageDraft.Compose(text, MessageLimits.Default);
+        if (!draft.IsAccepted)
+        {
+            return draft;
+        }
+
+        if (_parts.HostIdentity.OwnPeerCode() is not { } own)
+        {
+            return new MessageDraft(null, MessageFault.NotInASession, "This client is not in a session.");
+        }
+
+        _parts.Stream.Announce(StreamEventKind.Message, own, draft.Text!, now);
+        return draft;
+    }
+
+    /// <summary>Shares a roll this client made; returns why it was not shared, or null.</summary>
+    public string? ShareRoll(SharedRoll roll, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(roll);
+
+        if (!InAHostedSession)
+        {
+            return Membership.ShareRoll(roll);
+        }
+
+        if (roll.RefusalToShare() is { } refusal)
+        {
+            return refusal;
+        }
+
+        if (_parts.HostIdentity.OwnPeerCode() is not { } own)
+        {
+            return "This client is not in a session.";
+        }
+
+        _parts.Stream.Announce(StreamEventKind.Roll, own, roll.Summary(), now, roll);
+        return null;
+    }
+
     public HostSession Host => _parts.Host;
 
     public JoinAttempt Join => _parts.Join;
@@ -109,6 +167,7 @@ public sealed class SessionCoordinator
         var peer = _admissions.Admit(peerCode, role, asClaimed);
 
         _roster.Publish();
+        _parts.Stream.Announce(StreamEventKind.Joined, peerCode, string.Empty, DateTimeOffset.UtcNow);
         return peer;
     }
 
@@ -125,7 +184,7 @@ public sealed class SessionCoordinator
             Join,
             Membership.Keys,
             Host,
-            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
+            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, _parts.Stream, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
                 .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;

@@ -36,6 +36,8 @@ public sealed class SessionMembership
     public MessageDraft Say(string? text, MessageLimits? limits = null) =>
         _message.Say(text, limits ?? MessageLimits.Default);
 
+    public string? ShareRoll(SharedRoll roll) => _message.ShareRoll(roll);
+
     public SessionClosing? Closing => _closing.Notice;
 
     public int Undelivered { get; internal set; }

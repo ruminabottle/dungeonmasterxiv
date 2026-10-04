@@ -5,4 +5,5 @@ public sealed record StreamEntry(
     StreamStamp Stamp,
     StreamEventKind Kind,
     PeerCode Peer,
-    string Text);
+    string Text,
+    SharedRoll? Roll = null);

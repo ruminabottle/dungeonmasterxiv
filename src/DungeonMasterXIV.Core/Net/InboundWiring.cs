@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using DungeonMasterXIV.Chat;
+using DungeonMasterXIV.Rolls;
 
 namespace DungeonMasterXIV.Net;
 
@@ -10,6 +11,7 @@ internal sealed class InboundWiring(
     SessionResources resources,
     Func<string?, RelinkClaim> resolveRelink,
     RosterBroadcast roster,
+    HostStream stream,
     Action onReclaimed,
     Action onReclaimRefused,
     Action onHostAway,
@@ -36,6 +38,7 @@ internal sealed class InboundWiring(
                     {
                         admissions.Admit(request.PeerCode, asClaimed: true);
                         roster.Publish();
+                        stream.Announce(StreamEventKind.Joined, request.PeerCode, string.Empty, now);
                     }
                 },
                 OnResume: (key, envelope) =>
@@ -47,12 +50,12 @@ internal sealed class InboundWiring(
 
                     var missed = resources.Recording.Entries
                         .Where(entry => entry.Stamp.Sequence > resumed.LastSequence)
-                        .Select(entry => new StreamLine(
-                            entry.Stamp.Sequence, entry.Stamp.AtUtcTicks, entry.Kind, entry.Peer.Value, entry.Text))
+                        .Select(StreamLine.From)
                         .ToList();
 
                     roster.Publish();
                     roster.PublishEntriesTo(resumed.Peer, missed);
+                    stream.Announce(StreamEventKind.Reconnected, resumed.Peer, string.Empty, now);
                 }),
             HostAuthored: new HostAuthoredContent(
                 OpenWith: sessionKey,
@@ -64,16 +67,23 @@ internal sealed class InboundWiring(
                     resources.MemberContent.Record(peer, content);
 
                     Said(peer, content, now);
+                    Rolled(peer, content, now);
 
                     if (content.Leaving is true)
                     {
-                        resources.Recording.RecordAsHost(StreamEventKind.Left, peer, string.Empty, now);
+                        stream.Announce(StreamEventKind.Left, peer, string.Empty, now);
 
                         admissions.Departed(peer);
                     }
                 }),
             Transport: new TransportNotices(
-                OnConnectionDropped: key => admissions.RecordDrop(key, now),
+                OnConnectionDropped: key =>
+                {
+                    if (admissions.RecordDrop(key, now))
+                    {
+                        stream.Announce(StreamEventKind.Dropped, admissions.PeerCodeFor(key), string.Empty, now);
+                    }
+                },
                 OnReclaimed: onReclaimed,
                 OnReclaimRefused: onReclaimRefused,
                 OnHostAway: onHostAway,
@@ -93,12 +103,16 @@ internal sealed class InboundWiring(
             return;
         }
 
-        if (resources.Recording.StampAsHost(StreamEventKind.Message, peer, said, now) is not { } entry)
+        stream.Announce(StreamEventKind.Message, peer, said, now);
+    }
+
+    private void Rolled(PeerCode peer, SessionContent content, DateTimeOffset now)
+    {
+        if (content.Rolling is not { } roll || !roll.IsWithinBounds(RollLimits.Default))
         {
             return;
         }
 
-        roster.PublishEntry(new StreamLine(
-            entry.Stamp.Sequence, entry.Stamp.AtUtcTicks, entry.Kind, entry.Peer.Value, entry.Text));
+        stream.Announce(StreamEventKind.Roll, peer, roll.Summary(), now, roll);
     }
 }
