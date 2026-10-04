@@ -64,6 +64,15 @@ public sealed class SessionCoordinator
     public IReadOnlyList<StreamLine> StreamLines =>
         InAHostedSession ? Recorded.Select(StreamLine.From).ToList() : Received;
 
+    /// <summary>How many entries this client's session stream holds.</summary>
+    public int StreamCount => InAHostedSession ? Recorded.Count : _stream.Count;
+
+    /// <summary>The newest <paramref name="count"/> entries of this client's stream, oldest first, without copying the rest.</summary>
+    public IReadOnlyList<StreamLine> LatestStreamLines(int count) =>
+        InAHostedSession
+            ? Recorded.Skip(Math.Max(0, Recorded.Count - count)).Select(StreamLine.From).ToList()
+            : _stream.Latest(count);
+
     /// <summary>Who is in the session now: the host's own list, or the roster a member was sent.</summary>
     public IReadOnlyList<RosterEntry> CurrentRoster => InAHostedSession ? _roster.Current() : Roster;
 

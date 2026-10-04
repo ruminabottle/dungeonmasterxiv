@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -34,7 +32,8 @@ internal sealed class StreamView
     public void Draw(float height, SpeakerName you, IReadOnlyList<LocalRoll> localRolls)
     {
         _speakers.Learn(_coordinator.CurrentRoster);
-        var lines = _coordinator.InASession ? _coordinator.StreamLines : [];
+        var total = _coordinator.InASession ? _coordinator.StreamCount : 0;
+        var lines = _coordinator.InASession ? _coordinator.LatestStreamLines(MostShown) : [];
 
         using var child = ImRaii.Child("##stream", new Vector2(0f, height), false);
         if (!child.Success)
@@ -43,15 +42,15 @@ internal sealed class StreamView
         }
 
         var atBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 1f;
-        var count = lines.Count + localRolls.Count;
+        var count = total + localRolls.Count;
 
-        if (lines.Count > MostShown)
+        if (total > MostShown)
         {
             using var meta = _fonts.Meta.Push();
             ImGui.TextColored(Palette.TextMuted, $"Showing the latest {MostShown} entries.");
         }
 
-        foreach (var line in lines.Skip(Math.Max(0, lines.Count - MostShown)))
+        foreach (var line in lines)
         {
             DrawLine(line);
         }
