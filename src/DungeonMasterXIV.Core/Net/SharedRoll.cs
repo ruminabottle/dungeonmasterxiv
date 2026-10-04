@@ -28,14 +28,26 @@ public sealed record SharedRoll(
     {
         ArgumentNullException.ThrowIfNull(outcome);
 
-        return new SharedRoll(expression, outcome.Label, outcome.Dice, outcome.Total, outcome.Notice);
+        return new SharedRoll(RollParser.BodyOf(expression).Trim(), outcome.Label, outcome.Dice, outcome.Total, outcome.Notice);
     }
 
     /// <summary>Why this roll cannot be shared, or null when it can.</summary>
-    public string? RefusalToShare() =>
-        Dice.Count > MaxDice
-            ? $"That roll used {Dice.Count} dice. A roll shared with the session can carry up to {MaxDice}."
-            : null;
+    public string? RefusalToShare()
+    {
+        if (IsWithinBounds(RollLimits.Default))
+        {
+            return null;
+        }
+
+        if (Dice is not null && Dice.Count > MaxDice)
+        {
+            return $"That roll used {Dice.Count} dice. A roll shared with the session can carry up to {MaxDice}.";
+        }
+
+        return Label is not null && Label.Length > MaxLabelLength
+            ? $"That roll's label is {Label.Length} characters. A roll shared with the session can carry a label of up to {MaxLabelLength}."
+            : "That roll cannot be shared with the session.";
+    }
 
     public bool IsWithinBounds(RollLimits limits)
     {
@@ -56,7 +68,7 @@ public sealed record SharedRoll(
     public string Summary()
     {
         var expression = Expression.Length > SummaryExpressionLength
-            ? Expression[..SummaryExpressionLength] + "…"
+            ? Expression[..SummaryCut()] + "…"
             : Expression;
 
         var dice = string.Join(", ", Dice.Take(SummaryDice).Select(die => die.Kept ? $"{die.Value}" : $"{die.Value}*"));
@@ -64,4 +76,8 @@ public sealed record SharedRoll(
 
         return Dice.Count == 0 ? $"{expression} = {Total}" : $"{expression} = {Total} [{dice}{more}]";
     }
+
+    /// <summary>Where the summary cuts the expression, backing off so a surrogate pair is never split.</summary>
+    private int SummaryCut() =>
+        char.IsHighSurrogate(Expression[SummaryExpressionLength - 1]) ? SummaryExpressionLength - 1 : SummaryExpressionLength;
 }

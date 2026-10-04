@@ -34,6 +34,9 @@ internal sealed class RollParser
         return new RollParser(body, limits).ParseAll(label);
     }
 
+    /// <summary>The dice expression of what was typed, without its label.</summary>
+    public static string BodyOf(string text) => SplitLabel(text ?? string.Empty).Body;
+
     private static (string Body, string? Label) SplitLabel(string text)
     {
         var hash = text.IndexOf('#', StringComparison.Ordinal);

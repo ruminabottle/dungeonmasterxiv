@@ -60,10 +60,6 @@ public sealed class SessionCoordinator
     public MemberContentReceipts MemberContent => _resources.MemberContent;
     public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
 
-    /// <summary>This client's session stream: what the host recorded, or what a member was sent.</summary>
-    public IReadOnlyList<StreamLine> StreamLines =>
-        InAHostedSession ? Recorded.Select(StreamLine.From).ToList() : Received;
-
     /// <summary>How many entries this client's session stream holds.</summary>
     public int StreamCount => InAHostedSession ? Recorded.Count : _stream.Count;
 
@@ -142,6 +138,9 @@ public sealed class SessionCoordinator
 
     public IReadOnlyList<PendingAdmission> JustLapsed => _admissions.JustLapsed;
 
+    /// <summary>Every speaker's name and role seen in this client's rosters, learned each tick.</summary>
+    public SpeakerBook Speakers { get; } = new();
+
     public void StartHosting() => _hosting.Start();
 
     public void StopHosting(DateTimeOffset endedAt)
@@ -188,6 +187,12 @@ public sealed class SessionCoordinator
 
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
+        TickSession(sinceLastTick, now);
+        Speakers.Learn(CurrentRoster);
+    }
+
+    private void TickSession(TimeSpan sinceLastTick, DateTimeOffset now)
+    {
         _interruption.ApplyReportedFailure();
         Membership.SessionKey = _parts.Inbox.Drain(
             Join,
@@ -206,6 +211,7 @@ public sealed class SessionCoordinator
         }
 
         _admissions.ExpireLapsed(now);
+        AnnounceLastingDrops(now);
         Membership.ExpireIfTheSessionHasClosed(now);
 
         if (_interruption.Tick(sinceLastTick))
@@ -238,6 +244,19 @@ public sealed class SessionCoordinator
         if (_timeouts.Advance(sinceLastTick, Host, Join, _handshake.RegistrationWasSent))
         {
             SynchroniseTransport();
+        }
+    }
+
+    private void AnnounceLastingDrops(DateTimeOffset now)
+    {
+        if (!InAHostedSession)
+        {
+            return;
+        }
+
+        foreach (var peer in _admissions.DropLines.DueAt(now))
+        {
+            _parts.Stream.Announce(StreamEventKind.Dropped, peer, string.Empty, now);
         }
     }
 

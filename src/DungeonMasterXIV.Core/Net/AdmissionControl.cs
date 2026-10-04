@@ -32,6 +32,7 @@ public sealed class AdmissionControl
         _mintParticipant = mintParticipant;
         _letReturningPlayersIn = letReturningPlayersIn;
         _log = log;
+        DropLines = new DropAnnouncements(Drops);
     }
 
     public SessionAudience Audience { get; } = new();
@@ -97,12 +98,15 @@ public sealed class AdmissionControl
 
     public MemberDrops Drops { get; } = new();
 
+    public DropAnnouncements DropLines { get; }
+
+    /// <summary>Records an admitted member's drop; a drop already recorded keeps its start time.</summary>
     public bool RecordDrop(byte[] memberPublicKey, DateTimeOffset when)
     {
         ArgumentNullException.ThrowIfNull(memberPublicKey);
 
         var peerCode = PeerCodeFor(memberPublicKey);
-        if (!Audience.IsAdmitted(peerCode))
+        if (!Audience.IsAdmitted(peerCode) || Drops.WhenDropped(peerCode) is not null)
         {
             return false;
         }
@@ -201,7 +205,7 @@ public sealed class AdmissionControl
             if (Audience.HolderOf(claimed) is { } holder)
             {
                 Audience.Remove(holder.PeerCode);
-                Drops.Forget(holder.PeerCode);
+                ForgetDrop(holder.PeerCode);
             }
 
             participantId = claimed;
@@ -213,7 +217,7 @@ public sealed class AdmissionControl
 
         var peer = Audience.Admit(peerCode, role, request?.JoinerPublicKey, displayName, participantId);
 
-        Drops.Forget(peerCode);
+        ForgetDrop(peerCode);
         AnnounceAccepted(request?.JoinerPublicKey, participantId);
 
         if (participantId is null)
@@ -225,6 +229,12 @@ public sealed class AdmissionControl
         }
 
         return peer;
+    }
+
+    private void ForgetDrop(PeerCode peerCode)
+    {
+        Drops.Forget(peerCode);
+        DropLines.Forget(peerCode);
     }
 
     public bool CanAdmitAsClaimed(PendingAdmission request) => ClaimedAndFree(request) is not null;
@@ -259,12 +269,17 @@ public sealed class AdmissionControl
         _announcer.Accepted(code, joinerPublicKey, hostKeys.PublicKey, welcome);
     }
 
-    public bool Departed(PeerCode peerCode) => Audience.Remove(peerCode);
+    public bool Departed(PeerCode peerCode)
+    {
+        ForgetDrop(peerCode);
+        return Audience.Remove(peerCode);
+    }
 
     public void Deny(PeerCode peerCode)
     {
         var request = Desk.Decide(peerCode);
         Audience.Remove(peerCode);
+        ForgetDrop(peerCode);
 
         if (_hostCode() is { } code && request?.JoinerPublicKey is { } joinerKey)
         {
@@ -292,6 +307,7 @@ public sealed class AdmissionControl
         Audience.Clear();
         Desk.Clear();
         Drops.Clear();
+        DropLines.Clear();
         JustLapsed = Array.Empty<PendingAdmission>();
     }
 }

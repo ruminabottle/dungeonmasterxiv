@@ -55,7 +55,10 @@ internal sealed class InboundWiring(
 
                     roster.Publish();
                     roster.PublishEntriesTo(resumed.Peer, missed);
-                    stream.Announce(StreamEventKind.Reconnected, resumed.Peer, string.Empty, now);
+                    if (admissions.DropLines.Returned(resumed.Peer))
+                    {
+                        stream.Announce(StreamEventKind.Reconnected, resumed.Peer, string.Empty, now);
+                    }
                 }),
             HostAuthored: new HostAuthoredContent(
                 OpenWith: sessionKey,
@@ -77,13 +80,7 @@ internal sealed class InboundWiring(
                     }
                 }),
             Transport: new TransportNotices(
-                OnConnectionDropped: key =>
-                {
-                    if (admissions.RecordDrop(key, now))
-                    {
-                        stream.Announce(StreamEventKind.Dropped, admissions.PeerCodeFor(key), string.Empty, now);
-                    }
-                },
+                OnConnectionDropped: key => admissions.RecordDrop(key, now),
                 OnReclaimed: onReclaimed,
                 OnReclaimRefused: onReclaimRefused,
                 OnHostAway: onHostAway,
