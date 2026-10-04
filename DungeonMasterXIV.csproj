@@ -62,6 +62,11 @@
     <None Remove="tools/**" />
   </ItemGroup>
 
+  <!-- The bundled fonts and their licences ship next to the plugin, so the release zip carries them. -->
+  <ItemGroup>
+    <None Update="Data/Fonts/*.ttf;Data/Fonts/*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- References the Dalamud-free half of the plugin. -->
   <ItemGroup>
     <ProjectReference Include="src/DungeonMasterXIV.Core/DungeonMasterXIV.Core.csproj" />
@@ -79,6 +84,11 @@
     </Reference>
     <Reference Include="Dalamud.Bindings.ImGui">
       <HintPath>$(DalamudLibPath)Dalamud.Bindings.ImGui.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- ImRaii's colour and style pushes have ImPlot overloads, so the compiler needs this to pick one. -->
+    <Reference Include="Dalamud.Bindings.ImPlot">
+      <HintPath>$(DalamudLibPath)Dalamud.Bindings.ImPlot.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">
