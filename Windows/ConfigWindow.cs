@@ -1,14 +1,17 @@
 using System;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using Dalamud.Plugin.Services;
 using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Windows.Ui;
+using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
 /// <summary>The settings window: window restore, display name, relay address, the relay policy link, and campaign and user storage.</summary>
-public sealed class ConfigWindow : Window
+internal sealed class ConfigWindow : ThemedWindow
 {
     private readonly ConfigurationStore _configurationStore;
     private readonly Func<DisplayName> _characterName;
@@ -45,8 +48,10 @@ public sealed class ConfigWindow : Window
         Func<DisplayName> characterName,
         Func<Campaign?> currentCampaign,
         Action<Campaign> saveCampaign,
-        CampaignStorageView campaignStorage)
-        : base("Dungeon Master XIV settings###dmx-settings")
+        CampaignStorageView campaignStorage,
+        UiFonts fonts,
+        IPluginLog log)
+        : base("Settings###dmx-settings", fonts, log)
     {
         _configurationStore = configurationStore;
         _characterName = characterName;
@@ -71,9 +76,12 @@ public sealed class ConfigWindow : Window
 
     public void Open() => IsOpen = true;
 
-    public override void Draw()
+    protected override void DrawContent()
     {
         var settings = _configurationStore.Configuration.Settings;
+
+        Section.Heading(Fonts, "You");
+        DrawDisplayNameSetting(settings);
 
         var restore = settings.RestoreWindowState;
         if (ImGui.Checkbox("Reopen windows where I left them", ref restore))
@@ -82,32 +90,29 @@ public sealed class ConfigWindow : Window
             _configurationStore.Save();
         }
 
-        ImGui.Separator();
-        DrawDisplayNameSetting(settings);
-
-        ImGui.Separator();
+        Section.Heading(Fonts, "Connection");
         DrawRelaySetting(settings);
 
-        if (ImGui.Button("Relay and privacy"))
+        if (ActionRow.Secondary("Relay and privacy"))
         {
             Dalamud.Utility.Util.OpenLink(RelayPolicyUrl);
         }
 
-        ImGui.Separator();
-        ImGui.TextUnformatted("Campaign storage");
+        Section.Heading(Fonts, "Campaigns");
         _campaignStorage.Draw();
 
-        ImGui.Separator();
-        ImGui.TextUnformatted("User storage");
+        Section.Heading(Fonts, "Stored data");
         _relinkMemory.Draw();
 
-        ImGui.Separator();
-        ImGui.TextDisabled(_schemaVersionLabel);
+        ImGui.Spacing();
+        using (Fonts.Meta.Push())
+        {
+            ImGui.TextColored(Palette.TextMuted, _schemaVersionLabel);
+        }
     }
 
     private void DrawDisplayNameSetting(PluginSettings settings)
     {
-        ImGui.TextUnformatted("Display name");
 
         var characterName = _characterName();
 
@@ -116,7 +121,7 @@ public sealed class ConfigWindow : Window
 
         if (NameInputCapacity.IsFull(typed))
         {
-            ImGui.TextWrapped(NameFieldIsFull);
+            Banner.Draw(Fonts, BannerKind.Warning, NameFieldIsFull);
         }
 
         var effective = CampaignDisplayName.Or(campaign, characterName);
@@ -125,7 +130,7 @@ public sealed class ConfigWindow : Window
         var stored = CampaignDisplayName.Stored(campaign);
         if (stored.Length > 0 && !DisplayName.TryParse(stored, out _))
         {
-            ImGui.TextWrapped(UnusableAliasWarning);
+            Banner.Draw(Fonts, BannerKind.Warning, UnusableAliasWarning);
         }
     }
 
@@ -145,7 +150,7 @@ public sealed class ConfigWindow : Window
         if (noCampaign)
         {
             ImGui.EndDisabled();
-            ImGui.TextWrapped(NameNeedsACampaign);
+            Banner.Draw(Fonts, BannerKind.Info, NameNeedsACampaign);
         }
 
         if (edited)
@@ -161,7 +166,6 @@ public sealed class ConfigWindow : Window
 
     private void DrawRelaySetting(PluginSettings settings)
     {
-        ImGui.TextUnformatted("Relay");
         var address = settings.RelayAddress;
         if (ImGui.InputText("Relay address", ref address, 256))
         {
@@ -171,7 +175,7 @@ public sealed class ConfigWindow : Window
 
         if (!RelayEndpoint.TryParse(settings.RelayAddress, out _))
         {
-            ImGui.TextWrapped(InvalidRelayWarning);
+            Banner.Draw(Fonts, BannerKind.Danger, InvalidRelayWarning);
         }
     }
 

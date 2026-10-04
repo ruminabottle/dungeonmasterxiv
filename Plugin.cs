@@ -57,7 +57,7 @@ public sealed class Plugin : IDalamudPlugin
         var characterName = new LocalCharacterName(objects).Current;
 
         _hostingCampaign = new HostingCampaign(_campaignStore);
-        _configWindow = SettingsWindowFor(characterName, pluginInterface.ConfigDirectory);
+        _configWindow = SettingsWindowFor(characterName, pluginInterface.ConfigDirectory, log);
         var sessionLog = new SessionTransportLog(log);
         _relayTransport = new WebSocketSessionTransport(sessionLog);
         _sessionCoordinator = new SessionCoordinator(
@@ -104,7 +104,7 @@ public sealed class Plugin : IDalamudPlugin
     private Func<DisplayName> NameWeSendAs(Func<DisplayName> characterName) =>
         () => CampaignDisplayName.Or(_hostingCampaign.Current, characterName());
 
-    private ConfigWindow SettingsWindowFor(Func<DisplayName> characterName, DirectoryInfo configDirectory)
+    private ConfigWindow SettingsWindowFor(Func<DisplayName> characterName, DirectoryInfo configDirectory, IPluginLog log)
     {
         var retainedLogs = new RetainedLogStore(
             new RetainedLogFileArchive(Path.Combine(configDirectory.FullName, "logs")));
@@ -114,7 +114,9 @@ public sealed class Plugin : IDalamudPlugin
             characterName,
             () => _hostingCampaign.Current,
             _campaignStore.Save,
-            new CampaignStorageView(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs)));
+            new CampaignStorageView(_campaignStore, new CampaignDeletion(_campaignStore, retainedLogs)),
+            _fonts,
+            log);
     }
 
     private KeepOrLose SessionEndChoiceFor(DirectoryInfo configDirectory) =>

@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using Dalamud.Bindings.ImGui;
 using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
+using DungeonMasterXIV.Windows.Ui;
+using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
 /// <summary>Lists stored campaigns and unreadable campaign files in settings, each with a delete that asks to confirm.</summary>
-public sealed class CampaignStorageView
+internal sealed class CampaignStorageView
 {
     private readonly CampaignStore _store;
 
@@ -29,7 +31,7 @@ public sealed class CampaignStorageView
 
         if (_rows.Count == 0)
         {
-            ImGui.TextDisabled("No campaigns stored yet.");
+            ImGui.TextColored(Palette.TextMuted, "No campaigns stored yet.");
         }
 
         foreach (var row in _rows)
@@ -72,7 +74,7 @@ public sealed class CampaignStorageView
             {
                 DrawConfirmation();
             }
-            else if (ImGui.Button("Delete file"))
+            else if (ActionRow.Secondary("Delete file"))
             {
                 _prompt.Request(row.FileName);
             }
@@ -86,14 +88,14 @@ public sealed class CampaignStorageView
     {
         ImGui.PushID(row.CampaignId.ToString());
         ImGui.TextUnformatted(row.Label);
-        ImGui.TextDisabled(row.Detail);
+        ImGui.TextColored(Palette.TextMuted, row.Detail);
         ImGui.SameLine();
 
         if (_prompt.IsAwaiting(row.CampaignId))
         {
             DrawConfirmation();
         }
-        else if (ImGui.Button("Delete"))
+        else if (ActionRow.Secondary("Delete"))
         {
             _prompt.Request(row.CampaignId);
         }
@@ -107,14 +109,14 @@ public sealed class CampaignStorageView
         ImGui.TextUnformatted("Delete permanently?");
         ImGui.SameLine();
 
-        if (ImGui.Button("Yes, delete"))
+        if (ActionRow.Edged("Yes, delete", Palette.Danger, Palette.Danger))
         {
             _prompt.Confirm();
         }
 
         ImGui.SameLine();
 
-        if (ImGui.Button("Cancel"))
+        if (ActionRow.Secondary("Cancel"))
         {
             _prompt.Cancel();
         }
