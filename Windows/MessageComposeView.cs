@@ -1,50 +1,78 @@
 using System;
-using System.Globalization;
+using System.Collections.Generic;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility.Raii;
 using DungeonMasterXIV.Chat;
 using DungeonMasterXIV.Net;
 using DungeonMasterXIV.Rolls;
+using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>The chat box: sends a message to the session, or rolls dice locally when given a roll command.</summary>
+/// <summary>The chat box: sends a message or shares a roll in a session, or rolls only for you outside one.</summary>
 internal sealed class MessageComposeView
 {
     private readonly SessionCoordinator _coordinator;
 
     private readonly RollEvaluator _rolls = new(new SystemDieRoller());
 
+    private readonly List<LocalRoll> _local = new();
+
     private string _entry = string.Empty;
 
     private string? _refusal;
+
+    private bool _refocus;
 
     public MessageComposeView(SessionCoordinator coordinator) => _coordinator = coordinator;
 
     internal string? Refusal => _refusal;
 
+    public IReadOnlyList<LocalRoll> LocalRolls => _local;
+
+    /// <summary>The height Draw needs, so the stream above can take the rest.</summary>
+    public float Height =>
+        ImGui.GetFrameHeightWithSpacing() + (_refusal is null ? 0f : ImGui.GetTextLineHeightWithSpacing() * 2f);
+
     public void Draw()
     {
-        var reconnecting = _coordinator.ReconnectingLine;
-        if (reconnecting is not null)
+        if (_coordinator.InASession && _local.Count > 0)
         {
-            ImGui.TextWrapped(reconnecting);
+            _local.Clear();
         }
 
-        ImGui.BeginDisabled(reconnecting is not null);
+        var reconnecting = _coordinator.ReconnectingLine is not null;
 
-        ImGui.InputText("Say", ref _entry, MessageLimits.Default.MaxUtf8Bytes);
-
-        if (ImGui.Button("Send"))
+        using (ImRaii.Disabled(reconnecting))
         {
-            Submit();
+            var send = ImGui.GetStyle().ItemSpacing.X + ImGui.CalcTextSize("Send").X + (ImGui.GetStyle().FramePadding.X * 2f);
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - send);
+
+            if (_refocus)
+            {
+                ImGui.SetKeyboardFocusHere();
+                _refocus = false;
+            }
+
+            var entered = ImGui.InputTextWithHint(
+                "##compose",
+                "Say something, or /roll 1d20",
+                ref _entry,
+                MessageLimits.Default.MaxUtf8Bytes,
+                ImGuiInputTextFlags.EnterReturnsTrue);
+
+            ImGui.SameLine();
+            if (ActionRow.Primary("Send") || entered)
+            {
+                Submit();
+                _refocus = true;
+            }
         }
 
         if (_refusal is { } refusal)
         {
-            ImGui.TextUnformatted(refusal);
+            Banner.Refusal(refusal);
         }
-
-        ImGui.EndDisabled();
     }
 
     internal void Submit()
@@ -55,7 +83,7 @@ internal sealed class MessageComposeView
             return;
         }
 
-        var draft = _coordinator.Membership.Say(_entry);
+        var draft = _coordinator.Say(_entry, DateTimeOffset.UtcNow);
 
         _refusal = draft.IsAccepted ? null : draft.Reason;
 
@@ -68,12 +96,26 @@ internal sealed class MessageComposeView
     private void Roll(string expression)
     {
         var outcome = _rolls.Evaluate(expression);
+        if (!outcome.Evaluated)
+        {
+            _refusal = outcome.Message;
+            return;
+        }
 
-        _refusal = outcome.Evaluated
-            ? outcome.Notice is { } notice ? $"{outcome.Total} — {notice}" : outcome.Total.ToString(CultureInfo.InvariantCulture)
-            : outcome.Message;
+        var now = DateTimeOffset.UtcNow;
+        var roll = SharedRoll.From(expression, outcome);
 
-        if (outcome.Evaluated)
+        if (_coordinator.InASession)
+        {
+            _refusal = _coordinator.ShareRoll(roll, now);
+        }
+        else
+        {
+            _local.Add(new LocalRoll(now.UtcTicks, roll));
+            _refusal = null;
+        }
+
+        if (_refusal is null)
         {
             _entry = string.Empty;
         }

@@ -2,6 +2,8 @@ using System;
 using Dalamud.Bindings.ImGui;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Windows.Ui;
+using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
@@ -10,29 +12,31 @@ internal sealed class SessionEndingView
 {
     private readonly SessionCoordinator _coordinator;
 
+    private readonly UiFonts _fonts;
+
     private readonly KeepOrLose _keepOrLose;
+
+    private readonly DangerAction _leave = new();
 
     private SessionLogOffer? _offer;
 
-    public SessionEndingView(SessionCoordinator coordinator, KeepOrLose keepOrLose)
+    public SessionEndingView(SessionCoordinator coordinator, UiFonts fonts, KeepOrLose keepOrLose)
     {
         _coordinator = coordinator;
+        _fonts = fonts;
         _keepOrLose = keepOrLose;
     }
 
-    public void Draw(JoinAttempt join)
+    public void DrawLeaving(JoinAttempt join)
     {
         ArgumentNullException.ThrowIfNull(join);
 
         if (_coordinator.Membership.Closing is { } closing)
         {
-            ImGui.TextUnformatted(
+            Banner.Draw(
+                _fonts,
+                BannerKind.Warning,
                 $"The DM has ended this session. It closes in {closing.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss}");
-        }
-
-        if (DrawTheOffer())
-        {
-            return;
         }
 
         if (join.Phase != JoinPhase.Admitted)
@@ -40,14 +44,15 @@ internal sealed class SessionEndingView
             return;
         }
 
-        if (ImGui.Button("Leave session"))
+        if (_leave.Draw("Leave session", "Yes, leave"))
         {
             _offer = _keepOrLose.Open();
             _coordinator.Membership.Leave();
         }
     }
 
-    private bool DrawTheOffer()
+    /// <summary>Draws the offer while it is open; returns true when it drew one.</summary>
+    public bool DrawOffer()
     {
         if (_offer is not { IsOpen: true } offer)
         {
@@ -60,17 +65,19 @@ internal sealed class SessionEndingView
             return false;
         }
 
-        ImGui.TextUnformatted(
+        using var card = Card.Begin(Palette.SurfaceRaised, Palette.Gold);
+        ImGui.TextWrapped(
             offer.HasAnything
                 ? $"Keep this session's log? {offer.LineCount} lines, {offer.Participants.Count} people. {remaining:mm\\:ss}"
                 : $"This session recorded nothing to keep. {remaining:mm\\:ss}");
 
-        if (ImGui.Button("Keep"))
+        if (ActionRow.Primary("Keep"))
         {
             SessionExport.Produce(offer, _keepOrLose.Export);
         }
 
-        if (ImGui.Button("Discard"))
+        ImGui.SameLine();
+        if (ActionRow.Secondary("Discard"))
         {
             offer.Decline();
         }

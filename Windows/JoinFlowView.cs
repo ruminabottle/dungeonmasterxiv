@@ -1,15 +1,18 @@
 using System;
-using System.Linq;
 using Dalamud.Bindings.ImGui;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Windows.Ui;
+using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>Draws the joiner's side of the session window: status, roster, leaving and request form.</summary>
+/// <summary>The joiner's side of the session window: status, banners, leaving, and the request form.</summary>
 internal sealed class JoinFlowView
 {
     private readonly SessionCoordinator _coordinator;
+
+    private readonly UiFonts _fonts;
 
     private readonly SessionEndingView _ending;
 
@@ -17,54 +20,73 @@ internal sealed class JoinFlowView
 
     public JoinFlowView(
         SessionCoordinator coordinator,
+        UiFonts fonts,
         Func<DisplayName> displayName,
         Func<RelinkMemory> relink,
         KeepOrLose keepOrLose)
     {
         _coordinator = coordinator;
+        _fonts = fonts;
         _requestForm = new JoinRequestForm(coordinator, displayName, relink);
-        _ending = new SessionEndingView(coordinator, keepOrLose);
+        _ending = new SessionEndingView(coordinator, fonts, keepOrLose);
     }
 
-    public void Draw()
+    /// <summary>True while a join is under way or admitted, so the session window shows this side.</summary>
+    public bool IsActive => _coordinator.Join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted;
+
+    /// <summary>The status line, countdowns and problems; drawn above the stream.</summary>
+    public void DrawStatus()
     {
         var join = _coordinator.Join;
-        ImGui.TextUnformatted($"Joining: {DescribeJoin(join.Phase)}");
+
+        using (_fonts.Meta.Push())
+        {
+            ImGui.TextColored(Palette.TextMuted, $"Joining: {DescribeJoin(join.Phase)}");
+        }
 
         if (join.Phase == JoinPhase.AwaitingDecision)
         {
-            ImGui.TextUnformatted($"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");
-
+            Banner.Draw(_fonts, BannerKind.Info, $"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");
         }
 
-        _ending.Draw(join);
+        DrawProblems();
+        _ending.DrawLeaving(join);
+    }
 
-        if (join.Phase == JoinPhase.Admitted && _coordinator.Roster.Count > 0)
+    /// <summary>The join form, for the Join side of the empty state. Its problems are drawn by DrawProblems.</summary>
+    public void DrawForm()
+    {
+        if (!_coordinator.InAHostedSession && (_coordinator.Join.MayRequestAgain || _coordinator.Join.Phase == JoinPhase.Denied))
         {
-            ImGui.TextUnformatted(RosterHeading.Text);
-            RosterView.Draw(_coordinator.Roster.Select(entry => (entry.DisplayName, entry.Role)));
-        }
+            if (_coordinator.Join.Phase is JoinPhase.Denied or JoinPhase.Lapsed)
+            {
+                using var meta = _fonts.Meta.Push();
+                ImGui.TextColored(Palette.TextMuted, $"Joining: {DescribeJoin(_coordinator.Join.Phase)}");
+            }
 
-        if (!InAHostedSession() && (join.MayRequestAgain || join.Phase == JoinPhase.Denied))
-        {
             _requestForm.Draw();
         }
+    }
+
+    /// <summary>The keep-or-lose offer after leaving, drawn as a card where the stream was.</summary>
+    public bool DrawOffer() => _ending.DrawOffer();
+
+    /// <summary>A failed join and undelivered messages, as banners. Never drawn inside a table cell.</summary>
+    public void DrawProblems()
+    {
+        var join = _coordinator.Join;
 
         if (join.Failure != SessionFailure.None)
         {
-            ImGui.TextWrapped(SessionFailureMessage.For(join.Failure));
+            Banner.Draw(_fonts, BannerKind.Danger, SessionFailureMessage.For(join.Failure));
         }
 
         if (_coordinator.Membership.Undelivered > 0)
         {
-            ImGui.TextWrapped(
-                $"{_coordinator.Membership.Undelivered} messages you sent were not delivered.");
+            Banner.Draw(
+                _fonts, BannerKind.Warning, $"{_coordinator.Membership.Undelivered} messages you sent were not delivered.");
         }
-
     }
-
-    private bool InAHostedSession() =>
-        _coordinator.Host.Phase is HostingPhase.Registering or HostingPhase.Hosting;
 
     private static string DescribeJoin(JoinPhase phase) => phase switch
     {

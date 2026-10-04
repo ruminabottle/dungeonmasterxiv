@@ -74,6 +74,8 @@ public sealed class Plugin : IDalamudPlugin
                 LetReturningPlayersIn: () => _hostingCampaign.LetsReturningPlayersIn));
         _sessionWindow = new SessionWindow(
             _sessionCoordinator,
+            _fonts,
+            log,
             NameWeSendAs(characterName),
             _hostingCampaign,
             () => _configurationStore.Configuration.Settings.Relink, SessionEndChoiceFor(pluginInterface.ConfigDirectory));
