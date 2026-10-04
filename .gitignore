@@ -15,3 +15,5 @@ obj/
 
 # --- macOS ---
 .DS_Store
+
+.superpowers/

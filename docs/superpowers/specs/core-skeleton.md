@@ -44,20 +44,24 @@ delivers the shell that makes that possible, not the feature windows themselves.
 - **Window geometry is Dalamud's to persist, not ours.** Position and size are not stored in the
   plugin's own config. Two sources of truth that could disagree is a defect that would fail silently,
   so it is not created.
-- Exactly two windows ship at this layer: a **main window** (empty but for a statement of what the
-  plugin is and that no session is running) and a **settings window**.
+- Two windows ship at this layer: a **rail** and a **settings window**. The rail is the main window:
+  a small, movable column of buttons, one for each window that exists, each lit while its window is
+  open and toggling it when pressed. It collapses to a single button. Feature windows add their
+  button when they ship.
+- The look and the components every window is built from are set in
+  `2026-10-04-ui-foundation-design.md`.
 - No placeholder windows for a feature that does not exist yet. An empty feature window teaches users
   the feature exists and is broken.
 
 ### R-0.4 Commands
 
-- `/dmx` toggles the main window.
+- `/dmx` toggles the rail (the main window).
 - `/dmx settings` opens the settings window.
 - Both appear in `/xlhelp` with a useful help string.
 - The settings window is also reachable from the plugin installer entry, as Dalamud expects.
 
 **Acceptance criteria**
-- **A-0.4** `/dmx` opens the main window; `/dmx settings` opens the settings window; both are listed
+- **A-0.4** `/dmx` opens the rail; `/dmx settings` opens the settings window; both are listed
   in `/xlhelp`; both windows can be moved and resized, and each opens and closes independently of the
   other. The movable-and-resizable half is R-0.3's; it is folded into this criterion rather than left
   living only in a script where a later revision could quietly drop it.
