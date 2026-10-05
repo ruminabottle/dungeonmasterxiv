@@ -29,6 +29,15 @@ public sealed class HostingCampaign
 
     public void Ended() => Current = null;
 
+    /// <summary>Clears the current campaign whenever hosting is not running, including after a failed start.</summary>
+    public void Follow(bool hosting)
+    {
+        if (!hosting)
+        {
+            Current = null;
+        }
+    }
+
     public bool LetsReturningPlayersIn => Current?.LetReturningPlayersIn == true;
 
     public void SetReturningPlayers(bool letIn)
