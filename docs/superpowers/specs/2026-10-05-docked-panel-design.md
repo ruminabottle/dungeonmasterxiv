@@ -145,3 +145,44 @@ The smoke-tests-only rule applies:
   - an empty Send showing nothing;
   - the name box clearing;
   - five disable/re-enable cycles (A-0.6).
+
+## Status and what's next
+
+Status on 2026-10-05: built and shipped in v0.1.9 (PRs #283 and #284). The final review's
+fixes are in: the keep-or-lose offer shows on Session, and the session-state banners show on both
+tabs (§2).
+
+**Next for this spec**
+
+1. **The in-game checks** listed under Verification. Nothing has been checked in game yet. Also
+   check two things by eye: whether a one-digit badge looks smaller than "9+", and whether the
+   collapsed panel's title bar is cramped by the close and pin buttons. If it is, hide the title
+   bar while collapsed and bring back a grip.
+2. **Deferred minors**, each small:
+   - The very first open, and a reload while collapsed, don't give the remembered size.
+     `FirstSize` should apply with `ImGuiCond.FirstUseEver`.
+   - The rail column is about 24px wider than its buttons.
+   - An empty Send clears an earlier refusal message.
+   - A campaign whose name was cleared under the old code offers the carried-over name once more.
+     One more clear makes it stick.
+3. **Copy:**
+   - The admission prompt's headline reads "Name (ABCD)", which puts a peer code in parentheses.
+     Parentheses are reserved for the person behind a speaker (R-2.7). This was there before this
+     spec and needs its own fix.
+   - "Reopen windows where I left them" is plural, but there is now one panel.
+
+**Elsewhere**
+
+- **The relay's TLS certificate expires on 25 November 2026**, and nothing renews it yet. Do this
+  first.
+- **Release pipeline:**
+  - download-artifact v8 first runs in the next real release (v0.1.10). A digest mismatch now
+    fails the publish.
+  - The runners are pinned to `ubuntu-24.04`. Moving to Ubuntu 26 is a deliberate change.
+- **Reconnect gap:** a message sent into a half-open link (up to 90s) can be lost. A follow-up
+  plan needs message ids and an echo from the host.
+- **Next feature spec:** private messages and roll modes.
+- **Housekeeping:**
+  - remove the unused `/home/ramon/deploy-v012` on the relay VM;
+  - drop the extra key from the ssh agent (`ssh-add -d ~/.ssh/id_ed25519`);
+  - set git `user.name` and `user.email`.
