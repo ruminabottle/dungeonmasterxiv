@@ -150,6 +150,25 @@ exactly one place a human authors it, and the tag and the assembly version are n
   generated manifest, in a forced-failure case.
 - **A-7.6** The installed plugin's version matches what the manifest advertised, checked in-game.
 
+### R-7.5 A release ships the relay it needs
+
+A plugin build is useless against a default relay that does not speak its protocol: every client is
+refused, and nothing tells the person who released it. v0.1.7 shipped exactly that way.
+
+- **A release is cut by CI on a `v*` tag**, never by hand. The pipeline is specified in
+  `2026-10-04-release-pipeline-design.md`.
+- **The default relay is deployed at the same tag before any plugin artefact is published,** and the
+  live relay is checked to accept the plugin's protocol version and refuse the one before it.
+- **A failed relay deploy or check publishes nothing:** no GitHub release, no `repo.json` change.
+- The check reads the protocol version from the source; nobody types it.
+
+**Acceptance criteria**
+- **A-7.11** A release whose relay check fails publishes no release asset and leaves `repo.json`
+  unchanged. Demonstrated by a dry run against a relay on the previous protocol version, which must
+  stop at the check.
+- **A-7.12** After a release, the default relay accepts the released plugin's protocol version. A
+  release that ends green while the relay refuses the plugin fails this.
+
 ## Out of scope
 
 - Submission to the **official** Dalamud plugin repository, and any work whose only justification is
@@ -174,9 +193,6 @@ other anti-abandonment guarantee (`product-overview` Non-goals section, "No mone
   channel. Not now.
 - Open question: `IconUrl` (R-7.3) needs an icon that does not yet exist. Flagged, not urgent, and
   not a reason to delay a testing build.
-- Open question: whether the release is cut by a CI action on tag or by a human is not specified
-  here; it affects whether R-7.2's "generated, not hand-edited" is a fact about the current process
-  or a property the process must still be built to have.
 
 ## Retired IDs
 
