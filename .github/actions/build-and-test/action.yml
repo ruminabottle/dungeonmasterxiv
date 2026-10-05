@@ -1,0 +1,45 @@
+name: Build and test
+description: Fetches Dalamud, builds the solution with warnings as errors, and runs every test with none skipped.
+
+inputs:
+  source-dir:
+    description: The checkout to build and test.
+    default: .
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: ${{ inputs.source-dir }}/global.json
+
+    - name: Fetch Dalamud's libraries
+      shell: bash
+      run: |
+        mkdir -p "$RUNNER_TEMP/dalamud"
+        curl --silent --show-error --fail --location -o "$RUNNER_TEMP/dalamud.zip" \
+          https://goatcorp.github.io/dalamud-distrib/latest.zip
+        unzip -q "$RUNNER_TEMP/dalamud.zip" -d "$RUNNER_TEMP/dalamud"
+        echo "DALAMUD_HOME=$RUNNER_TEMP/dalamud" >> "$GITHUB_ENV"
+
+    - name: Build
+      shell: bash
+      working-directory: ${{ inputs.source-dir }}
+      run: dotnet build DungeonMasterXIV.sln -warnaserror
+
+    # dotnet test prints "Passed!" for a truncated run, so every assembly must report and none may skip.
+    - name: Test
+      shell: bash
+      working-directory: ${{ inputs.source-dir }}
+      run: |
+        set -o pipefail
+        dotnet test DungeonMasterXIV.sln --no-build 2>&1 | tee "$RUNNER_TEMP/test.log"
+        passed="$(grep -c '^Passed!' "$RUNNER_TEMP/test.log" || true)"
+        if [[ "$passed" != "3" ]]; then
+          echo "::error::Expected 3 test assemblies to pass, saw $passed."
+          exit 1
+        fi
+        if grep -qE 'Skipped: +[1-9]' "$RUNNER_TEMP/test.log"; then
+          echo "::error::A test was skipped."
+          exit 1
+        fi
