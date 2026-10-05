@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using DungeonMasterXIV.Net;
 using DungeonMasterXIV.Windows.Ui;
@@ -23,6 +24,7 @@ internal sealed class StreamView
     private readonly Dictionary<long, float> _lineHeights = new();
     private readonly Dictionary<LocalRoll, float> _localHeights = new();
     private float _heightsWidth;
+    private float _heightsScale;
     private int _lastCount;
     private bool _newBelow;
     private bool _drewAfter;
@@ -57,9 +59,11 @@ internal sealed class StreamView
         }
 
         var width = ImGui.GetContentRegionAvail().X;
-        if (width != _heightsWidth)
+        var scale = ImGuiHelpers.GlobalScale;
+        if (width != _heightsWidth || scale != _heightsScale)
         {
             _heightsWidth = width;
+            _heightsScale = scale;
             _lineHeights.Clear();
             _localHeights.Clear();
         }

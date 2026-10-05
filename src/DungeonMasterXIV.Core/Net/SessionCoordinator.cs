@@ -141,7 +141,11 @@ public sealed class SessionCoordinator
     /// <summary>Every speaker's name and role seen in this client's rosters, learned each tick.</summary>
     public SpeakerBook Speakers { get; } = new();
 
-    public void StartHosting() => _hosting.Start();
+    public void StartHosting()
+    {
+        _stream.Clear();
+        _hosting.Start();
+    }
 
     public void StopHosting(DateTimeOffset endedAt)
     {

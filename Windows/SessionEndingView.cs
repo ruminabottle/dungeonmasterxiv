@@ -51,7 +51,8 @@ internal sealed class SessionEndingView
         }
     }
 
-    public bool OfferIsOpen => _offer is { IsOpen: true };
+    /// <summary>True while the offer is open; also lets it lapse, so it closes even when the stream does not draw it.</summary>
+    public bool OfferIsOpen => _offer is { IsOpen: true } offer && !offer.ElapseTo(DateTimeOffset.UtcNow.UtcTicks);
 
     /// <summary>Draws the offer while it is open; returns true when it drew one.</summary>
     public bool DrawOffer()
