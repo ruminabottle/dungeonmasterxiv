@@ -19,16 +19,25 @@ echo "Checked out $tag at $(git rev-parse --short HEAD)."
 cd deploy
 GIT_COMMIT="$(git rev-parse HEAD)" docker compose up -d --build --quiet-pull
 
+# Ready means the relay itself answers HTTPS on two polls in a row. An open port alone is not enough:
+# Docker's proxy accepts connections before the relay binds. Logs stay on the VM; they carry session codes.
+answered=0
 for _ in $(seq 1 30); do
-    if docker compose ps --status running --services | grep -qx relay \
-        && timeout 2 bash -c '</dev/tcp/127.0.0.1/443' 2>/dev/null; then
-        echo "Relay $tag is running and listening on 443."
-        docker compose logs --no-color --tail=20 relay
-        exit 0
+    code="$(curl --silent --insecure --output /dev/null --max-time 3 --write-out '%{http_code}' \
+        https://127.0.0.1/session || true)"
+    if docker compose ps --status running --services | grep -qx relay && [[ "$code" != "000" ]]; then
+        answered=$((answered + 1))
+        if (( answered >= 2 )); then
+            echo "Relay $tag is answering on 443 (HTTP $code)."
+            docker inspect -f '{{.State.Status}} revision={{index .Config.Labels "org.opencontainers.image.revision"}}' \
+                "$(docker compose ps -q relay)"
+            exit 0
+        fi
+    else
+        answered=0
     fi
     sleep 2
 done
 
-echo "Relay $tag did not start listening on 443 within 60 seconds." >&2
-docker compose logs --no-color --tail=40 relay >&2 || true
+echo "Relay $tag did not answer on 443 within about two minutes. See 'docker compose logs relay' on the VM." >&2
 exit 1

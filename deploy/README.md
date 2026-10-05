@@ -73,9 +73,16 @@ prints its `deploy` folder.
 
    ```bash
    gh secret set RELAY_DEPLOY_KEY --repo ruminabottle/dungeonmasterxiv < ~/dmx-relay-deploy
-   ssh-keygen -F 91.99.153.235 | grep -v '^#' | gh secret set RELAY_KNOWN_HOSTS --repo ruminabottle/dungeonmasterxiv
+   gh secret set RELAY_KNOWN_HOSTS --repo ruminabottle/dungeonmasterxiv \
+     --body '91.99.153.235 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHzJACBboiKNUpJai/6e95CSXcSkz6GU9F7YlpmRvEq9'
    gh secret set RELAY_DEPLOY_TARGET --repo ruminabottle/dungeonmasterxiv --body 'dmx-deploy@91.99.153.235'
    ```
+
+   That host key line is the one the spec pins. Before trusting it, check it on the VM's console:
+   `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` must print the same fingerprint as
+   `echo '91.99.153.235 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHzJACBboiKNUpJai/6e95CSXcSkz6GU9F7YlpmRvEq9' | ssh-keygen -lf -`
+   on your machine. If they differ, set the secret to the line `ssh-keyscan -t ed25519 91.99.153.235`
+   prints, after confirming its fingerprint the same way. `gh secret list` must show all three secrets.
 
    Keep `~/dmx-relay-deploy` until step 9 passes, then `rm ~/dmx-relay-deploy ~/dmx-relay-deploy.pub`.
 
@@ -89,6 +96,12 @@ prints its `deploy` folder.
 
 ## Changing the deploy script
 
-`relay-deploy.sh` in the repository is the source; the VM runs the copy in `/usr/local/bin`. After
-changing it, reinstall on the VM as root: `git -C /opt/dungeonmasterxiv pull` (or check out the tag),
-then repeat step 4.
+`relay-deploy.sh` in the repository is the source; the VM runs the copy in `/usr/local/bin`. The
+checkout is left on a detached tag after every deploy, so install the new copy from `origin/main`
+instead of pulling. On the VM, as root:
+
+```bash
+sudo -u dmx-deploy git -C /opt/dungeonmasterxiv fetch --quiet origin
+sudo -u dmx-deploy git -C /opt/dungeonmasterxiv show origin/main:deploy/relay-deploy.sh > /tmp/dmx-relay-deploy
+install -m 755 /tmp/dmx-relay-deploy /usr/local/bin/dmx-relay-deploy && rm /tmp/dmx-relay-deploy
+```

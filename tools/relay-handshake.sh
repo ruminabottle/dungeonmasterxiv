@@ -31,10 +31,15 @@ probe() {
     echo "${status:-000} ${stated:-none}"
 }
 
-read -r status _ <<<"$(probe "$version")"
+# A relay that has just restarted may not answer yet, so the accepting probe is retried before failing.
+tries="${RELAY_HANDSHAKE_TRIES:-10}"
+for attempt in $(seq 1 "$tries"); do
+    read -r status stated <<<"$(probe "$version")"
+    [[ "$status" == "101" ]] && break
+    (( attempt < tries )) && sleep 3
+done
 if [[ "$status" != "101" ]]; then
-    read -r _ stated <<<"$(probe "$version")"
-    echo "FAIL: the relay at $url did not accept protocol $version (status $status, relay says ${stated})." >&2
+    echo "FAIL: the relay at $url did not accept protocol $version after $tries tries (status $status, relay says ${stated})." >&2
     exit 1
 fi
 echo "ok: protocol $version accepted (101)."

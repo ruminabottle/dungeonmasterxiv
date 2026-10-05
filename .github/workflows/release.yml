@@ -16,8 +16,10 @@ on:
         type: boolean
         default: true
 
+# Read-only by default; only publish gets write. The jobs that build and test the tagged code never
+# hold a token that could push to main.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release
@@ -36,6 +38,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check out the tag to ship
         run: |
@@ -105,6 +108,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: The live relay speaks the tag's protocol
         run: |
@@ -116,6 +120,8 @@ jobs:
     needs: [check, deploy-relay, verify-relay]
     if: github.event_name == 'push' || !inputs.dry_run
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -144,8 +150,12 @@ jobs:
             gh release upload "$TAG" bin/Release/DungeonMasterXIV/latest.zip --clobber
             exit 0
           fi
-          subject="$(git for-each-ref "refs/tags/$TAG" --format='%(contents:subject)')"
-          body="$(git for-each-ref "refs/tags/$TAG" --format='%(contents:body)')"
+          # Only an annotated tag carries notes; a lightweight tag would report its commit's message.
+          subject=""
+          if [[ "$(git cat-file -t "refs/tags/$TAG")" == "tag" ]]; then
+            subject="$(git for-each-ref "refs/tags/$TAG" --format='%(contents:subject)')"
+            body="$(git for-each-ref "refs/tags/$TAG" --format='%(contents:body)')"
+          fi
           if [[ -n "$subject" ]]; then
             printf '%s\n' "$body" > "$RUNNER_TEMP/notes.md"
             gh release create "$TAG" bin/Release/DungeonMasterXIV/latest.zip --prerelease --verify-tag \

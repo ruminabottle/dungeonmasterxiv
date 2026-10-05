@@ -54,8 +54,9 @@ This closes distribution's open question on who cuts a release: CI, on a tag.
   - the VM checking out an already-deployed tag rebuilds the same image;
   - publishing skips an existing release that already has its asset;
   - a `repo.json` that is already identical is not committed again.
-- **Permissions.** The workflow has `contents: write` only, enough for the release and the commit.
-  Nothing else.
+- **Permissions.** Only the publish job holds `contents: write`, enough for the release and the
+  commit. Every other job is `contents: read`, and the jobs that build and test the tagged code do not
+  persist the token into their checkout.
 
 ### 2. The VM side: a deploy user, a forced command, an installed script
 
@@ -71,10 +72,12 @@ This closes distribution's open question on who cuts a release: CI, on a tag.
      `^v[0-9]+(\.[0-9]+){1,3}$`;
   2. runs `git fetch --tags --force`, then `git checkout --detach <tag>`;
   3. runs `GIT_COMMIT=$(git rev-parse HEAD) docker compose up -d --build` in `deploy/`;
-  4. waits up to 60 seconds for the relay container to be running and accepting TCP on 443;
-  5. prints the container's last 20 log lines, and exits non-zero on any failure. Compose replaces
-     the running container only after a successful build, so a failed build leaves the old relay
-     serving.
+  4. waits until the relay itself answers HTTPS on 443 on two polls in a row. An open port is not
+     enough, because Docker's proxy accepts connections before the relay binds;
+  5. prints only the container's state and image revision, and exits non-zero on any failure. The
+     relay's logs stay on the VM: they carry session codes, and the CI log is public. Compose
+     replaces the running container only after a successful build, so a failed build leaves the old
+     relay serving.
 - **The deploy key** is a new ed25519 key made only for this, never a person's key. Its public half
   is in `/home/dmx-deploy/.ssh/authorized_keys` as
   `restrict,command="/usr/local/bin/dmx-relay-deploy" ssh-ed25519 …`. That rules out a shell, port
@@ -91,6 +94,8 @@ This closes distribution's open question on who cuts a release: CI, on a tag.
   - one at version `n - 1` answers `426 Upgrade Required` with `X-DMX-Protocol-Version: <n>`.
 
   When `n` is 1, only the first check applies.
+- The accepting probe is retried up to 10 times, 3 seconds apart, because a relay that has just
+  restarted may not answer yet.
 - It sends no session traffic: an upgrade request and nothing after it. A person runs the same script
   to check a relay by hand.
 

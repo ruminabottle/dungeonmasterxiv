@@ -17,3 +17,7 @@ obj/
 .DS_Store
 
 .superpowers/
+
+# --- Relay host secrets: live next to deploy/compose.yaml on the VM, never in git ---
+deploy/relay-certificate.pfx
+deploy/.env
