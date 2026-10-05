@@ -59,6 +59,10 @@ A fourth issue is not a bug but scolds the user: pressing Send on an empty box s
   - for the host: admission request cards;
   - the failure and undelivered banners.
 - **Settings tab:** the four sections from spec §4, with the wording unchanged.
+- **Session-state banners show on both tabs.** The reconnecting banner, the closing countdown
+  ("The DM has ended this session…") and the undelivered-messages banner are not Chat-only or
+  Session-only: each draws above the stream on Chat and at the top of the Session tab, since either
+  tab can be the one a person is looking at when the state changes.
 
 ### 3. A join request reaches the DM on any tab
 

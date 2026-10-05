@@ -41,10 +41,7 @@ internal sealed class ChatTab
 
     public void Draw()
     {
-        if (_coordinator.ReconnectingLine is { } reconnecting)
-        {
-            Banner.Draw(_fonts, BannerKind.Warning, reconnecting);
-        }
+        _joinFlow.DrawSessionBanners();
 
         DrawJoinRequestNotice();
 

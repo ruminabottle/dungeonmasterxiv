@@ -34,6 +34,24 @@ internal sealed class JoinFlowView
     /// <summary>True while a join is under way or admitted, so the session window shows this side.</summary>
     public bool IsActive => _coordinator.Join.Phase is JoinPhase.Contacting or JoinPhase.AwaitingDecision or JoinPhase.Admitted;
 
+    /// <summary>The reconnecting banner, the closing countdown and the undelivered-messages banner: each a
+    /// session-state signal, so each is drawn above the stream on Chat and at the top of the Session tab.</summary>
+    public void DrawSessionBanners()
+    {
+        if (_coordinator.ReconnectingLine is { } reconnecting)
+        {
+            Banner.Draw(_fonts, BannerKind.Warning, reconnecting);
+        }
+
+        _ending.DrawClosingNotice();
+
+        if (_coordinator.Membership.Undelivered > 0)
+        {
+            Banner.Draw(
+                _fonts, BannerKind.Warning, $"{_coordinator.Membership.Undelivered} messages you sent were not delivered.");
+        }
+    }
+
     /// <summary>The status line, countdowns and problems; drawn above the stream.</summary>
     public void DrawStatus()
     {
@@ -74,7 +92,7 @@ internal sealed class JoinFlowView
     /// <summary>True while the keep-or-lose offer is open, so the Host and Join paths wait.</summary>
     public bool OfferIsOpen => _ending.OfferIsOpen;
 
-    /// <summary>A failed join and undelivered messages, as banners. Never drawn inside a table cell.</summary>
+    /// <summary>A failed join, as a banner. Never drawn inside a table cell.</summary>
     public void DrawProblems()
     {
         var join = _coordinator.Join;
@@ -82,12 +100,6 @@ internal sealed class JoinFlowView
         if (join.Failure != SessionFailure.None)
         {
             Banner.Draw(_fonts, BannerKind.Danger, SessionFailureMessage.For(join.Failure));
-        }
-
-        if (_coordinator.Membership.Undelivered > 0)
-        {
-            Banner.Draw(
-                _fonts, BannerKind.Warning, $"{_coordinator.Membership.Undelivered} messages you sent were not delivered.");
         }
     }
 

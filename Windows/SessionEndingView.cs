@@ -31,14 +31,6 @@ internal sealed class SessionEndingView
     {
         ArgumentNullException.ThrowIfNull(join);
 
-        if (_coordinator.Membership.Closing is { } closing)
-        {
-            Banner.Draw(
-                _fonts,
-                BannerKind.Warning,
-                $"The DM has ended this session. It closes in {closing.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss}");
-        }
-
         if (join.Phase != JoinPhase.Admitted)
         {
             return;
@@ -48,6 +40,18 @@ internal sealed class SessionEndingView
         {
             _offer = _keepOrLose.Open();
             _coordinator.Membership.Leave();
+        }
+    }
+
+    /// <summary>The closing countdown, shown wherever a person mid-conversation needs to see it.</summary>
+    public void DrawClosingNotice()
+    {
+        if (_coordinator.Membership.Closing is { } closing)
+        {
+            Banner.Draw(
+                _fonts,
+                BannerKind.Warning,
+                $"The DM has ended this session. It closes in {closing.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss}");
         }
     }
 
