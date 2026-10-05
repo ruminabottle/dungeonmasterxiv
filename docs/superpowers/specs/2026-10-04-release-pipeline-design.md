@@ -98,7 +98,8 @@ This closes distribution's open question on who cuts a release: CI, on a tag.
 
 - **`.github/workflows/ci.yml`** runs on pull requests and on pushes to `main`. It does the Check
   job's build and test steps, and never deploys or publishes.
-- Its `repo.json` commits trigger it too, which is harmless. They change no code, and CI passes them.
+- The release workflow's own `repo.json` commits do not trigger it: GitHub runs no workflows for a
+  push made with the workflow's token. They change no code.
 
 ### 5. Secrets
 
@@ -134,10 +135,11 @@ Repository secrets:
 The smoke-tests-only rule applies: no new C# tests.
 
 - `ci.yml` runs green on the pipeline's own PR.
-- **After the one-time VM setup:**
-  - a manual dry run of `release.yml` is recorded. With the relay still on protocol 1, it must fail
-    at Verify. That proves the guard;
-  - `tools/relay-handshake.sh` run by hand against the live relay agrees with the dry run.
+- **Before the one-time VM setup**, while the relay is still on protocol 1, a manual dry run of
+  `release.yml` is recorded. It must fail at Verify, and that proves the guard.
+  `tools/relay-handshake.sh` run by hand against the live relay agrees with it.
+- **The VM setup** ends by redeploying v0.1.7 from the new checkout, after which the handshake
+  passes.
 - **The first real release, `v0.1.8`:**
   - its run is recorded with all four jobs green;
   - the handshake passes at version 2;
