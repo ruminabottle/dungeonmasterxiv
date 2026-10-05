@@ -1,7 +1,5 @@
 using System;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Windowing;
-using Dalamud.Plugin.Services;
 using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
@@ -10,9 +8,10 @@ using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
-/// <summary>The settings window: window restore, display name, relay address, the relay policy link, and campaign and user storage.</summary>
-internal sealed class ConfigWindow : ThemedWindow
+/// <summary>The panel's Settings tab: display name, window restore, relay address, the policy link, and campaign and user storage.</summary>
+internal sealed class SettingsTab
 {
+    private readonly UiFonts _fonts;
     private readonly ConfigurationStore _configurationStore;
     private readonly Func<DisplayName> _characterName;
 
@@ -43,16 +42,15 @@ internal sealed class ConfigWindow : ThemedWindow
         "This is not a usable relay address. It must start with wss:// - or ws:// for a relay "
         + "running on this machine.";
 
-    public ConfigWindow(
+    public SettingsTab(
         ConfigurationStore configurationStore,
         Func<DisplayName> characterName,
         Func<Campaign?> currentCampaign,
         Action<Campaign> saveCampaign,
         CampaignStorageView campaignStorage,
-        UiFonts fonts,
-        IPluginLog log)
-        : base("Settings###dmx-settings", fonts, log)
+        UiFonts fonts)
     {
+        _fonts = fonts;
         _configurationStore = configurationStore;
         _characterName = characterName;
         _currentCampaign = currentCampaign;
@@ -63,24 +61,13 @@ internal sealed class ConfigWindow : ThemedWindow
             () => _configurationStore.Configuration.Settings.Relink,
             _configurationStore.Save);
         _schemaVersionLabel = $"Settings schema version {configurationStore.Configuration.Version}";
-
-        SizeConstraints = new WindowSizeConstraints
-        {
-            MinimumSize = new System.Numerics.Vector2(360, 140),
-            MaximumSize = new System.Numerics.Vector2(float.MaxValue, float.MaxValue),
-        };
-
-        IsOpen = configurationStore.Configuration.Settings.ShouldOpenOnLoad(
-            configurationStore.Configuration.Settings.SettingsWindowOpen);
     }
 
-    public void Open() => IsOpen = true;
-
-    protected override void DrawContent()
+    public void Draw()
     {
         var settings = _configurationStore.Configuration.Settings;
 
-        Section.Heading(Fonts, "You");
+        Section.Heading(_fonts, "You");
         DrawDisplayNameSetting(settings);
 
         var restore = settings.RestoreWindowState;
@@ -90,7 +77,7 @@ internal sealed class ConfigWindow : ThemedWindow
             _configurationStore.Save();
         }
 
-        Section.Heading(Fonts, "Connection");
+        Section.Heading(_fonts, "Connection");
         DrawRelaySetting(settings);
 
         if (ActionRow.Secondary("Relay and privacy"))
@@ -98,14 +85,14 @@ internal sealed class ConfigWindow : ThemedWindow
             Dalamud.Utility.Util.OpenLink(RelayPolicyUrl);
         }
 
-        Section.Heading(Fonts, "Campaigns");
+        Section.Heading(_fonts, "Campaigns");
         _campaignStorage.Draw();
 
-        Section.Heading(Fonts, "Stored data");
+        Section.Heading(_fonts, "Stored data");
         _relinkMemory.Draw();
 
         ImGui.Spacing();
-        using (Fonts.Meta.Push())
+        using (_fonts.Meta.Push())
         {
             ImGui.TextColored(Palette.TextMuted, _schemaVersionLabel);
         }
@@ -120,7 +107,7 @@ internal sealed class ConfigWindow : ThemedWindow
 
         if (NameInputCapacity.IsFull(typed))
         {
-            Banner.Draw(Fonts, BannerKind.Warning, NameFieldIsFull);
+            Banner.Draw(_fonts, BannerKind.Warning, NameFieldIsFull);
         }
 
         var effective = CampaignDisplayName.Or(campaign, characterName);
@@ -129,7 +116,7 @@ internal sealed class ConfigWindow : ThemedWindow
         var stored = CampaignDisplayName.Stored(campaign);
         if (stored.Length > 0 && !DisplayName.TryParse(stored, out _))
         {
-            Banner.Draw(Fonts, BannerKind.Warning, UnusableAliasWarning);
+            Banner.Draw(_fonts, BannerKind.Warning, UnusableAliasWarning);
         }
     }
 
@@ -149,7 +136,7 @@ internal sealed class ConfigWindow : ThemedWindow
         if (noCampaign)
         {
             ImGui.EndDisabled();
-            Banner.Draw(Fonts, BannerKind.Info, NameNeedsACampaign);
+            Banner.Draw(_fonts, BannerKind.Info, NameNeedsACampaign);
         }
 
         if (edited)
@@ -174,19 +161,7 @@ internal sealed class ConfigWindow : ThemedWindow
 
         if (!RelayEndpoint.TryParse(settings.RelayAddress, out _))
         {
-            Banner.Draw(Fonts, BannerKind.Danger, InvalidRelayWarning);
-        }
-    }
-
-    public override void OnOpen() => Remember(true);
-
-    public override void OnClose() => Remember(false);
-
-    private void Remember(bool isOpen)
-    {
-        if (_configurationStore.Configuration.Settings.RecordSettingsWindowOpen(isOpen))
-        {
-            _configurationStore.Save();
+            Banner.Draw(_fonts, BannerKind.Danger, InvalidRelayWarning);
         }
     }
 }

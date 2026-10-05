@@ -15,7 +15,10 @@ internal enum BannerKind
 /// <summary>A status note with a coloured left edge and an icon, so its kind never rests on colour alone.</summary>
 internal static class Banner
 {
-    public static void Draw(UiFonts fonts, BannerKind kind, string text)
+    public static void Draw(UiFonts fonts, BannerKind kind, string text) => Draw(fonts, kind, text, action: null);
+
+    /// <summary>A banner with one button after its text; returns true the frame the button is pressed.</summary>
+    public static bool Draw(UiFonts fonts, BannerKind kind, string text, string? action)
     {
         var (colour, icon) = kind switch
         {
@@ -32,6 +35,8 @@ internal static class Banner
 
         ImGui.SameLine();
         ImGui.TextWrapped(text);
+
+        return action is not null && ActionRow.Secondary(action);
     }
 
     /// <summary>A one-line refusal under an input, in the danger colour.</summary>
