@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DungeonMasterXIV.Chat;
+using DungeonMasterXIV.Rolls;
 
 namespace DungeonMasterXIV.Net;
 
@@ -14,12 +15,15 @@ public sealed class MemberContentReceipts
     private readonly Dictionary<string, MemberContentReceipt> _latest = new(StringComparer.Ordinal);
     private int _received;
     private int _refusedSayings;
+    private int _refusedRolls;
     private int _refusedRosters;
     private int _refusedEntries;
 
     public int Received => _received;
 
     public int RefusedSayings => _refusedSayings;
+
+    public int RefusedRolls => _refusedRolls;
 
     public int RefusedRosters => _refusedRosters;
 
@@ -52,6 +56,11 @@ public sealed class MemberContentReceipts
             }
         }
 
+        if (content.Rolling is { } roll && !roll.IsWithinBounds(RollLimits.Default))
+        {
+            _refusedRolls = Counted(_refusedRolls);
+        }
+
         if (content.Roster is not null)
         {
             _refusedRosters = Counted(_refusedRosters);
@@ -77,6 +86,7 @@ public sealed class MemberContentReceipts
         _latest.Clear();
         _received = 0;
         _refusedSayings = 0;
+        _refusedRolls = 0;
         _refusedRosters = 0;
         _refusedEntries = 0;
     }

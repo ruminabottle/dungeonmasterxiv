@@ -27,6 +27,7 @@ public static class SessionContentCodec
             Leaving = content.Leaving,
             Entries = lines,
             Saying = content.Saying,
+            Rolling = content.Rolling,
         };
     }
 

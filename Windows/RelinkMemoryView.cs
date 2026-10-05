@@ -3,11 +3,13 @@ using System.Linq;
 using Dalamud.Bindings.ImGui;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Windows.Ui;
+using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
 /// <summary>Lists the participant ids remembered per session code, each with a Forget that asks to confirm.</summary>
-public sealed class RelinkMemoryView
+internal sealed class RelinkMemoryView
 {
     private readonly Func<RelinkMemory> _relink;
     private readonly Action _persist;
@@ -49,7 +51,7 @@ public sealed class RelinkMemoryView
                 continue;
             }
 
-            if (ImGui.Button($"{RelinkDisclosure.BeginForgetting}##{entry.SessionCode}"))
+            if (ActionRow.Secondary($"{RelinkDisclosure.BeginForgetting}##{entry.SessionCode}"))
             {
                 _confirming = entry.SessionCode;
             }
@@ -60,14 +62,14 @@ public sealed class RelinkMemoryView
     {
         ImGui.TextWrapped(RelinkDisclosure.BeforeForgetting(sessionCode));
 
-        if (ImGui.Button($"{RelinkDisclosure.KeepIt}##keep-{sessionCode}"))
+        if (ActionRow.Secondary($"{RelinkDisclosure.KeepIt}##keep-{sessionCode}"))
         {
             _confirming = string.Empty;
         }
 
         ImGui.SameLine();
 
-        if (!ImGui.Button($"{RelinkDisclosure.ConfirmForget}##forget-{sessionCode}"))
+        if (!ActionRow.Edged($"{RelinkDisclosure.ConfirmForget}##forget-{sessionCode}", Palette.Danger, Palette.Danger))
         {
             return;
         }

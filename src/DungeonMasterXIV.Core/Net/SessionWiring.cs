@@ -33,11 +33,9 @@ internal sealed class SessionWiring
             () => Interruption?.Grace.IsRunning == true,
             () => Joiner?.SessionKey,
             lastSequence);
-        Roster = new RosterBroadcast(
-            Link,
-            Admissions.Audience,
-            HostIdentity.ForHost(() => HostKeys, () => Host.Code, capabilities.HostNameSource, Admissions.PeerCodeFor),
-            log);
+        HostIdentity = HostIdentity.ForHost(
+            () => HostKeys, () => Host.Code, capabilities.HostNameSource, Admissions.PeerCodeFor);
+        Roster = new RosterBroadcast(Link, Admissions.Audience, HostIdentity, log);
         Resources = new SessionResources(
             Admissions,
             Inbox,
@@ -49,6 +47,7 @@ internal sealed class SessionWiring
         Membership = new SessionMembership(
             Link, Joiner, () => Join.Code, () => !Link.IsReadyToSend || Interruption.Reconnecting);
         Hosting = new HostRunner(Host, Resources, Handshake, newKeys, SynchroniseTransport);
+        Stream = new HostStream(Resources.Recording, Roster);
     }
 
     internal HostSession Host { get; } = new();
@@ -77,7 +76,11 @@ internal sealed class SessionWiring
 
     internal OutboundHandshake Handshake { get; }
 
+    internal HostIdentity HostIdentity { get; }
+
     internal RosterBroadcast Roster { get; }
+
+    internal HostStream Stream { get; }
 
     internal SessionResources Resources { get; }
 

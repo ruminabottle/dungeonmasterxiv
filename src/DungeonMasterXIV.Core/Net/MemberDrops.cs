@@ -10,6 +10,8 @@ public sealed class MemberDrops
 
     public int Count => _dropped.Count;
 
+    public IEnumerable<KeyValuePair<PeerCode, DateTimeOffset>> Entries => _dropped;
+
     public void Record(PeerCode peerCode, DateTimeOffset when) => _dropped[peerCode] = when;
 
     public bool Forget(PeerCode peerCode) => _dropped.Remove(peerCode);

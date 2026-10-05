@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography;
 using System.Collections.Generic;
 using System.Linq;
+using DungeonMasterXIV.Chat;
 
 namespace DungeonMasterXIV.Net;
 
@@ -59,6 +60,68 @@ public sealed class SessionCoordinator
     public MemberContentReceipts MemberContent => _resources.MemberContent;
     public IReadOnlyList<StreamEntry> Recorded => _resources.Recording.Entries;
 
+    /// <summary>How many entries this client's session stream holds.</summary>
+    public int StreamCount => InAHostedSession ? Recorded.Count : _stream.Count;
+
+    /// <summary>The newest <paramref name="count"/> entries of this client's stream, oldest first, without copying the rest.</summary>
+    public IReadOnlyList<StreamLine> LatestStreamLines(int count) =>
+        InAHostedSession
+            ? Recorded.Skip(Math.Max(0, Recorded.Count - count)).Select(StreamLine.From).ToList()
+            : _stream.Latest(count);
+
+    /// <summary>Who is in the session now: the host's own list, or the roster a member was sent.</summary>
+    public IReadOnlyList<RosterEntry> CurrentRoster => InAHostedSession ? _roster.Current() : Roster;
+
+    /// <summary>True while this client can send to a session, as its host or as an admitted member.</summary>
+    public bool InASession => InAHostedSession || Join.Phase == JoinPhase.Admitted;
+
+    /// <summary>Sends a message to the session: stamped directly when hosting, sealed to the host otherwise.</summary>
+    public MessageDraft Say(string? text, DateTimeOffset now)
+    {
+        if (!InAHostedSession)
+        {
+            return Membership.Say(text);
+        }
+
+        var draft = MessageDraft.Compose(text, MessageLimits.Default);
+        if (!draft.IsAccepted)
+        {
+            return draft;
+        }
+
+        if (_parts.HostIdentity.OwnPeerCode() is not { } own)
+        {
+            return new MessageDraft(null, MessageFault.NotInASession, "This client is not in a session.");
+        }
+
+        _parts.Stream.Announce(StreamEventKind.Message, own, draft.Text!, now);
+        return draft;
+    }
+
+    /// <summary>Shares a roll this client made; returns why it was not shared, or null.</summary>
+    public string? ShareRoll(SharedRoll roll, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(roll);
+
+        if (!InAHostedSession)
+        {
+            return Membership.ShareRoll(roll);
+        }
+
+        if (roll.RefusalToShare() is { } refusal)
+        {
+            return refusal;
+        }
+
+        if (_parts.HostIdentity.OwnPeerCode() is not { } own)
+        {
+            return "This client is not in a session.";
+        }
+
+        _parts.Stream.Announce(StreamEventKind.Roll, own, roll.Summary(), now, roll);
+        return null;
+    }
+
     public HostSession Host => _parts.Host;
 
     public JoinAttempt Join => _parts.Join;
@@ -75,7 +138,14 @@ public sealed class SessionCoordinator
 
     public IReadOnlyList<PendingAdmission> JustLapsed => _admissions.JustLapsed;
 
-    public void StartHosting() => _hosting.Start();
+    /// <summary>Every speaker's name and role seen in this client's rosters, learned each tick.</summary>
+    public SpeakerBook Speakers { get; } = new();
+
+    public void StartHosting()
+    {
+        _stream.Clear();
+        _hosting.Start();
+    }
 
     public void StopHosting(DateTimeOffset endedAt)
     {
@@ -109,6 +179,7 @@ public sealed class SessionCoordinator
         var peer = _admissions.Admit(peerCode, role, asClaimed);
 
         _roster.Publish();
+        _parts.Stream.Announce(StreamEventKind.Joined, peerCode, string.Empty, DateTimeOffset.UtcNow);
         return peer;
     }
 
@@ -120,12 +191,18 @@ public sealed class SessionCoordinator
 
     public void Tick(TimeSpan sinceLastTick, DateTimeOffset now)
     {
+        TickSession(sinceLastTick, now);
+        Speakers.Learn(CurrentRoster);
+    }
+
+    private void TickSession(TimeSpan sinceLastTick, DateTimeOffset now)
+    {
         _interruption.ApplyReportedFailure();
         Membership.SessionKey = _parts.Inbox.Drain(
             Join,
             Membership.Keys,
             Host,
-            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
+            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, _parts.Stream, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
                 .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;
@@ -138,6 +215,7 @@ public sealed class SessionCoordinator
         }
 
         _admissions.ExpireLapsed(now);
+        AnnounceLastingDrops(now);
         Membership.ExpireIfTheSessionHasClosed(now);
 
         if (_interruption.Tick(sinceLastTick))
@@ -170,6 +248,19 @@ public sealed class SessionCoordinator
         if (_timeouts.Advance(sinceLastTick, Host, Join, _handshake.RegistrationWasSent))
         {
             SynchroniseTransport();
+        }
+    }
+
+    private void AnnounceLastingDrops(DateTimeOffset now)
+    {
+        if (!InAHostedSession)
+        {
+            return;
+        }
+
+        foreach (var peer in _admissions.DropLines.DueAt(now))
+        {
+            _parts.Stream.Announce(StreamEventKind.Dropped, peer, string.Empty, now);
         }
     }
 

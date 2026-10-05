@@ -2,6 +2,7 @@ using System;
 using Dalamud.Bindings.ImGui;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
+using DungeonMasterXIV.Windows.Ui.Components;
 
 namespace DungeonMasterXIV.Windows;
 
@@ -51,7 +52,7 @@ internal sealed class JoinRequestForm
             : $"That name cannot be sent, so they will see \"{DisplayName.Unstated}\". Letters, "
               + "digits, spaces, apostrophes and hyphens work.");
 
-        if (ImGui.Button("Request to join") && JoinFlowCode.Accepts(_codeEntry, out var code))
+        if (ActionRow.Primary("Request to join") && JoinFlowCode.Accepts(_codeEntry, out var code))
         {
             _coordinator.RequestJoin(code, willSend, _relink().IdFor(code));
         }

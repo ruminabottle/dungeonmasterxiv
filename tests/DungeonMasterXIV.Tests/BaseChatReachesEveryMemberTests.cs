@@ -20,7 +20,8 @@ public sealed class BaseChatReachesEveryMemberTests
         transport.Deliver(SealedBy(speaker, host, new SessionContent { Saying = "the door is trapped" }));
         host.Tick(TimeSpan.Zero, Now);
 
-        var line = Assert.Single(StampedLinesFor(listener, host, transport));
+        var line = Assert.Single(
+            StampedLinesFor(listener, host, transport), sent => sent.Kind == StreamEventKind.Message);
 
         Assert.Equal("the door is trapped", line.Text);
         Assert.Equal(speakerCode.Value, line.Peer);

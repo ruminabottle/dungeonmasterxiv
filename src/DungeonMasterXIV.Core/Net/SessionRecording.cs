@@ -17,10 +17,11 @@ internal sealed class SessionRecording
     public bool RecordAsHost(StreamEventKind kind, PeerCode peer, string text, DateTimeOffset at) =>
         StampAsHost(kind, peer, text, at) is not null;
 
-    public StreamEntry? StampAsHost(StreamEventKind kind, PeerCode peer, string text, DateTimeOffset at)
+    public StreamEntry? StampAsHost(
+        StreamEventKind kind, PeerCode peer, string text, DateTimeOffset at, SharedRoll? roll = null)
     {
         _at = at;
-        var entry = new StreamEntry(_sequencer.Next(), kind, peer, text);
+        var entry = new StreamEntry(_sequencer.Next(), kind, peer, text, roll);
         return Record(entry) ? entry : null;
     }
 

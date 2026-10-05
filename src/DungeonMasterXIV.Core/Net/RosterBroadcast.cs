@@ -13,6 +13,8 @@ internal sealed class RosterBroadcast
     private readonly HostIdentity _host;
     private readonly ISessionTransportLog _log;
 
+    private const int CatchUpBatchBytes = 24 * 1024;
+
     public RosterBroadcast(
         RelayLink link,
         SessionAudience audience,
@@ -32,21 +34,27 @@ internal sealed class RosterBroadcast
             return;
         }
 
-        var roster = _audience.Recipients
-            .Select(peer => new RosterEntry(peer.PeerCode.Value, peer.DisplayName.Value, peer.Role))
-            .ToList();
-
-        if (roster.Count == 0)
+        if (_audience.Recipients.Count == 0)
         {
             return;
         }
+
+        SealToEveryRecipient(new SessionContent { Roster = Current() }, keys, code);
+    }
+
+    /// <summary>The host first, as Dungeon Master, then every admitted member.</summary>
+    public List<RosterEntry> Current()
+    {
+        var roster = _audience.Recipients
+            .Select(peer => new RosterEntry(peer.PeerCode.Value, peer.DisplayName.Value, peer.Role))
+            .ToList();
 
         if (_host.OwnPeerCode() is { } ownCode)
         {
             roster.Insert(0, new RosterEntry(ownCode.Value, _host.Name().Value, SessionRole.DungeonMaster));
         }
 
-        SealToEveryRecipient(new SessionContent { Roster = roster }, keys, code);
+        return roster;
     }
 
     public void PublishClosing(SessionClosing closing)
@@ -80,8 +88,37 @@ internal sealed class RosterBroadcast
             return;
         }
 
-        var plaintext = SessionContentCodec.Encode(new SessionContent { Entries = lines });
-        SealTo(peer, plaintext, WireEnvelope.AssociatedDataFor(code, WireMessageType.SessionPayload), keys, code);
+        var associatedData = WireEnvelope.AssociatedDataFor(code, WireMessageType.SessionPayload);
+        foreach (var batch in Batches(lines))
+        {
+            SealTo(peer, SessionContentCodec.Encode(new SessionContent { Entries = batch }), associatedData, keys, code);
+        }
+    }
+
+    /// <summary>Splits catch-up lines so no sealed frame nears the relay's 64 KiB message limit.</summary>
+    private static IEnumerable<List<StreamLine>> Batches(IReadOnlyList<StreamLine> lines)
+    {
+        var batch = new List<StreamLine>();
+        var size = 0;
+
+        foreach (var line in lines)
+        {
+            var lineSize = SessionContentCodec.Encode(new SessionContent { Entries = new[] { line } }).Length;
+            if (batch.Count > 0 && size + lineSize > CatchUpBatchBytes)
+            {
+                yield return batch;
+                batch = new List<StreamLine>();
+                size = 0;
+            }
+
+            batch.Add(line);
+            size += lineSize;
+        }
+
+        if (batch.Count > 0)
+        {
+            yield return batch;
+        }
     }
 
     private void SealToEveryRecipient(SessionContent content, SessionKeyExchange keys, SessionCode code)
