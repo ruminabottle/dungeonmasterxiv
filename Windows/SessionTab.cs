@@ -46,6 +46,8 @@ internal sealed class SessionTab
 
     public void Draw()
     {
+        _joinFlow.DrawSessionBanners();
+
         if (_coordinator.InAHostedSession)
         {
             DrawHosting();
@@ -67,6 +69,7 @@ internal sealed class SessionTab
     {
         if (_joinFlow.OfferIsOpen)
         {
+            _joinFlow.DrawOffer();
             return;
         }
 
