@@ -33,9 +33,9 @@ jobs:
   # The pipeline's own files come from this workflow's commit; the code it ships comes from the tag,
   # checked out outside the workspace so the plugin's source glob never sees a second copy.
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -70,7 +70,7 @@ jobs:
           --asset bin/Release/DungeonMasterXIV/latest.zip
           --tag "$TAG" --dry-run
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: plugin
           path: |
@@ -82,7 +82,7 @@ jobs:
   deploy-relay:
     needs: check
     if: github.event_name == 'push' || !inputs.dry_run
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Deploy the relay at the tag
         env:
@@ -103,9 +103,9 @@ jobs:
     if: >-
       always() && needs.check.result == 'success'
       && (needs.deploy-relay.result == 'success' || needs.deploy-relay.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -119,20 +119,20 @@ jobs:
   publish:
     needs: [check, deploy-relay, verify-relay]
     if: github.event_name == 'push' || !inputs.dry_run
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: plugin
           path: bin/Release
