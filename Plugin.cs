@@ -68,7 +68,7 @@ public sealed class Plugin : IDalamudPlugin
                     : null,
                 ResolveRelink: claimed => CampaignRelink.Resolve(_hostingCampaign.Current, claimed),
                 LetReturningPlayersIn: () => _hostingCampaign.LetsReturningPlayersIn));
-        _panel = new PanelWindow(_configurationStore, _sessionCoordinator, _fonts, log);
+        _panel = new PanelWindow(_configurationStore, _sessionCoordinator, _hostingCampaign, _fonts, log);
         var joinFlow = new JoinFlowView(
             _sessionCoordinator,
             _fonts,

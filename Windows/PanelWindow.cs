@@ -5,6 +5,7 @@ using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using DungeonMasterXIV.Campaigns;
 using DungeonMasterXIV.Data;
 using DungeonMasterXIV.Net;
 using DungeonMasterXIV.Windows.Ui;
@@ -15,12 +16,15 @@ namespace DungeonMasterXIV.Windows;
 /// <summary>The plugin's one window: a rail on its left edge whose buttons switch the tab shown beside it.</summary>
 internal sealed class PanelWindow : ThemedWindow
 {
+    private const string BaseTitle = "Dungeon Master XIV";
+
     private static readonly Vector2 MinimumSize = new(480, 360);
 
     private static readonly Vector2 FirstSize = new(640, 560);
 
     private readonly ConfigurationStore _configurationStore;
     private readonly SessionCoordinator _coordinator;
+    private readonly HostingCampaign _hosting;
     private ChatTab? _chat;
     private SessionTab? _session;
     private SettingsTab? _settings;
@@ -28,11 +32,13 @@ internal sealed class PanelWindow : ThemedWindow
     private Vector2 _expandedSize = FirstSize;
     private bool _restoreSize;
 
-    public PanelWindow(ConfigurationStore configurationStore, SessionCoordinator coordinator, UiFonts fonts, IPluginLog log)
-        : base("Dungeon Master XIV###dmx-main", fonts, log)
+    public PanelWindow(
+        ConfigurationStore configurationStore, SessionCoordinator coordinator, HostingCampaign hosting, UiFonts fonts, IPluginLog log)
+        : base($"{BaseTitle}###dmx-main", fonts, log)
     {
         _configurationStore = configurationStore;
         _coordinator = coordinator;
+        _hosting = hosting;
         RespectCloseHotkey = false;
 
         IsOpen = Settings.ShouldOpenOnLoad(Settings.MainWindowOpen);
@@ -66,6 +72,10 @@ internal sealed class PanelWindow : ThemedWindow
 
     public override void PreDraw()
     {
+        WindowName = _coordinator.InAHostedSession && _hosting.Current is { } campaign
+            ? $"{BaseTitle} · {CampaignName.For(campaign)}###dmx-main"
+            : $"{BaseTitle}###dmx-main";
+
         var baseFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoCollapse;
         if (Settings.PanelCollapsed)
         {
@@ -100,7 +110,8 @@ internal sealed class PanelWindow : ThemedWindow
         _expandedSize = ImGui.GetWindowSize() / ImGuiHelpers.GlobalScale;
 
         var railWidth = RailButton.Size + (ImGui.GetStyle().WindowPadding.X * 2f);
-        using (var rail = ImRaii.Child("##rail", new Vector2(railWidth, 0f), false, ImGuiWindowFlags.NoScrollbar))
+        using (var rail = ImRaii.Child(
+            "##rail", new Vector2(railWidth, 0f), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
         {
             if (rail.Success)
             {
@@ -146,7 +157,7 @@ internal sealed class PanelWindow : ThemedWindow
 
         if (!collapsed)
         {
-            var bottom = (RailButton.Size * 2f) + ImGui.GetStyle().ItemSpacing.Y;
+            var bottom = (2f * RailButton.Size) + (2f * ImGui.GetStyle().ItemSpacing.Y);
             var space = ImGui.GetContentRegionAvail().Y - bottom;
             if (space > 0f)
             {
