@@ -25,13 +25,15 @@ prints its `deploy` folder.
    chown -R dmx-deploy: /opt/dungeonmasterxiv
    ```
 
-3. **Move the certificate** (and its password file, if there is one) next to the new `compose.yaml`,
-   keeping their modes:
+3. **Copy the certificate** (and its password file, if there is one) next to the new `compose.yaml`.
+   `cp -p` keeps the owner and mode. The certificate must stay owned by the container's user
+   (uid 1654, the image's `$APP_UID`) with mode `600`, or the relay cannot read it. Do not `chown`
+   it to `dmx-deploy`.
 
    ```bash
    cp -p <old checkout>/deploy/relay-certificate.pfx /opt/dungeonmasterxiv/deploy/
    [ -f <old checkout>/deploy/.env ] && cp -p <old checkout>/deploy/.env /opt/dungeonmasterxiv/deploy/
-   chown dmx-deploy: /opt/dungeonmasterxiv/deploy/relay-certificate.pfx /opt/dungeonmasterxiv/deploy/.env 2>/dev/null || true
+   ls -l /opt/dungeonmasterxiv/deploy/relay-certificate.pfx   # -rw------- 1 1654 1654 …
    ```
 
 4. **Install the deploy script.** The installed copy is what runs, so a tag cannot change it:
