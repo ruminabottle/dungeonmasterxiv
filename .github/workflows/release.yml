@@ -1,0 +1,176 @@
+# One v* tag: check everything, deploy the default relay at that tag, prove it speaks the plugin's
+# protocol, then publish the plugin. A failure at any step publishes nothing (distribution R-7.5).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to run, for example v0.1.8
+        required: true
+        type: string
+      dry_run:
+        description: Check and verify only; deploy and publish nothing
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+  RELAY_URL: wss://relay.ruminabottle.com/session
+
+jobs:
+  # The pipeline's own files come from this workflow's commit; the code it ships comes from the tag,
+  # checked out outside the workspace so the plugin's source glob never sees a second copy.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out the tag to ship
+        run: |
+          git fetch --quiet --tags --force origin
+          git worktree add --detach "$RUNNER_TEMP/release" "refs/tags/$TAG"
+          echo "SRC=$RUNNER_TEMP/release" >> "$GITHUB_ENV"
+
+      - name: The tag is on main
+        run: |
+          if ! git merge-base --is-ancestor "refs/tags/$TAG" origin/main; then
+            echo "::error::$TAG is not on main."
+            exit 1
+          fi
+
+      - uses: ./.github/actions/build-and-test
+        with:
+          source-dir: ${{ env.SRC }}
+
+      - name: Build the plugin for the tag
+        working-directory: ${{ env.SRC }}
+        run: dotnet build DungeonMasterXIV.csproj -c Release -p:ReleaseTag="$TAG" -warnaserror
+
+      - name: Dry-run the release tool
+        working-directory: ${{ env.SRC }}
+        run: >-
+          dotnet run --project tools/DungeonMasterXIV.Release --
+          --assembly bin/Release/DungeonMasterXIV.dll
+          --plugin-manifest bin/Release/DungeonMasterXIV/DungeonMasterXIV.json
+          --asset bin/Release/DungeonMasterXIV/latest.zip
+          --tag "$TAG" --dry-run
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin
+          path: |
+            ${{ env.SRC }}/bin/Release/DungeonMasterXIV.dll
+            ${{ env.SRC }}/bin/Release/DungeonMasterXIV/DungeonMasterXIV.json
+            ${{ env.SRC }}/bin/Release/DungeonMasterXIV/latest.zip
+          if-no-files-found: error
+
+  deploy-relay:
+    needs: check
+    if: github.event_name == 'push' || !inputs.dry_run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy the relay at the tag
+        env:
+          DEPLOY_KEY: ${{ secrets.RELAY_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.RELAY_KNOWN_HOSTS }}
+          TARGET: ${{ secrets.RELAY_DEPLOY_TARGET }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/relay_deploy
+          chmod 600 ~/.ssh/relay_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/relay_known_hosts
+          ssh -i ~/.ssh/relay_deploy -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/relay_known_hosts" \
+            "$TARGET" "$TAG"
+
+  verify-relay:
+    needs: [check, deploy-relay]
+    if: >-
+      always() && needs.check.result == 'success'
+      && (needs.deploy-relay.result == 'success' || needs.deploy-relay.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: The live relay speaks the tag's protocol
+        run: |
+          git fetch --quiet --tags --force origin
+          git show "refs/tags/$TAG:src/DungeonMasterXIV.Core/Net/ProtocolVersion.cs" > "$RUNNER_TEMP/ProtocolVersion.cs"
+          tools/relay-handshake.sh "$RELAY_URL" "$RUNNER_TEMP/ProtocolVersion.cs"
+
+  publish:
+    needs: [check, deploy-relay, verify-relay]
+    if: github.event_name == 'push' || !inputs.dry_run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin
+          path: bin/Release
+
+      - name: Publish the GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --quiet --tags --force origin
+          if gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx latest.zip; then
+            echo "$TAG is already released with latest.zip."
+            exit 0
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" bin/Release/DungeonMasterXIV/latest.zip --clobber
+            exit 0
+          fi
+          subject="$(git for-each-ref "refs/tags/$TAG" --format='%(contents:subject)')"
+          body="$(git for-each-ref "refs/tags/$TAG" --format='%(contents:body)')"
+          if [[ -n "$subject" ]]; then
+            printf '%s\n' "$body" > "$RUNNER_TEMP/notes.md"
+            gh release create "$TAG" bin/Release/DungeonMasterXIV/latest.zip --prerelease --verify-tag \
+              --title "$subject" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "$TAG" bin/Release/DungeonMasterXIV/latest.zip --prerelease --verify-tag \
+              --title "$TAG" --generate-notes
+          fi
+
+      - name: Regenerate repo.json
+        run: >-
+          dotnet run --project tools/DungeonMasterXIV.Release --
+          --assembly bin/Release/DungeonMasterXIV.dll
+          --plugin-manifest bin/Release/DungeonMasterXIV/DungeonMasterXIV.json
+          --asset bin/Release/DungeonMasterXIV/latest.zip
+          --tag "$TAG" --out repo.json
+
+      - name: Commit repo.json to main
+        run: |
+          git add repo.json
+          if git diff --cached --quiet; then
+            echo "repo.json already describes $TAG."
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit --quiet -m "chore(release): regenerate repo.json for $TAG"
+          git push origin HEAD:main
