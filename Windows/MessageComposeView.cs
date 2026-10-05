@@ -85,6 +85,12 @@ internal sealed class MessageComposeView
 
     internal void Submit()
     {
+        if (string.IsNullOrWhiteSpace(_entry))
+        {
+            _refusal = null;
+            return;
+        }
+
         if (RollCommand.TryRead(_entry, out var expression))
         {
             Roll(expression);

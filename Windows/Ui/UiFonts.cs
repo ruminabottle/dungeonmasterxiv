@@ -14,9 +14,9 @@ internal sealed class UiFonts : IDisposable
     {
         Body = ui.FontAtlas.NewGameFontHandle(new GameFontStyle(GameFontFamilyAndSize.Axis14));
         Meta = ui.FontAtlas.NewGameFontHandle(new GameFontStyle(GameFontFamilyAndSize.Axis12));
-        Title = Bundled(ui, Path.Combine(fontDirectory, "Cinzel-Regular.ttf"), 15f, log);
-        Code = Bundled(ui, Path.Combine(fontDirectory, "Cinzel-Regular.ttf"), 20f, log);
-        Total = Bundled(ui, Path.Combine(fontDirectory, "Cinzel-Bold.ttf"), 24f, log);
+        Title = Bundled(ui, Path.Combine(fontDirectory, "Cinzel-Regular.ttf"), 18f, log);
+        Code = Bundled(ui, Path.Combine(fontDirectory, "Cinzel-Regular.ttf"), 24f, log);
+        Total = Bundled(ui, Path.Combine(fontDirectory, "Cinzel-Bold.ttf"), 28f, log);
         Voice = Bundled(ui, Path.Combine(fontDirectory, "Spectral-Regular.ttf"), 16f, log);
         Icon = ui.IconFontHandle;
     }
