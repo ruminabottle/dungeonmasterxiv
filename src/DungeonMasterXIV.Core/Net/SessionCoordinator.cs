@@ -144,6 +144,7 @@ public sealed class SessionCoordinator
     public void StartHosting()
     {
         _stream.Clear();
+        Membership.Undelivered = 0;
         _hosting.Start();
     }
 
