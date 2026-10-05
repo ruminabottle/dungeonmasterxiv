@@ -44,11 +44,6 @@ internal sealed class JoinFlowView
             ImGui.TextColored(Palette.TextMuted, $"Joining: {DescribeJoin(join.Phase)}");
         }
 
-        if (_coordinator.ReconnectingLine is { } reconnecting)
-        {
-            Banner.Draw(_fonts, BannerKind.Warning, reconnecting);
-        }
-
         if (join.Phase == JoinPhase.AwaitingDecision)
         {
             Banner.Draw(_fonts, BannerKind.Info, $"The DM has {join.RemainingAt(DateTimeOffset.UtcNow):mm\\:ss} left to answer");

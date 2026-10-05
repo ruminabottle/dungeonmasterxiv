@@ -2,21 +2,28 @@ using System;
 
 namespace DungeonMasterXIV.Data;
 
-/// <summary>The plugin's saved settings: window state, relay address, interruption window, relink memory, alias.</summary>
+/// <summary>The tabs the plugin's panel switches between.</summary>
+public enum PanelTab
+{
+    Chat = 0,
+
+    Session = 1,
+
+    Settings = 2,
+}
+
+/// <summary>The plugin's saved settings: panel state, relay address, interruption window, relink memory, alias.</summary>
 public sealed class PluginSettings
 {
     public const int CurrentSchemaVersion = 1;
 
     public bool MainWindowOpen { get; set; }
 
-    public bool SettingsWindowOpen { get; set; }
-
     public bool RestoreWindowState { get; set; } = true;
 
-    public bool RailCollapsed { get; set; }
+    public bool PanelCollapsed { get; set; }
 
-    /// <summary>False until the rail has opened once and put the session window beside it.</summary>
-    public bool RailIntroduced { get; set; }
+    public PanelTab SelectedTab { get; set; } = PanelTab.Session;
 
     public static bool RequiresWriteOnLoad(int? versionOnDisk) => versionOnDisk is null;
 
@@ -57,25 +64,25 @@ public sealed class PluginSettings
         return true;
     }
 
-    public bool RecordRailCollapsed(bool collapsed)
+    public bool RecordPanelCollapsed(bool collapsed)
     {
-        if (RailCollapsed == collapsed)
+        if (PanelCollapsed == collapsed)
         {
             return false;
         }
 
-        RailCollapsed = collapsed;
+        PanelCollapsed = collapsed;
         return true;
     }
 
-    public bool RecordSettingsWindowOpen(bool isOpen)
+    public bool RecordSelectedTab(PanelTab tab)
     {
-        if (SettingsWindowOpen == isOpen)
+        if (SelectedTab == tab)
         {
             return false;
         }
 
-        SettingsWindowOpen = isOpen;
+        SelectedTab = tab;
         return true;
     }
 }
