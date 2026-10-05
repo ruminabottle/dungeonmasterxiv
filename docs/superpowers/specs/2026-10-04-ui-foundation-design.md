@@ -126,6 +126,10 @@ instead of designing their own:
 
 ### 4. Windows
 
+> **Superseded by `2026-10-05-docked-panel-design.md`:** the rail is now attached to one panel and
+> switches its tabs (Chat, Session, Settings). The content each window held below moves into those
+> tabs; the components and behaviour stand.
+
 **The rail replaces the main window.**
 
 - A small borderless window: a column of `RailButton`s and a grip to drag it by. Dalamud keeps its
