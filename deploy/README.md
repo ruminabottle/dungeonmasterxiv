@@ -157,7 +157,8 @@ certificate at startup):
    ```
 
    The connected client must stay connected, and `tools/relay-handshake.sh wss://relay.ruminabottle.com/session`
-   must still pass.
+   must still pass. Use a real client: the relay closes a connection that does not answer its pings after
+   about two minutes, so a bare `curl` upgrade drops then whether or not a renewal happened.
 
 4. **Turn on the timer:**
 
