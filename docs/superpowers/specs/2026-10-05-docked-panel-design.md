@@ -173,8 +173,9 @@ tabs (§2).
 
 **Elsewhere**
 
-- **The relay's TLS certificate expires on 25 November 2026**, and nothing renews it yet. Do this
-  first.
+- **The relay's TLS certificate expires on 25 November 2026.** Renewal is built (daily certbot run,
+  reloaded without a restart; `deploy/README.md`, "Certificate renewal"). It goes live after v0.1.10
+  ships and the setup steps there are run on the VM, before 26 October.
 - **Release pipeline:**
   - download-artifact v8 first runs in the next real release (v0.1.10). A digest mismatch now
     fails the publish.

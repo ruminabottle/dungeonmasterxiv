@@ -1,0 +1,12 @@
+# Runs the renewal at 10:00 UTC, the quietest hour for players, because a renewal restarts the relay.
+# Certbot only renews inside the last 30 days, so a restart happens about once every 60 days.
+# Not Persistent: a run missed while the VM was off waits for the next 10:00 instead of firing at boot.
+[Unit]
+Description=Renew the DungeonMasterXIV relay certificate daily at 10:00 UTC
+
+[Timer]
+OnCalendar=*-*-* 10:00:00 UTC
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

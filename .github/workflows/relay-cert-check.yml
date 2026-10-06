@@ -1,0 +1,34 @@
+# Checks the default relay's certificate from outside, weekly. The VM renews it at 30 days left
+# (deploy/relay-renew-cert.sh), so this fails only when renewal is broken, and GitHub emails the failure.
+name: Relay certificate
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  RELAY_HOST: relay.ruminabottle.com
+  MIN_DAYS: 21
+
+jobs:
+  expiry:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: The certificate has at least ${{ env.MIN_DAYS }} days left
+        run: |
+          cert="$(openssl s_client -connect "$RELAY_HOST:443" -servername "$RELAY_HOST" </dev/null 2>/dev/null \
+            | openssl x509 2>/dev/null || true)"
+          if [[ -z "$cert" ]]; then
+            echo "::error::$RELAY_HOST did not present a certificate on 443."
+            exit 1
+          fi
+          end="$(openssl x509 -noout -enddate <<<"$cert" | cut -d= -f2)"
+          days=$(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 ))
+          echo "$RELAY_HOST: expires $end, $days days left."
+          if ! openssl x509 -noout -checkend $(( MIN_DAYS * 86400 )) <<<"$cert" >/dev/null; then
+            echo "::error::The relay certificate expires in $days days. Renewal on the VM is not working: see deploy/README.md, 'Certificate renewal'."
+            exit 1
+          fi

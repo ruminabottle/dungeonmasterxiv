@@ -107,3 +107,64 @@ sudo -u dmx-deploy git -C /opt/dungeonmasterxiv fetch --quiet origin
 sudo -u dmx-deploy git -C /opt/dungeonmasterxiv show origin/main:deploy/relay-deploy.sh > /tmp/dmx-relay-deploy
 install -m 755 /tmp/dmx-relay-deploy /usr/local/bin/dmx-relay-deploy && rm /tmp/dmx-relay-deploy
 ```
+
+## Certificate renewal
+
+The certificate is from Let's Encrypt and lasts 90 days. `relay-renew-cert.sh` runs daily at 10:00 UTC from
+a systemd timer. It runs `certbot renew` from the `certbot/certbot` image, which answers the HTTP-01
+challenge on port 80 itself: Docker's published port bypasses ufw, so port 80 is open only while certbot
+runs. Certbot renews in the last 30 days and does nothing before then.
+
+When the certificate changed, the script rebuilds `relay-certificate.pfx` from `/etc/letsencrypt/live` and
+writes it over the existing file, so it keeps its owner and mode. The relay loads the new file on the next
+handshake, without a restart: sessions already connected keep the certificate they started with, and new
+connections and reconnects get the renewed one. The script then checks the relay serves the new
+certificate, and writes the old file back if it does not.
+
+The weekly `Relay certificate` workflow checks the served certificate from outside and fails when fewer
+than 21 days remain, which means renewal is broken. GitHub emails that failure. (GitHub turns scheduled
+workflows off after 60 days without a commit; re-enable it in the Actions tab if that happens.)
+
+**Setup**, once, on the VM as root, after the relay runs v0.1.10 or later (earlier relays only load the
+certificate at startup):
+
+1. Install the script and its units from `origin/main`:
+
+   ```bash
+   sudo -u dmx-deploy git -C /opt/dungeonmasterxiv fetch --quiet origin
+   for f in relay-renew-cert.sh dmx-relay-renew-cert.service dmx-relay-renew-cert.timer; do
+       sudo -u dmx-deploy git -C /opt/dungeonmasterxiv show "origin/main:deploy/$f" > "/tmp/$f"
+   done
+   install -m 755 /tmp/relay-renew-cert.sh /usr/local/bin/dmx-relay-renew-cert
+   install -m 644 /tmp/dmx-relay-renew-cert.service /tmp/dmx-relay-renew-cert.timer /etc/systemd/system/
+   rm /tmp/relay-renew-cert.sh /tmp/dmx-relay-renew-cert.service /tmp/dmx-relay-renew-cert.timer
+   systemctl daemon-reload
+   ```
+
+2. **Prove the challenge works** against Let's Encrypt's staging server. This changes nothing:
+
+   ```bash
+   dmx-relay-renew-cert --dry-run   # ends with: The relay already has the current certificate (…)
+   ```
+
+   If it ends with "The relay serves the renewed certificate" instead, the old `.pfx` was in a format the
+   script could not read, and it has rewritten it with the same certificate. That is fine.
+
+3. **Prove the handover** with a real renewal, while a client is connected to the relay:
+
+   ```bash
+   dmx-relay-renew-cert --force-renewal   # ends with: The relay serves the renewed certificate (…)
+   ```
+
+   The connected client must stay connected, and `tools/relay-handshake.sh wss://relay.ruminabottle.com/session`
+   must still pass.
+
+4. **Turn on the timer:**
+
+   ```bash
+   systemctl enable --now dmx-relay-renew-cert.timer
+   systemctl list-timers dmx-relay-renew-cert.timer   # NEXT is the coming 10:00 UTC
+   ```
+
+A run's output is in `journalctl -u dmx-relay-renew-cert`. To change the script or units later, repeat
+step 1.
