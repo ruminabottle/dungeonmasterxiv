@@ -31,4 +31,16 @@ public sealed class SessionStream
         _entries.Insert(at, entry);
         return true;
     }
+
+    public bool Replace(StreamEntry entry)
+    {
+        var at = _entries.FindIndex(existing => existing.Stamp.Sequence == entry.Stamp.Sequence);
+        if (at < 0)
+        {
+            return false;
+        }
+
+        _entries[at] = entry;
+        return true;
+    }
 }

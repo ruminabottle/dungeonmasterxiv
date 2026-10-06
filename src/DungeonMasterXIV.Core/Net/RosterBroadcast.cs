@@ -67,16 +67,6 @@ internal sealed class RosterBroadcast
         SealToEveryRecipient(new SessionContent { ClosingAtUtcTicks = closing.UtcTicks }, keys, code);
     }
 
-    public void PublishEntry(StreamLine line)
-    {
-        if (_host.Keys() is not { } keys || _host.Code() is not { } code || !_link.IsReadyToSend)
-        {
-            return;
-        }
-
-        SealToEveryRecipient(new SessionContent { Entries = new[] { line } }, keys, code);
-    }
-
     public void PublishEntriesTo(PeerCode recipient, IReadOnlyList<StreamLine> lines)
     {
         if (lines.Count == 0

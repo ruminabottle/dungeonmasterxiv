@@ -47,7 +47,7 @@ internal sealed class SessionWiring
         Membership = new SessionMembership(
             Link, Joiner, () => Join.Code, () => !Link.IsReadyToSend || Interruption.Reconnecting);
         Hosting = new HostRunner(Host, Resources, Handshake, newKeys, SynchroniseTransport);
-        Stream = new HostStream(Resources.Recording, Roster);
+        Stream = new HostStream(Resources.Recording, Roster, Admissions.Audience);
     }
 
     internal HostSession Host { get; } = new();

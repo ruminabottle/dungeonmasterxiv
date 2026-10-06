@@ -12,6 +12,7 @@ internal sealed class InboundWiring(
     Func<string?, RelinkClaim> resolveRelink,
     RosterBroadcast roster,
     HostStream stream,
+    ISessionTransportLog log,
     Action onReclaimed,
     Action onReclaimRefused,
     Action onHostAway,
@@ -52,10 +53,9 @@ internal sealed class InboundWiring(
                         return;
                     }
 
-                    var missed = resources.Recording.Entries
-                        .Where(entry => entry.Stamp.Sequence > resumed.LastSequence)
-                        .Select(StreamLine.From)
-                        .ToList();
+                    var missed = admissions.Audience.Find(resumed.Peer) is { } member
+                        ? stream.MissedBy(member, resumed.LastSequence)
+                        : Array.Empty<StreamLine>();
 
                     roster.Publish();
                     roster.PublishEntriesTo(resumed.Peer, missed);
@@ -99,21 +99,42 @@ internal sealed class InboundWiring(
 
         var draft = MessageDraft.Compose(text, MessageLimits.Default);
 
-        if (!draft.IsAccepted || draft.Text is not { } said)
+        if (!draft.IsAccepted || draft.Text is not { } said || !Addressed(peer, content, isRoll: false, out var privacy))
         {
             return;
         }
 
-        stream.Announce(StreamEventKind.Message, peer, said, now);
+        stream.Announce(StreamEventKind.Message, peer, said, now, privacy: privacy);
     }
 
     private void Rolled(PeerCode peer, SessionContent content, DateTimeOffset now)
     {
-        if (content.Rolling is not { } roll || !roll.IsWithinBounds(RollLimits.Default))
+        if (content.Rolling is not { } roll
+            || !roll.IsWithinBounds(RollLimits.Default)
+            || !Addressed(peer, content, isRoll: true, out var privacy))
         {
             return;
         }
 
-        stream.Announce(StreamEventKind.Roll, peer, roll.Summary(), now, roll);
+        stream.Announce(StreamEventKind.Roll, peer, roll.Summary(), now, roll, privacy);
+    }
+
+    private bool Addressed(PeerCode peer, SessionContent content, bool isRoll, out EntryPrivacy? privacy)
+    {
+        privacy = null;
+        if (admissions.Audience.Find(peer) is not { } sender)
+        {
+            return false;
+        }
+
+        if (AudienceRules.TryResolve(content.Audience, isRoll, sender, admissions.Audience, out privacy))
+        {
+            return true;
+        }
+
+        log.Warning(
+            $"Dropped a send from {peer.Value} addressed to an audience it may not use. Nothing was "
+            + "relayed. The content is deliberately not recorded here.");
+        return false;
     }
 }
