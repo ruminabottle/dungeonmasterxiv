@@ -75,9 +75,10 @@ public sealed class Plugin : IDalamudPlugin
             NameWeSendAs(characterName),
             () => _configurationStore.Configuration.Settings.Relink,
             SessionEndChoiceFor(pluginInterface.ConfigDirectory));
+        var audience = new AudienceChoice();
         _panel.Attach(
-            new ChatTab(_sessionCoordinator, _fonts, NameWeSendAs(characterName), joinFlow, () => _panel.Select(PanelTab.Session)),
-            new SessionTab(_sessionCoordinator, _fonts, _hostingCampaign, joinFlow),
+            new ChatTab(_sessionCoordinator, _fonts, NameWeSendAs(characterName), joinFlow, () => _panel.Select(PanelTab.Session), audience),
+            new SessionTab(_sessionCoordinator, _fonts, _hostingCampaign, joinFlow, audience, () => _panel.Select(PanelTab.Chat)),
             SettingsTabFor(characterName, pluginInterface.ConfigDirectory));
         _commandDispatcher = new CommandDispatcher(_panel.Toggle, OpenSettingsTab);
 

@@ -1,5 +1,6 @@
 using System;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using DungeonMasterXIV.Campaigns;
@@ -29,17 +30,29 @@ internal sealed class SessionTab
 
     private readonly JoinFlowView _joinFlow;
 
+    private readonly AudienceChoice _audience;
+
+    private readonly Action _showChat;
+
     private readonly DangerAction _endSession = new();
 
     /// <summary>Below this width the Host and Join paths stack instead of sitting side by side.</summary>
     private const float SideBySideWidth = 560f;
 
-    public SessionTab(SessionCoordinator coordinator, UiFonts fonts, HostingCampaign hosting, JoinFlowView joinFlow)
+    public SessionTab(
+        SessionCoordinator coordinator,
+        UiFonts fonts,
+        HostingCampaign hosting,
+        JoinFlowView joinFlow,
+        AudienceChoice audience,
+        Action showChat)
     {
         _coordinator = coordinator;
         _fonts = fonts;
         _hosting = hosting;
         _joinFlow = joinFlow;
+        _audience = audience;
+        _showChat = showChat;
         _admissionPrompts = new AdmissionPromptView(coordinator, fonts);
         _campaignPicker = new HostCampaignPicker(hosting);
     }
@@ -174,6 +187,26 @@ internal sealed class SessionTab
                 && PeerCode.TryParse(entry.PeerCode, out var peer)
                 && _coordinator.Drops.WhenDropped(peer) is not null;
             RosterRow.Draw(_fonts, new SpeakerName(DisplayName.OrNone(entry.DisplayName).Value, entry.Role), away);
+
+            if (host && entry.Role == SessionRole.Player)
+            {
+                var name = DisplayName.OrNone(entry.DisplayName).Value;
+                var ready = PeerCode.TryParse(entry.PeerCode, out var code) && _coordinator.Audience.SupportsAudiences(code);
+                ImGui.SameLine();
+                using (ImRaii.Disabled(!ready))
+                {
+                    if (RailButton.Draw(_fonts, FontAwesomeIcon.User, $"Message {name} privately", lit: false))
+                    {
+                        _audience.ChoosePlayer(entry.PeerCode);
+                        _showChat();
+                    }
+                }
+
+                if (!ready && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.SetTooltip(AudienceRow.NeedsUpdating(name));
+                }
+            }
         }
 
         if (!host)
