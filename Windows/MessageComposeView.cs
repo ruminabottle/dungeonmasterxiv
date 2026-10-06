@@ -33,8 +33,6 @@ internal sealed class MessageComposeView
 
     private bool _refocus;
 
-    private int _seenStarts;
-
     public MessageComposeView(SessionCoordinator coordinator, AudienceChoice choice, UiFonts fonts)
     {
         _coordinator = coordinator;
@@ -59,16 +57,17 @@ internal sealed class MessageComposeView
             _local.Clear();
         }
 
-        if (_coordinator.SessionStarts != _seenStarts)
-        {
-            _choice.Reset();
-        }
-
-        _seenStarts = _coordinator.SessionStarts;
+        _choice.Sync(_coordinator.SessionStarts);
 
         if (_coordinator.CanAddress)
         {
-            AudienceRow.Draw(_fonts, _choice, _coordinator.InAHostedSession, _coordinator.CurrentRoster, Supports);
+            AudienceRow.Draw(
+                _fonts,
+                _choice,
+                _coordinator.InAHostedSession,
+                _coordinator.CurrentRoster,
+                Supports,
+                peer => _coordinator.Speakers.For(peer).Name);
         }
 
         var problem = TargetProblem();

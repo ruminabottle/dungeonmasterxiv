@@ -141,10 +141,10 @@ public sealed class SessionCoordinator
     }
 
     /// <summary>Reveals a private or blind roll to everyone; only the host can, and only once.</summary>
-    public bool Reveal(long sequence) =>
+    public bool Reveal(long sequence, DateTimeOffset now) =>
         InAHostedSession
         && _parts.HostIdentity.OwnPeerCode() is { } own
-        && _parts.Stream.Reveal(sequence, own);
+        && _parts.Stream.Reveal(sequence, own, now);
 
     private const string HostNeedsUpdating = "Your DM's plugin needs updating for private messages.";
 

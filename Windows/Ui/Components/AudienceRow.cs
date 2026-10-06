@@ -24,7 +24,8 @@ internal static class AudienceRow
         AudienceChoice choice,
         bool host,
         IReadOnlyList<RosterEntry> roster,
-        Func<string, bool> supports)
+        Func<string, bool> supports,
+        Func<string, string> nameOf)
     {
         if (RailButton.Draw(fonts, FontAwesomeIcon.Globe, PublicTooltip, choice.Kind == AudienceKind.Public))
         {
@@ -57,7 +58,7 @@ internal static class AudienceRow
         {
             var stillAtTheTable = roster.Any(entry => entry.PeerCode == to);
             ImGui.SameLine();
-            ImGui.TextColored(stillAtTheTable ? Palette.PrivateText : Palette.TextMuted, NameOf(roster, to));
+            ImGui.TextColored(stillAtTheTable ? Palette.PrivateText : Palette.TextMuted, nameOf(to));
         }
 
         using var popup = ImRaii.Popup("##to-player");
@@ -71,7 +72,7 @@ internal static class AudienceRow
             var ready = supports(player.PeerCode);
             using (ImRaii.Disabled(!ready))
             {
-                if (ImGui.Selectable($"{NameOf(roster, player.PeerCode)}##{player.PeerCode}"))
+                if (ImGui.Selectable($"{nameOf(player.PeerCode)}##{player.PeerCode}"))
                 {
                     choice.ChoosePlayer(player.PeerCode);
                 }
@@ -79,15 +80,10 @@ internal static class AudienceRow
 
             if (!ready && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
-                ImGui.SetTooltip(NeedsUpdating(NameOf(roster, player.PeerCode)));
+                ImGui.SetTooltip(NeedsUpdating(nameOf(player.PeerCode)));
             }
         }
     }
 
     public static string NeedsUpdating(string name) => $"{name}'s plugin needs updating for private messages";
-
-    public static string NameOf(IReadOnlyList<RosterEntry> roster, string peerCode) =>
-        roster.FirstOrDefault(entry => entry.PeerCode == peerCode) is { PeerCode: not null } entry
-            ? DisplayName.OrNone(entry.DisplayName).Value
-            : DisplayName.Unstated;
 }

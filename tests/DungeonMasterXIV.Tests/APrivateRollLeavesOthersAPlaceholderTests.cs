@@ -55,8 +55,8 @@ public sealed class APrivateRollLeavesOthersAPlaceholderTests
         Assert.Equal(AudienceKind.DmSide, eliRoll.Audience);
 
         var recorded = host.Recorded.First(entry => entry.Kind == StreamEventKind.Roll);
-        Assert.True(host.Reveal(recorded.Stamp.Sequence));
-        Assert.False(host.Reveal(recorded.Stamp.Sequence));
+        Assert.True(host.Reveal(recorded.Stamp.Sequence, Now));
+        Assert.False(host.Reveal(recorded.Stamp.Sequence, Now));
 
         var revealed = StampedLinesFor(mara, host, transport).Last(line => line.Sequence == placeholders[0].Sequence);
         Assert.Equal(17, revealed.Roll!.Total);

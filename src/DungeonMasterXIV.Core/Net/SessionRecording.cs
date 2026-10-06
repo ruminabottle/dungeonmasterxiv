@@ -34,7 +34,7 @@ internal sealed class SessionRecording
     public bool Record(StreamEntry entry) => _stream.Record(entry);
 
     /// <summary>Marks a private roll revealed; returns the revealed entry, or null when there is nothing to reveal.</summary>
-    public StreamEntry? Reveal(long sequence, string revealedBy)
+    public StreamEntry? Reveal(long sequence, string revealedBy, DateTimeOffset at)
     {
         var entry = _stream.Entries.FirstOrDefault(candidate => candidate.Stamp.Sequence == sequence);
         if (entry is not { Kind: StreamEventKind.Roll, Privacy: { IsRevealed: false } privacy })
@@ -42,7 +42,7 @@ internal sealed class SessionRecording
             return null;
         }
 
-        var revealed = entry with { Privacy = privacy with { RevealedBy = revealedBy } };
+        var revealed = entry with { Privacy = privacy with { RevealedBy = revealedBy, RevealedAtUtcTicks = at.UtcTicks } };
         return _stream.Replace(revealed) ? revealed : null;
     }
 

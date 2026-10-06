@@ -197,6 +197,7 @@ internal sealed class SessionTab
                 {
                     if (RailButton.Draw(_fonts, FontAwesomeIcon.User, $"Message {name} privately", lit: false))
                     {
+                        _audience.Sync(_coordinator.SessionStarts);
                         _audience.ChoosePlayer(entry.PeerCode);
                         _showChat();
                     }

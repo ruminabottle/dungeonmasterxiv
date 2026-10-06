@@ -8,7 +8,8 @@ public sealed record EntryPrivacy(
     MessageAudience Audience,
     IReadOnlyCollection<string> Entitled,
     string Placeholder,
-    string? RevealedBy = null)
+    string? RevealedBy = null,
+    long? RevealedAtUtcTicks = null)
 {
     public bool IsRevealed => RevealedBy is not null;
 

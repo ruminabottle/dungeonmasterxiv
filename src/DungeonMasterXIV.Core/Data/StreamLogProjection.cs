@@ -13,11 +13,16 @@ public static class StreamLogProjection
     {
         ArgumentNullException.ThrowIfNull(entry);
 
+        var privacy = entry.Privacy;
         return new LoggedEntry(
             new LoggedStamp(entry.Stamp.Sequence, entry.Stamp.AtUtcTicks),
             NameOf(entry.Kind),
             entry.Peer.Value,
-            entry.Text);
+            entry.Text,
+            privacy is null ? null : AudienceNameOf(privacy.Audience.Kind),
+            privacy?.Audience.To,
+            privacy?.RevealedBy,
+            privacy?.RevealedAtUtcTicks);
     }
 
     public static IReadOnlyList<LoggedEntry> From(IEnumerable<StreamEntry> entries)
@@ -26,6 +31,17 @@ public static class StreamLogProjection
 
         return entries.Select(From).ToList();
     }
+
+    private static string AudienceNameOf(AudienceKind kind) => kind switch
+    {
+        AudienceKind.DmSide => "dm-side",
+        AudienceKind.Blind => "blind",
+        AudienceKind.Player => "player",
+
+        _ => throw new NotSupportedException(
+            $"The log projection has not been taught the audience kind '{kind}'. "
+            + "A new private audience kind needs a word here, or exports will throw."),
+    };
 
     private static string NameOf(StreamEventKind kind) => kind switch
     {

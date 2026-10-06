@@ -174,7 +174,7 @@ internal sealed class StreamView
                 var canReveal = _coordinator.InAHostedSession && mark is { Revealed: false };
                 if (RollCard.Draw(_fonts, speaker, line.AtUtcTicks, roll, mark: mark, hideTotal: hideTotal, canReveal: canReveal))
                 {
-                    _coordinator.Reveal(line.Sequence);
+                    _coordinator.Reveal(line.Sequence, DateTimeOffset.UtcNow);
                 }
 
                 break;

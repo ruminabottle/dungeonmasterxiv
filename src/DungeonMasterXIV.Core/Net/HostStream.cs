@@ -24,9 +24,9 @@ internal sealed class HostStream(SessionRecording recording, RosterBroadcast ros
         return entry;
     }
 
-    public bool Reveal(long sequence, PeerCode revealedBy)
+    public bool Reveal(long sequence, PeerCode revealedBy, DateTimeOffset at)
     {
-        if (recording.Reveal(sequence, revealedBy.Value) is null)
+        if (recording.Reveal(sequence, revealedBy.Value, at) is null)
         {
             return false;
         }
