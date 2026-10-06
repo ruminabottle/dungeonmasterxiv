@@ -194,7 +194,10 @@ left, dropped, reconnected), each timed.
   legitimate party to. With player-to-player privacy the host would hold content it must not read,
   and R-2.10 would have to change in the same breath.
 - A DM-private message is an access level under product-overview D-13: a non-recipient never
-  receives it.
+  receives it. It is at **None** for them: it leaves no trace, not even a gap in their numbering.
+- **Both targets are reached through the audience row above the message box**, which sets the
+  audience for messages and rolls alike. The DM picks the one player with To ▾ or with "Message
+  privately" on that player's roster row (`2026-10-06-private-messages-and-roll-modes-design.md`).
 
 **Acceptance criteria**
 - **A-2.15** A DM-private message's content is absent from a non-recipient's **received data**, not
@@ -548,6 +551,13 @@ echoing nothing by default fails, and echoing everything by default fails.
   client produced the value. Blind hides a number in the UI and sends it to the DM; that is the whole
   mechanism, and it is sufficient (product-overview "No defence against a participant cheating their
   own table").
+- **The modes are set by the same audience row as messages** (R-2.6). Blind applies to rolls; text
+  sent while Blind is selected goes as Private to the DM.
+- **Everyone not entitled to a private or blind roll is at Limited:** they receive a contentless
+  placeholder ("Eli (Tuka) rolled for the DM" and a "?" bar) and no roll data. Private and blind
+  placeholders look the same.
+- **Only the DM side reveals, and a reveal always goes to everyone**
+  (`2026-10-06-private-messages-and-roll-modes-design.md` decision 4).
 - **Copy may not call a blind roll secret, private, hidden from everyone, or secure**
   (session-layer R-1.7a). It need not advertise that it is defeatable. Say what it does, not what it
   withstands.

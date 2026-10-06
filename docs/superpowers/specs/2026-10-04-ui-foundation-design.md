@@ -118,8 +118,8 @@ instead of designing their own:
 
 | Component | Shape | Built with |
 | --- | --- | --- |
-| `PrivateCard` | A `MessageCard` or `RollCard` on `PrivateSurface` with a `PrivateRule` edge. For someone not entitled to the content: "Mara (Copy) rolled for the DM" and a "?" bar. | private messages and roll modes |
-| `RollModeSwitch` | A segmented control above the composer: Public, GM only, Blind. Copy follows rolls R-2.15: never "secret", "hidden" or "secure". | roll modes |
+| `PrivateCard` | A `MessageCard` or `RollCard` on `PrivateSurface` with a `PrivateRule` edge. For someone not entitled to a private roll: a placeholder line ("Mara (Copy) rolled for the DM") and a "?" bar; a private message leaves nothing (`2026-10-06-private-messages-and-roll-modes-design.md` decision 3). | private messages and roll modes |
+| `RollModeSwitch` | The audience row above the composer, for messages and rolls: icon buttons with tooltips, styled as `RailButton`s. Players: Public, DM only, Blind. The DM: Public, DM only, To ▾. Copy follows rolls R-2.15: never "secret", "hidden" or "secure" (`2026-10-06-private-messages-and-roll-modes-design.md` decision 2). | private messages and roll modes |
 | `RollButton` | A `[[/roll]]` button inside a message. Greyed, with "for Eli, Mara", when addressed to others (product-overview Session panel item 9). | clickable rolls |
 | `RemovedMarker` | An `EventLine` reading "Message removed by the DM" in the deleted message's place (product-overview Session panel item 8). | moderation |
 | `InitiativeRow` | `Speaker`, initiative value, and the current turn marked in `Gold` with a ▸. | initiative |
