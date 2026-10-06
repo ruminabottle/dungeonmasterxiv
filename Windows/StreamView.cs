@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -150,6 +151,7 @@ internal sealed class StreamView
 
     private void DrawLine(StreamLine line)
     {
+        using var id = ImRaii.PushId(line.Sequence.ToString(CultureInfo.InvariantCulture));
         var speaker = _coordinator.Speakers.For(line.Peer);
 
         if (line.Withheld == true)

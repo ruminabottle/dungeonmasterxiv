@@ -33,7 +33,7 @@ internal sealed class MessageComposeView
 
     private bool _refocus;
 
-    private bool _wasInSession;
+    private int _seenStarts;
 
     public MessageComposeView(SessionCoordinator coordinator, AudienceChoice choice, UiFonts fonts)
     {
@@ -59,12 +59,12 @@ internal sealed class MessageComposeView
             _local.Clear();
         }
 
-        if (_coordinator.InASession && !_wasInSession)
+        if (_coordinator.SessionStarts != _seenStarts)
         {
             _choice.Reset();
         }
 
-        _wasInSession = _coordinator.InASession;
+        _seenStarts = _coordinator.SessionStarts;
 
         if (_coordinator.CanAddress)
         {

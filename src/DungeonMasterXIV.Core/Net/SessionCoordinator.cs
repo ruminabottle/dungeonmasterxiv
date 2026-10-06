@@ -172,8 +172,12 @@ public sealed class SessionCoordinator
     /// <summary>Every speaker's name and role seen in this client's rosters, learned each tick.</summary>
     public SpeakerBook Speakers { get; } = new();
 
+    /// <summary>How many sessions this client has started hosting or asked to join; changes once per start.</summary>
+    public int SessionStarts { get; private set; }
+
     public void StartHosting()
     {
+        SessionStarts++;
         _hostAnnouncedAudiences = false;
         _stream.Clear();
         Membership.Undelivered = 0;
@@ -192,6 +196,7 @@ public sealed class SessionCoordinator
 
     public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
     {
+        SessionStarts++;
         _hostAnnouncedAudiences = false;
         _stream.Clear();
         Membership.Undelivered = 0;

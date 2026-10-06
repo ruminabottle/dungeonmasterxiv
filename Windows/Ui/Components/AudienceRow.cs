@@ -55,8 +55,9 @@ internal static class AudienceRow
 
         if (choice.Kind == AudienceKind.Player && choice.To is { } to)
         {
+            var stillAtTheTable = roster.Any(entry => entry.PeerCode == to);
             ImGui.SameLine();
-            ImGui.TextColored(Palette.PrivateText, NameOf(roster, to));
+            ImGui.TextColored(stillAtTheTable ? Palette.PrivateText : Palette.TextMuted, NameOf(roster, to));
         }
 
         using var popup = ImRaii.Popup("##to-player");
