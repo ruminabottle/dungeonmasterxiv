@@ -12,4 +12,6 @@ public enum MessageFault
     TooLarge,
 
     NotInASession,
+
+    AudienceUnavailable,
 }

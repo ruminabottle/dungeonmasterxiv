@@ -39,7 +39,7 @@ internal sealed class RosterBroadcast
             return;
         }
 
-        SealToEveryRecipient(new SessionContent { Roster = Current() }, keys, code);
+        SealToEveryRecipient(new SessionContent { Roster = Current(), Audiences = true }, keys, code);
     }
 
     /// <summary>The host first, as Dungeon Master, then every admitted member.</summary>

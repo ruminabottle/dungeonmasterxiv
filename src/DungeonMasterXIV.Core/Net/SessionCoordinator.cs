@@ -52,6 +52,7 @@ public sealed class SessionCoordinator
     private readonly ReconnectSchedule _reconnect = new();
     private static readonly TimeSpan ResumeRetryInterval = TimeSpan.FromSeconds(5);
     private TimeSpan _sinceResumeSent;
+    private bool _hostAnnouncedAudiences;
 
     public IReadOnlyList<RosterEntry> Roster => _received.Entries;
 
@@ -74,6 +75,9 @@ public sealed class SessionCoordinator
 
     /// <summary>True while this client can send to a session, as its host or as an admitted member.</summary>
     public bool InASession => InAHostedSession || Join.Phase == JoinPhase.Admitted;
+
+    /// <summary>True when sends can carry an audience: always when hosting, otherwise once the host has announced it.</summary>
+    public bool CanAddress => InAHostedSession || (Join.Phase == JoinPhase.Admitted && _hostAnnouncedAudiences);
 
     /// <summary>Sends a message to the session: stamped directly when hosting, sealed to the host otherwise.</summary>
     public MessageDraft Say(string? text, DateTimeOffset now)
@@ -143,6 +147,7 @@ public sealed class SessionCoordinator
 
     public void StartHosting()
     {
+        _hostAnnouncedAudiences = false;
         _stream.Clear();
         Membership.Undelivered = 0;
         _hosting.Start();
@@ -160,6 +165,7 @@ public sealed class SessionCoordinator
 
     public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
     {
+        _hostAnnouncedAudiences = false;
         _stream.Clear();
         Membership.Undelivered = 0;
         _joiner.Request(code, name, claimedParticipantId);
@@ -172,8 +178,9 @@ public sealed class SessionCoordinator
         byte[] joinerPublicKey,
         DateTimeOffset now,
         RelinkClaim relink = default,
-        DisplayName displayName = default) =>
-        _admissions.Receive(peerCode, joinerPublicKey, now, relink, displayName);
+        DisplayName displayName = default,
+        bool supportsAudiences = false) =>
+        _admissions.Receive(peerCode, joinerPublicKey, now, relink, displayName, supportsAudiences);
 
     public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player, bool asClaimed = false)
     {
@@ -337,6 +344,11 @@ public sealed class SessionCoordinator
 
     private void HeardFromTheHost(SessionContent content)
     {
+        if (content.Roster is not null)
+        {
+            _hostAnnouncedAudiences = content.Audiences == true;
+        }
+
         _received.Replace(content.Roster);
         _stream.Add(content.Entries);
         Membership.HeardFromTheHost(content.ClosingAtUtcTicks);

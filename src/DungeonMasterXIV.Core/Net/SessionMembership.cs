@@ -33,10 +33,10 @@ public sealed class SessionMembership
 
     public bool AnnounceDeparture() => _departure.Announce();
 
-    public MessageDraft Say(string? text, MessageLimits? limits = null) =>
-        _message.Say(text, limits ?? MessageLimits.Default);
+    public MessageDraft Say(string? text, MessageLimits? limits = null, MessageAudience? audience = null) =>
+        _message.Say(text, limits ?? MessageLimits.Default, audience);
 
-    public string? ShareRoll(SharedRoll roll) => _message.ShareRoll(roll);
+    public string? ShareRoll(SharedRoll roll, MessageAudience? audience = null) => _message.ShareRoll(roll, audience);
 
     public SessionClosing? Closing => _closing.Notice;
 

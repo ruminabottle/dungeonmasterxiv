@@ -32,7 +32,11 @@ internal sealed class InboundWiring(
                     }
 
                     var request = admissions.AdmitToTheQueue(
-                        key, now, DisplayName.OrNone(details.DisplayName), resolveRelink(details.ParticipantId));
+                        key,
+                        now,
+                        DisplayName.OrNone(details.DisplayName),
+                        resolveRelink(details.ParticipantId),
+                        details.Audiences ?? false);
 
                     if (request is not null && admissions.LetsInAutomatically(request))
                     {

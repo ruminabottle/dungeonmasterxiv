@@ -47,8 +47,9 @@ public sealed class AdmissionControl
         byte[] joinerPublicKey,
         DateTimeOffset now,
         DisplayName displayName = default,
-        RelinkClaim relink = default) =>
-        Receive(PeerCodeFor(joinerPublicKey), joinerPublicKey, now, relink, displayName);
+        RelinkClaim relink = default,
+        bool supportsAudiences = false) =>
+        Receive(PeerCodeFor(joinerPublicKey), joinerPublicKey, now, relink, displayName, supportsAudiences);
 
     public PeerCode PeerCodeFor(byte[] joinerPublicKey)
     {
@@ -71,7 +72,8 @@ public sealed class AdmissionControl
         byte[] joinerPublicKey,
         DateTimeOffset now,
         RelinkClaim relink = default,
-        DisplayName displayName = default)
+        DisplayName displayName = default,
+        bool supportsAudiences = false)
     {
         if (_hostKeys() is not { } hostKeys)
         {
@@ -84,7 +86,7 @@ public sealed class AdmissionControl
         }
 
         var deadline = AdmissionDeadline.DecidedByHost(now);
-        var request = new PendingAdmission(peerCode, deadline, relink, joinerPublicKey, displayName);
+        var request = new PendingAdmission(peerCode, deadline, relink, joinerPublicKey, displayName, supportsAudiences);
 
         Desk.Receive(request);
 
@@ -155,6 +157,7 @@ public sealed class AdmissionControl
             return null;
         }
 
+        Audience.NoteAudiences(peer, details.Audiences ?? false);
         Drops.Forget(peer);
         _announcer.Accepted(code, memberPublicKey, hostKeys.PublicKey);
         return (peer, details.LastSequence ?? 0);
@@ -216,6 +219,7 @@ public sealed class AdmissionControl
         }
 
         var peer = Audience.Admit(peerCode, role, request?.JoinerPublicKey, displayName, participantId);
+        Audience.NoteAudiences(peerCode, request?.SupportsAudiences ?? false);
 
         ForgetDrop(peerCode);
         AnnounceAccepted(request?.JoinerPublicKey, participantId);

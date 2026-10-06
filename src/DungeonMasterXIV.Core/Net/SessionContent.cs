@@ -15,6 +15,10 @@ public sealed class SessionContent
 
     public SharedRoll? Rolling { get; init; }
 
+    public MessageAudience? Audience { get; init; }
+
+    public bool? Audiences { get; init; }
+
     public IReadOnlyList<StreamLine>? Entries { get; init; }
 }
 

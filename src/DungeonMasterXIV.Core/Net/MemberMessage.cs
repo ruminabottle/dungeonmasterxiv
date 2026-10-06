@@ -28,7 +28,7 @@ internal sealed class MemberMessage
 
     public int Waiting => _waiting.Count;
 
-    public MessageDraft Say(string? text, MessageLimits limits)
+    public MessageDraft Say(string? text, MessageLimits limits, MessageAudience? audience = null)
     {
         var draft = MessageDraft.Compose(text, limits);
         if (!draft.IsAccepted)
@@ -41,13 +41,13 @@ internal sealed class MemberMessage
             return new MessageDraft(null, MessageFault.NotInASession, "This client is not in a session.");
         }
 
-        _waiting.Enqueue(new SessionContent { Saying = draft.Text! });
+        _waiting.Enqueue(new SessionContent { Saying = draft.Text!, Audience = audience?.ForSending(isRoll: false) });
         Flush();
         return draft;
     }
 
     /// <summary>Queues a roll for the host; returns why it cannot be shared, or null once it is queued.</summary>
-    public string? ShareRoll(SharedRoll roll)
+    public string? ShareRoll(SharedRoll roll, MessageAudience? audience = null)
     {
         ArgumentNullException.ThrowIfNull(roll);
 
@@ -61,7 +61,7 @@ internal sealed class MemberMessage
             return "This client is not in a session.";
         }
 
-        _waiting.Enqueue(new SessionContent { Rolling = roll });
+        _waiting.Enqueue(new SessionContent { Rolling = roll, Audience = audience?.ForSending(isRoll: true) });
         Flush();
         return null;
     }

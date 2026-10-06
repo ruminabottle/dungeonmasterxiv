@@ -28,6 +28,8 @@ public static class SessionContentCodec
             Entries = lines,
             Saying = content.Saying,
             Rolling = content.Rolling,
+            Audience = content.Audience,
+            Audiences = content.Audiences,
         };
     }
 
