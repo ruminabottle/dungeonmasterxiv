@@ -10,9 +10,11 @@ live="/etc/letsencrypt/live/$domain"
 pfx="$deploy_dir/relay-certificate.pfx"
 
 # Certbot answers the HTTP-01 challenge itself on port 80. Docker's published port bypasses ufw, so port 80
-# is reachable only while this container runs. It does nothing until fewer than 30 days remain.
+# is reachable only while this container runs. It does nothing until fewer than 30 days remain. Certbot's own
+# random wait (up to 8 minutes without a terminal) is off: the timer already randomizes the start.
 docker pull --quiet certbot/certbot >/dev/null || echo "Could not pull certbot/certbot; using the local image." >&2
-docker run --rm -p 80:80 -v /etc/letsencrypt:/etc/letsencrypt certbot/certbot renew --non-interactive "$@"
+docker run --rm -p 80:80 -v /etc/letsencrypt:/etc/letsencrypt certbot/certbot renew --non-interactive \
+    --no-random-sleep-on-renew "$@"
 
 # Reads the password the relay is given, from the same .env compose reads. No password means an empty one.
 password=""
