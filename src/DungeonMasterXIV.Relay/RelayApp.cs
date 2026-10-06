@@ -1,8 +1,10 @@
+using System.Net.Security;
 using DungeonMasterXIV.Relay.Diagnostics;
 using DungeonMasterXIV.Relay.Sessions;
 using DungeonMasterXIV.Relay.Transport;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 
 namespace DungeonMasterXIV.Relay;
 
@@ -37,9 +39,14 @@ public static class RelayApp
                         + "terminates TLS itself; a proxy in front of it is not supported.");
                 }
 
+                ReloadingCertificate certificate;
                 try
                 {
-                    listen.UseHttps(options.CertificatePath, options.CertificatePassword);
+                    certificate = new ReloadingCertificate(
+                        options.CertificatePath,
+                        options.CertificatePassword,
+                        kestrel.ApplicationServices.GetRequiredService<ILoggerFactory>()
+                            .CreateLogger<ReloadingCertificate>());
                 }
                 catch (Exception failure)
                 {
@@ -47,6 +54,16 @@ public static class RelayApp
                         CertificateLoadFailure.Describe(options.CertificatePath, failure.Message),
                         failure);
                 }
+
+                // Asks for the certificate on every handshake, so a renewed file is served without a restart.
+                listen.UseHttps(new TlsHandshakeCallbackOptions
+                {
+                    OnConnection = _ => ValueTask.FromResult(new SslServerAuthenticationOptions
+                    {
+                        ServerCertificateContext = certificate.Current,
+                        ApplicationProtocols = [SslApplicationProtocol.Http2, SslApplicationProtocol.Http11],
+                    }),
+                });
             }));
 
         builder.Services.AddSingleton(options);

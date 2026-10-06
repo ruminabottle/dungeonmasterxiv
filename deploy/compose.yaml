@@ -20,7 +20,8 @@ services:
       DMX_RELAY_CERT_PASSWORD: ${DMX_RELAY_CERT_PASSWORD:-}
       # Keepalive left unset so it follows TransportContract; the reap timeout derives from it and has no setting.
 
-    # The operator supplies the certificate file; provisioning it, the VM and DNS is outside this repository.
+    # The operator supplies the first certificate file; deploy/relay-renew-cert.sh renews it in place, and the
+    # relay reloads it without a restart (README, "Certificate renewal"). The VM and DNS are outside this repository.
     secrets:
       - relay-certificate
 

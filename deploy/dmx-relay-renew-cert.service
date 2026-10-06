@@ -1,0 +1,9 @@
+# Renews the relay's certificate; run daily by dmx-relay-renew-cert.timer. Installed in /etc/systemd/system.
+[Unit]
+Description=Renew the DungeonMasterXIV relay certificate
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/dmx-relay-renew-cert
