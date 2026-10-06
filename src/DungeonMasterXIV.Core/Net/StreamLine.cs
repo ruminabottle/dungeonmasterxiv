@@ -10,14 +10,26 @@ public readonly record struct StreamLine(
     StreamEventKind Kind,
     string Peer,
     string Text,
-    SharedRoll? Roll = null)
+    SharedRoll? Roll = null,
+    AudienceKind? Audience = null,
+    string? To = null,
+    bool? Withheld = null,
+    string? RevealedBy = null)
 {
     public static StreamLine From(StreamEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
         return new StreamLine(
-            entry.Stamp.Sequence, entry.Stamp.AtUtcTicks, entry.Kind, entry.Peer.Value, entry.Text, entry.Roll);
+            entry.Stamp.Sequence,
+            entry.Stamp.AtUtcTicks,
+            entry.Kind,
+            entry.Peer.Value,
+            entry.Text,
+            entry.Roll,
+            entry.Privacy?.Audience.Kind,
+            entry.Privacy?.Audience.To,
+            RevealedBy: entry.Privacy?.RevealedBy);
     }
 
     public bool TryToEntry(out StreamEntry entry)

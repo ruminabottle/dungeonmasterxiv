@@ -220,7 +220,6 @@ stays offered at session end and is never buried (product-overview Session panel
   (`1d20+4 = 17 [13]`), so the log and export projection keep working unchanged.
 - **Receivers draw the dice exactly as received** and never re-evaluate the expression. That is
   A-2.18, and it means no client evaluates a stranger's formula.
-- **All rolls are Public** until roll modes are built (rolls R-2.15 default).
 - **Version skew is accepted pre-release.** The JSON codec ignores unknown fields, so an older host
   drops a newer member's roll without telling anyone. There is no protocol version bump; everyone
   updates from the same repository.

@@ -8,6 +8,7 @@ namespace DungeonMasterXIV.Net;
 public sealed class SessionAudience
 {
     private readonly List<AdmittedPeer> _admitted = new();
+    private readonly HashSet<PeerCode> _addressable = new();
 
     public IReadOnlyList<AdmittedPeer> Recipients => _admitted.AsReadOnly();
 
@@ -33,6 +34,7 @@ public sealed class SessionAudience
 
     public bool Remove(PeerCode peerCode)
     {
+        _addressable.Remove(peerCode);
         var peer = _admitted.FirstOrDefault(candidate => candidate.PeerCode == peerCode);
         return peer is not null && _admitted.Remove(peer);
     }
@@ -45,5 +47,23 @@ public sealed class SessionAudience
     public AdmittedPeer? Find(PeerCode peerCode) =>
         _admitted.FirstOrDefault(peer => peer.PeerCode == peerCode);
 
-    public void Clear() => _admitted.Clear();
+    public void NoteAudiences(PeerCode peerCode, bool supported)
+    {
+        if (supported)
+        {
+            _addressable.Add(peerCode);
+        }
+        else
+        {
+            _addressable.Remove(peerCode);
+        }
+    }
+
+    public bool SupportsAudiences(PeerCode peerCode) => _addressable.Contains(peerCode);
+
+    public void Clear()
+    {
+        _admitted.Clear();
+        _addressable.Clear();
+    }
 }

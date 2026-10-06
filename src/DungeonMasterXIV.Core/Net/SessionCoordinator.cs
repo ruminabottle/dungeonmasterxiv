@@ -52,6 +52,7 @@ public sealed class SessionCoordinator
     private readonly ReconnectSchedule _reconnect = new();
     private static readonly TimeSpan ResumeRetryInterval = TimeSpan.FromSeconds(5);
     private TimeSpan _sinceResumeSent;
+    private bool _hostAnnouncedAudiences;
 
     public IReadOnlyList<RosterEntry> Roster => _received.Entries;
 
@@ -75,12 +76,18 @@ public sealed class SessionCoordinator
     /// <summary>True while this client can send to a session, as its host or as an admitted member.</summary>
     public bool InASession => InAHostedSession || Join.Phase == JoinPhase.Admitted;
 
+    /// <summary>True when sends can carry an audience: always when hosting, otherwise once the host has announced it.</summary>
+    public bool CanAddress => InAHostedSession || (Join.Phase == JoinPhase.Admitted && _hostAnnouncedAudiences);
+
     /// <summary>Sends a message to the session: stamped directly when hosting, sealed to the host otherwise.</summary>
-    public MessageDraft Say(string? text, DateTimeOffset now)
+    public MessageDraft Say(string? text, DateTimeOffset now, MessageAudience? audience = null)
     {
+        var addressed = audience?.ForSending(isRoll: false);
         if (!InAHostedSession)
         {
-            return Membership.Say(text);
+            return addressed is not null && !CanAddress
+                ? new MessageDraft(null, MessageFault.AudienceUnavailable, HostNeedsUpdating)
+                : Membership.Say(text, audience: addressed);
         }
 
         var draft = MessageDraft.Compose(text, MessageLimits.Default);
@@ -94,18 +101,24 @@ public sealed class SessionCoordinator
             return new MessageDraft(null, MessageFault.NotInASession, "This client is not in a session.");
         }
 
-        _parts.Stream.Announce(StreamEventKind.Message, own, draft.Text!, now);
+        if (!AudienceRules.TryResolve(addressed, isRoll: false, null, Audience, out var privacy))
+        {
+            return new MessageDraft(null, MessageFault.AudienceUnavailable, AudienceRefusal(addressed));
+        }
+
+        _parts.Stream.Announce(StreamEventKind.Message, own, draft.Text!, now, privacy: privacy);
         return draft;
     }
 
     /// <summary>Shares a roll this client made; returns why it was not shared, or null.</summary>
-    public string? ShareRoll(SharedRoll roll, DateTimeOffset now)
+    public string? ShareRoll(SharedRoll roll, DateTimeOffset now, MessageAudience? audience = null)
     {
         ArgumentNullException.ThrowIfNull(roll);
 
+        var addressed = audience?.ForSending(isRoll: true);
         if (!InAHostedSession)
         {
-            return Membership.ShareRoll(roll);
+            return addressed is not null && !CanAddress ? HostNeedsUpdating : Membership.ShareRoll(roll, addressed);
         }
 
         if (roll.RefusalToShare() is { } refusal)
@@ -118,9 +131,27 @@ public sealed class SessionCoordinator
             return "This client is not in a session.";
         }
 
-        _parts.Stream.Announce(StreamEventKind.Roll, own, roll.Summary(), now, roll);
+        if (!AudienceRules.TryResolve(addressed, isRoll: true, null, Audience, out var privacy))
+        {
+            return AudienceRefusal(addressed);
+        }
+
+        _parts.Stream.Announce(StreamEventKind.Roll, own, roll.Summary(), now, roll, privacy);
         return null;
     }
+
+    /// <summary>Reveals a private or blind roll to everyone; only the host can, and only once.</summary>
+    public bool Reveal(long sequence, DateTimeOffset now) =>
+        InAHostedSession
+        && _parts.HostIdentity.OwnPeerCode() is { } own
+        && _parts.Stream.Reveal(sequence, own, now);
+
+    private const string HostNeedsUpdating = "Your DM's plugin needs updating for private messages.";
+
+    private string AudienceRefusal(MessageAudience? audience) =>
+        audience?.To is { } to && PeerCode.TryParse(to, out var code) && Audience.Find(code) is { } target
+            ? $"{target.DisplayName.Value}'s plugin needs updating for private messages."
+            : "That player is no longer in the session.";
 
     public HostSession Host => _parts.Host;
 
@@ -141,8 +172,13 @@ public sealed class SessionCoordinator
     /// <summary>Every speaker's name and role seen in this client's rosters, learned each tick.</summary>
     public SpeakerBook Speakers { get; } = new();
 
+    /// <summary>How many sessions this client has started hosting or asked to join; changes once per start.</summary>
+    public int SessionStarts { get; private set; }
+
     public void StartHosting()
     {
+        SessionStarts++;
+        _hostAnnouncedAudiences = false;
         _stream.Clear();
         Membership.Undelivered = 0;
         _hosting.Start();
@@ -160,6 +196,8 @@ public sealed class SessionCoordinator
 
     public void RequestJoin(SessionCode code, DisplayName name, Guid? claimedParticipantId)
     {
+        SessionStarts++;
+        _hostAnnouncedAudiences = false;
         _stream.Clear();
         Membership.Undelivered = 0;
         _joiner.Request(code, name, claimedParticipantId);
@@ -172,8 +210,9 @@ public sealed class SessionCoordinator
         byte[] joinerPublicKey,
         DateTimeOffset now,
         RelinkClaim relink = default,
-        DisplayName displayName = default) =>
-        _admissions.Receive(peerCode, joinerPublicKey, now, relink, displayName);
+        DisplayName displayName = default,
+        bool supportsAudiences = false) =>
+        _admissions.Receive(peerCode, joinerPublicKey, now, relink, displayName, supportsAudiences);
 
     public AdmittedPeer Admit(PeerCode peerCode, SessionRole role = SessionRole.Player, bool asClaimed = false)
     {
@@ -203,7 +242,7 @@ public sealed class SessionCoordinator
             Join,
             Membership.Keys,
             Host,
-            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, _parts.Stream, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
+            new InboundWiring(_admissions, _resources, _resolveRelink, _roster, _parts.Stream, _log, Reclaimed, ReclaimRefused, HostWentAway, HostCameBack)
                 .For(now, Membership.SessionKey, content => HeardFromTheHost(content)),
             _log)
             ?? Membership.SessionKey;
@@ -337,6 +376,11 @@ public sealed class SessionCoordinator
 
     private void HeardFromTheHost(SessionContent content)
     {
+        if (content.Roster is not null)
+        {
+            _hostAnnouncedAudiences = content.Audiences == true;
+        }
+
         _received.Replace(content.Roster);
         _stream.Add(content.Entries);
         Membership.HeardFromTheHost(content.ClosingAtUtcTicks);

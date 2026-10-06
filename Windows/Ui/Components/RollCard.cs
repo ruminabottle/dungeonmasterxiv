@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using DungeonMasterXIV.Net;
 using DungeonMasterXIV.Rolls;
@@ -12,10 +13,24 @@ internal static class RollCard
 {
     public const string OnlyYou = "Only you saw this.";
 
-    public static void Draw(UiFonts fonts, SpeakerName speaker, long atUtcTicks, SharedRoll roll, bool local = false)
+    public const string RevealTooltip = "Reveal to everyone";
+
+    /// <summary>Draws the card; returns true when the host pressed Reveal on it.</summary>
+    public static bool Draw(
+        UiFonts fonts,
+        SpeakerName speaker,
+        long atUtcTicks,
+        SharedRoll roll,
+        bool local = false,
+        AudienceMark? mark = null,
+        bool hideTotal = false,
+        bool canReveal = false)
     {
-        using var card = Card.Begin(Palette.SurfaceRaised, Palette.Rule);
+        using var card = mark is { Revealed: false }
+            ? Card.Begin(Palette.PrivateSurface, Palette.PrivateRule)
+            : Card.Begin(Palette.SurfaceRaised, Palette.Rule);
         Speaker.DrawWithTime(fonts, speaker, atUtcTicks);
+        mark?.Draw(fonts);
 
         if (!string.IsNullOrWhiteSpace(roll.Label))
         {
@@ -24,10 +39,17 @@ internal static class RollCard
         }
 
         Bar(fonts.Body, roll.Expression, Palette.Text);
-        DrawDice(fonts, roll);
-        Bar(fonts.Total, roll.Total.ToString(CultureInfo.InvariantCulture), Palette.GoldBright);
+        if (hideTotal)
+        {
+            Bar(fonts.Total, "?", Palette.GoldBright);
+        }
+        else
+        {
+            DrawDice(fonts, roll);
+            Bar(fonts.Total, roll.Total.ToString(CultureInfo.InvariantCulture), Palette.GoldBright);
+        }
 
-        if (RollSurvival.NoticeFor(roll.Dice) is { } notice)
+        if (RollSurvival.NoticeFor(roll.Dice) is { } notice && !hideTotal)
         {
             ImGui.TextColored(Palette.Warning, notice);
         }
@@ -37,6 +59,8 @@ internal static class RollCard
             using var meta = fonts.Meta.Push();
             ImGui.TextColored(Palette.TextMuted, OnlyYou);
         }
+
+        return canReveal && RailButton.Draw(fonts, FontAwesomeIcon.Eye, RevealTooltip, lit: false);
     }
 
     /// <summary>Kept dice plain; set-aside dice muted and struck through, so the audit trail stays visible.</summary>
@@ -82,7 +106,7 @@ internal static class RollCard
         ImGui.Dummy(new Vector2(0f, spacing / 2f));
     }
 
-    private static void Bar(IFontHandle font, string text, Vector4 colour)
+    internal static void Bar(IFontHandle font, string text, Vector4 colour)
     {
         using var pushed = font.Push();
         var start = ImGui.GetCursorScreenPos();

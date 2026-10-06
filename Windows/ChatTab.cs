@@ -28,14 +28,15 @@ internal sealed class ChatTab
         UiFonts fonts,
         Func<DisplayName> displayName,
         JoinFlowView joinFlow,
-        Action showSession)
+        Action showSession,
+        AudienceChoice audience)
     {
         _coordinator = coordinator;
         _fonts = fonts;
         _displayName = displayName;
         _joinFlow = joinFlow;
         _showSession = showSession;
-        _compose = new MessageComposeView(coordinator);
+        _compose = new MessageComposeView(coordinator, audience, fonts);
         _stream = new StreamView(coordinator, fonts);
     }
 

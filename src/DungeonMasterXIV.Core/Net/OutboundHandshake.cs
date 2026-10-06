@@ -123,7 +123,7 @@ internal sealed class OutboundHandshake
 
         _resumeSentOnThisLink = true;
         var proof = JoinDetailsCodec.Seal(
-            key, new JoinDetails { LastSequence = _lastSequence() }, code, WireMessageType.Resume);
+            key, new JoinDetails { LastSequence = _lastSequence(), Audiences = true }, code, WireMessageType.Resume);
         _link.Send(EnvelopeCodec.Encode(WireEnvelope.ForResume(code, keys.PublicKey, proof)));
     }
 
@@ -171,6 +171,7 @@ internal sealed class OutboundHandshake
         {
             DisplayName = _joinDisplayName.WasStated ? _joinDisplayName.Value : null,
             ParticipantId = _claimedParticipantId?.ToString("D"),
+            Audiences = true,
         };
 
         var sealedDetails = JoinDetailsCodec.Seal(key, details, code, WireMessageType.JoinRequest);

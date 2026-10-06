@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using DungeonMasterXIV.Net;
@@ -149,23 +151,52 @@ internal sealed class StreamView
 
     private void DrawLine(StreamLine line)
     {
+        using var id = ImRaii.PushId(line.Sequence.ToString(CultureInfo.InvariantCulture));
         var speaker = _coordinator.Speakers.For(line.Peer);
+
+        if (line.Withheld == true)
+        {
+            PrivateCard.Placeholder(_fonts, speaker, line.AtUtcTicks, line.Text);
+            return;
+        }
+
+        var mark = MarkFor(line);
 
         switch (line.Kind)
         {
             case StreamEventKind.Message:
-                MessageCard.Draw(_fonts, speaker, line.AtUtcTicks, line.Text);
+                MessageCard.Draw(_fonts, speaker, line.AtUtcTicks, line.Text, mark);
                 break;
             case StreamEventKind.Roll when line.Roll is { } roll:
-                RollCard.Draw(_fonts, speaker, line.AtUtcTicks, roll);
+                var hideTotal = line.Audience == AudienceKind.Blind
+                    && line.RevealedBy is null
+                    && !_coordinator.InAHostedSession;
+                var canReveal = _coordinator.InAHostedSession && mark is { Revealed: false };
+                if (RollCard.Draw(_fonts, speaker, line.AtUtcTicks, roll, mark: mark, hideTotal: hideTotal, canReveal: canReveal))
+                {
+                    _coordinator.Reveal(line.Sequence, DateTimeOffset.UtcNow);
+                }
+
                 break;
             case StreamEventKind.Roll:
-                MessageCard.Draw(_fonts, speaker, line.AtUtcTicks, line.Text);
+                MessageCard.Draw(_fonts, speaker, line.AtUtcTicks, line.Text, mark);
                 break;
             default:
                 EventLine.Draw(_fonts, line.Kind, speaker, line.AtUtcTicks);
                 break;
         }
+    }
+
+    private AudienceMark? MarkFor(StreamLine line)
+    {
+        if (line.Audience is not { } kind || kind == AudienceKind.Public)
+        {
+            return null;
+        }
+
+        return kind == AudienceKind.Player && line.To is { } to
+            ? new AudienceMark(FontAwesomeIcon.User, _coordinator.Speakers.For(to).Name, false, line.RevealedBy is not null)
+            : new AudienceMark(FontAwesomeIcon.UserSecret, "DM", kind == AudienceKind.Blind, line.RevealedBy is not null);
     }
 
     private void DrawNewBelow()

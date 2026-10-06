@@ -10,13 +10,15 @@ public sealed class PendingAdmission
         AdmissionDeadline deadline,
         RelinkClaim relink = default,
         byte[]? joinerPublicKey = null,
-        DisplayName displayName = default)
+        DisplayName displayName = default,
+        bool supportsAudiences = false)
     {
         PeerCode = peerCode;
         Deadline = deadline;
         Relink = relink;
         JoinerPublicKey = joinerPublicKey;
         DisplayName = displayName;
+        SupportsAudiences = supportsAudiences;
     }
 
     public DisplayName DisplayName { get; }
@@ -32,6 +34,8 @@ public sealed class PendingAdmission
     public string? RelinkLabel => Relink.Label;
 
     public byte[]? JoinerPublicKey { get; }
+
+    public bool SupportsAudiences { get; }
 
     public TimeSpan RemainingAt(DateTimeOffset now) => Deadline.RemainingAt(now);
 

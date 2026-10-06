@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DungeonMasterXIV.Net;
 
@@ -18,14 +19,32 @@ internal sealed class SessionRecording
         StampAsHost(kind, peer, text, at) is not null;
 
     public StreamEntry? StampAsHost(
-        StreamEventKind kind, PeerCode peer, string text, DateTimeOffset at, SharedRoll? roll = null)
+        StreamEventKind kind,
+        PeerCode peer,
+        string text,
+        DateTimeOffset at,
+        SharedRoll? roll = null,
+        EntryPrivacy? privacy = null)
     {
         _at = at;
-        var entry = new StreamEntry(_sequencer.Next(), kind, peer, text, roll);
+        var entry = new StreamEntry(_sequencer.Next(), kind, peer, text, roll, privacy);
         return Record(entry) ? entry : null;
     }
 
     public bool Record(StreamEntry entry) => _stream.Record(entry);
+
+    /// <summary>Marks a private roll revealed; returns the revealed entry, or null when there is nothing to reveal.</summary>
+    public StreamEntry? Reveal(long sequence, string revealedBy, DateTimeOffset at)
+    {
+        var entry = _stream.Entries.FirstOrDefault(candidate => candidate.Stamp.Sequence == sequence);
+        if (entry is not { Kind: StreamEventKind.Roll, Privacy: { IsRevealed: false } privacy })
+        {
+            return null;
+        }
+
+        var revealed = entry with { Privacy = privacy with { RevealedBy = revealedBy, RevealedAtUtcTicks = at.UtcTicks } };
+        return _stream.Replace(revealed) ? revealed : null;
+    }
 
     public void Release()
     {
